@@ -1,9 +1,13 @@
 module SimBoxDef
 use VarPrecision
+use NeighListDef
+
 use CoordinateTypes
 
   type, public :: SimBox
+    integer :: nAtoms
     real(dp), allocatable :: atoms(:,:)
+
     real(dp), allocatable :: ETable(:), dETable(:)
     real(dp) :: beta, temperature
     real(dp) :: ETotal
@@ -31,6 +35,7 @@ use CoordinateTypes
   real(dp), intent(in) :: E_Diff
 
     self % E_Total = self % E_Total + E_Diff
+!    self % ETable = self % ETable + self % dETable
 
   end subroutine
 

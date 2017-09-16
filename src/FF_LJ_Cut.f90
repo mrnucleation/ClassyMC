@@ -1,14 +1,15 @@
 module Pair_LJ_Cut
   use ForceFieldTemplate
   use VarPrecision
-  type, public :: Pair_LJ_Cut
+  type, public, extends( :: Pair_LJ_Cut
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
     real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: DetailedECalc 
-      procedure, pass :: ShiftECalc
+      procedure, pass :: ShiftECalc_Single
+      procedure, pass :: ShiftECalc_Multi
       procedure, pass :: SwapInECalc
       procedure, pass :: SwapOutECalc
       procedure, pass :: SetParameter
@@ -51,21 +52,63 @@ module Pair_LJ_Cut
           LJ = ep * LJ * (LJ-1E0)              
           E_LJ = E_LJ + LJ
 
-          ETable(iIndx) = ETable(iIndx) + Ele + LJ
-          ETable(jIndx) = ETable(jIndx) + Ele + LJ              
+          ETable(iAtom) = ETable(iAtom) + LJ
+          ETable(jAtom) = ETable(jAtom) + LJ 
         enddo
       enddo
 
       
       write(nout,*) "Lennard-Jones Energy:", E_LJ
       
-      E_T = E_T + E_Ele + E_LJ    
-      E_Inter_T = E_Ele + E_LJ   
+      E_T = E_LJ    
    end subroutine
   !=====================================================================
-  subroutine ShiftCheck(self)
+  subroutine ShiftCheck_Single(self, curbox, disp, E_T)
     implicit none
     class(forcefield), intent(in) :: self
+      type(simBox), intent(in) :: curbox
+      type(displacement), intent(in) :: disp(:)
+      real(dp), intent(inOut) :: E_T
+      integer :: iDisp, iAtom, jAtom
+      real(dp) :: rx, ry, rz, rsq
+      real(dp) :: ep, sig_sq
+      real(dp) :: LJ
+      real(dp) :: rmin_ij      
+
+      E_LJ = 0E0
+      dETable = 0E0
+
+
+      do iDisp = 1, curbox%
+        atmType1 = atomArray(iType,iAtom)
+        do jAtom = 1,nAtoms(jType)        
+          atmType2 = atomArray(jType,jAtom)
+          ep = self%epsTable(atmType1,atmType2)
+          sig_sq = self%sigTable(atmType1,atmType2)          
+          rmin_ij = r_min_tab(atmType1,atmType2)          
+
+
+          rx = curbox % atoms(0, iAtom)  -  curbox % atoms(0, jAtom)
+          ry = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
+          rz = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
+          r = rx*rx + ry*ry + rz*rz
+          if(r .lt. rmin_ij) then
+          endif 
+
+          rx = curbox % atoms(0, iAtom)  -  curbox % atoms(0, jAtom)
+          ry = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
+          rz = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
+          r = rx*rx + ry*ry + rz*rz
+          LJ = (sig_sq/r)
+          LJ = LJ * LJ * LJ
+          LJ = ep * LJ * (LJ-1E0)              
+          E_T = E_T + LJ
+
+          dETable(iAtom) = dETable(iAtom) + LJ
+          dETable(jAtom) = dETable(jAtom) + LJ
+        enddo
+      enddo
+ 
   end subroutine
   !=====================================================================
   subroutine SwapInCheck(self)

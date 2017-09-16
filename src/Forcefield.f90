@@ -3,7 +3,8 @@ module ForceFieldTemplate
   type, public :: forcefield
     contains
       procedure, pass :: DetailedECalc 
-      procedure, pass :: ShiftECalc
+      procedure, pass :: ShiftECalc_Single
+      procedure, pass :: ShiftECalc_Multi
       procedure, pass :: SwapInECalc
       procedure, pass :: SwapOutECalc
       procedure, pass :: SetParameter

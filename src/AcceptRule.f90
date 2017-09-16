@@ -8,7 +8,7 @@ module AcceptRuleTemplate
 
   contains
 
-  function CheckInitialConstraint(self, E_Diff, disp) result(accept)
+  function MakeDecision(self, E_Diff, disp) result(accept)
     implicit none
     class(constraint), intent(in) :: self
     type(Displacement), intent(in) :: disp
