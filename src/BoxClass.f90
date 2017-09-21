@@ -1,3 +1,4 @@
+!==========================================================================================
 module SimBoxDef
 use VarPrecision
 use NeighListDef
@@ -11,11 +12,11 @@ use CoordinateTypes
     real(dp), allocatable :: ETable(:), dETable(:)
     real(dp) :: beta, temperature
     real(dp) :: ETotal
-    integer, allocatable :: NMin(:), NMax(:)
+    integer, allocatable :: NMolMin(:), NMolMax(:)
     integer, allocatable :: NMol(:)
     integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:)
-    integer :: nTotal
+    integer :: nTotal, nAtoms
 ! Constraint Class
     contains
       procedure, pass :: UpdateEnergy
@@ -59,3 +60,4 @@ use CoordinateTypes
   !------------------------------------------------------------------------------
 
 end module
+!==========================================================================================
