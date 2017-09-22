@@ -2,11 +2,12 @@ module MoleculeTranslation
 use CoordinateTypes
 use MoveClassDef
 use SimBoxDef, only: SimBox
+use EnergyCalculators, only: ECalcs
 use VarPrecision
 
   type, public, extends(MCMove) :: MolTranslate
     real(dp), :: max_dist
-    type(Displacement), allocatable :: disp
+    type(Displacement), allocatable :: disp(:)
     contains
       procedure, pass :: GeneratePosition 
       procedure, pass :: FullMove
@@ -23,12 +24,13 @@ use VarPrecision
       dy = self % max_dist(nType) * (2E0_dp*grnd() - 1E0_dp)
       dz = self % max_dist(nType) * (2E0_dp*grnd() - 1E0_dp)
   end subroutine
-
+!===============================================
   subroutine FullMove(self, trialBox)
     implicit none
     class(MCMove), intent(in) :: self
-    class(SimBox), intent(inout) :: trialBox
+    type(SimBox), intent(inout) :: trialBox
     logical :: accept
+    integer :: nDisp
 
 
     self % atmps = self % atmps + 1E0_dp
@@ -47,9 +49,13 @@ use VarPrecision
 
 
     !Energy Calculation
+    call ECalcs % ShiftECalc_Single(trialBox, disp(1:nDisp), E_Diff)
 
+
+    
 
     !Accept/Reject
+
     if(accept) then
       self % accpt = self % atmps + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)

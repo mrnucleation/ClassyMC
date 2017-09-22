@@ -11,3 +11,12 @@
       end module
 
 !======================================================
+      module EnergyCalculators
+      use ForceFieldTemplate
+
+
+      type(forcefield), allocatable :: ECalcs(:)
+
+      end module
+!======================================================
+

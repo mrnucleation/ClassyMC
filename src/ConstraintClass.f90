@@ -15,9 +15,10 @@ module ConstraintTemplate
     class(constraint), intent(in) :: self
   end subroutine
 
-  subroutine ShiftCheck(self)
+  subroutine ShiftCheck(self, disp)
     implicit none
     class(constraint), intent(in) :: self
+    type(Displacement), intent(inout) :: disp(:)
   end subroutine
 
   subroutine SwapInCheck(self)
