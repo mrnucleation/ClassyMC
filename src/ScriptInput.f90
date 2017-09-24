@@ -228,24 +228,6 @@
         case("out_distunits")
           read(line,*) dummy, command, outputLenUnits   
           outputLenConv = FindLengthUnit(outputLenUnits)
-        case("usewham")
-          read(line,*) dummy, command, logicValue
-          useWHAM = logicValue  
-        case("whamseglength")
-          read(line,*) dummy, command, intValue
-          intervalWHAM = intValue 
-        case("whammaxiteration")
-          read(line,*) dummy, command, intValue
-          maxSelfConsist = intValue 
-        case("whamdgreplace")
-          read(line,*) dummy, command, intValue
-          whamEstInterval = intValue
-        case("whamequilcycle")
-          read(line,*) dummy, command, intValue
-          equilInterval = intValue 
-        case("whamtol")
-          read(line,*) dummy, command, realValue
-          tolLimit = realValue 
         case default
           lineStat = -1
       end select
