@@ -106,8 +106,8 @@
  
       call ReadInitialConfiguration
 !      write(*,*) "Finished Reading Initial Configuration."
-      call RecenterCoordinates
-      call ReadInitialGasPhase     
+!      call RecenterCoordinates
+!      call ReadInitialGasPhase     
 !      write(*,*) "Finished Setting up Gas Phase Configuration." 
       if(useWHAM) then
         if(.not. useUmbrella) then
