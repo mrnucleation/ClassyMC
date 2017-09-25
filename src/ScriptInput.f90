@@ -1,6 +1,6 @@
 !========================================================            
       module ScriptInput
-      integer, parameter :: maxLineLen = 500   
+      integer, parameter :: maxLineLen = 100   
       contains
 !========================================================            
       subroutine Script_ReadParameters
@@ -28,6 +28,7 @@
       elseif(nArgs == 1) then
         call get_command_argument(1, fileName)
         call LoadFile(lineStore, nLines, lineNumber, fileName)
+        write(*,*) "File successfully loaded!"
       elseif(nArgs == 0) then
         write(*,*) "ERROR! No Input File has been given!"
         stop
@@ -48,7 +49,7 @@
           cycle
         endif
         lineStat = 0        
-!        write(*,*) trim(adjustl(lineStore(iLine)))
+        write(*,*) trim(adjustl(lineStore(iLine)))
         call getCommand(lineStore(iLine), command, lineStat)
         call LowerCaseLine(command)
 !         If line is empty or commented, move to the next line.         
@@ -120,7 +121,7 @@
 !      character(len=15) :: fileName      
       logical :: logicValue
       integer :: j
-      integer :: intValue, AllocateStat
+      integer :: intValue
       real(dp) :: realValue
       
 
@@ -147,6 +148,7 @@
             seed = intValue
           endif
           seed = p_size*seed + myid
+          write(*,*) seed
 !        case("out_energyunits")
 !          read(line,*) dummy, command, outputEngUnits
 !          outputEConv = FindEngUnit(outputEngUnits)
@@ -188,13 +190,15 @@
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
            endif
-!           do i = 1, intValue
-!             BoxArray(i)%
-!           enddo
+           do i = 1, intValue
+             BoxArray(i)%temperature = i
+             write(*,*) BoxArray(i)%temperature
+           enddo
         case default
           lineStat = -1
       end select
 
+      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
      
       end subroutine   
 !========================================================            
@@ -226,7 +230,7 @@
       nRawLines = 0
       do iLine = 1, nint(1d7)
         read(54,*,iostat=lineStat)
-        if(lineStat .lt. 0) then
+        if(lineStat < 0) then
           exit
         endif
         nRawLines = nRawLines + 1
@@ -236,6 +240,9 @@
 
 !      Read in the file line by line
       allocate(rawLines(1:nRawLines), stat = AllocateStat)
+      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+
+!      write(*,*) nRawLines
 
       do iLine = 1, nRawLines
         read(54,"(A)") rawLines(iLine)
@@ -243,7 +250,7 @@
 !          write(35,*) rawLines(iLine)        
 !        endif
 !        call LowerCaseLine(rawLines(iLine))
-!        write(*,*) rawLines(iLine)
+!        write(*,*) trim(rawLines(iLine))
       enddo
       close(54) 
 
@@ -257,20 +264,23 @@
         endif
       enddo
 
-      allocate( lineArray(1:nLines) )
-      allocate( lineNumber(1:nLines) )
+      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+
+      allocate( lineArray(1:nLines), stat = AllocateStat )
+      allocate( lineNumber(1:nLines), stat = AllocateStat )
       i = 0
       do iLine = 1, nRawLines
         lineStat = 0        
         call getCommand(rawLines(iLine), command, lineStat)
         if(lineStat .eq. 0) then
           i = i + 1
-          call CleanLine(rawLines(iLine), lineArray(i))
-!          lineArray(i) = rawLines(iLine)
+!          call CleanLine(rawLines(iLine), lineArray(i))
+          lineArray(i) = rawLines(iLine)
           lineNumber(i) = iLine
-!          write(*,*) lineNumber(i), lineArray(i)
         endif 
       enddo
+
+      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
       deallocate(rawLines)
     
@@ -285,6 +295,7 @@
       character(len=25), intent(out) :: command
       integer, intent(out) :: lineStat
       integer :: i, sizeLine, lowerLim, upperLim
+
 
       sizeLine = len( line )
       lineStat = 0
@@ -327,7 +338,7 @@
       use VarPrecision
       implicit none
       character(len=*), intent(in) :: inputline
-      character(len=25), intent(out) :: cleanedLine
+      character(len=maxLineLen), intent(out) :: cleanedLine
       integer :: i, sizeLine
 
       sizeLine = len(inputline)
@@ -360,7 +371,6 @@
       do i = iLine + 1, nLines
         call GetCommand(lineStore(i), command, lineStat)
         call LowerCaseLine(command)
-!        write(*,*)  dummy
         if( trim(adjustl(command)) .eq. trim(adjustl(endCommand)) ) then
           lineBuffer = i - iLine
           found = .true.

@@ -14,8 +14,8 @@ OPTIMIZE_FLAGS += -xHost
 OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
-DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-#DETAILEDDEBUG:= -check all -traceback -g -fpe0
+#DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
+DETAILEDDEBUG:= -check all -traceback -g -fpe0
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -heap-arrays 1024
 #DEBUGFLAGS += $(DETAILEDDEBUG)
@@ -84,18 +84,18 @@ $(OBJ)/%.o: $(SRC)/%.f90
 #        Compile Commands
 # ====================================
 default: startUP classyMC finale
-debug: startUP_debug classMC_debug finale
+debug: startUP_debug classyMC_debug finale
 neat: startUP classyMC removeObject finale
 clean: removeObjects removeExec finale    
        
-classyMC: $(OBJ_MOD)  $(OBJ_COMPLETE) 
+classyMC: $(OBJ_COMPLETE) 
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
 		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 	
 
-classyMC_debug: $(OBJ_MOD)  $(OBJ_COMPLETE) 
+classyMC_debug: $(OBJ_COMPLETE) 
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	

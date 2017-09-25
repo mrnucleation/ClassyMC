@@ -1,0 +1,2 @@
+  set rng_seed -1
+  create boxes 2

@@ -19,6 +19,7 @@ use CoordinateTypes
 
 ! Constraint Class
     contains
+      procedure, pass :: LoadCoordinates
       procedure, pass :: UpdateEnergy
       procedure, pass :: UpdatePosition
 !      procedure, pass :: CreateNeighList
@@ -28,7 +29,14 @@ use CoordinateTypes
 
   contains
 
+  !------------------------------------------------------------------------------
+  subroutine LoadCoordinates(self, fileName)
+  implicit none
+  class(SimBox), intent(inout) :: self
+  character(len=*), intent(in) :: fileName
 
+
+  end subroutine
   !------------------------------------------------------------------------------
   subroutine UpdateEnergy(self, E_Diff)
   implicit none
