@@ -17,6 +17,8 @@ use CoordinateTypes
     integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:)
 
+!    type(ForceFieldTemplate), pointer :: ECalc
+
 ! Constraint Class
     contains
       procedure, pass :: LoadCoordinates
