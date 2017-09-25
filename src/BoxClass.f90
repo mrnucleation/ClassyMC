@@ -1,12 +1,12 @@
 !==========================================================================================
 module SimBoxDef
 use VarPrecision
-use NeighListDef
+!use NeighListDef
 
 use CoordinateTypes
 
   type, public :: SimBox
-    integer :: nAtoms
+    integer :: nTotal, nAtoms
     real(dp), allocatable :: atoms(:,:)
 
     real(dp), allocatable :: ETable(:), dETable(:)
@@ -16,12 +16,12 @@ use CoordinateTypes
     integer, allocatable :: NMol(:)
     integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:)
-    integer :: nTotal, nAtoms
+
 ! Constraint Class
     contains
       procedure, pass :: UpdateEnergy
       procedure, pass :: UpdatePosition
-      procedure, pass :: CreateNeighList
+!      procedure, pass :: CreateNeighList
 
   end type
 
@@ -32,22 +32,23 @@ use CoordinateTypes
   !------------------------------------------------------------------------------
   subroutine UpdateEnergy(self, E_Diff)
   implicit none
-  class(SimBox), intent(in) :: self
+  class(SimBox), intent(inout) :: self
   real(dp), intent(in) :: E_Diff
 
-    self % E_Total = self % E_Total + E_Diff
+    self % ETotal = self % ETotal + E_Diff
 !    self % ETable = self % ETable + self % dETable
 
   end subroutine
 
   !------------------------------------------------------------------------------
   subroutine UpdatePosition(self, disp)
+  use CoordinateTypes
   implicit none
-  class(SimBox), intent(in) :: self
+  class(SimBox), intent(inout) :: self
   type(Displacement), intent(in) :: disp(:)
   integer :: iDisp, dispLen, dispIndx
 
-  dispLen = len(disp)
+  dispLen = size(disp)
 
   do iDisp = 1, dispLen
     dispIndx = disp(iDisp) % atmIndx

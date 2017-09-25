@@ -2,21 +2,23 @@
       module CoordinateTypes
       use VarPrecision
 
-
       type Displacement
-        integer(kind=atomIntType) :: molType, atmIndx
+        integer(kind=atomIntType) :: molType, atmIndx, molIndx
         real(dp) :: x_new, y_new, z_new
       end type
 
-      end module
 
+      end module
 !======================================================
-      module EnergyCalculators
-      use ForceFieldTemplate
+      module ParallelVar
+        integer :: myid, p_size, ierror, tag, nout, seed
+      end module  
+!======================================================
+!      module EnergyCalculators
+!      use ForceFieldTemplate
 
+!      type(forcefield), allocatable :: ECalcs(:)
 
-      type(forcefield), allocatable :: ECalcs(:)
-
-      end module
+!      end module
 !======================================================
 

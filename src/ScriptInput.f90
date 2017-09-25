@@ -3,24 +3,11 @@
       integer, parameter :: maxLineLen = 500   
       contains
 !========================================================            
-      subroutine Script_ReadParameters(seed, screenEcho)
-      use AnalysisMain,only: ScriptAnalysisInput
-      use CBMC_Variables
+      subroutine Script_ReadParameters
       use Constants
-      use Coords
-      use CoordinateFunctions
-      use EnergyTables
-      use ForceField
-      use ForceFieldInput, only: SetForcefieldType, ScriptForcefield, fieldTypeSet
-      use MoveTypeModule, only: ScriptInput_MCMove
       use ParallelVar
-      use SimParameters
-      use UmbrellaSamplingNew, only: useUmbrella, ScriptInput_Umbrella
       use Units
-      use WHAM_Functions
       implicit none
-      logical, intent(OUT)  :: screenEcho
-      integer, intent(OUT) :: seed
 !      integer(kind=8), intent(OUT) :: ncycle,nmoves
       integer :: i, ii, j, nArgs
       integer :: iLine, lineStat, AllocateStat
@@ -52,7 +39,7 @@
 
 !      This block counts the number of lines in the input file to determine how large the lineStorage array needs to be.
 
-      call setDefaults(seed, screenEcho)
+!      call setDefaults(seed, screenEcho)
 
       lineBuffer = 0
       do iLine = 1, nLines
@@ -71,28 +58,27 @@
 
         select case(trim(adjustl( command )))
         case("set")
-          call setVariable( lineStore(iLine), seed, screenEcho, lineStat )
-          if(lineStat .eq. -1) then
-            write(*,"(A,2x,I10)") "ERROR! Unknown Variable Name on Line", lineNumber(iLine)
-            write(*,*) lineStore(iLine)
-            stop 
-          endif
+           call setCommand( lineStore(iLine), lineStat )
+           if(lineStat .eq. -1) then
+             write(*,"(A,2x,I10)") "ERROR! Unknown Variable Name on Line", lineNumber(iLine)
+             write(*,*) lineStore(iLine)
+             stop 
+           endif
         case("create")
-          call setVariable( lineStore(iLine), seed, screenEcho, lineStat )
-          if(lineStat .eq. -1) then
-            write(*,"(A,2x,I10)") "ERROR! Unknown Variable Name on Line", lineNumber(iLine)
-            write(*,*) lineStore(iLine)
-            stop 
-          endif
-        case("forcefieldfile")
-          read(lineStore(iLine),*) dummy, command2
-          forcefieldFile =  trim( adjustl( command2 ) )
-          call LoadFile(forcefieldStore, nForceLines, ffLineNumber, forcefieldFile)
-          call ScriptForcefield(forcefieldStore)
-
-          if(allocated(forcefieldStore)) then
-            deallocate(forcefieldStore)
-          endif
+           call createCommand( lineStore(iLine), lineStat )
+           if(lineStat .eq. -1) then
+             write(*,"(A,2x,I10)") "ERROR! Unknown Variable Name on Line", lineNumber(iLine)
+             write(*,*) lineStore(iLine)
+             stop 
+           endif
+!        case("forcefieldfile")
+!          read(lineStore(iLine),*) dummy, command2
+!          forcefieldFile =  trim( adjustl( command2 ) )
+!          call LoadFile(forcefieldStore, nForceLines, ffLineNumber, forcefieldFile)
+!          call ScriptForcefield(forcefieldStore)
+!          if(allocated(forcefieldStore)) then
+!            deallocate(forcefieldStore)
+!          endif
         case default
           write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
           write(*,*) lineStore(iLine)
@@ -104,35 +90,31 @@
 !      deallocate(lineStore)
 
  
-      call ReadInitialConfiguration
+!      call ReadInitialConfiguration
 !      write(*,*) "Finished Reading Initial Configuration."
 !      call RecenterCoordinates
 !      call ReadInitialGasPhase     
 !      write(*,*) "Finished Setting up Gas Phase Configuration." 
-      if(useWHAM) then
-        if(.not. useUmbrella) then
-          write(*,*) "ERROR! The WHAM method can not be used if no Umbrella sampling variables are given!"
-          stop
-        endif
-        nWhamItter = ceiling(dble(ncycle)/dble(intervalWHAM))
-        call WHAM_Initialize
-      endif
+!      if(useWHAM) then
+!        if(.not. useUmbrella) then
+!          write(*,*) "ERROR! The WHAM method can not be used if no Umbrella sampling variables are given!"
+!          stop
+!        endif
+!        nWhamItter = ceiling(dble(ncycle)/dble(intervalWHAM))
+!        call WHAM_Initialize
+!      endif
 
 
 
       end subroutine
 !========================================================            
-      subroutine setCommand(line, seed, screenEcho, lineStat)
-      use VarPrecision
-      use SimParameters
-      use CBMC_Variables
-      use Coords
-      use EnergyTables
+      subroutine setCommand(line, lineStat)
       use Units
+      use VarPrecision
+      use ParallelVar
       implicit none
       character(len=maxLineLen), intent(in) :: line      
-      logical, intent(out) :: screenEcho
-      integer, intent(out) :: seed, lineStat
+      integer, intent(out) :: lineStat
 
       character(len=30) :: dummy, command!, stringValue
 !      character(len=15) :: fileName      
@@ -147,87 +129,30 @@
       read(line,*) dummy, command
       call LowerCaseLine(command)
       select case(trim(adjustl(command)))
-        case("avbmc_distance")
-          read(line,*) dummy, command, realValue
-          Dist_Critr = realValue   
-          Dist_Critr_sq = realValue**2
-        case("calcpressure")     
-          read(line,*) dummy, command, logicValue
-          calcPressure = logicValue 
-        case("cycles")
-          read(line,*) dummy, command, realValue  
-          nCycle = nint(realValue)
-        case("gasdensity")        
-          if(.not. allocated(gas_dens)) then
-            write(*,*) "INPUT ERROR! GasDensity is called before the number of molecule types has been assigned"
-            stop
-          endif
-          read(line,*) dummy, command, (gas_dens(j), j=1, nMolTypes)  
-        case("moves")
-          read(line,*) dummy, command, realValue        
-          ncycle2 = nint(realValue)   
-        case("moleculetypes")
-          read(line,*) dummy, command, realValue        
-          nMolTypes = nint(realValue)
-          allocate( NPART(1:nMolTypes), STAT = AllocateStat ) 
-          allocate( NPART_new(1:nMolTypes),STAT = AllocateStat )     
-          allocate( NMIN(1:nMolTypes), STAT = AllocateStat )     
-          allocate( NMAX(1:nMolTypes), STAT = AllocateStat )     
-          allocate( gas_dens(1:nMolTypes), STAT = AllocateStat )      
-          allocate( nRosenTrials(1:nMolTypes), STAT = AllocateStat )  
-          NMIN = 0
-          NMAX = 0
-          gas_dens = 0
-          nRosenTrials = 1
-          allocate( biasAlpha(1:nMolTypes,1:nMolTypes), STAT = AllocateStat )
-          biasAlpha = 0E0_dp
-        case("molmin")        
-          if(.not. allocated(NMIN)) then
-            write(*,*) "INPUT ERROR! molmin is called before the number of molecule types has been assigned"
-            stop
-          endif
-          read(line,*) dummy, command, (NMIN(j), j=1, nMolTypes)    
-        case("molmax")        
-          if(.not. allocated(NMAX)) then
-            write(*,*) "INPUT ERROR! molmax is called before the number of molecule types has been assigned"
-            stop
-          endif
-          read(line,*) dummy, command, (NMAX(j), j=1, nMolTypes)
-          maxMol = sum(NMAX)        
-!          ALLOCATE (acptInSize(1:maxMol), STAT = AllocateStat)
-!          ALLOCATE (atmpInSize(1:maxMol), STAT = AllocateStat)
-        case("temperature")        
-          read(line,*) dummy, command, realValue        
-          temperature = realValue
-          beta = 1d0/temperature
-        case("screenecho")
-          read(line,*) dummy, command, logicValue
-          screenEcho = logicValue
+!        case("cycles")
+!          read(line,*) dummy, command, realValue  
+!          nCycle = nint(realValue)
+!        case("moves")
+!          read(line,*) dummy, command, realValue        
+!          ncycle2 = nint(realValue)   
+!        case("screenecho")
+!          read(line,*) dummy, command, logicValue
+!          screenEcho = logicValue
         case("rng_seed")
           read(line,*) dummy, command, intValue
-          seed = intValue
-          if(seed .lt. 0) then
+          if(intValue < 0) then
             call system_clock(intValue)
             seed = mod(intValue,10000)
+          else
+            seed = intValue
           endif
-        case("softcutoff")
-          read(line,*) dummy, command, realValue
-          softCutoff = realValue
-        case("screen_outfreq")
-          read(line,*) dummy, command, intValue
-          outFreq_Screen = intValue             
-        case("trajectory_outfreq")     
-          read(line,*) dummy, command, intValue
-          outFreq_Traj = intValue  
-        case("multipleinputconfig")
-          read(line,*) dummy, command, logicValue
-          multipleInput = logicValue  
-        case("out_energyunits")
-          read(line,*) dummy, command, outputEngUnits
-          outputEConv = FindEngUnit(outputEngUnits)
-        case("out_distunits")
-          read(line,*) dummy, command, outputLenUnits   
-          outputLenConv = FindLengthUnit(outputLenUnits)
+          seed = p_size*seed + myid
+!        case("out_energyunits")
+!          read(line,*) dummy, command, outputEngUnits
+!          outputEConv = FindEngUnit(outputEngUnits)
+!        case("out_distunits")
+!          read(line,*) dummy, command, outputLenUnits   
+!          outputLenConv = FindLengthUnit(outputLenUnits)
         case default
           lineStat = -1
       end select
@@ -235,19 +160,17 @@
      
       end subroutine
 !========================================================            
-      subroutine createCommand(line, seed, screenEcho, lineStat)
+      subroutine createCommand(line, lineStat)
       use BoxData, only: BoxArray
       use VarPrecision
-      use SimParameters
       use Units
       implicit none
       character(len=maxLineLen), intent(in) :: line      
-      logical, intent(out) :: screenEcho
-      integer, intent(out) :: seed, lineStat
+      integer, intent(out) :: lineStat
 
       character(len=30) :: dummy, command!, stringValue
       logical :: logicValue
-      integer :: j
+      integer :: i
       integer :: intValue, AllocateStat
       real(dp) :: realValue
       
@@ -259,14 +182,15 @@
       select case(trim(adjustl(command)))
         case("boxes")
            read(line,*) dummy, command, intValue
-           if( not allocated(BoxArray) ) then
-             allocate(BoxArray(1:intValue), status = AllocateStat)
+           if( .not. allocated(BoxArray) ) then
+             allocate(BoxArray(1:intValue), stat = AllocateStat)
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
            endif
-
-
+!           do i = 1, intValue
+!             BoxArray(i)%
+!           enddo
         case default
           lineStat = -1
       end select
@@ -274,54 +198,9 @@
      
       end subroutine   
 !========================================================            
-      subroutine setDefaults(seed, screenEcho)
-      use VarPrecision
-      use SimParameters
-      use CBMC_Variables
-      use Coords
-      use EnergyTables
-      use WHAM_Module
-      use AcceptRates
-      use Units
-      implicit none
-      logical, intent(out) :: screenEcho
-      integer, intent(out) :: seed
-
-      seed = -1
-
-      Dist_Critr = 0E0_dp
-      Dist_Critr_sq = 0E0_dp
-      nCycle = 0
-      ncycle2 = 0
-      maxMol = 0
-
-      maxRosenTrial = 1
-    
-      temperature = 0E0_dp
-      beta = 0E0_dp
-
-      screenEcho = .true.
-      softCutoff = 100E0_dp
-
-      outFreq_Screen = 1000
-      outFreq_Traj = 1000  
-      multipleInput = .false.
-
-      outputEConv = FindEngUnit("kb")
-      outputLenConv = FindLengthUnit("ang")
-      useWHAM = .false.
-      intervalWHAM = 10000
-      maxSelfConsist = 100
-      whamEstInterval = -1
-      equilInterval = 10
-      tolLimit = 1E-5_dp
-
-     
-      end subroutine
-!========================================================            
       subroutine LoadFile(lineArray, nLines, lineNumber, fileName)
       use ParallelVar, only: myid
-      use SimParameters, only: echoInput
+!      use SimParameters, only: echoInput
       implicit none
       character(len=maxLineLen),allocatable,intent(inout) :: lineArray(:)
       character(len=50), intent(in) :: fileName
@@ -360,9 +239,9 @@
 
       do iLine = 1, nRawLines
         read(54,"(A)") rawLines(iLine)
-        if(echoInput) then
-          write(35,*) rawLines(iLine)        
-        endif
+!        if(echoInput) then
+!          write(35,*) rawLines(iLine)        
+!        endif
 !        call LowerCaseLine(rawLines(iLine))
 !        write(*,*) rawLines(iLine)
       enddo
@@ -407,7 +286,7 @@
       integer, intent(out) :: lineStat
       integer :: i, sizeLine, lowerLim, upperLim
 
-      sizeLine = len(line)
+      sizeLine = len( line )
       lineStat = 0
       i = 1
 !      Find the first non-blank character in the string
@@ -444,24 +323,23 @@
       end subroutine
 !========================================================            
 !     This subrotuine searches a given input line for comments 
-      subroutine CleanLine(inputline, cleanLine)
+      subroutine CleanLine(inputline, cleanedLine)
       use VarPrecision
       implicit none
       character(len=*), intent(in) :: inputline
-      character(len=25), intent(out) :: cleanLine
+      character(len=25), intent(out) :: cleanedLine
       integer :: i, sizeLine
 
-      sizeLine = len(line)
-      lineStat = 0
+      sizeLine = len(inputline)
       i = 1
 !      Find the first non-blank character in the string
       do while(i .le. sizeLine)
-        if(ichar(line(i:i)) .eq. ichar('#')) then
+        if(ichar(inputline(i:i)) .eq. ichar('#')) then
           exit
         endif
       enddo
 
-      cleanLine = inputline(1:i)
+      cleanedLine = inputline(1:i)
      
       end subroutine
 !========================================================
@@ -495,6 +373,28 @@
         write(*,*) lineStore(iLine)
         stop
       endif
+
+      end subroutine
+!========================================================            
+!     The purpose of this subroutine is to lower case a given character string. 
+      subroutine LowerCaseLine(line)
+      implicit none
+      character(len=*),intent(inout) :: line
+      integer, parameter :: offset = ichar("a") - ichar("A")
+      integer :: i,sizeLine
+      integer :: curVal, newVal
+
+      sizeLine = len(line)
+
+      do i = 1, sizeLine
+        curVal = ichar(line(i:i))
+        if(curVal .le. ichar("Z")) then
+          if(curVal .ge. ichar("A")) then
+            newVal = curVal + offSet
+            line(i:i) = char(newVal)
+          endif
+        endif
+      enddo
 
       end subroutine
 !========================================================            
