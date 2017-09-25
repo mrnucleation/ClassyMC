@@ -9,9 +9,9 @@ FC := mpif90
 #FC := gfortran
 CC := mpicc
 OPTIMIZE_FLAGS := -O3
-OPTIMIZE_FLAGS += -xHost
+#OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
-OPTIMIZE_FLAGS += -no-prec-div
+#OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 #DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
@@ -49,8 +49,11 @@ OBJ := $(CUR_DIR)/objects
 
 SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_BoxData.f90\
+        		$(SRC)/Common_ECalc.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/BoxClass.f90\
+        		$(SRC)/Forcefield.f90\
+        		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/VariablePrecision.f90\
  	        	$(SRC)/ScriptInput.f90
 
@@ -141,6 +144,7 @@ removeExec:
 # ====================================
 $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Common_BoxData.o: $(OBJ)/BoxClass.o
+$(OBJ)/Common_ECalc.o: $(OBJ)/Forcefield.o $(OBJ)/Common.o
 $(OBJ)/BoxClass.o: $(OBJ)/Common.o
 $(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/ScriptInput.o
 

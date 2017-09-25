@@ -164,6 +164,7 @@
 !========================================================            
       subroutine createCommand(line, lineStat)
       use BoxData, only: BoxArray
+      use ForcefieldData, only: EnergyCalculator
       use VarPrecision
       use Units
       implicit none
@@ -190,10 +191,20 @@
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
            endif
-           do i = 1, intValue
-             BoxArray(i)%temperature = i
-             write(*,*) BoxArray(i)%temperature
-           enddo
+!           do i = 1, intValue
+!             BoxArray(i)%temperature = i
+!             write(*,*) BoxArray(i)%temperature
+!           enddo
+
+        case("energycalculators")
+           read(line,*) dummy, command, intValue
+           if( .not. allocated(EnergyCalculator) ) then
+             allocate(EnergyCalculator(1:intValue), stat = AllocateStat)
+           else
+             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             stop
+           endif
+ 
         case default
           lineStat = -1
       end select
@@ -274,8 +285,8 @@
         call getCommand(rawLines(iLine), command, lineStat)
         if(lineStat .eq. 0) then
           i = i + 1
-!          call CleanLine(rawLines(iLine), lineArray(i))
-          lineArray(i) = rawLines(iLine)
+          call CleanLine(rawLines(iLine), lineArray(i))
+!          lineArray(i) = rawLines(iLine)
           lineNumber(i) = iLine
         endif 
       enddo
@@ -348,6 +359,7 @@
         if(ichar(inputline(i:i)) .eq. ichar('#')) then
           exit
         endif
+        i = i + 1
       enddo
 
       cleanedLine = inputline(1:i)

@@ -1,25 +1,26 @@
-module Pair_LJ_Cut
+module FF_Pair_LJ_Cut
   use ForceFieldTemplate
   use VarPrecision
-  type, public, extends( :: Pair_LJ_Cut
+  use SimBoxDef, only: SimBox
+  type, extends(forcefield) :: Pair_LJ_Cut
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
     real(dp) :: rCut, rCutSq
     contains
-      procedure, pass :: DetailedECalc 
-      procedure, pass :: ShiftECalc_Single
-      procedure, pass :: ShiftECalc_Multi
-      procedure, pass :: SwapInECalc
-      procedure, pass :: SwapOutECalc
-      procedure, pass :: SetParameter
+      procedure, pass :: DetailedECalc => Detailed_LJ_Cut
+      procedure, pass :: ShiftECalc_Single => Shift_LJ_Cut_Single
+      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
+      procedure, pass :: SwapInECalc => SwapIn_LJ_Cut
+      procedure, pass :: SwapOutECalc => SwapOut_LJ_Cut
+      procedure, pass :: SetParameter => SetPar_LJ_Cut
   end type
 
   contains
   !===================================================================================
-  subroutine DetailedECalc(self, curbox)
+  subroutine Detailed_LJ_Cut(self, curbox)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(Pair_LJ_Cut), intent(in) :: self
     type(simBox), intent(in) :: curbox
       real(dp), intent(inOut) :: E_T
       integer :: iAtom,jAtom
@@ -63,9 +64,9 @@ module Pair_LJ_Cut
       E_T = E_LJ    
    end subroutine
   !=====================================================================
-  subroutine ShiftCheck_Single(self, curbox, disp, E_Diff)
+  subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(Pair_LJ_Cut), intent(in) :: self
       type(simBox), intent(in) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
@@ -173,9 +174,9 @@ module Pair_LJ_Cut
  
   end subroutine
   !=====================================================================
-  subroutine SwapInECalc(self, curbox, disp, E_Diff)
+  subroutine SwapIn_LJ_Cut(self, curbox, disp, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(Pair_LJ_Cut), intent(in) :: self
       type(simBox), intent(in) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
@@ -215,9 +216,9 @@ module Pair_LJ_Cut
       enddo
   end subroutine
   !=====================================================================
-  subroutine SwapOutECalc(self)
+  subroutine SwapOut_LJ_Cut(self)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(Pair_LJ_Cut), intent(in) :: self
       type(simBox), intent(in) :: curbox
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
@@ -251,9 +252,9 @@ module Pair_LJ_Cut
       enddo
   end subroutine
   !=====================================================================
-  subroutine SetParameter(self, parIndex,  parVal)
+  subroutine SetPar_LJ_Cut(self, parIndex,  parVal)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(Pair_LJ_Cut), intent(in) :: self
     integer, intent(in) :: parIndex(:)
     real(dp), intent(in) :: parVal
 

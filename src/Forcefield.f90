@@ -17,17 +17,23 @@ module ForceFieldTemplate
     class(forcefield), intent(in) :: self
   end subroutine
 
-  subroutine ShiftCheck(self)
+  subroutine ShiftECalc_Single(self)
     implicit none
     class(forcefield), intent(in) :: self
   end subroutine
 
-  subroutine SwapInCheck(self)
+  subroutine ShiftECalc_Multi(self)
     implicit none
     class(forcefield), intent(in) :: self
   end subroutine
 
-  subroutine SwapOutCheck(self)
+
+  subroutine SwapInECalc(self)
+    implicit none
+    class(forcefield), intent(in) :: self
+  end subroutine
+
+  subroutine SwapOutECalc(self)
     implicit none
     class(forcefield), intent(in) :: self
   end subroutine
