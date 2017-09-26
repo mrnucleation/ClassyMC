@@ -20,9 +20,9 @@ use VarPrecision
     class(MCMove), intent(in) :: self
     type(Displacement), intent(inout) :: disp
     real(dp) :: dx, dy, dz
-      dx = self % max_dist(nType) * (2E0_dp*grnd() - 1E0_dp)
-      dy = self % max_dist(nType) * (2E0_dp*grnd() - 1E0_dp)
-      dz = self % max_dist(nType) * (2E0_dp*grnd() - 1E0_dp)
+      dx = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
+      dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
+      dz = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
   end subroutine
 !===============================================
   subroutine FullMove(self, trialBox)
@@ -38,9 +38,9 @@ use VarPrecision
 
     !Propose move
        !Choose Molecule
-    dx = self % max_dist(nType) * (2E0_dp*grnd() - 1E0_dp)
-    dy = self % max_dist(nType) * (2E0_dp*grnd() - 1E0_dp)
-    dz = self % max_dist(nType) * (2E0_dp*grnd() - 1E0_dp)
+    dx = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
+    dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
+    dz = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
  
     !Check Constraint
     if(.not. accept) then

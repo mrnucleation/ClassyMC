@@ -13,12 +13,6 @@
       module ParallelVar
         integer :: myid, p_size, ierror, tag, nout, seed
       end module  
-!======================================================
-!      module EnergyCalculators
-!      use ForceFieldTemplate
 
-!      type(forcefield), allocatable :: ECalcs(:)
-
-!      end module
 !======================================================
 

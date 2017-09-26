@@ -11,17 +11,13 @@ end module
 !================================================================
 module Common_MolDef
   use VarPrecision 
-
-  type AtomDef 
-    character(len=5) :: Symb
-    real(dp) :: mass
-  end type
+  use StructureTypes
 
   integer :: nMolTypes
   integer :: nAtomTypes
 
   type(AtomDef), allocatable :: AtomData(:)
-  type(BondDef), allocatable :: bondData(:)
+!  type(BondDef), allocatable :: bondData(:)
 
 
 end module

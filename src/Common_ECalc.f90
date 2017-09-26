@@ -1,6 +1,6 @@
 !======================================================
 module ForcefieldData
-      use ForceFieldTemplate, only: ForceField
+use ForceFieldTemplate, only: ForceField
 
   type ECalcArray 
     type(forcefield), allocatable :: Method

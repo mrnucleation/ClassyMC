@@ -2,12 +2,15 @@ module FF_Pair_LJ_Cut
   use ForceFieldTemplate
   use VarPrecision
   use SimBoxDef, only: SimBox
+  use CoordinateTypes
+
   type, extends(forcefield) :: Pair_LJ_Cut
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
     real(dp) :: rCut, rCutSq
     contains
+      procedure, pass :: Constructor => Constructor_LJ_Cut
       procedure, pass :: DetailedECalc => Detailed_LJ_Cut
       procedure, pass :: ShiftECalc_Single => Shift_LJ_Cut_Single
       procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
@@ -17,13 +20,33 @@ module FF_Pair_LJ_Cut
   end type
 
   contains
+  !=============================================================================+
+  subroutine Constructor_LJ_Cut(self)
+    use Common_MolDef, only: nAtomTypes
+    implicit none
+    class(Pair_LJ_Cut), intent(inout) :: self
+    integer :: AllocateStat
+
+    allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+
+    self%epsTable = 0E0_dp
+    self%sigTable = 0E0_dp
+    self%rMinTable = 0E0_dp
+
+    IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+
+  end subroutine
   !===================================================================================
-  subroutine Detailed_LJ_Cut(self, curbox)
+  subroutine Detailed_LJ_Cut(self, curbox, E_T)
+    use ParallelVar, only: nout
     implicit none
     class(Pair_LJ_Cut), intent(in) :: self
-    type(simBox), intent(in) :: curbox
+    type(simBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_T
       integer :: iAtom,jAtom
+      integer :: atmType1, atmType2
       real(dp) :: rx, ry, rz, rsq
       real(dp) :: ep, sig_sq
       real(dp) :: LJ
@@ -31,15 +54,14 @@ module FF_Pair_LJ_Cut
       real(dp) :: rmin_ij      
 
       E_LJ = 0E0
-      PairList = 0E0      
-      ETable = 0E0
-      do iAtom = 1, curbox%
-        atmType1 = atomArray(iType,iAtom)
-        do jAtom = 1,nAtoms(jType)        
-          atmType2 = atomArray(jType,jAtom)
-          ep = self%epsTable(atmType1,atmType2)
-          sig_sq = self%sigTable(atmType1,atmType2)          
-          rmin_ij = self%r_min_tab(atmType1,atmType2)          
+      curbox%ETable = 0E0
+      do iAtom = 1, curbox % nAtoms-1
+        atmType1 = curbox % AtomType(iAtom)
+        do jAtom = iAtom+1, curbox%nAtoms
+          atmType2 = curbox % AtomType(jAtom)
+          ep = self % epsTable(atmType1,atmType2)
+          sig_sq = self % sigTable(atmType1,atmType2)          
+          rmin_ij = self % rMinTable(atmType1,atmType2)          
 
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
@@ -52,8 +74,8 @@ module FF_Pair_LJ_Cut
             LJ = (sig_sq/rsq)**3
             LJ = ep * LJ * (LJ-1E0)              
             E_LJ = E_LJ + LJ
-            ETable(iAtom) = ETable(iAtom) + LJ
-            ETable(jAtom) = ETable(jAtom) + LJ 
+            curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
+            curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ 
           endif
         enddo
       enddo
@@ -66,20 +88,21 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff)
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
-      type(simBox), intent(in) :: curbox
+      class(Pair_LJ_Cut), intent(in) :: self
+      type(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
       integer :: iDisp, iAtom, jAtom, dispLen
       integer :: maxIndx, minIndx
+      integer :: atmType1, atmType2
       real(dp) :: rx, ry, rz, rsq
       real(dp) :: ep, sig_sq
       real(dp) :: LJ
       real(dp) :: rmin_ij      
 
-      dispLen = len(disp)
+      dispLen = size(disp)
       E_Diff = 0E0
-      dETable = 0E0
+      curbox%dETable = 0E0
       maxIndx = 0
       minIndx = curbox % nAtoms
       do iDisp = 1, dispLen
@@ -103,24 +126,24 @@ module FF_Pair_LJ_Cut
         iAtom = disp(iDisp)%atmIndx
         atmType1 = curbox % AtomType(iAtom)
         do jAtom = 1, minIndx        
-          atmType1 = curbox % AtomType(jAtom)
-          ep = self%epsTable(atmType1,atmType2)
-          sig_sq = self%sigTable(atmType1,atmType2)          
-          rmin_ij = r_min_tab(atmType1,atmType2)          
+          atmType2 = curbox % AtomType(jAtom)
+          ep = self % epsTable(atmType1,atmType2)
+          sig_sq = self % sigTable(atmType1,atmType2)          
+          rmin_ij = self % rMinTable(atmType1,atmType2)          
 
           rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
           ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
           rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
-          if(rsq < rCutSq) then
+          if(rsq < self%rCutSq) then
             if(rsq < rmin_ij) then
             endif 
             LJ = (sig_sq/rsq)
             LJ = LJ * LJ * LJ
             LJ = ep * LJ * (LJ-1E0)              
             E_Diff = E_Diff + LJ
-            dETable(iAtom) = dETable(iAtom) + LJ
-            dETable(jAtom) = dETable(jAtom) + LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
           endif
 
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
@@ -134,103 +157,114 @@ module FF_Pair_LJ_Cut
             LJ = LJ * LJ * LJ
             LJ = ep * LJ * (LJ-1E0)              
             E_Diff = E_Diff - LJ
-            dETable(iAtom) = dETable(iAtom) - LJ
-            dETable(jAtom) = dETable(jAtom) - LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
           endif
         enddo
 
         do jAtom = maxIndx, curbox % nAtoms
-          atmType1 = curbox % AtomType(jAtom)
-          ep = self%epsTable(atmType1,atmType2)
-          sig_sq = self%sigTable(atmType1,atmType2)          
-          rmin_ij = r_min_tab(atmType1,atmType2)          
+          atmType2 = curbox % AtomType(jAtom)
+          ep = self % epsTable(atmType1, atmType2)
+          sig_sq = self % sigTable(atmType1, atmType2)          
+          rmin_ij = self % rMinTable(atmType1, atmType2)          
 
           rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
           ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
           rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
-          r = rx*rx + ry*ry + rz*rz
-          LJ = (sig_sq/r)
+          rsq = rx*rx + ry*ry + rz*rz
+          LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0)              
           E_Diff = E_Diff + LJ
-          dETable(iAtom) = dETable(iAtom) + LJ
-          dETable(jAtom) = dETable(jAtom) + LJ
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
 !          if(r .lt. rmin_ij) then
 !          endif 
 
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
-          r = rx*rx + ry*ry + rz*rz
-          LJ = (sig_sq/r)
+          rsq = rx*rx + ry*ry + rz*rz
+          LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0)              
           E_Diff = E_Diff - LJ
-          dETable(iAtom) = dETable(iAtom) - LJ
-          dETable(jAtom) = dETable(jAtom) - LJ
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
         enddo
 
       enddo
  
   end subroutine
   !=====================================================================
+  subroutine Shift_LJ_Cut_Multi(self, curbox, disp, E_Diff)
+    implicit none
+      class(Pair_LJ_Cut), intent(in) :: self
+      type(simBox), intent(inout) :: curbox
+      type(displacement), intent(in) :: disp(:)
+      real(dp), intent(inout) :: E_Diff
+   
+  end subroutine
+  !=====================================================================
   subroutine SwapIn_LJ_Cut(self, curbox, disp, E_Diff)
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
-      type(simBox), intent(in) :: curbox
+      class(Pair_LJ_Cut), intent(in) :: self
+      type(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
       integer :: iDisp, iAtom, jAtom, dispLen
+      integer :: atmType1, atmType2
       real(dp) :: rx, ry, rz, rsq
       real(dp) :: ep, sig_sq
       real(dp) :: LJ
       real(dp) :: rmin_ij      
 
-      dispLen = len(disp)
+      dispLen = size(disp)
       E_Diff = 0E0
-      dETable = 0E0
+      curbox%dETable = 0E0
 
 
       do iDisp = 1, dispLen
         iAtom = disp(iDisp)%atmIndx
         atmType1 = curbox % AtomType(iAtom)
         do jAtom = 1, curbox % nAtoms        
-          atmType1 = curbox % AtomType(jAtom)
+          atmType2 = curbox % AtomType(jAtom)
           ep = self%epsTable(atmType1,atmType2)
           sig_sq = self%sigTable(atmType1,atmType2)          
-          rmin_ij = r_min_tab(atmType1,atmType2)          
+          rmin_ij = self%rMinTable(atmType1,atmType2)          
 
           rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
           ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
           rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
           if(rsq < self%rCutSq) then
-            LJ = (sig_sq/r)
+            LJ = (sig_sq/rsq)
             LJ = LJ * LJ * LJ
             LJ = ep * LJ * (LJ-1E0)              
             E_Diff = E_Diff - LJ
-            dETable(iAtom) = dETable(iAtom) - LJ
-            dETable(jAtom) = dETable(jAtom) - LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
           endif
         enddo
       enddo
   end subroutine
   !=====================================================================
-  subroutine SwapOut_LJ_Cut(self)
+  subroutine SwapOut_LJ_Cut(self, curbox, atmIndx, E_Diff)
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
-      type(simBox), intent(in) :: curbox
+      class(Pair_LJ_Cut), intent(in) :: self
+      type(simBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
       integer :: iIndx, iAtom, jAtom, remLen
+      integer :: atmType1, atmType2
       real(dp) :: rx, ry, rz, rsq
       real(dp) :: ep, sig_sq
       real(dp) :: LJ
       real(dp) :: rmin_ij      
 
-      remLen = len(iRemove)
+      remLen = size(atmIndx)
       E_Diff = 0E0
-      dETable = 0E0
+      curbox%dETable = 0E0
 
 
       do iIndx = 1, remLen
@@ -238,23 +272,23 @@ module FF_Pair_LJ_Cut
         atmType1 = curbox % AtomType(iAtom)
         do jAtom = 1, curbox % nAtoms        
           atmType1 = curbox % AtomType(jAtom)
-          ep = self%epsTable(atmType1,atmType2)
-          sig_sq = self%sigTable(atmType1,atmType2)          
-          rmin_ij = r_min_tab(atmType1,atmType2)          
+          ep = self % epsTable(atmType1,atmType2)
+          sig_sq = self % sigTable(atmType1,atmType2)          
+          rmin_ij = self % rMinTable(atmType1,atmType2)          
 
           rx = curbox % atoms(1, iAtom) - curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom) - curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom) - curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
-          dETable(iAtom) = dETable(iAtom) + LJ
-          dETable(jAtom) = dETable(jAtom) + LJ
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
         enddo
       enddo
   end subroutine
   !=====================================================================
   subroutine SetPar_LJ_Cut(self, parIndex,  parVal)
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
+    class(Pair_LJ_Cut), intent(inout) :: self
     integer, intent(in) :: parIndex(:)
     real(dp), intent(in) :: parVal
 
@@ -265,7 +299,7 @@ module FF_Pair_LJ_Cut
       self%sigTable(parIndex(2), parIndex(3)) = parVal
     case(3) !rMin
       self%rMinTable(parIndex(2), parIndex(3)) = parVal
-    case(3) !rCut
+    case(4) !rCut
       self%rCut = parVal
       self%rCutSq = parVal * parVal
     case default

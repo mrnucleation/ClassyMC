@@ -112,6 +112,7 @@
       subroutine setCommand(line, lineStat)
       use Units
       use VarPrecision
+      use Common_MolDef
       use ParallelVar
       implicit none
       character(len=maxLineLen), intent(in) :: line      
@@ -139,6 +140,9 @@
 !        case("screenecho")
 !          read(line,*) dummy, command, logicValue
 !          screenEcho = logicValue
+        case("AtomTypes")
+          read(line,*) dummy, command, intValue
+          nAtomTypes = intValue
         case("rng_seed")
           read(line,*) dummy, command, intValue
           if(intValue < 0) then

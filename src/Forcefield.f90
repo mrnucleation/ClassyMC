@@ -1,7 +1,11 @@
 module ForceFieldTemplate
   use VarPrecision
+  use SimBoxDef, only: SimBox
+  use CoordinateTypes
+
   type, public :: forcefield
     contains
+      procedure, pass :: Constructor 
       procedure, pass :: DetailedECalc 
       procedure, pass :: ShiftECalc_Single
       procedure, pass :: ShiftECalc_Multi
@@ -11,40 +15,62 @@ module ForceFieldTemplate
   end type
 
   contains
+!=============================================================================+
+  subroutine Constructor(self)
+    use Common_MolDef, only: nMolTypes
+    implicit none
+    class(forcefield), intent(inout) :: self
 
-  subroutine DetailedECalc(self)
+
+  end subroutine
+!=============================================================================+
+  subroutine DetailedECalc(self, curbox, E_T)
     implicit none
     class(forcefield), intent(in) :: self
-  end subroutine
+    type(simBox), intent(inout) :: curbox
+    real(dp), intent(inout) :: E_T
 
-  subroutine ShiftECalc_Single(self)
+  end subroutine
+!=============================================================================+
+  subroutine ShiftECalc_Single(self, curbox, disp, E_Diff)
     implicit none
     class(forcefield), intent(in) :: self
+      type(simBox), intent(inout) :: curbox
+      type(displacement), intent(in) :: disp(:)
+      real(dp), intent(inOut) :: E_Diff
   end subroutine
-
-  subroutine ShiftECalc_Multi(self)
+!=============================================================================+
+  subroutine ShiftECalc_Multi(self, curbox, disp, E_Diff)
     implicit none
     class(forcefield), intent(in) :: self
+      type(simBox), intent(inout) :: curbox
+      type(displacement), intent(in) :: disp(:)
+      real(dp), intent(inout) :: E_Diff
   end subroutine
-
-
-  subroutine SwapInECalc(self)
+!=============================================================================+
+  subroutine SwapInECalc(self, curbox, disp, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
-  end subroutine
+      class(forcefield), intent(in) :: self
+      type(simBox), intent(inout) :: curbox
+      type(displacement), intent(in) :: disp(:)
+      real(dp), intent(inOut) :: E_Diff
 
-  subroutine SwapOutECalc(self)
+  end subroutine
+!=============================================================================+
+  subroutine SwapOutECalc(self, curbox, atmIndx, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
+      class(forcefield), intent(in) :: self
+      type(simBox), intent(inout) :: curbox
+      real(dp), intent(inOut) :: E_Diff
+      integer, intent(in) :: atmIndx(:)
   end subroutine
-
-
+!=============================================================================+
   subroutine SetParameter(self, parIndex,  parVal)
     implicit none
-    class(forcefield), intent(in) :: self
-    integer, intent(in) :: parIndex
+    class(forcefield), intent(inout) :: self
+    integer, intent(in) :: parIndex(:)
     real(dp), intent(in) :: parVal
   end subroutine
-
+!=============================================================================+
 
 end module

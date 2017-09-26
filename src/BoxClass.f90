@@ -1,6 +1,7 @@
 !==========================================================================================
 module SimBoxDef
 use VarPrecision
+!use ForcefieldData, only: ECalcArray
 !use NeighListDef
 
 use CoordinateTypes
@@ -17,10 +18,11 @@ use CoordinateTypes
     integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:)
 
-!    type(ForceFieldTemplate), pointer :: ECalc
+!    type(ECalcArray), pointer :: ECalc
 
 ! Constraint Class
     contains
+      procedure, pass :: Constructor
       procedure, pass :: LoadCoordinates
       procedure, pass :: UpdateEnergy
       procedure, pass :: UpdatePosition
@@ -30,6 +32,15 @@ use CoordinateTypes
 
 
   contains
+
+  !------------------------------------------------------------------------------
+  subroutine Constructor(self)
+    implicit none
+    class(SimBox), intent(inout) :: self
+!    character(len=*), intent(in) :: fileName
+
+
+  end subroutine
 
   !------------------------------------------------------------------------------
   subroutine LoadCoordinates(self, fileName)
