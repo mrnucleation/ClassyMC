@@ -12,6 +12,7 @@ module ForceFieldTemplate
       procedure, pass :: SwapInECalc
       procedure, pass :: SwapOutECalc
       procedure, pass :: SetParameter
+      procedure, pass :: ReadParFile
   end type
 
   contains
@@ -70,6 +71,12 @@ module ForceFieldTemplate
     class(forcefield), intent(inout) :: self
     integer, intent(in) :: parIndex(:)
     real(dp), intent(in) :: parVal
+  end subroutine
+!=============================================================================+
+  subroutine ReadParFile(self, fileName)
+    implicit none
+    class(forcefield), intent(inout) :: self
+    character(len=*), intent(in) :: fileName
   end subroutine
 !=============================================================================+
 

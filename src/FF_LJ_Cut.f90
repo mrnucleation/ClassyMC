@@ -17,6 +17,7 @@ module FF_Pair_LJ_Cut
       procedure, pass :: SwapInECalc => SwapIn_LJ_Cut
       procedure, pass :: SwapOutECalc => SwapOut_LJ_Cut
       procedure, pass :: SetParameter => SetPar_LJ_Cut
+      procedure, pass :: ReadParFile => ReadPar_LJ_Cut
   end type
 
   contains
@@ -306,6 +307,14 @@ module FF_Pair_LJ_Cut
       write(*,*) "ERROR! An invalid paramter set was given to the LJ-Cut pair function."
       stop
     end select
+  end subroutine
+
+  !=====================================================================
+  subroutine ReadPar_LJ_Cut(self, fileName)
+    implicit none
+    class(Pair_LJ_Cut), intent(inout) :: self
+    character(len=*), intent(in) :: fileName
+    write(*,*) "LJ CUT SAYING HELLO!!!"
   end subroutine
   !=====================================================================
 
