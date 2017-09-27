@@ -1,8 +1,8 @@
 #======================================
   set rng_seed -1
-  create boxes 2
-  create EnergyCalculators 2
+  set AtomTypes 2
+  create boxes 1
+  create EnergyCalculators 1
 #======================================
   forcefield 1 fieldtype LJ_Cut
-  forcefield 2 fieldtype LJ_Cut
 #======================================

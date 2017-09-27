@@ -1,10 +1,10 @@
-!=============================================================
+!================================================================================
 module Input_Forcefield
   use VarPrecision
   use Input_Format
   use ForcefieldData
   contains
-!=============================================================
+!================================================================================
   subroutine Script_Forcefield(line, lineStat)
     implicit none
     character(len=*), intent(in) :: line
@@ -38,8 +38,9 @@ module Input_Forcefield
 
   end subroutine
 
-!=============================================================
+!================================================================================
   subroutine fieldType(line, lineStat)
+    use ForcefieldData, only: nForceFields
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use ParallelVar, only: nout
     implicit none
@@ -59,6 +60,13 @@ module Input_Forcefield
       lineStat  = 0
       read(line, *) dummy, FFNum, command, FF_Type
 
+      !Safety check to ensure that a number
+      if(FFNum > nForceFields) then
+        write(*,*) "ERROR! An invalid forcefield reference number has been given"
+        write(*,"(A,I2,A)") "A Forcefield with index number", FFNum, " does not exist!"
+        stop
+      endif
+
       !Safety check to ensure a forcefield type has not already been assigned
       if( allocated(EnergyCalculator(FFNum) % Method) ) then
         write(*,*) "ERROR! Forcefield has already been intialized!"
@@ -71,14 +79,13 @@ module Input_Forcefield
         case("lj_cut")
           allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
           write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as LJ_Cut style"
+
         case default
           lineStat = -1
+
       end select
 
-
   end subroutine
-
-
-
+!================================================================================
 end module
-!=============================================================
+!================================================================================

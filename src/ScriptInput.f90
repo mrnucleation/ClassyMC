@@ -51,7 +51,7 @@
           cycle
         endif
         lineStat = 0        
-        write(*,*) trim(adjustl(lineStore(iLine)))
+!        write(*,*) trim(adjustl(lineStore(iLine)))
         call getCommand(lineStore(iLine), command, lineStat)
         call LowerCaseLine(command)
 !         If line is empty or commented, move to the next line.         
@@ -134,7 +134,7 @@
 !        case("screenecho")
 !          read(line,*) dummy, command, logicValue
 !          screenEcho = logicValue
-        case("AtomTypes")
+        case("atomtypes")
           read(line,*) dummy, command, intValue
           nAtomTypes = intValue
         case("rng_seed")
@@ -189,10 +189,7 @@
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
            endif
-!           do i = 1, intValue
-!             BoxArray(i)%temperature = i
-!             write(*,*) BoxArray(i)%temperature
-!           enddo
+
 
         case("energycalculators")
            read(line,*) dummy, command, intValue

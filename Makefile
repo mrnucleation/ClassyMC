@@ -139,6 +139,7 @@ removeObjects:
 
 removeExec:
 		@rm -f $(CUR_DIR)/classyMC
+		@rm -f $(CUR_DIR)/classyMC_debug
 		@rm -f $(CUR_DIR)/classyMC.exe
 
 
@@ -154,7 +155,8 @@ $(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/ScriptInput.o
 $(OBJ)/Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o 
 
 $(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Input_Forcefield.o
-$(OBJ)/Input_Forcefield.o: ${OBJ}/Input_Format.o
+$(OBJ)/Input_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Forcefield.o ${OBJ}/FF_LJ_Cut.o
+
 
 
 

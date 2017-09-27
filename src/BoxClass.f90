@@ -26,6 +26,7 @@ use CoordinateTypes
       procedure, pass :: LoadCoordinates
       procedure, pass :: UpdateEnergy
       procedure, pass :: UpdatePosition
+      procedure, pass :: DummyCoords
 !      procedure, pass :: CreateNeighList
 
   end type
@@ -77,6 +78,25 @@ use CoordinateTypes
     self % atoms(2, dispIndx) = disp(iDisp)%y_new
     self % atoms(3, dispIndx) = disp(iDisp)%z_new
   enddo
+
+  end subroutine
+
+  !------------------------------------------------------------------------------
+  subroutine DummyCoords(self)
+  use CoordinateTypes
+  implicit none
+  class(SimBox), intent(inout) :: self
+
+  self % nAtoms = 2
+
+  self % atoms(1, 1) = 0.0
+  self % atoms(2, 1) = 0.0
+  self % atoms(3, 1) = 0.0
+
+  self % atoms(1, 2) = 2.0**(1.0/6.0)
+  self % atoms(2, 2) = 0.0
+  self % atoms(3, 2) = 0.0
+
 
   end subroutine
   !------------------------------------------------------------------------------

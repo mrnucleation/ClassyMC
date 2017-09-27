@@ -32,9 +32,11 @@ module FF_Pair_LJ_Cut
     allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
-    self%epsTable = 0E0_dp
-    self%sigTable = 0E0_dp
-    self%rMinTable = 0E0_dp
+    self%epsTable = 4E0_dp
+    self%sigTable = 1E0_dp
+    self%rMinTable = 1E0_dp
+    self%rCut = 5E0_dp
+    self%rCutSq = 5E0_dp**2
 
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
@@ -56,7 +58,7 @@ module FF_Pair_LJ_Cut
 
       E_LJ = 0E0
       curbox%ETable = 0E0
-      do iAtom = 1, curbox % nAtoms-1
+      do iAtom = 1, curbox%nAtoms-1
         atmType1 = curbox % AtomType(iAtom)
         do jAtom = iAtom+1, curbox%nAtoms
           atmType2 = curbox % AtomType(jAtom)
@@ -64,9 +66,11 @@ module FF_Pair_LJ_Cut
           sig_sq = self % sigTable(atmType1,atmType2)          
           rmin_ij = self % rMinTable(atmType1,atmType2)          
 
+          write(*,*) ep, sig_sq, rmin_ij
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
+          write(*,*) ep, sig_sq, rmin_ij
           rsq = rx**2 + ry**2 + rz**2
           if(rsq < self%rCutSq) then
             if(rsq < rmin_ij) then
