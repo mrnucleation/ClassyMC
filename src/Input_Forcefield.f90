@@ -60,8 +60,8 @@ module Input_Forcefield
       lineStat  = 0
       read(line, *) dummy, FFNum, command, FF_Type
 
-      !Safety check to ensure that a number
-      if(FFNum > nForceFields) then
+      !Safety check to ensure that the index number is within proper bounds
+      if( (FFNum > nForceFields) .or. (FFNum < 0)) then
         write(*,*) "ERROR! An invalid forcefield reference number has been given"
         write(*,"(A,I2,A)") "A Forcefield with index number", FFNum, " does not exist!"
         stop

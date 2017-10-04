@@ -53,6 +53,8 @@
         lineStat = 0        
 !        write(*,*) trim(adjustl(lineStore(iLine)))
         call getCommand(lineStore(iLine), command, lineStat)
+!        call GetXCommand(lineStore(iLine), dummy, 2, lineStat)
+!        write(*,*) dummy, command
         call LowerCaseLine(command)
 !         If line is empty or commented, move to the next line.         
         if(lineStat .eq. 1) then
@@ -65,7 +67,7 @@
         case("create")
            call createCommand( lineStore(iLine), lineStat )
         case("forcefield")
-          call Script_Forcefield(lineStore(iLine), lineStat)
+          call Script_Forcefield( lineStore(iLine), lineStat )
         case default
           write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
           write(*,*) lineStore(iLine)
@@ -190,7 +192,6 @@
              stop
            endif
 
-
         case("energycalculators")
            read(line,*) dummy, command, intValue
            nForceFields = intValue
@@ -201,6 +202,38 @@
              stop
            endif
  
+        case default
+          lineStat = -1
+      end select
+
+      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+     
+      end subroutine   
+!========================================================            
+      subroutine modifyCommand(line, lineStat)
+      use BoxData, only: BoxArray
+      use ForcefieldData, only: EnergyCalculator, nForceFields
+      use VarPrecision
+      use Units
+      implicit none
+      character(len=maxLineLen), intent(in) :: line      
+      integer, intent(out) :: lineStat
+
+      character(len=30) :: dummy, command
+      logical :: logicValue
+      integer :: i
+      integer :: intValue, AllocateStat
+      real(dp) :: realValue
+      
+
+      lineStat  = 0
+
+      read(line,*) dummy, command
+      call LowerCaseLine(command)
+      select case(trim(adjustl(command)))
+        case("box")
+           read(line,*) dummy, command, intValue
+           call BoxArray(intValue)%IOProcess(line, lineStat)
         case default
           lineStat = -1
       end select

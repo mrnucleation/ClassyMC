@@ -134,6 +134,56 @@
      
       end subroutine
 !========================================================            
+!     This subrotuine searches a given input line for the first command. 
+      subroutine GetXCommand(line, command, comNum, lineStat)
+      use VarPrecision
+      implicit none
+      integer, intent(in) :: comNum
+      character(len=*), intent(in) :: line
+      character(len=25), intent(out) :: command
+      
+      integer, intent(out) :: lineStat
+      integer :: i, sizeLine, lowerLim, upperLim
+      integer :: curNum
+
+
+      sizeLine = len( line )
+      lineStat = 0
+      i = 1
+      curNum = 0
+!      Find the first non-blank character in the string
+      do while(curNum < comNum)
+        do while(i .le. sizeLine)
+          if(ichar(line(i:i)) .ne. ichar(' ')) then
+            exit
+          endif
+          i = i + 1
+        enddo
+!        If no characters are found the line is empty, 
+        if(i .ge. sizeLine) then
+          lineStat = 1
+          return
+        endif
+        lowerLim = i
+      
+        do while(i .le. sizeLine)
+          if(line(i:i) .eq. " ") then
+            exit
+          endif
+          i = i + 1
+        enddo
+        if(i .ge. sizeLine) then
+          lineStat = 1
+          return
+        endif
+        upperLim = i
+        curNum = curNum + 1
+      enddo
+
+      command = line(lowerLim:upperLim)
+     
+      end subroutine
+!========================================================            
 !     This subrotuine searches a given input line for comments 
       subroutine CleanLine(inputline, cleanedLine)
       use VarPrecision

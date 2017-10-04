@@ -1,6 +1,7 @@
 module DistanceCriteria
   use VarPrecision
   type, public, extends(constraint) :: distcriteria
+    integer :: neiList = -1
     contains
       procedure, pass :: CheckInitialConstraint 
       procedure, pass :: ShiftCheck

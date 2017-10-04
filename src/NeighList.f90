@@ -1,10 +1,8 @@
 module NeighListDef
 use VarPrecision
 use CoordinateTypes
-use Constants, only: pi
 
   type, public :: NeighList
-      
       integer, allocatable :: list(:,:)
       integer, allocatable :: nNeigh(:)
       integer :: maxNei
@@ -14,40 +12,36 @@ use Constants, only: pi
       procedure, pass :: InitializeList
   end type
 
-
+!===================================================================================
   contains
-
-  !------------------------------------------------------------------------------
+!===================================================================================
   subroutine Constructor(self, nAtoms, rCut)
-  implicit none
-  class(NeighList), intent(in) :: self
-  integer, intent(in) :: nAtoms
-  real(dp), intent(in) :: rCut
-  real(dp), parameter :: atomRadius = 1.0  !Used to estimate an approximate volume of 
-  integer :: AllocateStatus
+    implicit none
+    class(NeighList), intent(inout) :: self
+    integer, intent(in) :: nAtoms
+    real(dp), intent(in) :: rCut
+    real(dp), parameter :: atomRadius = 1.0  !Used to estimate an approximate volume of 
+    integer :: AllocateStatus
 
-  self % rCut = rCut
-  self % rCutSq = rCut * rCut
+    self % rCut = rCut
+    self % rCutSq = rCut * rCut
 
-  self% maxNei = ceiling(atomRadius**3/rCut**3)
+    self% maxNei = ceiling(atomRadius**3/rCut**3)
 
-  allocate(self%list(1:nAtoms, 1:maxNei), status=AllocateStatus)
-  allocate(self%nNei(1:nAtoms), status=AllocateStatus)
+    allocate(self%list(1:nAtoms, 1:self%maxNei), stat=AllocateStatus)
+    allocate(self%nNeigh(1:nAtoms), stat=AllocateStatus)
 
-  self%list = 0
+    self%list = 0
 
-  IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
   end subroutine
-  !------------------------------------------------------------------------------
+!===================================================================================
   subroutine InitializeList(self)
   implicit none
-  class(NeighList), intent(in) :: self
-  real(dp), intent(in) :: E_Diff
-
-    self % E_Total = self % E_Total + E_Diff
+  class(NeighList), intent(inout) :: self
 
   end subroutine
-  !------------------------------------------------------------------------------
-
+!===================================================================================
 end module
+!===================================================================================
