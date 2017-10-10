@@ -77,6 +77,7 @@ use VarPrecision
     call EnergyCalculator(CalcIndex) % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
     write(*,*) E_Diff    
 
+    accept = .true.
     !Accept/Reject
     if(accept) then
       self % accpt = self % atmps + 1E0_dp

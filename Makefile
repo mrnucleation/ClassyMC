@@ -51,6 +51,8 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_BoxData.f90\
         		$(SRC)/Common_ECalc.f90\
         		$(SRC)/Common_MolDef.f90\
+        		$(SRC)/ConstraintClass.f90\
+        		$(SRC)/DistanceCriteria.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/BoxClass.f90\
         		$(SRC)/Forcefield.f90\

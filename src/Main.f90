@@ -36,6 +36,7 @@
     call EnergyCalculator(BoxArray(1)%ECalcer)%Method%DetailedECalc( BoxArray(1), E_T)
 
     call MCMover % FullMove(BoxArray(1))
+    call EnergyCalculator(BoxArray(1)%ECalcer)%Method%DetailedECalc( BoxArray(1), E_T)
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
     write(nout,*) "Finished!"

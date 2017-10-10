@@ -1,36 +1,44 @@
+!====================================================================
 module DistanceCriteria
   use VarPrecision
+  use ConstraintTemplate, only: constraint
+
   type, public, extends(constraint) :: distcriteria
     integer :: neiList = -1
     contains
-      procedure, pass :: CheckInitialConstraint 
-      procedure, pass :: ShiftCheck
-      procedure, pass :: SwapInCheck
-      procedure, pass :: SwapOutCheck
+      procedure, pass :: CheckInitialConstraint => DistCrit_CheckInitialConstraint
+      procedure, pass :: ShiftCheck => DistCrit_ShiftCheck
+      procedure, pass :: SwapInCheck => DistCrit_SwapInCheck
+      procedure, pass :: SwapOutCheck => DistCrit_SwapOutCheck
   end type
-
+!=====================================================================
   contains
-
-  subroutine CheckInitialConstraint(self)
+!=====================================================================
+  subroutine DistCrit_CheckInitialConstraint(self)
     implicit none
-    class(constraint), intent(in) :: self
+    class(distcriteria), intent(in) :: self
   end subroutine
-
-  subroutine ShiftCheck(self)
+!=====================================================================
+  subroutine DistCrit_ShiftCheck(self, disp, rejMove)
+    use CoordinateTypes, only: Displacement
     implicit none
-    class(constraint), intent(in) :: self
-  end subroutine
+    class(distcriteria), intent(in) :: self
+    type(Displacement), intent(in) :: disp(:)
+    logical, intent(out) :: rejMove
 
-  subroutine SwapInCheck(self)
+    write(*,*) "Here in my Dispy!"
+    rejMove = .false.
+  end subroutine
+!=====================================================================
+  subroutine DistCrit_SwapInCheck(self)
     implicit none
-    class(constraint), intent(in) :: self
+    class(distcriteria), intent(in) :: self
   end subroutine
-
-  subroutine SwapOutCheck(self)
+!=====================================================================
+  subroutine DistCrit_SwapOutCheck(self)
     implicit none
-    class(constraint), intent(in) :: self
+    class(distcriteria), intent(in) :: self
   end subroutine
-
-
-
+!=====================================================================
 end module
+!=====================================================================
