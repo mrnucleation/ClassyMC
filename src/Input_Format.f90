@@ -12,7 +12,7 @@
       integer, allocatable, intent(inout) :: lineNumber(:)
 
       character(len=maxLineLen),allocatable :: rawLines(:)
-      character(len=25) :: command
+      character(len=30) :: command
       integer, intent(out) :: nLines
       integer :: i,iLine, nRawLines, lineStat, AllocateStat, InOutStat
 
@@ -93,7 +93,7 @@
       use VarPrecision
       implicit none
       character(len=*), intent(in) :: line
-      character(len=25), intent(out) :: command
+      character(len=30), intent(out) :: command
       integer, intent(out) :: lineStat
       integer :: i, sizeLine, lowerLim, upperLim
 
@@ -140,7 +140,7 @@
       implicit none
       integer, intent(in) :: comNum
       character(len=*), intent(in) :: line
-      character(len=25), intent(out) :: command
+      character(len=30), intent(out) :: command
       
       integer, intent(out) :: lineStat
       integer :: i, sizeLine, lowerLim, upperLim

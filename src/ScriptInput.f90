@@ -17,7 +17,7 @@
       integer, allocatable :: lineNumber(:), ffLineNumber(:)
       character(len=maxLineLen), allocatable :: lineStore(:)
       character(len=maxLineLen), allocatable :: forcefieldStore(:)
-      character(len=25) :: command, command2, dummy
+      character(len=30) :: command, command2, dummy
       character(len=50) :: fileName
       character(len=50) :: forcefieldFile
       
@@ -66,11 +66,13 @@
            call setCommand( lineStore(iLine), lineStat )
         case("create")
            call createCommand( lineStore(iLine), lineStat )
+        case("modify")
+           call modifyCommand( lineStore(iLine), lineStat )
         case("forcefield")
           call Script_Forcefield( lineStore(iLine), lineStat )
         case default
           write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
-          write(*,*) lineStore(iLine)
+          write(*,*) trim(adjustl(lineStore(iLine)))
           stop 
         end select
 
@@ -78,7 +80,7 @@
         if(lineStat .eq. -1) then
           write(*,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
           write(*, "(A)") "could not be understood. Please check command for accuracy and try again."
-          write(*,*) lineStore(iLine)
+          write(*,*) trim(adjustl(lineStore(iLine)))
           stop 
         endif
         
@@ -219,7 +221,7 @@
       character(len=maxLineLen), intent(in) :: line      
       integer, intent(out) :: lineStat
 
-      character(len=30) :: dummy, command
+      character(len=30) :: dummy, command, command2
       logical :: logicValue
       integer :: i
       integer :: intValue, AllocateStat
@@ -228,14 +230,17 @@
 
       lineStat  = 0
 
-      read(line,*) dummy, command
+!      read(line,*) dummy, command
+      call GetXCommand(line, command, 2, lineStat)
       call LowerCaseLine(command)
-      select case(trim(adjustl(command)))
+      select case(adjustl(trim(command)))
         case("box")
-           read(line,*) dummy, command, intValue
+           call GetXCommand(line, command2, 3, lineStat)
+           read(command2, *) intValue
+
            call BoxArray(intValue)%IOProcess(line, lineStat)
         case default
-          lineStat = -1
+           lineStat = -1
       end select
 
       IF (AllocateStat /= 0) STOP "*** Not enough memory ***"

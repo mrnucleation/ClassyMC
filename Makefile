@@ -15,7 +15,7 @@ OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 #DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-DETAILEDDEBUG:= -check all -traceback -g -fpe0
+DETAILEDDEBUG:= -check all -traceback -g -fpe0 -Og
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -heap-arrays 1024
 #DEBUGFLAGS += $(DETAILEDDEBUG)
@@ -54,7 +54,10 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/BoxClass.f90\
         		$(SRC)/Forcefield.f90\
+        		$(SRC)/RandomNew.f90\
         		$(SRC)/FF_LJ_Cut.f90\
+        		$(SRC)/MoveClass.f90\
+        		$(SRC)/AtomTranslation.f90\
         		$(SRC)/VariablePrecision.f90\
  	        	$(SRC)/ScriptInput.f90\
  	        	$(SRC)/Input_Format.f90\
@@ -150,10 +153,12 @@ removeExec:
 $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Common_BoxData.o: $(OBJ)/BoxClass.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Forcefield.o $(OBJ)/Common.o
-$(OBJ)/BoxClass.o: $(OBJ)/Common.o $(OBJ)/NeighList.o
+$(OBJ)/BoxClass.o: $(OBJ)/Common.o $(OBJ)/NeighList.o $(OBJ)/Input_Format.o
 
-$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/ScriptInput.o
+$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/ScriptInput.o $(OBJ)/AtomTranslation.o $(OBJ)/RandomNew.o
 $(OBJ)/Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o 
+
+$(OBJ)/AtomTranslation.o: $(OBJ)/Common.o  $(OBJ)/BoxClass.o $(OBJ)/RandomNew.o $(OBJ)/MoveClass.o
 
 $(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Input_Forcefield.o
 $(OBJ)/Input_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Forcefield.o ${OBJ}/FF_LJ_Cut.o

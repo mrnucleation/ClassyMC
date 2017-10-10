@@ -18,8 +18,9 @@ use CoordinateTypes
     integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:)
 
+    integer :: ECalcer = -1
+
     type(NeighList), allocatable :: NeighList(:)
-!    type(ECalcArray), pointer :: ECalc
 
 ! Constraint Class
     contains
@@ -73,55 +74,65 @@ use CoordinateTypes
 
   !==========================================================================================
   subroutine UpdatePosition(self, disp)
-  use CoordinateTypes
-  implicit none
-  class(SimBox), intent(inout) :: self
-  type(Displacement), intent(in) :: disp(:)
-  integer :: iDisp, dispLen, dispIndx
+    use CoordinateTypes
+    implicit none
+    class(SimBox), intent(inout) :: self
+    type(Displacement), intent(in) :: disp(:)
+    integer :: iDisp, dispLen, dispIndx
 
-  dispLen = size(disp)
+    dispLen = size(disp)
 
-  do iDisp = 1, dispLen
-    dispIndx = disp(iDisp) % atmIndx
-    self % atoms(1, dispIndx) = disp(iDisp)%x_new
-    self % atoms(2, dispIndx) = disp(iDisp)%y_new
-    self % atoms(3, dispIndx) = disp(iDisp)%z_new
-  enddo
+    do iDisp = 1, dispLen
+      dispIndx = disp(iDisp) % atmIndx
+      self % atoms(1, dispIndx) = disp(iDisp)%x_new
+      self % atoms(2, dispIndx) = disp(iDisp)%y_new
+      self % atoms(3, dispIndx) = disp(iDisp)%z_new
+    enddo
 
   end subroutine
-
   !==========================================================================================
   subroutine DummyCoords(self)
-  use CoordinateTypes
-  implicit none
-  class(SimBox), intent(inout) :: self
+    use CoordinateTypes
+    implicit none
+    class(SimBox), intent(inout) :: self
 
-  self % nAtoms = 2
+    self % nAtoms = 2
 
-  self % atoms(1, 1) = 0.0
-  self % atoms(2, 1) = 0.0
-  self % atoms(3, 1) = 0.0
-
-  self % atoms(1, 2) = 2.0**(1.0/6.0)
-  self % atoms(2, 2) = 0.0
-  self % atoms(3, 2) = 0.0
-
+    self % atoms(1, 1) = 0.0
+    self % atoms(2, 1) = 0.0
+    self % atoms(3, 1) = 0.0
+ 
+    self % atoms(1, 2) = 2.0**(1.0/6.0)
+    self % atoms(2, 2) = 0.0
+    self % atoms(3, 2) = 0.0
 
   end subroutine
 
   !==========================================================================================
   subroutine IOProcess(self, line, lineStat)
     use CoordinateTypes
-    use Input_Format, only: maxLineLen
+    use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     implicit none
 
     class(SimBox), intent(inout) :: self
+    integer, intent(out) :: lineStat
     character(len=maxLineLen), intent(in) :: line   
 
-    integer, intent(out) :: lineStat
+    integer :: intVal
+    character(len=30) :: command, val
 
     lineStat = 0
-
+    call GetXCommand(line, command, 4, lineStat)
+    call LowerCaseLine(command)
+    write(*,*) command
+    select case( trim(adjustl(command)) )
+      case("energycalc")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self % ECalcer = intVal
+      case default
+        lineStat = -1
+    end select
   end subroutine
   !==========================================================================================
 

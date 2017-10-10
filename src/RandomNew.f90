@@ -1,18 +1,22 @@
 !=======================================================
-      real(dp) function grnd()
+      module RandomGen
       use VarPrecision
-      implicit none
-      real(dp) :: r
 
-      call RANDOM_NUMBER(r)
-      grnd = r
+!=======================================================
+      contains
+!=======================================================
+      real(dp) function grnd()
+        implicit none
+        real(dp) :: r
 
-     
+        call RANDOM_NUMBER(r)
+        grnd = r
+       
       end function
 !=======================================================
       subroutine sgrnd(seed)
       implicit none
-      integer,intent(inout) :: seed
+      integer, intent(in) :: seed
       integer :: i,n
       integer, allocatable :: tempSeed(:)
       
@@ -25,13 +29,12 @@
       deallocate(tempSeed)
      
       end subroutine      
-
 !=======================================================
       real(dp) function Gaussian() result(num)
       use Constants
       use VarPrecision
       implicit none
-      real(dp) :: y1, w, x1, x2, grnd
+      real(dp) :: y1, w, x1, x2
 
       x1 = grnd()
       x2 = grnd()
@@ -40,3 +43,4 @@
 
       end function
 !=========================================================
+      end module

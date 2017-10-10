@@ -108,8 +108,8 @@ module FF_Pair_LJ_Cut
       dispLen = size(disp)
       E_Diff = 0E0
       curbox%dETable = 0E0
-      maxIndx = 0
-      minIndx = curbox % nAtoms
+      minIndx = 0
+      maxIndx = curbox % nAtoms
       do iDisp = 1, dispLen
         if(disp(iDisp)% atmindx > maxIndx) then
           maxIndx = disp(iDisp)% atmindx
@@ -119,14 +119,14 @@ module FF_Pair_LJ_Cut
         endif
       enddo      
 
-      if(minIndx .eq. 1) then
-        minIndx = 0
+      if(minIndx .eq. 0) then
+        minIndx = 1
       endif
       if(maxIndx .eq. curbox % nAtoms) then
         maxIndx = curbox % nAtoms + 1
       endif
 
-
+      write(*,*) "Here", disp%atmIndx, maxIndx, minIndx
       do iDisp = 1, dispLen
         iAtom = disp(iDisp)%atmIndx
         atmType1 = curbox % AtomType(iAtom)
@@ -141,8 +141,8 @@ module FF_Pair_LJ_Cut
           rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
           if(rsq < self%rCutSq) then
-            if(rsq < rmin_ij) then
-            endif 
+!            if(rsq < rmin_ij) then
+!            endif 
             LJ = (sig_sq/rsq)
             LJ = LJ * LJ * LJ
             LJ = ep * LJ * (LJ-1E0)              
@@ -156,8 +156,8 @@ module FF_Pair_LJ_Cut
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
           if(rsq < self%rCutSq) then
-            if(rsq < rmin_ij) then
-            endif 
+!            if(rsq < rmin_ij) then
+!            endif 
             LJ = (sig_sq/rsq)
             LJ = LJ * LJ * LJ
             LJ = ep * LJ * (LJ-1E0)              
@@ -177,27 +177,31 @@ module FF_Pair_LJ_Cut
           ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
           rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
-          LJ = (sig_sq/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0)              
-          E_Diff = E_Diff + LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
-!          if(r .lt. rmin_ij) then
-!          endif 
+          if(rsq < self%rCutSq) then
+!           if(r .lt. rmin_ij) then
+!           endif 
+            LJ = (sig_sq/rsq)
+            LJ = LJ * LJ * LJ
+            LJ = ep * LJ * (LJ-1E0)              
+            E_Diff = E_Diff + LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
+          endif
+
 
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
-          LJ = (sig_sq/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0)              
-          E_Diff = E_Diff - LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
+          if(rsq < self%rCutSq) then
+            LJ = (sig_sq/rsq)
+            LJ = LJ * LJ * LJ
+            LJ = ep * LJ * (LJ-1E0)              
+            E_Diff = E_Diff - LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
+          endif
         enddo
-
       enddo
  
   end subroutine

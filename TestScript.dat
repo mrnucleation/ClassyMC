@@ -3,6 +3,7 @@
   set AtomTypes 2
   create boxes 1
   create EnergyCalculators 1
+  modify box 1 energycalc 1
 #======================================
   forcefield 1 fieldtype LJ_Cut
 #======================================
