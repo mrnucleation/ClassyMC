@@ -43,7 +43,7 @@ module DistanceCriteria
     ry = disp(1)%y_new - trialBox%atoms(2, indx2)
     rz = disp(1)%z_new - trialBox%atoms(3, indx2)
     rsq = rx*rx + ry*ry + rz*rz
-    if(rsq > 4.0E0_dp**2) then
+    if(rsq > 2.0E0_dp**2) then
       accept = .false.
     endif
 
