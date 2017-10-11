@@ -125,7 +125,7 @@ module FF_Pair_LJ_Cut
         maxIndx = curbox % nAtoms + 1
       endif
 
-      write(*,*) "Here", disp%atmIndx, maxIndx, minIndx
+!      write(*,*) "Here", disp%atmIndx, maxIndx, minIndx
       do iDisp = 1, dispLen
         iAtom = disp(iDisp)%atmIndx
         atmType1 = curbox % AtomType(iAtom)
@@ -139,7 +139,7 @@ module FF_Pair_LJ_Cut
           ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
           rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
-          write(*,*) rsq
+!          write(*,*) rsq
           if(rsq < self%rCutSq) then
 !            if(rsq < rmin_ij) then
 !            endif 
@@ -155,7 +155,7 @@ module FF_Pair_LJ_Cut
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
           rsq = rx*rx + ry*ry + rz*rz
-          write(*,*) rsq
+!          write(*,*) rsq
           if(rsq < self%rCutSq) then
 !            if(rsq < rmin_ij) then
 !            endif 

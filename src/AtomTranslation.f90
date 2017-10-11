@@ -36,12 +36,13 @@ use VarPrecision
 !===============================================
   subroutine AtomTrans_FullMove(self, trialBox) 
     use ForcefieldData, only: EnergyCalculator
+    use BoxData, only: Constrain
     use RandomGen, only: grnd
     implicit none
     class(AtomMolTranslate), intent(inout) :: self
     type(SimBox), intent(inout) :: trialBox
     logical :: accept
-    integer :: nMove
+    integer :: nMove, iConstrain
     integer :: CalcIndex
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff
@@ -62,20 +63,23 @@ use VarPrecision
     self%disp(1)%y_new = trialBox%atoms(2, nMove) + dy
     self%disp(1)%z_new = trialBox%atoms(3, nMove) + dz
 
-    write(*,*) self%disp(1)%x_new, self%disp(1)%y_new, self%disp(1)%z_new
-    write(*,*) trialBox%atoms(1, nMove), trialBox%atoms(2, nMove), trialBox%atoms(3, nMove)
+!    write(*,*) self%disp(1)%x_new, self%disp(1)%y_new, self%disp(1)%z_new
+!    write(*,*) trialBox%atoms(1, nMove), trialBox%atoms(2, nMove), trialBox%atoms(3, nMove)
 
 
     !Check Constraint
-!    if(.not. accept) then
-!      return
-!    endif
+    do iConstrain = 1, size(Constrain)
+      call Constrain(iConstrain) % method % ShiftCheck( trialBox, self%disp(1:1), accept )
+    enddo
+    if(.not. accept) then
+      return
+    endif
 
 
     !Energy Calculation
     CalcIndex = trialBox % ECalcer
     call EnergyCalculator(CalcIndex) % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
-    write(*,*) E_Diff    
+!    write(*,*) E_Diff    
 
     accept = .true.
     !Accept/Reject

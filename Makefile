@@ -153,14 +153,16 @@ removeExec:
 #        Dependencies
 # ====================================
 $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
-$(OBJ)/Common_BoxData.o: $(OBJ)/BoxClass.o
+$(OBJ)/Common_BoxData.o: $(OBJ)/BoxClass.o $(OBJ)/ConstraintClass.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Forcefield.o $(OBJ)/Common.o
-$(OBJ)/BoxClass.o: $(OBJ)/Common.o $(OBJ)/NeighList.o $(OBJ)/Input_Format.o
+$(OBJ)/BoxClass.o: $(OBJ)/Common.o $(OBJ)/NeighList.o $(OBJ)/Input_Format.o 
+
+$(OBJ)/ConstraintClass.o: ${OBJ}/BoxClass.o 
 
 $(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/ScriptInput.o $(OBJ)/AtomTranslation.o $(OBJ)/RandomNew.o
 $(OBJ)/Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o 
 
-$(OBJ)/AtomTranslation.o: $(OBJ)/Common.o  $(OBJ)/BoxClass.o $(OBJ)/RandomNew.o $(OBJ)/MoveClass.o
+$(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/BoxClass.o $(OBJ)/RandomNew.o $(OBJ)/MoveClass.o $(OBJ)/ConstraintClass.o
 
 $(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Input_Forcefield.o
 $(OBJ)/Input_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Forcefield.o ${OBJ}/FF_LJ_Cut.o

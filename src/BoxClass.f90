@@ -1,10 +1,11 @@
 !==========================================================================================
 module SimBoxDef
-use NeighListDef, only: NeighList
-use VarPrecision
-!use ForcefieldData, only: ECalcArray
-!use NeighListDef
-use CoordinateTypes
+  use NeighListDef, only: NeighList
+  use VarPrecision
+!  use ForcefieldData, only: ECalcArray
+!  use NeighListDef
+  use CoordinateTypes, only: Displacement
+!  use ConstraintTemplate, only: constrainArray
 
   type, public :: SimBox
     integer :: nTotal, nAtoms
@@ -19,10 +20,8 @@ use CoordinateTypes
     integer, allocatable :: MolIndx(:)
 
     integer :: ECalcer = -1
-
     type(NeighList), allocatable :: NeighList(:)
 
-! Constraint Class
     contains
       procedure, pass :: Constructor
       procedure, pass :: LoadCoordinates
@@ -30,14 +29,11 @@ use CoordinateTypes
       procedure, pass :: UpdatePosition
       procedure, pass :: DummyCoords
       procedure, pass :: IOProcess
-!      procedure, pass :: CreateNeighList
-
   end type
 
-
+!==========================================================================================
   contains
-
-  !==========================================================================================
+!==========================================================================================
   subroutine Constructor(self)
     implicit none
     class(SimBox), intent(inout) :: self
@@ -53,7 +49,7 @@ use CoordinateTypes
 
   end subroutine
 
-  !==========================================================================================
+!==========================================================================================
   subroutine LoadCoordinates(self, fileName)
   implicit none
   class(SimBox), intent(inout) :: self
@@ -61,7 +57,7 @@ use CoordinateTypes
 
 
   end subroutine
-  !==========================================================================================
+!==========================================================================================
   subroutine UpdateEnergy(self, E_Diff)
   implicit none
   class(SimBox), intent(inout) :: self
@@ -72,7 +68,7 @@ use CoordinateTypes
 
   end subroutine
 
-  !==========================================================================================
+!==========================================================================================
   subroutine UpdatePosition(self, disp)
     use CoordinateTypes
     implicit none
@@ -90,7 +86,7 @@ use CoordinateTypes
     enddo
 
   end subroutine
-  !==========================================================================================
+!==========================================================================================
   subroutine DummyCoords(self)
     use CoordinateTypes
     implicit none
@@ -108,7 +104,7 @@ use CoordinateTypes
 
   end subroutine
 
-  !==========================================================================================
+!==========================================================================================
   subroutine IOProcess(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
@@ -134,7 +130,7 @@ use CoordinateTypes
         lineStat = -1
     end select
   end subroutine
-  !==========================================================================================
 
+!==========================================================================================
 end module
 !==========================================================================================
