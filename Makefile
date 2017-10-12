@@ -51,8 +51,11 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_BoxData.f90\
         		$(SRC)/Common_ECalc.f90\
         		$(SRC)/Common_MolDef.f90\
+        		$(SRC)/Common_Sampling.f90\
         		$(SRC)/ConstraintClass.f90\
         		$(SRC)/DistanceCriteria.f90\
+        		$(SRC)/AcceptRule.f90\
+        		$(SRC)/Metropolis.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/BoxClass.f90\
         		$(SRC)/Forcefield.f90\
@@ -167,6 +170,6 @@ $(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/BoxClas
 $(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Input_Forcefield.o
 $(OBJ)/Input_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Forcefield.o ${OBJ}/FF_LJ_Cut.o
 
-
-
-
+$(OBJ)/RandomNew.o: $(OBJ)/Common.o
+$(OBJ)/Metropolis.o: $(OBJ)/RandomNew.o
+$(OBJ)/Common_Sampling.o: $(OBJ)/AcceptRule.o $(OBJ)/Metropolis.o

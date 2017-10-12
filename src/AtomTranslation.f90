@@ -38,6 +38,7 @@ use VarPrecision
     use ForcefieldData, only: EnergyCalculator
     use BoxData, only: Constrain
     use RandomGen, only: grnd
+    use CommonSampling, only: sampling
     implicit none
     class(AtomMolTranslate), intent(inout) :: self
     type(SimBox), intent(inout) :: trialBox
@@ -45,7 +46,7 @@ use VarPrecision
     integer :: nMove, iConstrain
     integer :: CalcIndex
     real(dp) :: dx, dy, dz
-    real(dp) :: E_Diff
+    real(dp) :: E_Diff, biasE
 
 
     self % atmps = self % atmps + 1E0_dp
@@ -79,10 +80,13 @@ use VarPrecision
     !Energy Calculation
     CalcIndex = trialBox % ECalcer
     call EnergyCalculator(CalcIndex) % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
-!    write(*,*) E_Diff    
 
-    accept = .true.
+
     !Accept/Reject
+    accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
+
+
+
     if(accept) then
       self % accpt = self % atmps + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)

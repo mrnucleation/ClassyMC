@@ -130,7 +130,15 @@ module SimBoxDef
         lineStat = -1
     end select
   end subroutine
+!==========================================================================================
+  subroutine DumpConfig(self, fileName)
+    use CoordinateTypes
+    use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
+    implicit none
+    class(SimBox), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: fileName
 
+  end subroutine
 !==========================================================================================
 end module
 !==========================================================================================

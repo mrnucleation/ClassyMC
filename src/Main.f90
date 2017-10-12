@@ -10,6 +10,7 @@
     use AtomTranslation, only: AtomMolTranslate
     use RandomGen, only: sgrnd
     use DistanceCriteria, only: distcriteria
+    use CommonSampling, only: sampling, metropolis
     implicit none
  
     integer :: nMoves
@@ -30,6 +31,7 @@
     allocate( Constrain(1:1) )
     allocate( distcriteria::Constrain(1)%Method )
     allocate( BoxArray(1)%NeighList(1:1) )
+    allocate( metropolis::sampling )
 
     allocate( AtomMolTranslate::MCMover )
 !    allocate( BoxArray(1)%AtomType(1:2) )
