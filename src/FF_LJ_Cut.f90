@@ -107,8 +107,8 @@ module FF_Pair_LJ_Cut
       dispLen = size(disp)
       E_Diff = 0E0_dp
       curbox%dETable = 0E0_dp
-      minIndx = 0
-      maxIndx = curbox % nAtoms
+      maxIndx = 1
+      minIndx = curbox % nAtoms
       do iDisp = 1, dispLen
         if(disp(iDisp)% atmindx > maxIndx) then
           maxIndx = disp(iDisp)% atmindx
@@ -118,18 +118,11 @@ module FF_Pair_LJ_Cut
         endif
       enddo      
 
-      if(minIndx .eq. 0) then
-        minIndx = 1
-      endif
-      if(maxIndx .eq. curbox % nAtoms) then
-        maxIndx = curbox % nAtoms + 1
-      endif
-
 !      write(*,*) "Here", disp%atmIndx, maxIndx, minIndx
       do iDisp = 1, dispLen
         iAtom = disp(iDisp)%atmIndx
         atmType1 = curbox % AtomType(iAtom)
-        do jAtom = 1, minIndx        
+        do jAtom = 1, minIndx-1  
           atmType2 = curbox % AtomType(jAtom)
           ep = self % epsTable(atmType1,atmType2)
           sig_sq = self % sigTable(atmType1,atmType2)          
@@ -168,7 +161,7 @@ module FF_Pair_LJ_Cut
           endif
         enddo
 
-        do jAtom = maxIndx, curbox % nAtoms
+        do jAtom = maxIndx+1, curbox % nAtoms
           atmType2 = curbox % AtomType(jAtom)
           ep = self % epsTable(atmType1, atmType2)
           sig_sq = self % sigTable(atmType1, atmType2)          

@@ -7,6 +7,8 @@ module SimBoxDef
   use CoordinateTypes, only: Displacement
 !  use ConstraintTemplate, only: constrainArray
 
+
+  !Sim Box Definition
   type, public :: SimBox
     integer :: nTotal, nAtoms
     real(dp), allocatable :: atoms(:,:)
@@ -29,6 +31,7 @@ module SimBoxDef
       procedure, pass :: UpdatePosition
       procedure, pass :: DummyCoords
       procedure, pass :: IOProcess
+      procedure, pass :: DumpXYZConfig
   end type
 
 !==========================================================================================
@@ -64,7 +67,7 @@ module SimBoxDef
   real(dp), intent(in) :: E_Diff
 
     self % ETotal = self % ETotal + E_Diff
-!    self % ETable = self % ETable + self % dETable
+    self % ETable = self % ETable + self % dETable
 
   end subroutine
 
@@ -131,7 +134,7 @@ module SimBoxDef
     end select
   end subroutine
 !==========================================================================================
-  subroutine DumpConfig(self, fileName)
+  subroutine DumpXYZConfig(self, fileName)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     implicit none

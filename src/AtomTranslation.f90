@@ -54,7 +54,7 @@ use VarPrecision
 
     !Propose move
        !Choose Molecule
-    nMove = floor( trialBox%nAtoms * grnd() + 1d0)
+    nMove = floor( trialBox%nAtoms * grnd() + 1E0_dp)
     dx = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
     dy = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
     dz = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
@@ -84,9 +84,6 @@ use VarPrecision
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
-
-
-
     if(accept) then
       self % accpt = self % atmps + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)

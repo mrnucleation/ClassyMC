@@ -15,6 +15,7 @@
  
     integer :: nMoves
     real(dp) :: E_T
+    real(dp) :: avgE, cnt
     class(AtomMolTranslate), allocatable :: MCMover
 
     call MPI_INIT(ierror)
@@ -38,18 +39,26 @@
     call EnergyCalculator(1)%Method%Constructor
 
     BoxArray(1)%AtomType = 1
+    BoxArray(1)%temperature = 0.7E0_dp
+    BoxArray(1)%beta = 1E0_dp/BoxArray(1)%temperature
     call BoxArray(1)%DummyCoords
     call EnergyCalculator(BoxArray(1)%ECalcer) % Method % DetailedECalc( BoxArray(1), BoxArray(1)%ETotal )
 
     open(unit=2, file="Traj.xyz")
-         write(2,*) 2
-         write(2,*) 
-         write(2,*) "Ar",BoxArray(1)%atoms(1, 1), BoxArray(1)%atoms(2, 1), BoxArray(1)%atoms(3, 1)
-         write(2,*) "Ar",BoxArray(1)%atoms(1, 2), BoxArray(1)%atoms(2, 2), BoxArray(1)%atoms(3, 2)
-    do nMoves = 1, nint(1d6)
+    write(2,*) 2
+    write(2,*) 
+    write(2,*) "Ar",BoxArray(1)%atoms(1, 1), BoxArray(1)%atoms(2, 1), BoxArray(1)%atoms(3, 1)
+    write(2,*) "Ar",BoxArray(1)%atoms(1, 2), BoxArray(1)%atoms(2, 2), BoxArray(1)%atoms(3, 2)
+
+
+    avgE = 0E0_dp
+    cnt = 0E0_dp
+    do nMoves = 1, nint(1d9)
        call MCMover % FullMove(BoxArray(1))
+       avgE = avgE + BoxArray(1)%ETotal
+       cnt = cnt + 1E0_dp
        if(mod(nMoves, 1000) == 0) then
-         write(*,*) nMoves
+         write(*,*) nMoves, BoxArray(1)%ETotal
          write(2,*) 2
          write(2,*) 
          write(2,*) "Ar",BoxArray(1)%atoms(1, 1), BoxArray(1)%atoms(2, 1), BoxArray(1)%atoms(3, 1)
@@ -57,6 +66,8 @@
        endif
     enddo
     call EnergyCalculator(BoxArray(1)%ECalcer) % Method % DetailedECalc( BoxArray(1), BoxArray(1)%ETotal )
+
+    write(*,*) "Average Energy:", avgE/cnt
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
     write(nout,*) "Finished!"
