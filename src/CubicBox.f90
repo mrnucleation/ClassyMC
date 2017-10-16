@@ -1,5 +1,6 @@
 !==========================================================================================
-module SimBoxDef
+module CubicBoxDef
+  use SimBoxDef, only: SimBox
   use NeighListDef, only: NeighList
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
@@ -9,20 +10,8 @@ module SimBoxDef
 
 
   !Sim Box Definition
-  type, public :: SimBox
-    integer :: nTotal, nAtoms
-    real(dp), allocatable :: atoms(:,:)
-
-    real(dp), allocatable :: ETable(:), dETable(:)
-    real(dp) :: beta, temperature
-    real(dp) :: ETotal
-    integer, allocatable :: NMolMin(:), NMolMax(:)
-    integer, allocatable :: NMol(:)
-    integer, allocatable :: AtomType(:)
-    integer, allocatable :: MolIndx(:)
-
-    integer :: ECalcer = -1
-    type(NeighList), allocatable :: NeighList(:)
+  type, public, extends(SimBox) :: CubeBox
+    real(dp) :: boxL, boxL2
 
     contains
       procedure, pass :: Constructor
@@ -39,7 +28,7 @@ module SimBoxDef
 !==========================================================================================
   subroutine Constructor(self)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(CubeBox), intent(inout) :: self
     integer :: AllocateStatus
  
     allocate(self%atoms(1:3, 1:self%nAtoms), stat= AllocateStatus)
@@ -55,7 +44,7 @@ module SimBoxDef
 !==========================================================================================
   subroutine LoadCoordinates(self, fileName)
   implicit none
-  class(SimBox), intent(inout) :: self
+  class(CubeBox), intent(inout) :: self
   character(len=*), intent(in) :: fileName
 
 
@@ -63,7 +52,7 @@ module SimBoxDef
 !==========================================================================================
   subroutine UpdateEnergy(self, E_Diff)
   implicit none
-  class(SimBox), intent(inout) :: self
+  class(CubeBox), intent(inout) :: self
   real(dp), intent(in) :: E_Diff
 
     self % ETotal = self % ETotal + E_Diff
@@ -75,7 +64,7 @@ module SimBoxDef
   subroutine UpdatePosition(self, disp)
     use CoordinateTypes
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(CubeBox), intent(inout) :: self
     type(Displacement), intent(inout) :: disp(:)
     integer :: iDisp, dispLen, dispIndx
 
@@ -83,6 +72,15 @@ module SimBoxDef
 
     do iDisp = 1, dispLen
       dispIndx = disp(iDisp) % atmIndx
+      if(abs(disp(iDisp)%x_new) > self%boxL2) then
+        disp(iDisp)%x_new = disp(iDisp)%x_new - sign(disp(iDisp)%x_new, self%boxL)
+      endif
+      if(abs(disp(iDisp)%y_new) > self%boxL2) then
+        disp(iDisp)%y_new = disp(iDisp)%y_new - sign(disp(iDisp)%y_new, self%boxL)
+      endif
+      if(abs(disp(iDisp)%z_new) > self%boxL2) then
+        disp(iDisp)%z_new = disp(iDisp)%z_new - sign(disp(iDisp)%z_new, self%boxL)
+      endif
       self % atoms(1, dispIndx) = disp(iDisp)%x_new
       self % atoms(2, dispIndx) = disp(iDisp)%y_new
       self % atoms(3, dispIndx) = disp(iDisp)%z_new
@@ -93,7 +91,7 @@ module SimBoxDef
   subroutine DummyCoords(self)
     use CoordinateTypes
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(CubeBox), intent(inout) :: self
 
     self % nAtoms = 2
 
@@ -113,11 +111,12 @@ module SimBoxDef
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     implicit none
 
-    class(SimBox), intent(inout) :: self
+    class(CubeBox), intent(inout) :: self
     integer, intent(out) :: lineStat
     character(len=maxLineLen), intent(in) :: line   
 
     integer :: intVal
+    real(dp) :: realVal
     character(len=30) :: command, val
 
     lineStat = 0
@@ -129,6 +128,11 @@ module SimBoxDef
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         self % ECalcer = intVal
+      case("boxlength")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self % boxL = realVal
+        self % boxL2 = realVal/2.0E0_dp
       case default
         lineStat = -1
     end select
@@ -138,7 +142,7 @@ module SimBoxDef
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(CubeBox), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: fileName
 
   end subroutine

@@ -53,7 +53,7 @@
 
     avgE = 0E0_dp
     cnt = 0E0_dp
-    do nMoves = 1, nint(1d9)
+    do nMoves = 1, nint(1d6)
        call MCMover % FullMove(BoxArray(1))
        avgE = avgE + BoxArray(1)%ETotal
        cnt = cnt + 1E0_dp

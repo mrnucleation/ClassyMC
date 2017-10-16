@@ -58,6 +58,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Metropolis.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/BoxClass.f90\
+        		$(SRC)/CubicBox.f90\
         		$(SRC)/Forcefield.f90\
         		$(SRC)/RandomNew.f90\
         		$(SRC)/FF_LJ_Cut.f90\
