@@ -27,6 +27,7 @@ module SimBoxDef
     contains
       procedure, pass :: Constructor
       procedure, pass :: LoadCoordinates
+      procedure, pass :: Boundary
       procedure, pass :: UpdateEnergy
       procedure, pass :: UpdatePosition
       procedure, pass :: DummyCoords
@@ -59,6 +60,14 @@ module SimBoxDef
   character(len=*), intent(in) :: fileName
 
 
+  end subroutine
+!==========================================================================================
+  subroutine Boundary(self, rx, ry, rz)
+  implicit none
+  class(SimBox), intent(in) :: self
+  real(dp), intent(inout) :: rx, ry, rz 
+
+!  write(*,*) "OLD!"
   end subroutine
 !==========================================================================================
   subroutine UpdateEnergy(self, E_Diff)

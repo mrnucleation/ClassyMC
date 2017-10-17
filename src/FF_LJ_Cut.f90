@@ -46,7 +46,7 @@ module FF_Pair_LJ_Cut
     use ParallelVar, only: nout
     implicit none
     class(Pair_LJ_Cut), intent(in) :: self
-    type(simBox), intent(inout) :: curbox
+    class(simBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_T
       integer :: iAtom,jAtom
       integer :: atmType1, atmType2
@@ -66,10 +66,13 @@ module FF_Pair_LJ_Cut
           sig_sq = self % sigTable(atmType1,atmType2)          
           rmin_ij = self % rMinTable(atmType1,atmType2)          
 
-          write(*,*) ep, sig_sq, rmin_ij
+!          write(*,*) ep, sig_sq, rmin_ij
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
+!          write(*,*) rx, ry, rz
+          call curbox%Boundary(rx, ry, rz)
+!          write(*,*) rx, ry, rz
           rsq = rx**2 + ry**2 + rz**2
           if(rsq < self%rCutSq) then
             if(rsq < rmin_ij) then
@@ -93,7 +96,7 @@ module FF_Pair_LJ_Cut
   subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
-      type(simBox), intent(inout) :: curbox
+      class(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
       integer :: iDisp, iAtom, jAtom, dispLen
@@ -131,6 +134,9 @@ module FF_Pair_LJ_Cut
           rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
           ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
           rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
+!          write(*,*) rx, ry, rz
+          call curbox%Boundary(rx, ry, rz)
+!          write(*,*) rx, ry, rz
           rsq = rx*rx + ry*ry + rz*rz
 !          write(*,*) rsq
           if(rsq < self%rCutSq) then
@@ -147,6 +153,7 @@ module FF_Pair_LJ_Cut
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
+          call curbox%Boundary(rx, ry, rz)
           rsq = rx*rx + ry*ry + rz*rz
 !          write(*,*) rsq
           if(rsq < self%rCutSq) then
@@ -170,6 +177,7 @@ module FF_Pair_LJ_Cut
           rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
           ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
           rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
+          call curbox%Boundary(rx, ry, rz)
           rsq = rx*rx + ry*ry + rz*rz
           if(rsq < self%rCutSq) then
 !           if(r .lt. rmin_ij) then
@@ -186,6 +194,7 @@ module FF_Pair_LJ_Cut
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
+          call curbox%Boundary(rx, ry, rz)
           rsq = rx*rx + ry*ry + rz*rz
           if(rsq < self%rCutSq) then
             LJ = (sig_sq/rsq)
@@ -212,7 +221,7 @@ module FF_Pair_LJ_Cut
   subroutine SwapIn_LJ_Cut(self, curbox, disp, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
-      type(simBox), intent(inout) :: curbox
+      class(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
       integer :: iDisp, iAtom, jAtom, dispLen
@@ -255,7 +264,7 @@ module FF_Pair_LJ_Cut
   subroutine SwapOut_LJ_Cut(self, curbox, atmIndx, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
-      type(simBox), intent(inout) :: curbox
+      class(simBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
       integer :: iIndx, iAtom, jAtom, remLen

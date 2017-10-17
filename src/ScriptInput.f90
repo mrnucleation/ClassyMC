@@ -166,6 +166,7 @@
 !========================================================            
       subroutine createCommand(line, lineStat)
       use BoxData, only: BoxArray
+      use CubicBoxDef, only: CubeBox
       use ForcefieldData, only: EnergyCalculator, nForceFields
       use VarPrecision
       use Units
@@ -189,6 +190,8 @@
            read(line,*) dummy, command, intValue
            if( .not. allocated(BoxArray) ) then
              allocate(BoxArray(1:intValue), stat = AllocateStat)
+
+             allocate(CubeBox::BoxArray(1)%box, stat = AllocateStat)
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
@@ -238,7 +241,7 @@
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue
 
-           call BoxArray(intValue)%IOProcess(line, lineStat)
+           call BoxArray(intValue)%box%IOProcess(line, lineStat)
         case default
            lineStat = -1
       end select

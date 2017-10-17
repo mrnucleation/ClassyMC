@@ -28,7 +28,7 @@ module ForceFieldTemplate
   subroutine DetailedECalc(self, curbox, E_T)
     implicit none
     class(forcefield), intent(in) :: self
-    type(simBox), intent(inout) :: curbox
+    class(simBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
 
   end subroutine
@@ -36,7 +36,7 @@ module ForceFieldTemplate
   subroutine ShiftECalc_Single(self, curbox, disp, E_Diff)
     implicit none
     class(forcefield), intent(in) :: self
-      type(simBox), intent(inout) :: curbox
+      class(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
   end subroutine
@@ -44,7 +44,7 @@ module ForceFieldTemplate
   subroutine ShiftECalc_Multi(self, curbox, disp, E_Diff)
     implicit none
     class(forcefield), intent(in) :: self
-      type(simBox), intent(inout) :: curbox
+      class(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inout) :: E_Diff
   end subroutine
@@ -52,7 +52,7 @@ module ForceFieldTemplate
   subroutine SwapInECalc(self, curbox, disp, E_Diff)
     implicit none
       class(forcefield), intent(in) :: self
-      type(simBox), intent(inout) :: curbox
+      class(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
 
@@ -61,7 +61,7 @@ module ForceFieldTemplate
   subroutine SwapOutECalc(self, curbox, atmIndx, E_Diff)
     implicit none
       class(forcefield), intent(in) :: self
-      type(simBox), intent(inout) :: curbox
+      class(simBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
   end subroutine

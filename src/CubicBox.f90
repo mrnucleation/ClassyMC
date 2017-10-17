@@ -14,23 +14,26 @@ module CubicBoxDef
     real(dp) :: boxL, boxL2
 
     contains
-      procedure, pass :: Constructor
-      procedure, pass :: LoadCoordinates
-      procedure, pass :: UpdateEnergy
-      procedure, pass :: UpdatePosition
-      procedure, pass :: DummyCoords
-      procedure, pass :: IOProcess
-      procedure, pass :: DumpXYZConfig
+      procedure, pass :: Constructor => Cube_Constructor
+      procedure, pass :: LoadCoordinates => Cube_LoadCoordinates
+      procedure, pass :: UpdateEnergy => Cube_UpdateEnergy
+      procedure, pass :: Boundary => Cube_Boundary
+      procedure, pass :: UpdatePosition => Cube_UpdatePosition
+      procedure, pass :: DummyCoords => Cube_DummyCoords
+      procedure, pass :: IOProcess => Cube_IOProcess
+      procedure, pass :: DumpXYZConfig => Cube_DumpXYZConfig
   end type
 
 !==========================================================================================
   contains
 !==========================================================================================
-  subroutine Constructor(self)
+  subroutine Cube_Constructor(self)
     implicit none
     class(CubeBox), intent(inout) :: self
     integer :: AllocateStatus
  
+    write(*,*) "Box Type: Cubic"
+
     allocate(self%atoms(1:3, 1:self%nAtoms), stat= AllocateStatus)
     allocate(self%ETable(1:self%nAtoms), stat= AllocateStatus)
     allocate(self%dETable(1:self%nAtoms), stat= AllocateStatus)
@@ -42,7 +45,7 @@ module CubicBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine LoadCoordinates(self, fileName)
+  subroutine Cube_LoadCoordinates(self, fileName)
   implicit none
   class(CubeBox), intent(inout) :: self
   character(len=*), intent(in) :: fileName
@@ -50,7 +53,27 @@ module CubicBoxDef
 
   end subroutine
 !==========================================================================================
-  subroutine UpdateEnergy(self, E_Diff)
+  subroutine Cube_Boundary(self, rx, ry, rz)
+  implicit none
+  class(CubeBox), intent(in) :: self
+  real(dp), intent(inout) :: rx, ry, rz 
+  real(dp) :: rx_new, ry_new, rz_new
+
+  if(abs(rx) > self%boxL2) then
+    rx = rx - sign(self%boxL, rx)
+  endif
+
+  if(abs(ry) > self%boxL2) then
+    ry = ry - sign(self%boxL, ry)
+  endif
+
+  if(abs(rz) > self%boxL2) then
+    rz = rz - sign(self%boxL, rz)
+  endif
+
+  end subroutine
+!==========================================================================================
+  subroutine Cube_UpdateEnergy(self, E_Diff)
   implicit none
   class(CubeBox), intent(inout) :: self
   real(dp), intent(in) :: E_Diff
@@ -61,26 +84,21 @@ module CubicBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine UpdatePosition(self, disp)
+  subroutine Cube_UpdatePosition(self, disp)
     use CoordinateTypes
     implicit none
     class(CubeBox), intent(inout) :: self
     type(Displacement), intent(inout) :: disp(:)
     integer :: iDisp, dispLen, dispIndx
 
+
+!  write(*,*) "cube"
+
     dispLen = size(disp)
 
     do iDisp = 1, dispLen
       dispIndx = disp(iDisp) % atmIndx
-      if(abs(disp(iDisp)%x_new) > self%boxL2) then
-        disp(iDisp)%x_new = disp(iDisp)%x_new - sign(disp(iDisp)%x_new, self%boxL)
-      endif
-      if(abs(disp(iDisp)%y_new) > self%boxL2) then
-        disp(iDisp)%y_new = disp(iDisp)%y_new - sign(disp(iDisp)%y_new, self%boxL)
-      endif
-      if(abs(disp(iDisp)%z_new) > self%boxL2) then
-        disp(iDisp)%z_new = disp(iDisp)%z_new - sign(disp(iDisp)%z_new, self%boxL)
-      endif
+      call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
       self % atoms(1, dispIndx) = disp(iDisp)%x_new
       self % atoms(2, dispIndx) = disp(iDisp)%y_new
       self % atoms(3, dispIndx) = disp(iDisp)%z_new
@@ -88,7 +106,7 @@ module CubicBoxDef
 
   end subroutine
 !==========================================================================================
-  subroutine DummyCoords(self)
+  subroutine Cube_DummyCoords(self)
     use CoordinateTypes
     implicit none
     class(CubeBox), intent(inout) :: self
@@ -106,7 +124,7 @@ module CubicBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine IOProcess(self, line, lineStat)
+  subroutine Cube_IOProcess(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     implicit none
@@ -119,6 +137,7 @@ module CubicBoxDef
     real(dp) :: realVal
     character(len=30) :: command, val
 
+    write(*,*) "Cube"
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
     call LowerCaseLine(command)
@@ -133,12 +152,14 @@ module CubicBoxDef
         read(command, *) realVal
         self % boxL = realVal
         self % boxL2 = realVal/2.0E0_dp
+        write(*,*) "Box Length:", self%boxL
       case default
         lineStat = -1
     end select
+
   end subroutine
 !==========================================================================================
-  subroutine DumpXYZConfig(self, fileName)
+  subroutine Cube_DumpXYZConfig(self, fileName)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     implicit none

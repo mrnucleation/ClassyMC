@@ -41,7 +41,7 @@ use VarPrecision
     use CommonSampling, only: sampling
     implicit none
     class(AtomMolTranslate), intent(inout) :: self
-    type(SimBox), intent(inout) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
     logical :: accept
     integer :: nMove, iConstrain
     integer :: CalcIndex
@@ -69,11 +69,13 @@ use VarPrecision
 
 
     !Check Constraint
-    do iConstrain = 1, size(Constrain)
-      call Constrain(iConstrain) % method % ShiftCheck( trialBox, self%disp(1:1), accept )
-    enddo
-    if(.not. accept) then
-      return
+    if( size(Constrain) > 0 ) then
+      do iConstrain = 1, size(Constrain)
+        call Constrain(iConstrain) % method % ShiftCheck( trialBox, self%disp(1:1), accept )
+      enddo
+      if(.not. accept) then
+        return
+      endif
     endif
 
 
@@ -83,6 +85,7 @@ use VarPrecision
 
 
     !Accept/Reject
+    accept = .false.
     accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
     if(accept) then
       self % accpt = self % atmps + 1E0_dp

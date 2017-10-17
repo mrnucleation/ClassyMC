@@ -22,7 +22,7 @@ use VarPrecision
 !=========================================================================
   subroutine FullMove(self, trialBox)
     class(MCMove), intent(inout) :: self
-    type(SimBox), intent(inout) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
   end subroutine
 !=========================================================================
   function GetAcceptRate(self) result(rate)

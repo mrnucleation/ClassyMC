@@ -3,7 +3,11 @@ module BoxData
   use SimBoxDef
   use ConstraintTemplate
 
-  type(SimBox), allocatable :: BoxArray(:)
+  type BxArray 
+    class(SimBox), allocatable:: box
+  end type
+
+  type(BxArray), allocatable, target  :: BoxArray(:)
   type(constrainArray), allocatable :: Constrain(:)
 
 end module

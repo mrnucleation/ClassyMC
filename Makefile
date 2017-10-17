@@ -8,18 +8,18 @@ FC := mpif90
 #FC := mpifort
 #FC := gfortran
 CC := mpicc
-OPTIMIZE_FLAGS := -O3
+#OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
 #OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 #DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-DETAILEDDEBUG:= -check all -traceback -g -fpe0 -Og
+DETAILEDDEBUG:= -check all -traceback -g -fpe3 -Og
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -heap-arrays 1024
 #DEBUGFLAGS += $(DETAILEDDEBUG)
-#DEBUGFLAGS += -check all -traceback -g
+DEBUGFLAGS += -fpe3
 #DEBUGFLAGS += -pg 
 #DEBUGFLAGS += -ffpe-trap=invalid
 #DEBUGFLAGS += -Wunused-parameter 
@@ -160,6 +160,7 @@ $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Common_BoxData.o: $(OBJ)/BoxClass.o $(OBJ)/ConstraintClass.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Forcefield.o $(OBJ)/Common.o
 $(OBJ)/BoxClass.o: $(OBJ)/Common.o $(OBJ)/NeighList.o $(OBJ)/Input_Format.o 
+$(OBJ)/CubicBox.o: $(OBJ)/BoxClass.o
 
 $(OBJ)/ConstraintClass.o: ${OBJ}/BoxClass.o 
 
@@ -168,7 +169,7 @@ $(OBJ)/Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o
 
 $(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/BoxClass.o $(OBJ)/RandomNew.o $(OBJ)/MoveClass.o $(OBJ)/ConstraintClass.o
 
-$(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Input_Forcefield.o
+$(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Input_Forcefield.o $(OBJ)/CubicBox.o
 $(OBJ)/Input_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Forcefield.o ${OBJ}/FF_LJ_Cut.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o
