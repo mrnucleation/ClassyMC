@@ -8,7 +8,7 @@ FC := mpif90
 #FC := mpifort
 #FC := gfortran
 CC := mpicc
-#OPTIMIZE_FLAGS := -O3
+OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
 #OPTIMIZE_FLAGS += -no-prec-div
@@ -19,7 +19,7 @@ DETAILEDDEBUG:= -check all -traceback -g -fpe3 -Og
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -heap-arrays 1024
 #DEBUGFLAGS += $(DETAILEDDEBUG)
-DEBUGFLAGS += -fpe3
+#DEBUGFLAGS += -fpe3
 #DEBUGFLAGS += -pg 
 #DEBUGFLAGS += -ffpe-trap=invalid
 #DEBUGFLAGS += -Wunused-parameter 

@@ -54,11 +54,34 @@ module SimBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine LoadCoordinates(self, fileName)
-  implicit none
-  class(SimBox), intent(inout) :: self
-  character(len=*), intent(in) :: fileName
+  subroutine LoadCoordinates(self, fileName, fileType)
+    implicit none
+    class(SimBox), intent(inout) :: self
+    character(len=*), intent(in) :: fileName
+    character(len=*), intent(in), optional :: fileType
+    character(len=3) :: sym
+    integer :: iAtom
+    integer :: AllocateStatus, IOSt
 
+    open(unit=50, file=fileName, status="OLD")
+    read(50,*) self%nAtoms
+    read(50,*) 
+
+    allocate( self%atoms(1:3, 1:self%nAtoms), stat= AllocateStatus)
+    allocate( self%AtomType(1:self%nAtoms), stat= AllocateStatus )
+    allocate( self%ETable(1:self%nAtoms), stat= AllocateStatus )
+    allocate( self%dETable(1:self%nAtoms), stat= AllocateStatus )
+    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+
+    do iAtom = 1, self%nAtoms
+      read(50,*, iostat=IOSt) sym, self%atoms(1, iAtom), self%atoms(2, iAtom), self%atoms(3, iAtom)
+      if(IOSt .ne. 0) then
+        write(*,*) "ERROR! Could not properly read the configuration file."
+        stop
+      endif
+    enddo
+
+    close(50)
 
   end subroutine
 !==========================================================================================

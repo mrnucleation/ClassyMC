@@ -34,7 +34,7 @@ module FF_Pair_LJ_Cut
 
     self%epsTable = 4E0_dp
     self%sigTable = 1E0_dp
-    self%rMinTable = 1E0_dp
+    self%rMinTable = 0.5E0_dp
     self%rCut = 5E0_dp
     self%rCutSq = 5E0_dp**2
 
