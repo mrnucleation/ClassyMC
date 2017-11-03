@@ -28,8 +28,8 @@ use CoordinateTypes
 
     self% maxNei = ceiling(atomRadius**3/rCut**3)
 
-    allocate(self%list(1:nAtoms, 1:self%maxNei), stat=AllocateStatus)
-    allocate(self%nNeigh(1:nAtoms), stat=AllocateStatus)
+    allocate( self%list(1:self%maxNei, 1:nAtoms), stat=AllocateStatus )
+    allocate( self%nNeigh(1:nAtoms), stat=AllocateStatus )
 
     self%list = 0
 

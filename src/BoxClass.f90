@@ -11,6 +11,7 @@ module SimBoxDef
   !Sim Box Definition
   type, public :: SimBox
     integer :: nTotal, nAtoms
+    integer :: nMaxAtoms
     real(dp), allocatable :: atoms(:,:)
 
     real(dp), allocatable :: ETable(:), dETable(:)
@@ -22,6 +23,7 @@ module SimBoxDef
     integer, allocatable :: MolIndx(:)
 
     integer :: ECalcer = -1
+    integer :: ENeiList = -1
     type(NeighList), allocatable :: NeighList(:)
 
     contains
@@ -30,6 +32,7 @@ module SimBoxDef
       procedure, pass :: Boundary
       procedure, pass :: UpdateEnergy
       procedure, pass :: UpdatePosition
+      procedure, pass :: UpdateNeighLists
       procedure, pass :: DummyCoords
       procedure, pass :: IOProcess
       procedure, pass :: DumpXYZConfig
@@ -43,10 +46,10 @@ module SimBoxDef
     class(SimBox), intent(inout) :: self
     integer :: AllocateStatus
  
-    allocate(self%atoms(1:3, 1:self%nAtoms), stat= AllocateStatus)
-    allocate(self%ETable(1:self%nAtoms), stat= AllocateStatus)
-    allocate(self%dETable(1:self%nAtoms), stat= AllocateStatus)
-    allocate(self%AtomType(1:self%nAtoms), stat= AllocateStatus)
+    allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat= AllocateStatus)
+    allocate(self%ETable(1:self%nMaxAtoms), stat= AllocateStatus)
+    allocate(self%dETable(1:self%nMaxAtoms), stat= AllocateStatus)
+    allocate(self%AtomType(1:self%nMaxAtoms), stat= AllocateStatus)
 
 
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
@@ -121,6 +124,20 @@ module SimBoxDef
     enddo
 
   end subroutine
+!==========================================================================================
+  subroutine UpdateNeighLists(self, disp)
+    use CoordinateTypes
+    implicit none
+    class(SimBox), intent(inout) :: self
+    type(Displacement), intent(inout) :: disp(:)
+    integer :: iList
+
+    do iList = 1, size(self%NeighList)
+      self%NeighList
+    enddo
+
+  end subroutine
+
 !==========================================================================================
   subroutine DummyCoords(self)
     use CoordinateTypes
