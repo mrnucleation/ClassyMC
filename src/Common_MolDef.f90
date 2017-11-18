@@ -7,6 +7,14 @@ module StructureTypes
     real(dp) :: mass
   end type
 
+  type BondDef 
+    integer :: mem1, mem2
+  end type
+
+  type AngleDef 
+    integer :: mem1, mem2, mem3
+  end type
+
 end module
 !================================================================
 module Common_MolDef
@@ -17,7 +25,7 @@ module Common_MolDef
   integer :: nAtomTypes
 
   type(AtomDef), allocatable :: AtomData(:)
-!  type(BondDef), allocatable :: bondData(:)
+  type(BondDef), allocatable :: bondData(:)
 
 
 end module

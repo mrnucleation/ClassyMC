@@ -8,7 +8,7 @@ use VarPrecision
     contains
       procedure, pass :: GeneratePosition 
       procedure, pass :: FullMove
-      procedure, nopass, non_overridable  :: GetAcceptRate
+      procedure, pass :: GetAcceptRate
   end type
 
  contains

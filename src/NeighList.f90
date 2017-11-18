@@ -3,6 +3,7 @@ use VarPrecision
 use CoordinateTypes
 
   type, public :: NeighList
+      logical :: Strict = .false.
       integer, allocatable :: list(:,:)
       integer, allocatable :: nNeigh(:)
       integer :: maxNei

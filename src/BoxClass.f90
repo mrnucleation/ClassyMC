@@ -10,6 +10,7 @@ module SimBoxDef
 
   !Sim Box Definition
   type, public :: SimBox
+    integer :: boxID
     integer :: nTotal, nAtoms
     integer :: nMaxAtoms
     real(dp), allocatable :: atoms(:,:)
@@ -101,6 +102,7 @@ module SimBoxDef
         rx = self%atoms(1, iAtom) - self%atoms(1, jAtom)
         ry = self%atoms(2, iAtom) - self%atoms(2, jAtom)
         rz = self%atoms(3, iAtom) - self%atoms(3, jAtom)
+        call self%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         do iList = 1, size(self%NeighList)
           if( rsq <= self%NeighList(iList)%rCutSq ) then 
@@ -117,17 +119,16 @@ module SimBoxDef
   end subroutine
 !==========================================================================================
   subroutine Boundary(self, rx, ry, rz)
-  implicit none
-  class(SimBox), intent(in) :: self
-  real(dp), intent(inout) :: rx, ry, rz 
+    implicit none
+    class(SimBox), intent(in) :: self
+    real(dp), intent(inout) :: rx, ry, rz 
 
-!  write(*,*) "OLD!"
   end subroutine
 !==========================================================================================
   subroutine UpdateEnergy(self, E_Diff)
-  implicit none
-  class(SimBox), intent(inout) :: self
-  real(dp), intent(in) :: E_Diff
+    implicit none
+    class(SimBox), intent(inout) :: self
+    real(dp), intent(in) :: E_Diff
 
     self % ETotal = self % ETotal + E_Diff
     self % ETable = self % ETable + self % dETable
@@ -158,10 +159,36 @@ module SimBoxDef
     implicit none
     class(SimBox), intent(inout) :: self
     type(Displacement), intent(inout) :: disp(:)
-    integer :: iList
+    integer :: iDisp, iList
+    integer :: atmIndx
+    real(dp) :: rx, ry, rz, rsq
 
-    do iList = 1, size(self%NeighList)
-!      self%NeighList
+    do iDisp = 1, size(disp)
+      atmIndx = disp(iDisp)%atmIndx
+      rx = disp(iDisp)%x_new - self%atoms(1, atmIndx)
+      ry = disp(iDisp)%y_new - self%atoms(2, atmIndx)
+      rz = disp(iDisp)%z_new - self%atoms(3, atmIndx)
+      rsq = rx*rx + ry*ry + rz*rz
+      if(rsq < 1.0E0_dp) then
+        cycle
+      endif
+
+      do jAtom = 1, self%nAtoms
+        rx = self%atoms(1, atmIndx) - self%atoms(1, jAtom)
+        ry = self%atoms(2, atmIndx) - self%atoms(2, jAtom)
+        rz = self%atoms(3, atmIndx) - self%atoms(3, jAtom)
+        call self%Boundary(rx, ry, rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        do iList = 1, size(self%NeighList)
+          if( rsq <= self%NeighList(iList)%rCutSq ) then 
+            self%NeighList(iList)%nNeigh(iAtom) = self%NeighList(iList)%nNeigh(iAtom) + 1
+            self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
+
+            self%NeighList(iList)%nNeigh(jAtom) = self%NeighList(iList)%nNeigh(jAtom) + 1
+            self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
+          endif
+        enddo        
+      enddo
     enddo
 
   end subroutine

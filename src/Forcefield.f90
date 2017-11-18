@@ -11,6 +11,7 @@ module ForceFieldTemplate
       procedure, pass :: ShiftECalc_Multi
       procedure, pass :: SwapInECalc
       procedure, pass :: SwapOutECalc
+      procedure, pass :: Exchange
       procedure, pass :: SetParameter
       procedure, pass :: ReadParFile
   end type
@@ -56,6 +57,14 @@ module ForceFieldTemplate
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
 
+  end subroutine
+!=============================================================================+
+  subroutine SwapOutECalc(self, curbox, atmIndx, E_Diff)
+    implicit none
+      class(forcefield), intent(in) :: self
+      class(simBox), intent(inout) :: curbox
+      real(dp), intent(inOut) :: E_Diff
+      integer, intent(in) :: atmIndx(:)
   end subroutine
 !=============================================================================+
   subroutine SwapOutECalc(self, curbox, atmIndx, E_Diff)
