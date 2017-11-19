@@ -12,7 +12,7 @@ module MetropolisRule
   contains
 !====================================================================
   function Metropolis_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
-    use SimBoxDef, only: SimBox
+    use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     implicit none
     class(metropolis), intent(in) :: self

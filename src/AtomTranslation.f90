@@ -2,7 +2,7 @@
 module AtomTranslation
 use CoordinateTypes, only: Displacement
 use MoveClassDef
-use SimBoxDef, only: SimBox
+use SimpleSimBox, only: SimpleBox
 use VarPrecision
 
   type, public, extends(MCMove) :: AtomMolTranslate
@@ -41,7 +41,7 @@ use VarPrecision
     use CommonSampling, only: sampling
     implicit none
     class(AtomMolTranslate), intent(inout) :: self
-    class(SimBox), intent(inout) :: trialBox
+    class(SimpleBox), intent(inout) :: trialBox
     logical :: accept
     integer :: nMove, iConstrain
     integer :: CalcIndex
@@ -80,8 +80,8 @@ use VarPrecision
 
 
     !Energy Calculation
-    CalcIndex = trialBox % ECalcer
-    call EnergyCalculator(CalcIndex) % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
+!    CalcIndex = trialBox % ECalcer
+    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
 
 
     !Accept/Reject

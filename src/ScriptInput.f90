@@ -165,9 +165,10 @@
       end subroutine
 !========================================================            
       subroutine createCommand(line, lineStat)
-      use BoxData, only: BoxArray
-      use CubicBoxDef, only: CubeBox
+      use BoxData
+      use CubicBoxDef
       use ForcefieldData, only: EnergyCalculator, nForceFields
+      use Template_SimBox
       use VarPrecision
       use Units
       implicit none
@@ -190,7 +191,6 @@
            read(line,*) dummy, command, intValue
            if( .not. allocated(BoxArray) ) then
              allocate(BoxArray(1:intValue), stat = AllocateStat)
-
              allocate(CubeBox::BoxArray(1)%box, stat = AllocateStat)
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
@@ -217,6 +217,7 @@
 !========================================================            
       subroutine modifyCommand(line, lineStat)
       use BoxData, only: BoxArray
+      use Template_SimBox
       use ForcefieldData, only: EnergyCalculator, nForceFields
       use VarPrecision
       use Units

@@ -11,7 +11,7 @@ module AcceptRuleTemplate
   contains
 !====================================================================
   function MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
-    use SimBoxDef, only: SimBox
+    use Template_SimBox, only: SimBox
     implicit none
     class(acceptrule), intent(in) :: self
     class(simBox), intent(in) :: trialBox

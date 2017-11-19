@@ -1,81 +1,106 @@
 !==========================================================================================
-module SimBoxDef
-use VarPrecision
-!use ForcefieldData, only: ECalcArray
-!use NeighListDef
+module Template_SimBox
+  use VarPrecision
+!  use ForcefieldData, only: ECalcArray
+!  use NeighListDef
+  use CoordinateTypes, only: Displacement
+!  use ConstraintTemplate, only: constrainArray
 
-use CoordinateTypes
 
-  type, public :: SimBox
+  !Sim Box Definition
+  type :: SimBox
     integer :: nAtoms
-    real(dp), allocatable :: atoms(:,:)
-
+    real(dp) :: ETotal
     real(dp), allocatable :: ETable(:), dETable(:)
     real(dp) :: beta, temperature
-    real(dp) :: ETotal
+    real(dp), allocatable :: atoms(:,:)
     integer, allocatable :: AtomType(:)
-!    type(ECalcArray), pointer :: ECalc
-
-! Constraint Class
     contains
-      procedure, pass :: Constructor
-      procedure, pass :: LoadCoordinates
-      procedure, pass :: UpdateEnergy
-      procedure, pass :: UpdatePosition
-!      procedure, pass :: CreateNeighList
-
+      procedure, public, pass :: Constructor
+      procedure, public, pass :: LoadCoordinates
+      procedure, public, pass :: BuildNeighList
+      procedure, public, pass :: Boundary
+      procedure, public, pass :: UpdateEnergy
+      procedure, public, pass :: UpdatePosition
+      procedure, public, pass :: UpdateNeighLists
+      procedure, public, pass :: DummyCoords
+      procedure, public, pass :: IOProcess
+      procedure, public, pass :: DumpXYZConfig
   end type
 
-
+  public :: Constructor, LoadCoordinates, BuildNeighList,Boundary
+  public :: UpdateEnergy, UpdatePosition, UpdateNeighLists, DummyCoords, IOProcess
+  public :: DumpXYZConfig
+!==========================================================================================
   contains
-
-  !------------------------------------------------------------------------------
+!==========================================================================================
   subroutine Constructor(self)
     implicit none
     class(SimBox), intent(inout) :: self
-!    character(len=*), intent(in) :: fileName
-
-
   end subroutine
 
-  !------------------------------------------------------------------------------
-  subroutine LoadCoordinates(self, fileName)
-  implicit none
-  class(SimBox), intent(inout) :: self
-  character(len=*), intent(in) :: fileName
-
+!==========================================================================================
+  subroutine LoadCoordinates(self, fileName, fileType)
+    implicit none
+    class(SimBox), intent(inout) :: self
+    character(len=*), intent(in) :: fileName
+    character(len=*), intent(in), optional :: fileType
+  end subroutine
+!==========================================================================================
+  subroutine BuildNeighList(self)
+    implicit none
+    class(SimBox), intent(inout) :: self
 
   end subroutine
-  !------------------------------------------------------------------------------
+!==========================================================================================
+  subroutine Boundary(self, rx, ry, rz)
+    implicit none
+    class(SimBox), intent(in) :: self
+    real(dp), intent(inout) :: rx, ry, rz 
+
+  end subroutine
+!==========================================================================================
   subroutine UpdateEnergy(self, E_Diff)
-  implicit none
-  class(SimBox), intent(inout) :: self
-  real(dp), intent(in) :: E_Diff
-
-    self % ETotal = self % ETotal + E_Diff
-!    self % ETable = self % ETable + self % dETable
-
+    implicit none
+    class(SimBox), intent(inout) :: self
+    real(dp), intent(in) :: E_Diff
   end subroutine
-
-  !------------------------------------------------------------------------------
+!==========================================================================================
   subroutine UpdatePosition(self, disp)
-  use CoordinateTypes
-  implicit none
-  class(SimBox), intent(inout) :: self
-  type(Displacement), intent(in) :: disp(:)
-  integer :: iDisp, dispLen, dispIndx
-
-  dispLen = size(disp)
-
-  do iDisp = 1, dispLen
-    dispIndx = disp(iDisp) % atmIndx
-    self % atoms(1, dispIndx) = disp(iDisp)%x_new
-    self % atoms(2, dispIndx) = disp(iDisp)%y_new
-    self % atoms(3, dispIndx) = disp(iDisp)%z_new
-  enddo
-
+    implicit none
+    class(SimBox), intent(inout) :: self
+    type(Displacement), intent(inout) :: disp(:)
   end subroutine
-  !------------------------------------------------------------------------------
+!==========================================================================================
+  subroutine UpdateNeighLists(self, disp)
+    use CoordinateTypes
+    implicit none
+    class(SimBox), intent(inout) :: self
+    type(Displacement), intent(inout) :: disp(:)
+  end subroutine
+!==========================================================================================
+  subroutine DummyCoords(self)
+    use CoordinateTypes
+    implicit none
+    class(SimBox), intent(inout) :: self
+  end subroutine
+!==========================================================================================
+  subroutine IOProcess(self, line, lineStat)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(SimBox), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line   
+    integer, intent(out) :: lineStat
 
+    lineStat = 0
+  end subroutine
+!==========================================================================================
+  subroutine DumpXYZConfig(self, fileName)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(SimBox), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: fileName
+  end subroutine
+!==========================================================================================
 end module
 !==========================================================================================

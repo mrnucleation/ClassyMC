@@ -1,7 +1,7 @@
 module FF_Pair_LJ_Cut
-  use ForceFieldTemplate
+  use Template_ForceField
   use VarPrecision
-  use SimBoxDef, only: SimBox
+  use Template_SimBox, only: SimBox
   use CoordinateTypes
 
   type, extends(forcefield) :: Pair_LJ_Cut
@@ -46,7 +46,7 @@ module FF_Pair_LJ_Cut
     use ParallelVar, only: nout
     implicit none
     class(Pair_LJ_Cut), intent(in) :: self
-    class(simBox), intent(inout) :: curbox
+    class(SimBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_T
       integer :: iAtom,jAtom
       integer :: atmType1, atmType2
@@ -96,7 +96,7 @@ module FF_Pair_LJ_Cut
   subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
-      class(simBox), intent(inout) :: curbox
+      class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
       integer :: iDisp, iAtom, jAtom, dispLen
@@ -212,7 +212,7 @@ module FF_Pair_LJ_Cut
   subroutine Shift_LJ_Cut_Multi(self, curbox, disp, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
-      type(simBox), intent(inout) :: curbox
+      class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inout) :: E_Diff
    
@@ -221,7 +221,7 @@ module FF_Pair_LJ_Cut
   subroutine SwapIn_LJ_Cut(self, curbox, disp, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
-      class(simBox), intent(inout) :: curbox
+      class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
       integer :: iDisp, iAtom, jAtom, dispLen
@@ -264,7 +264,7 @@ module FF_Pair_LJ_Cut
   subroutine SwapOut_LJ_Cut(self, curbox, atmIndx, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
-      class(simBox), intent(inout) :: curbox
+      class(SimBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
       integer :: iIndx, iAtom, jAtom, remLen

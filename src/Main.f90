@@ -5,7 +5,7 @@
     use ParallelVar, only: myid, p_size, ierror, nout
     use ScriptInput, only: Script_ReadParameters
     use BoxData, only: BoxArray, Constrain
-    use SimBoxDef, only: SimBox
+    use SimpleSimBox, only: SimpleBox
     use CubicBoxDef, only: CubeBox
     use Common_MolDef, only: nAtomTypes
     use ForcefieldData, only: EnergyCalculator
@@ -28,10 +28,7 @@
 
     call Script_ReadParameters
 
-!    allocate( CubeBox::BoxArray(1)%box )
-!    allocate( BoxArray(1)%box%AtomType(1:2) )
-!    allocate( BoxArray(1)%box%ETable(1:2) )
-!    allocate( BoxArray(1)%box%dETable(1:2) )
+!    allocate( BoxArray(1)%box, source=CubeBox )
 !    allocate( Constrain(1:1) )
 !    allocate( distcriteria::Constrain(1)%Method )
     allocate( BoxArray(1)%box%NeighList(1:1) )
@@ -45,7 +42,7 @@
     BoxArray(1)%box%temperature = 0.7E0_dp
     BoxArray(1)%box%beta = 1E0_dp/BoxArray(1)%box%temperature
 !    call BoxArray(1)%box%DummyCoords
-    call EnergyCalculator(BoxArray(1)%box%ECalcer) % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
+    call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
 
     open(unit=2, file="Traj.xyz")
     write(2,*) BoxArray(1)%box%nAtoms
@@ -70,7 +67,7 @@
          enddo
        endif
     enddo
-    call EnergyCalculator(BoxArray(1)%box%ECalcer) % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
+    call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
 
     write(*,*) "Average Energy:", avgE/cnt
 

@@ -1,6 +1,6 @@
 !======================================================
 module ForcefieldData
-use ForceFieldTemplate, only: ForceField
+use Template_ForceField, only: ForceField
 
   integer :: nForceFields = 0
   type ECalcArray 

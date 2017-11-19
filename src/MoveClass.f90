@@ -1,6 +1,6 @@
 !=========================================================================
 module MoveClassDef
-use SimBoxDef, only: SimBox
+use SimpleSimBox, only: SimpleBox
 use VarPrecision
 
   type, public :: MCMove
@@ -22,7 +22,7 @@ use VarPrecision
 !=========================================================================
   subroutine FullMove(self, trialBox)
     class(MCMove), intent(inout) :: self
-    class(SimBox), intent(inout) :: trialBox
+    class(SimpleBox), intent(inout) :: trialBox
   end subroutine
 !=========================================================================
   function GetAcceptRate(self) result(rate)

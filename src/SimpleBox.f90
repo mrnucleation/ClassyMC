@@ -1,51 +1,55 @@
 !==========================================================================================
-module SimBoxDef
+module SimpleSimBox
   use NeighListDef, only: NeighList
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
 !  use NeighListDef
   use CoordinateTypes, only: Displacement
+  use ForcefieldData, only: ECalcArray
+  use Template_SimBox
 !  use ConstraintTemplate, only: constrainArray
 
 
   !Sim Box Definition
-  type, public :: SimBox
+  type, public, extends(SimBox) :: SimpleBox
     integer :: boxID
-    integer :: nTotal, nAtoms
+    integer :: nTotal
     integer :: nMaxAtoms
-    real(dp), allocatable :: atoms(:,:)
 
-    real(dp), allocatable :: ETable(:), dETable(:)
-    real(dp) :: beta, temperature
-    real(dp) :: ETotal
+!    real(dp), allocatable :: atoms(:,:)
+!    real(dp), allocatable :: ETable(:), dETable(:)
+!    real(dp) :: beta, temperature
+
+!    real(dp) :: ETotal
     integer, allocatable :: NMolMin(:), NMolMax(:)
     integer, allocatable :: NMol(:)
-    integer, allocatable :: AtomType(:)
+!    integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:)
 
+    class(ECalcArray), pointer :: EFunc
     integer :: ECalcer = -1
     integer :: ENeiList = -1
     type(NeighList), allocatable :: NeighList(:)
 
     contains
-      procedure, pass :: Constructor
-      procedure, pass :: LoadCoordinates
-      procedure, pass :: BuildNeighList
-      procedure, pass :: Boundary
-      procedure, pass :: UpdateEnergy
-      procedure, pass :: UpdatePosition
-      procedure, pass :: UpdateNeighLists
-      procedure, pass :: DummyCoords
-      procedure, pass :: IOProcess
-      procedure, pass :: DumpXYZConfig
+      procedure, pass :: Constructor => SimpleBox_Constructor
+      procedure, pass :: LoadCoordinates => SimpleBox_LoadCoordinates
+      procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
+      procedure, pass :: Boundary => SimpleBox_Boundary
+      procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
+      procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
+      procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
+      procedure, pass :: DummyCoords => SimpleBox_DummyCoords
+      procedure, pass :: IOProcess => SimpleBox_IOProcess
+      procedure, pass :: DumpXYZConfig => SimpleBox_DumpXYZConfig
   end type
 
 !==========================================================================================
   contains
 !==========================================================================================
-  subroutine Constructor(self)
+  subroutine SimpleBox_Constructor(self)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
     integer :: AllocateStatus
  
     allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat= AllocateStatus)
@@ -59,9 +63,9 @@ module SimBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine LoadCoordinates(self, fileName, fileType)
+  subroutine SimpleBox_LoadCoordinates(self, fileName, fileType)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
     character(len=*), intent(in) :: fileName
     character(len=*), intent(in), optional :: fileType
     character(len=3) :: sym
@@ -90,9 +94,9 @@ module SimBoxDef
 
   end subroutine
 !==========================================================================================
-  subroutine BuildNeighList(self)
+  subroutine SimpleBox_BuildNeighList(self)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
     integer :: iList
     integer :: iAtom, jAtom
     real(dp) :: rx, ry, rz, rsq
@@ -118,16 +122,16 @@ module SimBoxDef
 
   end subroutine
 !==========================================================================================
-  subroutine Boundary(self, rx, ry, rz)
+  subroutine SimpleBox_Boundary(self, rx, ry, rz)
     implicit none
-    class(SimBox), intent(in) :: self
+    class(SimpleBox), intent(in) :: self
     real(dp), intent(inout) :: rx, ry, rz 
 
   end subroutine
 !==========================================================================================
-  subroutine UpdateEnergy(self, E_Diff)
+  subroutine SimpleBox_UpdateEnergy(self, E_Diff)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
     real(dp), intent(in) :: E_Diff
 
     self % ETotal = self % ETotal + E_Diff
@@ -136,10 +140,10 @@ module SimBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine UpdatePosition(self, disp)
+  subroutine SimpleBox_UpdatePosition(self, disp)
     use CoordinateTypes
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
     type(Displacement), intent(inout) :: disp(:)
     integer :: iDisp, dispLen, dispIndx
 
@@ -154,13 +158,13 @@ module SimBoxDef
 
   end subroutine
 !==========================================================================================
-  subroutine UpdateNeighLists(self, disp)
+  subroutine SimpleBox_UpdateNeighLists(self, disp)
     use CoordinateTypes
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
     type(Displacement), intent(inout) :: disp(:)
     integer :: iDisp, iList
-    integer :: atmIndx
+    integer :: atmIndx, iAtom, jAtom
     real(dp) :: rx, ry, rz, rsq
 
     do iDisp = 1, size(disp)
@@ -194,10 +198,10 @@ module SimBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine DummyCoords(self)
+  subroutine SimpleBox_DummyCoords(self)
     use CoordinateTypes
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
 
     self % nAtoms = 2
 
@@ -212,12 +216,13 @@ module SimBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine IOProcess(self, line, lineStat)
+  subroutine SimpleBox_IOProcess(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
+    use ForcefieldData, only: EnergyCalculator
     implicit none
 
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
     integer, intent(out) :: lineStat
     character(len=maxLineLen), intent(in) :: line   
 
@@ -232,17 +237,17 @@ module SimBoxDef
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
-        self % ECalcer = intVal
+        self % EFunc => EnergyCalculator(intVal)
       case default
         lineStat = -1
     end select
   end subroutine
 !==========================================================================================
-  subroutine DumpXYZConfig(self, fileName)
+  subroutine SimpleBox_DumpXYZConfig(self, fileName)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: fileName
 
   end subroutine

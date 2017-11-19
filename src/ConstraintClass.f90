@@ -23,7 +23,7 @@ module ConstraintTemplate
 !=============================================================
   subroutine ShiftCheck(self, trialBox, disp, accept)
     use CoordinateTypes, only: Displacement
-    use SimBoxDef, only: SimBox
+    use Template_SimBox, only: SimBox
     implicit none
     class(constraint), intent(in) :: self
     class(SimBox), intent(in) :: trialBox

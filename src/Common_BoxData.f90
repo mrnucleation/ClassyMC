@@ -1,10 +1,10 @@
 !==============================================================
 module BoxData
-  use SimBoxDef
+  use SimpleSimBox, only: SimpleBox
   use ConstraintTemplate
 
   type BxArray 
-    class(SimBox), allocatable:: box
+    class(SimpleBox), allocatable:: box
   end type
 
   type(BxArray), allocatable, target  :: BoxArray(:)

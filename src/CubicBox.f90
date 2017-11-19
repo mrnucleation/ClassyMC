@@ -1,6 +1,7 @@
 !==========================================================================================
 module CubicBoxDef
-  use SimBoxDef, only: SimBox
+  use Template_SimBox
+  use SimpleSimBox
   use NeighListDef, only: NeighList
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
@@ -10,7 +11,7 @@ module CubicBoxDef
 
 
   !Sim Box Definition
-  type, public, extends(SimBox) :: CubeBox
+  type, public, extends(SimpleBox) :: CubeBox
     real(dp) :: boxL, boxL2
 
     contains
@@ -152,6 +153,7 @@ module CubicBoxDef
   subroutine Cube_IOProcess(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
+    use ForcefieldData, only: EnergyCalculator
     implicit none
 
     class(CubeBox), intent(inout) :: self
@@ -171,7 +173,9 @@ module CubicBoxDef
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
-        self % ECalcer = intVal
+        self % EFunc => EnergyCalculator(intVal)
+
+!        self % ECalcer = intVal
       case("boxlength")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal

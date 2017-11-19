@@ -1,6 +1,6 @@
-module ForceFieldTemplate
+module Template_ForceField
   use VarPrecision
-  use SimBoxDef, only: SimBox
+  use Template_SimBox, only: SimBox
   use CoordinateTypes
 
   type, public :: forcefield
@@ -11,7 +11,7 @@ module ForceFieldTemplate
       procedure, pass :: ShiftECalc_Multi
       procedure, pass :: SwapInECalc
       procedure, pass :: SwapOutECalc
-      procedure, pass :: Exchange
+!      procedure, pass :: Exchange
       procedure, pass :: SetParameter
       procedure, pass :: ReadParFile
   end type
@@ -66,14 +66,7 @@ module ForceFieldTemplate
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
   end subroutine
-!=============================================================================+
-  subroutine SwapOutECalc(self, curbox, atmIndx, E_Diff)
-    implicit none
-      class(forcefield), intent(in) :: self
-      class(simBox), intent(inout) :: curbox
-      real(dp), intent(inOut) :: E_Diff
-      integer, intent(in) :: atmIndx(:)
-  end subroutine
+
 !=============================================================================+
   subroutine SetParameter(self, parIndex,  parVal)
     implicit none
