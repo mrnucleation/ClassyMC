@@ -8,7 +8,6 @@ module SimpleSimBox
   use ForcefieldData, only: ECalcArray
   use ConstraintTemplate, only: constrainArray
   use Template_SimBox, only: SimBox
-!  use ConstraintTemplate, only: constrainArray
 
 
   !Sim Box Definition

@@ -1,36 +1,47 @@
-module NeighListDef
+module RSqListDef
 use VarPrecision
 use CoordinateTypes
+use Template_SimBox, only: SimBox
+use SimpleSimBox, only: SimpleBox
+use NeighListDef, only: NeighList
 
-  type, public :: NeighList
-      logical :: Strict = .false.
-      integer, allocatable :: list(:,:)
-      integer, allocatable :: nNeigh(:)
-      integer :: maxNei
-      real(dp) :: rCut, rCutSq
+  type, public, extends(NeighList) :: RSqList
+!      logical :: Strict = .false.
+!      integer, allocatable :: list(:,:)
+!      integer, allocatable :: nNeigh(:)
+!      integer :: maxNei
+!      real(dp) :: rCut, rCutSq
+      class(SimpleBox), pointer :: parent => null()
     contains
-      procedure, pass :: Constructor
-      procedure, pass :: InitializeList
+      procedure, pass :: Constructor => RSqList_Constructor 
+      procedure, pass :: InitializeList => RSqList_InitializeList 
   end type
 
 !===================================================================================
   contains
 !===================================================================================
-  subroutine Constructor(self, nAtoms, rCut)
+  subroutine RSqList_Constructor(self, parentID, rCut)
+    use BoxData, only: BoxArray
     implicit none
-    class(NeighList), intent(inout) :: self
-    integer, intent(in) :: nAtoms
-    real(dp), intent(in) :: rCut
+    class(RSqList), intent(inout) :: self
+    integer, intent(in) :: parentID
+    real(dp), intent(in), optional :: rCut
     real(dp), parameter :: atomRadius = 1.0  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
-    self % rCut = rCut
-    self % rCutSq = rCut * rCut
+    self%parent => BoxArray(parentID)%box
+    if( present(rCut) ) then
+      self % rCut = rCut
+      self % rCutSq = rCut * rCut
+      self % maxNei = ceiling(rCut**3/atomRadius**3)
+    else
+      self % rCut = self % parent % EFunc % Method % GetCutOff()
+      self % rCutSq = (self%rCut)**2
+      self % maxNei = ceiling(self%rCut**3/atomRadius**3)
+    endif
 
-    self% maxNei = ceiling(atomRadius**3/rCut**3)
-
-    allocate( self%list(1:self%maxNei, 1:nAtoms), stat=AllocateStatus )
-    allocate( self%nNeigh(1:nAtoms), stat=AllocateStatus )
+    allocate( self%list(1:self%maxNei, 1:self%parent%nAtoms), stat=AllocateStatus )
+    allocate( self%nNeigh(1:self%parent%nAtoms), stat=AllocateStatus )
 
     self%list = 0
 
@@ -38,9 +49,9 @@ use CoordinateTypes
 
   end subroutine
 !===================================================================================
-  subroutine InitializeList(self)
+  subroutine RSqList_InitializeList(self)
     implicit none
-    class(NeighList), intent(inout) :: self
+    class(RSqList), intent(inout) :: self
 
   end subroutine
 !===================================================================================

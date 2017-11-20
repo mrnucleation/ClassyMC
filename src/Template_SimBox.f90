@@ -1,4 +1,8 @@
 !==========================================================================================
+! The purpose of this module is to provide the base class for the simulation box
+! family of objects. This type is only intended to provide the basic
+! structure for child classes and should not be used directly. 
+!==========================================================================================
 module Template_SimBox
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray

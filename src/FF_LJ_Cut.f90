@@ -8,7 +8,7 @@ module FF_Pair_LJ_Cut
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
-    real(dp) :: rCut, rCutSq
+!    real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Constructor => Constructor_LJ_Cut
       procedure, pass :: DetailedECalc => Detailed_LJ_Cut
@@ -18,6 +18,7 @@ module FF_Pair_LJ_Cut
       procedure, pass :: SwapOutECalc => SwapOut_LJ_Cut
       procedure, pass :: SetParameter => SetPar_LJ_Cut
       procedure, pass :: ReadParFile => ReadPar_LJ_Cut
+      procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
   end type
 
   contains
@@ -327,6 +328,14 @@ module FF_Pair_LJ_Cut
     character(len=*), intent(in) :: fileName
     write(*,*) "LJ CUT SAYING HELLO!!!"
   end subroutine
+  !=============================================================================+
+    function GetCutOff_LJ_Cut(self) result(rCut)
+      implicit none
+      class(Pair_LJ_Cut), intent(inout) :: self
+      real(dp) :: rCut
+
+      rCut = self%rCut
+    end function
   !=====================================================================
 
 end module

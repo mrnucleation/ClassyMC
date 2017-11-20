@@ -4,6 +4,7 @@ module Template_ForceField
   use CoordinateTypes
 
   type, public :: forcefield
+    real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Constructor 
       procedure, pass :: DetailedECalc 
@@ -14,6 +15,7 @@ module Template_ForceField
 !      procedure, pass :: Exchange
       procedure, pass :: SetParameter
       procedure, pass :: ReadParFile
+      procedure, pass :: GetCutOff
   end type
 
   contains
@@ -80,6 +82,14 @@ module Template_ForceField
     class(forcefield), intent(inout) :: self
     character(len=*), intent(in) :: fileName
   end subroutine
+!=============================================================================+
+  function GetCutOff(self) result(rCut)
+    implicit none
+    class(forcefield), intent(inout) :: self
+    real(dp) :: rCut
+
+    rCut = self%rCut
+  end function
 !=============================================================================+
 end module
 !=============================================================================+

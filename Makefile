@@ -54,7 +54,6 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_Sampling.f90\
         		$(SRC)/ConstraintClass.f90\
         		$(SRC)/DistanceCriteria.f90\
-        		$(SRC)/AcceptRule.f90\
         		$(SRC)/Metropolis.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/SimpleBox.f90\
@@ -71,6 +70,9 @@ SRC_MAIN := $(SRC)/Common.f90\
 
 SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
         		$(SRC)/Template_Forcefield.f90\
+        		$(SRC)/Template_AcceptRule.f90\
+        		$(SRC)/Template_NeighList.f90\
+  					$(SRC)/Template_MultiBoxMove.f90\
         		$(SRC)/Template_MoveClass.f90
 
 SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
@@ -169,10 +171,13 @@ $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Common_BoxData.o: $(OBJ)/SimpleBox.o $(OBJ)/ConstraintClass.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
 
+$(OBJ)/Neighlist.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o
+
 $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o
+$(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o
 $(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/SimpleBox.o
 
-$(OBJ)/SimpleBox.o: $(OBJ)/Common.o $(OBJ)/NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/ConstraintClass.o
+$(OBJ)/SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/ConstraintClass.o
 $(OBJ)/CubicBox.o: $(OBJ)/SimpleBox.o
 
 $(OBJ)/ConstraintClass.o: ${OBJ}/Template_SimBox.o 
@@ -187,4 +192,4 @@ $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o $
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o
 $(OBJ)/Metropolis.o: $(OBJ)/RandomNew.o
-$(OBJ)/Common_Sampling.o: $(OBJ)/AcceptRule.o $(OBJ)/Metropolis.o
+$(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Metropolis.o
