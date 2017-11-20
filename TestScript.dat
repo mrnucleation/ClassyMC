@@ -1,9 +1,15 @@
 #======================================
   set rng_seed -1
   set AtomTypes 2
+#  create boxes 1
   create boxes 1
+    cube
+  end_create
 #  create cubeboxes 1
-  create EnergyCalculators 1
+#  create EnergyCalculators 1
+  create EnergyCalculators
+    LJ_Cut
+  end_create
   modify box 1 energycalc 1
   modify box 1 boxlength 7.0
 #======================================

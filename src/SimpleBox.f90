@@ -6,7 +6,8 @@ module SimpleSimBox
 !  use NeighListDef
   use CoordinateTypes, only: Displacement
   use ForcefieldData, only: ECalcArray
-  use Template_SimBox
+  use ConstraintTemplate, only: constrainArray
+  use Template_SimBox, only: SimBox
 !  use ConstraintTemplate, only: constrainArray
 
 
@@ -26,10 +27,11 @@ module SimpleSimBox
 !    integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:)
 
+    type(constrainArray), allocatable :: Constrain(:)
     class(ECalcArray), pointer :: EFunc
-    integer :: ECalcer = -1
+
     integer :: ENeiList = -1
-    type(NeighList), allocatable :: NeighList(:)
+    class(NeighList), allocatable :: NeighList(:)
 
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor

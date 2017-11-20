@@ -28,7 +28,6 @@
 
     call Script_ReadParameters
 
-!    allocate( BoxArray(1)%box, source=CubeBox )
 !    allocate( Constrain(1:1) )
 !    allocate( distcriteria::Constrain(1)%Method )
     allocate( BoxArray(1)%box%NeighList(1:1) )

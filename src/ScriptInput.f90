@@ -65,7 +65,7 @@
         case("set")
            call setCommand( lineStore(iLine), lineStat )
         case("create")
-           call createCommand( lineStore(iLine), lineStat )
+           call createCommand(iLine, linestore, lineBuffer, lineStat)
         case("modify")
            call modifyCommand( lineStore(iLine), lineStat )
         case("forcefield")
@@ -150,7 +150,7 @@
             seed = intValue
           endif
           seed = p_size*seed + myid
-          write(*,*) seed
+          write(nout,*) seed
 !        case("out_energyunits")
 !          read(line,*) dummy, command, outputEngUnits
 !          outputEConv = FindEngUnit(outputEngUnits)
@@ -164,7 +164,7 @@
      
       end subroutine
 !========================================================            
-      subroutine createCommand(line, lineStat)
+      subroutine createCommand(iLine, linestore, lineBuffer, lineStat)
       use BoxData
       use CubicBoxDef
       use ForcefieldData, only: EnergyCalculator, nForceFields
@@ -172,25 +172,31 @@
       use VarPrecision
       use Units
       implicit none
-      character(len=maxLineLen), intent(in) :: line      
-      integer, intent(out) :: lineStat
+      integer, intent(in) :: iLine
+      character(len=maxLineLen), intent(in) :: linestore(:) 
+      integer, intent(out) :: lineStat, lineBuffer
 
       character(len=30) :: dummy, command!, stringValue
       logical :: logicValue
       integer :: i
-      integer :: intValue, AllocateStat
+      integer :: intValue, AllocateStat, nItems
       real(dp) :: realValue
       
 
       lineStat  = 0
 
-      read(line,*) dummy, command
+      read(linestore(iLine),*) dummy, command
       call LowerCaseLine(command)
+      call FindCommandBlock(iLine, lineStore, "end_create", lineBuffer)
+      nItems = lineBuffer - 1
+      write(*,*) nItems
+
       select case(trim(adjustl(command)))
         case("boxes")
-           read(line,*) dummy, command, intValue
+!           read(line,*) dummy, command, intValue
            if( .not. allocated(BoxArray) ) then
-             allocate(BoxArray(1:intValue), stat = AllocateStat)
+  
+             allocate(BoxArray(1:nItems), stat = AllocateStat)
              allocate(CubeBox::BoxArray(1)%box, stat = AllocateStat)
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
@@ -198,10 +204,10 @@
            endif
 
         case("energycalculators")
-           read(line,*) dummy, command, intValue
-           nForceFields = intValue
+!           read(line,*) dummy, command, intValue
+           nForceFields = nItems
            if( .not. allocated(EnergyCalculator) ) then
-             allocate(EnergyCalculator(1:intValue), stat = AllocateStat)
+             allocate(EnergyCalculator(1:nItems), stat = AllocateStat)
            else
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
              stop

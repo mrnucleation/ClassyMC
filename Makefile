@@ -170,10 +170,10 @@ $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
 
 $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o
 
-$(OBJ)/SimpleBox.o: $(OBJ)/Common.o $(OBJ)/NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o
+$(OBJ)/SimpleBox.o: $(OBJ)/Common.o $(OBJ)/NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/ConstraintClass.o
 $(OBJ)/CubicBox.o: $(OBJ)/SimpleBox.o
 
-$(OBJ)/ConstraintClass.o: ${OBJ}/SimpleBox.o 
+$(OBJ)/ConstraintClass.o: ${OBJ}/Template_SimBox.o 
 
 $(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/ScriptInput.o $(OBJ)/AtomTranslation.o $(OBJ)/RandomNew.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o
