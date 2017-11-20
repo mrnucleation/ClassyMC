@@ -27,10 +27,9 @@
     call sgrnd(1) 
 
     call Script_ReadParameters
-
 !    allocate( Constrain(1:1) )
 !    allocate( distcriteria::Constrain(1)%Method )
-    allocate( BoxArray(1)%box%NeighList(1:1) )
+!    allocate( BoxArray(1)%box%NeighList(1:1) )
     call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
     allocate( metropolis::sampling )
 

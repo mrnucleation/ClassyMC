@@ -39,8 +39,8 @@ use CoordinateTypes
   end subroutine
 !===================================================================================
   subroutine InitializeList(self)
-  implicit none
-  class(NeighList), intent(inout) :: self
+    implicit none
+    class(NeighList), intent(inout) :: self
 
   end subroutine
 !===================================================================================

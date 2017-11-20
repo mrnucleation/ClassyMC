@@ -5,8 +5,6 @@
   create boxes 1
     cube
   end_create
-#  create cubeboxes 1
-#  create EnergyCalculators 1
   create energyfunctions
     LJ_Cut
   end_create

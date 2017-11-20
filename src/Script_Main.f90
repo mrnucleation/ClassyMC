@@ -193,14 +193,12 @@
 
       select case(trim(adjustl(command)))
         case("boxes")
-!           read(line,*) dummy, command, intValue
            if( .not. allocated(BoxArray) ) then
              allocate(BoxArray(1:nItems), stat = AllocateStat)
              do i = 1, nItems
                curLine = iLine + i
                call Script_BoxType(linestore(curLine), i, lineStat)
              enddo             
-!             allocate(CubeBox::BoxArray(1)%box, stat = AllocateStat)
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
