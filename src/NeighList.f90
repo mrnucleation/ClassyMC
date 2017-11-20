@@ -35,7 +35,7 @@ use NeighListDef, only: NeighList
       self % rCutSq = rCut * rCut
       self % maxNei = ceiling(rCut**3/atomRadius**3)
     else
-      self % rCut = self % parent % EFunc % Method % GetCutOff()
+      self % rCut = self % parent % EFunc % Method % GetCutOff() + 2.0E0_dp
       self % rCutSq = (self%rCut)**2
       self % maxNei = ceiling(self%rCut**3/atomRadius**3)
     endif
