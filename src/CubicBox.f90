@@ -1,7 +1,6 @@
 !==========================================================================================
 module CubicBoxDef
-  use Template_SimBox
-  use SimpleSimBox
+  use SimpleSimBox, only: SimpleBox
   use NeighListDef, only: NeighList
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray

@@ -64,11 +64,12 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/MoveClass.f90\
         		$(SRC)/AtomTranslation.f90\
         		$(SRC)/VariablePrecision.f90\
- 	        	$(SRC)/ScriptInput.f90\
- 	        	$(SRC)/Input_Format.f90\
- 	        	$(SRC)/NeighList.f90\
  	        	$(SRC)/Script_Forcefield.f90\
-#           $(SRC)/Template_SimBox.f90
+	        	$(SRC)/Script_Main.f90\
+	        	$(SRC)/Script_SimBoxes.f90\
+            	$(SRC)/Input_Format.f90\
+ 	        	$(SRC)/NeighList.f90
+
 SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
         		$(SRC)/Template_Forcefield.f90
 
@@ -175,12 +176,12 @@ $(OBJ)/CubicBox.o: $(OBJ)/SimpleBox.o
 
 $(OBJ)/ConstraintClass.o: ${OBJ}/Template_SimBox.o 
 
-$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/ScriptInput.o $(OBJ)/AtomTranslation.o $(OBJ)/RandomNew.o
+$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/AtomTranslation.o $(OBJ)/RandomNew.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o
 
 $(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/MoveClass.o $(OBJ)/ConstraintClass.o
 
-$(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/CubicBox.o
+$(OBJ)/Script_Main.o: $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/CubicBox.o $(OBJ)/Script_SimBoxes.o
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o

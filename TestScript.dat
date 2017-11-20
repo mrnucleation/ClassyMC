@@ -7,11 +7,11 @@
   end_create
 #  create cubeboxes 1
 #  create EnergyCalculators 1
-  create EnergyCalculators
+  create energyfunctions
     LJ_Cut
   end_create
   modify box 1 energycalc 1
-  modify box 1 boxlength 7.0
+#  modify box 1 boxlength 7.0
 #======================================
-  forcefield 1 fieldtype LJ_Cut
+#  forcefield 1 fieldtype LJ_Cut
 #======================================

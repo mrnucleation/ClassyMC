@@ -62,14 +62,14 @@
         endif 
 
         select case(trim(adjustl( command )))
-        case("set")
-           call setCommand( lineStore(iLine), lineStat )
         case("create")
            call createCommand(iLine, linestore, lineBuffer, lineStat)
-        case("modify")
-           call modifyCommand( lineStore(iLine), lineStat )
         case("forcefield")
           call Script_Forcefield( lineStore(iLine), lineStat )
+        case("modify")
+           call modifyCommand( lineStore(iLine), lineStat )
+        case("set")
+           call setCommand( lineStore(iLine), lineStat )
         case default
           write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
           write(*,*) trim(adjustl(lineStore(iLine)))
@@ -165,10 +165,10 @@
       end subroutine
 !========================================================            
       subroutine createCommand(iLine, linestore, lineBuffer, lineStat)
-      use BoxData
-      use CubicBoxDef
+      use BoxData, only: BoxArray
       use ForcefieldData, only: EnergyCalculator, nForceFields
-      use Template_SimBox
+      use Script_SimBoxes, only: Script_BoxType
+      use Input_Forcefield, only:Script_FieldType
       use VarPrecision
       use Units
       implicit none
@@ -176,9 +176,9 @@
       character(len=maxLineLen), intent(in) :: linestore(:) 
       integer, intent(out) :: lineStat, lineBuffer
 
-      character(len=30) :: dummy, command!, stringValue
+      character(len=50) :: dummy, command!, stringValue
       logical :: logicValue
-      integer :: i
+      integer :: i, curLine
       integer :: intValue, AllocateStat, nItems
       real(dp) :: realValue
       
@@ -196,24 +196,31 @@
 !           read(line,*) dummy, command, intValue
            if( .not. allocated(BoxArray) ) then
              allocate(BoxArray(1:nItems), stat = AllocateStat)
-
-             allocate(CubeBox::BoxArray(1)%box, stat = AllocateStat)
+             do i = 1, nItems
+               curLine = iLine + i
+               call Script_BoxType(linestore(curLine), i, lineStat)
+             enddo             
+!             allocate(CubeBox::BoxArray(1)%box, stat = AllocateStat)
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
            endif
 
-        case("energycalculators")
-!           read(line,*) dummy, command, intValue
-           nForceFields = nItems
+        case("energyfunctions")
            if( .not. allocated(EnergyCalculator) ) then
+             nForceFields = nItems
              allocate(EnergyCalculator(1:nItems), stat = AllocateStat)
+             do i = 1, nItems
+               curLine = iLine + i
+               call Script_FieldType(linestore(curLine), i, lineStat)
+             enddo   
            else
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
              stop
            endif
  
         case default
+          write(*,*) command
           lineStat = -1
       end select
 

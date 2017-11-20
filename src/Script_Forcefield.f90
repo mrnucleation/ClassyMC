@@ -24,8 +24,8 @@ module Input_Forcefield
       read(line, *) dummy, FFNum, command
       call LowerCaseLine(command)
       select case(trim(adjustl(command)))
-        case("fieldtype")
-          call fieldType(line, lineStat) 
+!        case("fieldtype")
+!          call Script_FieldType(line, lineStat) 
 
         case("readfile")
           read(line,*) dummy, FFNum, command, fileName
@@ -39,12 +39,13 @@ module Input_Forcefield
   end subroutine
 
 !================================================================================
-  subroutine fieldType(line, lineStat)
+  subroutine Script_FieldType(line, FFNum, lineStat)
     use ForcefieldData, only: nForceFields
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use ParallelVar, only: nout
     implicit none
     character(len=*), intent(in) :: line
+    integer, intent(in) :: FFNum
     integer, intent(out) :: lineStat
 
 
@@ -52,28 +53,13 @@ module Input_Forcefield
       character(len=30) :: fileName      
       logical :: logicValue
       integer :: j
-      integer :: intValue
-      integer :: FFNum
       real(dp) :: realValue
 
 
       lineStat  = 0
-      read(line, *) dummy, FFNum, command, FF_Type
+      read(line, *) FF_Type
 
       !Safety check to ensure that the index number is within proper bounds
-      if( (FFNum > nForceFields) .or. (FFNum < 0)) then
-        write(*,*) "ERROR! An invalid forcefield reference number has been given"
-        write(*,"(A,I2,A)") "A Forcefield with index number", FFNum, " does not exist!"
-        stop
-      endif
-
-      !Safety check to ensure a forcefield type has not already been assigned
-      if( allocated(EnergyCalculator(FFNum) % Method) ) then
-        write(*,*) "ERROR! Forcefield has already been intialized!"
-        write(*,*) "Forcefield Number:", FFNum
-        stop
-      endif
-
       call LowerCaseLine(FF_Type)
       select case(trim(adjustl(FF_Type)))
         case("lj_cut")
@@ -81,6 +67,7 @@ module Input_Forcefield
           write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as LJ_Cut style"
 
         case default
+          write(*,*) "Here"
           lineStat = -1
 
       end select
