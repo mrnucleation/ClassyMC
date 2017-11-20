@@ -195,8 +195,8 @@
         case("boxes")
 !           read(line,*) dummy, command, intValue
            if( .not. allocated(BoxArray) ) then
-  
              allocate(BoxArray(1:nItems), stat = AllocateStat)
+
              allocate(CubeBox::BoxArray(1)%box, stat = AllocateStat)
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"

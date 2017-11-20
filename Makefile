@@ -67,7 +67,7 @@ SRC_MAIN := $(SRC)/Common.f90\
  	        	$(SRC)/ScriptInput.f90\
  	        	$(SRC)/Input_Format.f90\
  	        	$(SRC)/NeighList.f90\
- 	        	$(SRC)/Input_Forcefield.f90\
+ 	        	$(SRC)/Script_Forcefield.f90\
 #           $(SRC)/Template_SimBox.f90
 SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
         		$(SRC)/Template_Forcefield.f90
@@ -180,8 +180,8 @@ $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Tem
 
 $(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/MoveClass.o $(OBJ)/ConstraintClass.o
 
-$(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Input_Forcefield.o $(OBJ)/CubicBox.o
-$(OBJ)/Input_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o
+$(OBJ)/ScriptInput.o: $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/CubicBox.o
+$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o
 $(OBJ)/Metropolis.o: $(OBJ)/RandomNew.o
