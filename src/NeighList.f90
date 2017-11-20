@@ -15,6 +15,7 @@ use NeighListDef, only: NeighList
     contains
       procedure, pass :: Constructor => RSqList_Constructor 
       procedure, pass :: InitializeList => RSqList_InitializeList 
+      procedure, pass :: GetNewList => RSqList_GetNewList
   end type
 
 !===================================================================================
@@ -30,6 +31,10 @@ use NeighListDef, only: NeighList
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box
+
+!     If no rCut value is given by the subroutine call attempt to pull
+!     the rSq value from the parent box's energy function. The assumption being
+!     that the neighborlist is used for the energy calculation routines.
     if( present(rCut) ) then
       self % rCut = rCut
       self % rCutSq = rCut * rCut
@@ -52,6 +57,14 @@ use NeighListDef, only: NeighList
   subroutine RSqList_InitializeList(self)
     implicit none
     class(RSqList), intent(inout) :: self
+
+  end subroutine
+!===================================================================================
+  subroutine RSqList_GetNewList(self, disp, newList)
+    implicit none
+    class(RSqList), intent(inout) :: self
+    type(Displacement), intent(in) :: disp
+    real(dp), intent(out) :: newList(:)
 
   end subroutine
 !===================================================================================

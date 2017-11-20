@@ -1,6 +1,6 @@
 module NeighListDef
 use VarPrecision
-use CoordinateTypes
+use CoordinateTypes, only: Displacement
 use Template_SimBox, only: SimBox
 
   type, public :: NeighList
@@ -13,6 +13,7 @@ use Template_SimBox, only: SimBox
     contains
       procedure, pass :: Constructor
       procedure, pass :: InitializeList
+      procedure, pass :: GetNewList
   end type
 
 !===================================================================================
@@ -30,6 +31,13 @@ use Template_SimBox, only: SimBox
     implicit none
     class(NeighList), intent(inout) :: self
 
+  end subroutine
+!===================================================================================
+  subroutine GetNewList(self, disp, newList)
+    implicit none
+    class(NeighList), intent(inout) :: self
+    type(Displacement), intent(in) :: disp
+    real(dp), intent(out) :: newList(:)
   end subroutine
 !===================================================================================
 end module
