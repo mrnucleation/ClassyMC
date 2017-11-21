@@ -1,5 +1,5 @@
 module FF_Pair_LJ_Cut
-  use Template_ForceField, only: ForceField
+  use Template_ForceField
   use VarPrecision
   use Template_SimBox, only: SimBox
   use CoordinateTypes
