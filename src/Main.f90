@@ -12,7 +12,7 @@
     use AtomTranslation, only: AtomMolTranslate
     use RandomGen, only: sgrnd
     use DistanceCriteria, only: distcriteria
-    use CommonSampling, only: sampling, metropolis
+!    use CommonSampling, only: sampling, metropolis
     implicit none
  
     integer :: nMoves, iAtom
@@ -31,7 +31,7 @@
 !    allocate( distcriteria::Constrain(1)%Method )
 !    allocate( BoxArray(1)%box%NeighList(1:1) )
     call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
-    allocate( metropolis::sampling )
+!    allocate( metropolis::sampling )
 
     allocate( AtomMolTranslate::MCMover )
     call EnergyCalculator(1)%Method%Constructor

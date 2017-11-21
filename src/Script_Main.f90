@@ -9,6 +9,7 @@
       use ParallelVar
       use Units
       use Input_Forcefield
+      use Script_Sampling, only: Script_SamplingType
       implicit none
 !      integer(kind=8), intent(OUT) :: ncycle,nmoves
       integer :: i, ii, j, nArgs
@@ -70,6 +71,8 @@
            call modifyCommand( lineStore(iLine), lineStat )
         case("set")
            call setCommand( lineStore(iLine), lineStat )
+        case("samplingtype")
+           call Script_SamplingType(lineStore(iLine), lineStat)
         case default
           write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
           write(*,*) trim(adjustl(lineStore(iLine)))
@@ -216,7 +219,7 @@
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
              stop
            endif
- 
+
         case default
           write(*,*) command
           lineStat = -1

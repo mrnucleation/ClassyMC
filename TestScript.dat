@@ -1,6 +1,7 @@
 #======================================
   set rng_seed -1
   set AtomTypes 2
+  SamplingType Metropolis
 #  create boxes 1
   create boxes 1
     cube
