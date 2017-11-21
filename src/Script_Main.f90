@@ -171,7 +171,7 @@
       use BoxData, only: BoxArray
       use ForcefieldData, only: EnergyCalculator, nForceFields
       use Script_SimBoxes, only: Script_BoxType
-      use Input_Forcefield, only:Script_FieldType
+      use Input_Forcefield, only: Script_FieldType
       use VarPrecision
       use Units
       implicit none
@@ -201,6 +201,7 @@
              do i = 1, nItems
                curLine = iLine + i
                call Script_BoxType(linestore(curLine), i, lineStat)
+               BoxArray(i)%boxID = i - 1
              enddo             
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
