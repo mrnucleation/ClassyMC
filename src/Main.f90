@@ -65,7 +65,7 @@
            write(2,*) "Ar",BoxArray(1)%box%atoms(1, iAtom), BoxArray(1)%box%atoms(2, iAtom), BoxArray(1)%box%atoms(3, iAtom)
          enddo
        endif
-       if(mod(nMoves, 100) == 0) then
+       if(mod(nMoves, 200) == 0) then
          call BoxArray(1)%box % BuildNeighList
        endif
     enddo

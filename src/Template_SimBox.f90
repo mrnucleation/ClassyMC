@@ -19,6 +19,8 @@ module Template_SimBox
     real(dp) :: beta, temperature
     real(dp), allocatable :: atoms(:,:)
     integer, allocatable :: AtomType(:)
+
+    integer :: nLists
     class(NeighListDef), allocatable :: NeighList(:)
 
     contains

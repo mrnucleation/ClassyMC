@@ -1,10 +1,10 @@
-module FF_Pair_LJ_Cut
+module FF_Pair_LJ_Cut_NoNei
   use Template_ForceField
   use VarPrecision
   use Template_SimBox, only: SimBox
   use CoordinateTypes
 
-  type, extends(forcefield) :: Pair_LJ_Cut
+  type, extends(forcefield) :: Pair_LJ_Cut_NoNei
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
@@ -26,7 +26,7 @@ module FF_Pair_LJ_Cut
   subroutine Constructor_LJ_Cut(self)
     use Common_MolDef, only: nAtomTypes
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Cut_NoNei), intent(inout) :: self
     integer :: AllocateStat
 
     allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
@@ -46,7 +46,7 @@ module FF_Pair_LJ_Cut
   subroutine Detailed_LJ_Cut(self, curbox, E_T)
     use ParallelVar, only: nout
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
+    class(Pair_LJ_Cut_NoNei), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_T
       integer :: iAtom,jAtom
@@ -96,7 +96,7 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff)
     implicit none
-      class(Pair_LJ_Cut), intent(in) :: self
+      class(Pair_LJ_Cut_NoNei), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
@@ -212,7 +212,7 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine Shift_LJ_Cut_Multi(self, curbox, disp, E_Diff)
     implicit none
-      class(Pair_LJ_Cut), intent(in) :: self
+      class(Pair_LJ_Cut_NoNei), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inout) :: E_Diff
@@ -221,7 +221,7 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine SwapIn_LJ_Cut(self, curbox, disp, E_Diff)
     implicit none
-      class(Pair_LJ_Cut), intent(in) :: self
+      class(Pair_LJ_Cut_NoNei), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
@@ -264,7 +264,7 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine SwapOut_LJ_Cut(self, curbox, atmIndx, E_Diff)
     implicit none
-      class(Pair_LJ_Cut), intent(in) :: self
+      class(Pair_LJ_Cut_NoNei), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
@@ -301,7 +301,7 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine SetPar_LJ_Cut(self, parIndex,  parVal)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Cut_NoNei), intent(inout) :: self
     integer, intent(in) :: parIndex(:)
     real(dp), intent(in) :: parVal
 
@@ -324,14 +324,14 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine ReadPar_LJ_Cut(self, fileName)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Cut_NoNei), intent(inout) :: self
     character(len=*), intent(in) :: fileName
     write(*,*) "LJ CUT SAYING HELLO!!!"
   end subroutine
   !=============================================================================+
     function GetCutOff_LJ_Cut(self) result(rCut)
       implicit none
-      class(Pair_LJ_Cut), intent(inout) :: self
+      class(Pair_LJ_Cut_NoNei), intent(inout) :: self
       real(dp) :: rCut
 
       rCut = self%rCut

@@ -1,4 +1,6 @@
 !===================================================================================
+! This module contains a simplistic neighbor list implimentation primarily used for debugging.  
+!===================================================================================
 module RSqListDef
 use VarPrecision
 use CoordinateTypes
