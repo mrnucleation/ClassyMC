@@ -88,6 +88,7 @@ module Template_ForceField
     class(forcefield), intent(inout) :: self
     real(dp) :: rCut
 
+    write(*,*) self%rCut
     rCut = self%rCut
   end function
 !=============================================================================+

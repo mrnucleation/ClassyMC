@@ -40,6 +40,7 @@ module FF_Pair_LJ_Cut
     self%rCut = 5E0_dp
     self%rCutSq = 5E0_dp**2
 
+    write(*,*) 
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
   end subroutine

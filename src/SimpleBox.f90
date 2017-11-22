@@ -116,7 +116,7 @@ module SimpleSimBox
         rz = self%atoms(3, iAtom) - self%atoms(3, jAtom)
         call self%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-        write(*,*) iAtom, jAtom, rsq
+!        write(*,*) iAtom, jAtom, rsq
         do iList = 1, size(self%NeighList)
           if( rsq <= self%NeighList(iList)%rCutSq ) then 
 !            write(*,*) iList

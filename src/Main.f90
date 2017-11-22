@@ -15,7 +15,7 @@
     implicit none
  
     integer :: nMoves, iAtom
-    real(dp) :: E_T
+    real(dp) :: E_T, E_Final
     real(dp) :: avgE, cnt
     class(AtomMolTranslate), allocatable :: MCMover
 
@@ -30,10 +30,11 @@
 !    allocate( distcriteria::Constrain(1)%Method )
     allocate( RSqList::BoxArray(1)%box%NeighList(1:1) )
     call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
+    call EnergyCalculator(1)%Method%Constructor
     call BoxArray(1)%box%NeighList(1)%constructor(1)
 
     allocate( AtomMolTranslate::MCMover )
-    call EnergyCalculator(1)%Method%Constructor
+
 
     BoxArray(1)%box%AtomType = 1
     BoxArray(1)%box%temperature = 0.7E0_dp
@@ -52,7 +53,7 @@
     write(nout,*) "Simulation Start!"
     avgE = 0E0_dp
     cnt = 0E0_dp
-    do nMoves = 1, nint(1d4)
+    do nMoves = 1, nint(1d7)
        call MCMover % FullMove(BoxArray(1)%box)
        avgE = avgE + BoxArray(1)%box%ETotal
        cnt = cnt + 1E0_dp
@@ -64,9 +65,17 @@
            write(2,*) "Ar",BoxArray(1)%box%atoms(1, iAtom), BoxArray(1)%box%atoms(2, iAtom), BoxArray(1)%box%atoms(3, iAtom)
          enddo
        endif
+       if(mod(nMoves, 100) == 0) then
+         call BoxArray(1)%box % BuildNeighList
+       endif
     enddo
-    call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
+    
+    E_Final = BoxArray(1)%box%ETotal
 
+    call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
+    write(*,*) "Culmative Energy:", E_Final
+    write(*,*) "Final Energy:",  BoxArray(1)%box%ETotal
+    write(*,*) "Difference:",  E_Final-BoxArray(1)%box%ETotal
     write(*,*) "Average Energy:", avgE/cnt
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       

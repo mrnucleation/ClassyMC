@@ -52,28 +52,29 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_ECalc.f90\
         		$(SRC)/Common_MolDef.f90\
         		$(SRC)/Common_Sampling.f90\
-        		$(SRC)/ConstraintClass.f90\
-        		$(SRC)/DistanceCriteria.f90\
-        		$(SRC)/Metropolis.f90\
+        		$(SRC)/Common_NeighList.f90\
+         		$(SRC)/DistanceCriteria.f90\
+        		$(SRC)/Sampling_Metropolis.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/SimpleBox.f90\
         		$(SRC)/CubicBox.f90\
         		$(SRC)/RandomNew.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/AtomTranslation.f90\
-        		$(SRC)/VariablePrecision.f90\
  	        	$(SRC)/Script_Forcefield.f90\
 	        	$(SRC)/Script_Main.f90\
 	        	$(SRC)/Script_Sampling.f90\
 	        	$(SRC)/Script_SimBoxes.f90\
 				$(SRC)/Input_Format.f90\
- 	        	$(SRC)/Neigh_RSqList.f90
+ 	        	$(SRC)/Neigh_RSqList.f90\
+        		$(SRC)/VariablePrecision.f90
 
 SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
         		$(SRC)/Template_Forcefield.f90\
+                $(SRC)/Template_Constraint.f90\
         		$(SRC)/Template_AcceptRule.f90\
         		$(SRC)/Template_NeighList.f90\
-  					$(SRC)/Template_MultiBoxMove.f90\
+                $(SRC)/Template_MultiBoxMove.f90\
         		$(SRC)/Template_MoveClass.f90
 
 SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
@@ -82,7 +83,6 @@ SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN)
 #        Object Files
 # ====================================
 OBJ_MAIN:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_MAIN))
-
 OBJ_TEMPLATE:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_TEMPLATE))
 
 OBJ_COMPLETE:= ${OBJ_TEMPLATE} $(OBJ_MAIN) 
@@ -169,29 +169,31 @@ removeExec:
 #        Dependencies
 # ====================================
 $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
-$(OBJ)/Common_BoxData.o: $(OBJ)/SimpleBox.o $(OBJ)/ConstraintClass.o
+$(OBJ)/Common_BoxData.o: $(OBJ)/SimpleBox.o $(OBJ)/Template_Constraint.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
+$(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Sampling_Metropolis.o
 
-$(OBJ)/Neigh_RSqList.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o
+$(OBJ)/Neigh_RSqList.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o $(OBJ)/Common_NeighList.o
 
 $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_NeighList.o
 $(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o
 $(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/SimpleBox.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o
 
-$(OBJ)/SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/ConstraintClass.o
+$(OBJ)/SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o
 $(OBJ)/CubicBox.o: $(OBJ)/SimpleBox.o
 
-$(OBJ)/ConstraintClass.o: ${OBJ}/Template_SimBox.o 
+$(OBJ)/Template_Constraint.o: $(OBJ)/Template_SimBox.o 
 
-$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Neigh_RSqList.o
-
-
-$(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/ConstraintClass.o
+$(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o
-$(OBJ)/Metropolis.o: $(OBJ)/RandomNew.o
-$(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Metropolis.o
+
+$(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
+
+$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Neigh_RSqList.o
+
+

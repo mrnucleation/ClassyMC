@@ -24,11 +24,12 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
   subroutine RSqList_Constructor(self, parentID, rCut)
     use BoxData, only: BoxArray
+    use NeighData, only: neighSkin
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 1.0  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 1.0E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box
@@ -44,7 +45,8 @@ use Template_NeighList, only: NeighListDef
       self % rCutSq = rCut * rCut
       self % maxNei = ceiling(rCut**3/atomRadius**3)
     else
-      self % rCut = self % parent % EFunc % Method % GetCutOff() + 5.0E0_dp
+      self % rCut = self % parent % EFunc % Method % GetCutOff() + neighSkin
+      write(*,*) self % rCut
       self % rCutSq = (self%rCut)**2
       self % maxNei = ceiling(self%rCut**3/atomRadius**3)
     endif
