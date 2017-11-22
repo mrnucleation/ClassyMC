@@ -1,6 +1,6 @@
 !==========================================================================================
 module SimpleSimBox
-  use NeighListDef, only: NeighList
+!  use NeighListDef, only: NeighList
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
 !  use NeighListDef
@@ -30,7 +30,7 @@ module SimpleSimBox
     class(ECalcArray), pointer :: EFunc
 
     integer :: ENeiList = -1
-    class(NeighList), allocatable :: NeighList(:)
+!    class(NeighList), allocatable :: NeighList(:)
 
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
@@ -102,6 +102,13 @@ module SimpleSimBox
     integer :: iAtom, jAtom
     real(dp) :: rx, ry, rz, rsq
 
+!    write(*,*) "Here"
+    do iList = 1, size(self%NeighList)
+      self%NeighList(iList)%nNeigh = 0
+      self%NeighList(iList)%list = 0
+!      write(*,*) iList, size(self%NeighList(iList)%nNeigh)
+    enddo
+
     do iAtom = 1, self%nAtoms-1
       do jAtom = iAtom+1, self%nAtoms
         rx = self%atoms(1, iAtom) - self%atoms(1, jAtom)
@@ -109,17 +116,21 @@ module SimpleSimBox
         rz = self%atoms(3, iAtom) - self%atoms(3, jAtom)
         call self%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
+        write(*,*) iAtom, jAtom, rsq
         do iList = 1, size(self%NeighList)
           if( rsq <= self%NeighList(iList)%rCutSq ) then 
+!            write(*,*) iList
             self%NeighList(iList)%nNeigh(iAtom) = self%NeighList(iList)%nNeigh(iAtom) + 1
             self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
-
+!            write(*,*) iList
             self%NeighList(iList)%nNeigh(jAtom) = self%NeighList(iList)%nNeigh(jAtom) + 1
             self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
           endif
         enddo        
       enddo
     enddo
+!    write(*,*) "Here"
+
 
   end subroutine
 !==========================================================================================

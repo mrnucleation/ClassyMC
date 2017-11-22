@@ -1,9 +1,10 @@
-module NeighListDef
+!===================================================================================
+module Template_NeighList
 use VarPrecision
 use CoordinateTypes, only: Displacement
-use Template_SimBox, only: SimBox
+!use Template_SimBox, only: SimBox
 
-  type, public :: NeighList
+  type, public :: NeighListDef
       logical :: Strict = .false.
       integer, allocatable :: list(:,:)
       integer, allocatable :: nNeigh(:)
@@ -21,7 +22,7 @@ use Template_SimBox, only: SimBox
 !===================================================================================
   subroutine Constructor(self, parentID, rCut)
     implicit none
-    class(NeighList), intent(inout) :: self
+    class(NeighListDef), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
 
@@ -29,15 +30,17 @@ use Template_SimBox, only: SimBox
 !===================================================================================
   subroutine InitializeList(self)
     implicit none
-    class(NeighList), intent(inout) :: self
+    class(NeighListDef), intent(inout) :: self
 
   end subroutine
 !===================================================================================
   subroutine GetNewList(self, disp, newList)
     implicit none
-    class(NeighList), intent(inout) :: self
+    class(NeighListDef), intent(inout) :: self
     type(Displacement), intent(in) :: disp
     real(dp), intent(out) :: newList(:)
+
+    newList = 0E0_dp
   end subroutine
 !===================================================================================
 end module

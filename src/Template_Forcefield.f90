@@ -38,7 +38,7 @@ module Template_ForceField
 !=============================================================================+
   subroutine ShiftECalc_Single(self, curbox, disp, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
+      class(forcefield), intent(in) :: self
       class(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
@@ -46,7 +46,7 @@ module Template_ForceField
 !=============================================================================+
   subroutine ShiftECalc_Multi(self, curbox, disp, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
+      class(forcefield), intent(in) :: self
       class(simBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inout) :: E_Diff

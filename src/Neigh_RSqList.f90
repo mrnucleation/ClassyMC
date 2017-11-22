@@ -4,9 +4,9 @@ use VarPrecision
 use CoordinateTypes
 use Template_SimBox, only: SimBox
 use SimpleSimBox, only: SimpleBox
-use NeighListDef, only: NeighList
+use Template_NeighList, only: NeighListDef
 
-  type, public, extends(NeighList) :: RSqList
+  type, public, extends(NeighListDef) :: RSqList
 !      logical :: Strict = .false.
 !      integer, allocatable :: list(:,:)
 !      integer, allocatable :: nNeigh(:)
@@ -32,6 +32,9 @@ use NeighListDef, only: NeighList
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box
+    if(.not. allocated(self%parent%atoms) ) then
+      stop
+    endif
 
 !     If no rCut value is given by the subroutine call attempt to pull
 !     the rSq value from the parent box's energy function. The assumption being
@@ -41,7 +44,7 @@ use NeighListDef, only: NeighList
       self % rCutSq = rCut * rCut
       self % maxNei = ceiling(rCut**3/atomRadius**3)
     else
-      self % rCut = self % parent % EFunc % Method % GetCutOff() + 2.0E0_dp
+      self % rCut = self % parent % EFunc % Method % GetCutOff() + 5.0E0_dp
       self % rCutSq = (self%rCut)**2
       self % maxNei = ceiling(self%rCut**3/atomRadius**3)
     endif
@@ -67,6 +70,7 @@ use NeighListDef, only: NeighList
     type(Displacement), intent(in) :: disp
     real(dp), intent(out) :: newList(:)
 
+    newList = 0E0_dp
   end subroutine
 !===================================================================================
 end module

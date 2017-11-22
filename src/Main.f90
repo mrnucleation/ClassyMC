@@ -5,12 +5,11 @@
     use ParallelVar, only: myid, p_size, ierror, nout
     use ScriptInput, only: Script_ReadParameters
     use BoxData, only: BoxArray, Constrain
-    use SimpleSimBox, only: SimpleBox
-    use CubicBoxDef, only: CubeBox
     use Common_MolDef, only: nAtomTypes
     use ForcefieldData, only: EnergyCalculator
     use AtomTranslation, only: AtomMolTranslate
     use RandomGen, only: sgrnd
+    use RSqListDef, only: RSqList
     use DistanceCriteria, only: distcriteria
 !    use CommonSampling, only: sampling, metropolis
     implicit none
@@ -29,9 +28,9 @@
     call Script_ReadParameters
 !    allocate( Constrain(1:1) )
 !    allocate( distcriteria::Constrain(1)%Method )
-!    allocate( BoxArray(1)%box%NeighList(1:1) )
+    allocate( RSqList::BoxArray(1)%box%NeighList(1:1) )
     call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
-!    allocate( metropolis::sampling )
+    call BoxArray(1)%box%NeighList(1)%constructor(1)
 
     allocate( AtomMolTranslate::MCMover )
     call EnergyCalculator(1)%Method%Constructor
@@ -41,6 +40,7 @@
     BoxArray(1)%box%beta = 1E0_dp/BoxArray(1)%box%temperature
 !    call BoxArray(1)%box%DummyCoords
     call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
+    call BoxArray(1)%box % BuildNeighList
 
     open(unit=2, file="Traj.xyz")
     write(2,*) BoxArray(1)%box%nAtoms
@@ -49,10 +49,10 @@
       write(2,*) "Ar",BoxArray(1)%box%atoms(1, iAtom), BoxArray(1)%box%atoms(2, iAtom), BoxArray(1)%box%atoms(3, iAtom)
     enddo
 
-
+    write(nout,*) "Simulation Start!"
     avgE = 0E0_dp
     cnt = 0E0_dp
-    do nMoves = 1, nint(1d7)
+    do nMoves = 1, nint(1d4)
        call MCMover % FullMove(BoxArray(1)%box)
        avgE = avgE + BoxArray(1)%box%ETotal
        cnt = cnt + 1E0_dp

@@ -3,6 +3,7 @@
       use VarPrecision
 
       type Displacement
+        logical :: newAtom = .false.
         integer(kind=atomIntType) :: molType, atmIndx, molIndx
         real(dp) :: x_new, y_new, z_new
       end type

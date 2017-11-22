@@ -6,7 +6,7 @@
 module Template_SimBox
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
-!  use NeighListDef
+  use Template_NeighList, only: NeighListDef
   use CoordinateTypes, only: Displacement
 !  use ConstraintTemplate, only: constrainArray
 
@@ -19,6 +19,8 @@ module Template_SimBox
     real(dp) :: beta, temperature
     real(dp), allocatable :: atoms(:,:)
     integer, allocatable :: AtomType(:)
+    class(NeighListDef), allocatable :: NeighList(:)
+
     contains
       procedure, public, pass :: Constructor
       procedure, public, pass :: LoadCoordinates
