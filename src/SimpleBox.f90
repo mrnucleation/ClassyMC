@@ -119,10 +119,10 @@ module SimpleSimBox
 !        write(*,*) iAtom, jAtom, rsq
         do iList = 1, size(self%NeighList)
           if( rsq <= self%NeighList(iList)%rCutSq ) then 
-!            write(*,*) iList
+
             self%NeighList(iList)%nNeigh(iAtom) = self%NeighList(iList)%nNeigh(iAtom) + 1
             self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
-!            write(*,*) iList
+
             self%NeighList(iList)%nNeigh(jAtom) = self%NeighList(iList)%nNeigh(jAtom) + 1
             self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
           endif

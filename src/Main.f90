@@ -37,7 +37,7 @@
 
 
     BoxArray(1)%box%AtomType = 1
-    BoxArray(1)%box%temperature = 0.7E0_dp
+    BoxArray(1)%box%temperature = 0.8E0_dp
     BoxArray(1)%box%beta = 1E0_dp/BoxArray(1)%box%temperature
 !    call BoxArray(1)%box%DummyCoords
     call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
@@ -58,15 +58,18 @@
        avgE = avgE + BoxArray(1)%box%ETotal
        cnt = cnt + 1E0_dp
        if(mod(nMoves, 1000) == 0) then
-         write(*,*) nMoves, BoxArray(1)%box%ETotal
+         write(*,*) nMoves, BoxArray(1)%box%ETotal/BoxArray(1)%box%nAtoms, MCMover%GetAcceptRate()
          write(2,*) BoxArray(1)%box%nAtoms
          write(2,*) 
          do iAtom = 1, BoxArray(1)%box%nAtoms
            write(2,*) "Ar",BoxArray(1)%box%atoms(1, iAtom), BoxArray(1)%box%atoms(2, iAtom), BoxArray(1)%box%atoms(3, iAtom)
          enddo
        endif
-       if(mod(nMoves, 200) == 0) then
+       if(mod(nMoves, 1000) == 0) then
          call BoxArray(1)%box % BuildNeighList
+       endif
+       if(mod(nMoves, 100) == 0) then
+         call MCMover%Maintenance
        endif
     enddo
     

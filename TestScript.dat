@@ -1,13 +1,15 @@
 #======================================
   set rng_seed -1
   set AtomTypes 2
+
   SamplingType Metropolis
-#  create boxes 1
+
   create boxes 1
     cube
   end_create
   create energyfunctions
-    LJ_Cut
+#    LJ_Cut
+    LJ_Cut_NoNei
   end_create
   modify box 1 energycalc 1
 #  modify box 1 boxlength 7.0

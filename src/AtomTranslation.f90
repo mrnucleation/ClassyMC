@@ -6,12 +6,16 @@ use SimpleSimBox, only: SimpleBox
 use VarPrecision
 
   type, public, extends(MCMove) :: AtomMolTranslate
-    real(dp) :: max_dist = 0.1E0_dp
+!    real(dp) :: atmps = 1E-30_dp
+!    real(dp) :: accpt = 0E0_dp
+    real(dp) :: max_dist = 0.05E0_dp
     type(Displacement) :: disp(1:1)
     contains
       procedure, pass :: Constructor => AtomTrans_Constructor
       procedure, pass :: GeneratePosition => AtomTrans_GeneratePosition
       procedure, pass :: FullMove => AtomTrans_FullMove
+      procedure, pass :: Maintenance => AtomTrans_Maintenance
+
   end type
 !========================================================
  contains
@@ -87,14 +91,37 @@ use VarPrecision
     !Accept/Reject
     accept = .false.
     accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
+!    write(*,*) E_Diff, accept
     if(accept) then
-      self % accpt = self % atmps + 1E0_dp
+      self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:1))
     endif
 
   end subroutine
+!=========================================================================
+  subroutine AtomTrans_Maintenance(self)
+    implicit none
+    class(AtomMolTranslate), intent(inout) :: self
+    real(dp), parameter :: limit = 3.0E0_dp
+      
+    if(self%atmps .lt. 0.5E0_dp) then
+      return
+    endif
 
+    if(self%GetAcceptRate() .gt. 50E0_dp) then
+      if(self%max_dist*1.01E0_dp .lt. limit) then
+        self%max_dist = self%max_dist * 1.01E0_dp
+      else 
+        self%max_dist = limit       
+      endif
+    else
+      self%max_dist = self%max_dist * 0.99E0_dp
+    endif
+
+ 
+
+  end subroutine
 !========================================================
 end module
 !========================================================

@@ -37,10 +37,10 @@ module FF_Pair_LJ_Cut
     self%epsTable = 4E0_dp
     self%sigTable = 1E0_dp
     self%rMinTable = 0.5E0_dp
-    self%rCut = 5E0_dp
-    self%rCutSq = 5E0_dp**2
+    self%rCut = 3E0_dp
+    self%rCutSq = 3E0_dp**2
 
-    write(*,*) 
+!    write(*,*) 
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
   end subroutine
@@ -148,7 +148,7 @@ module FF_Pair_LJ_Cut
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-!          write(*,*) rsq
+!        write(*,*) rsq
         if(rsq < self%rCutSq) then
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ

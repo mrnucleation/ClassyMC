@@ -23,14 +23,16 @@ module MetropolisRule
     logical :: accept
     real(dp) :: biasE
 
-    biasE = -trialBox%beta * E_Diff
+
+    accept = .false.
+    biasE = -trialBox%beta * E_Diff + log(inProb)
     if(biasE > 0.0E0_dp) then
       accept = .true.
     elseif(biasE > log(grnd())) then
       accept = .true.
-    else
-      accept = .false.
     endif
+!    write(12,*) biasE, accept
+
 
   end function
 !====================================================================
