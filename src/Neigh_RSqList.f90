@@ -1,5 +1,5 @@
 !===================================================================================
-! This module contains a simplistic neighbor list implimentation primarily used for debugging.  
+! This module contains a simple neighborlist
 !===================================================================================
 module RSqListDef
 use VarPrecision
@@ -26,7 +26,7 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
   subroutine RSqList_Constructor(self, parentID, rCut)
     use BoxData, only: BoxArray
-    use NeighData, only: neighSkin
+    use Common_NeighData, only: neighSkin
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID

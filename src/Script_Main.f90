@@ -115,11 +115,12 @@
       use VarPrecision
       use Common_MolDef
       use ParallelVar
+      use Common_NeighData
       implicit none
       character(len=maxLineLen), intent(in) :: line      
       integer, intent(out) :: lineStat
 
-      character(len=30) :: dummy, command!, stringValue
+      character(len=30) :: dummy, command, command2
 !      character(len=15) :: fileName      
       logical :: logicValue
       integer :: j
@@ -160,6 +161,10 @@
 !        case("out_distunits")
 !          read(line,*) dummy, command, outputLenUnits   
 !          outputLenConv = FindLengthUnit(outputLenUnits)
+        case("neighskin")
+          call GetXCommand(line, command2, 3, lineStat)
+          read(command2, *) realValue
+          neighSkin = realValue
         case default
           lineStat = -1
       end select
