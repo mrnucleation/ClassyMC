@@ -15,6 +15,7 @@ use Template_NeighList, only: NeighListDef
 !      integer :: maxNei
 !      real(dp) :: rCut, rCutSq
       class(SimpleBox), pointer :: parent => null()
+!      procedure, pointer :: builder => 
     contains
       procedure, pass :: Constructor => RSqList_Constructor 
       procedure, pass :: InitializeList => RSqList_InitializeList 
@@ -57,7 +58,7 @@ use Template_NeighList, only: NeighListDef
     allocate( self%nNeigh(1:self%parent%nAtoms), stat=AllocateStatus )
 
     self%list = 0
-
+    self%nNeigh = 0 
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
   end subroutine
@@ -75,6 +76,16 @@ use Template_NeighList, only: NeighListDef
     real(dp), intent(out) :: newList(:)
 
     newList = 0E0_dp
+  end subroutine
+!===================================================================================
+! End Type Bound
+!===================================================================================
+  subroutine BuildLists_RSq(trialBox)
+    implicit none
+    class(SimBox), intent(inout) :: trialBox
+
+
+
   end subroutine
 !===================================================================================
 end module

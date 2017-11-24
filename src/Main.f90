@@ -5,9 +5,9 @@
     use ParallelVar, only: myid, p_size, ierror, nout
     use ScriptInput, only: Script_ReadParameters
     use BoxData, only: BoxArray, Constrain
+    use MCMoveData, only: Moves
     use Common_MolDef, only: nAtomTypes
     use ForcefieldData, only: EnergyCalculator
-    use AtomTranslation, only: AtomMolTranslate
     use RandomGen, only: sgrnd
     use RSqListDef, only: RSqList
     use DistanceCriteria, only: distcriteria
@@ -17,7 +17,6 @@
     integer :: nMoves, iAtom
     real(dp) :: E_T, E_Final
     real(dp) :: avgE, cnt
-    class(AtomMolTranslate), allocatable :: MCMover
 
     call MPI_INIT(ierror)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, p_size, ierror)
@@ -32,9 +31,6 @@
     call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
     call EnergyCalculator(1)%Method%Constructor
     call BoxArray(1)%box%NeighList(1)%constructor(1)
-
-    allocate( AtomMolTranslate::MCMover )
-
 
     BoxArray(1)%box%AtomType = 1
     BoxArray(1)%box%temperature = 0.8E0_dp
@@ -54,11 +50,11 @@
     avgE = 0E0_dp
     cnt = 0E0_dp
     do nMoves = 1, nint(1d7)
-       call MCMover % FullMove(BoxArray(1)%box)
+       call Moves(1) % Move % FullMove(BoxArray(1)%box)
        avgE = avgE + BoxArray(1)%box%ETotal
        cnt = cnt + 1E0_dp
        if(mod(nMoves, 1000) == 0) then
-         write(*,*) nMoves, BoxArray(1)%box%ETotal/BoxArray(1)%box%nAtoms, MCMover%GetAcceptRate()
+         write(*,*) nMoves, BoxArray(1)%box%ETotal/BoxArray(1)%box%nAtoms, Moves(1)%Move%GetAcceptRate()
          write(2,*) BoxArray(1)%box%nAtoms
          write(2,*) 
          do iAtom = 1, BoxArray(1)%box%nAtoms
@@ -69,7 +65,7 @@
          call BoxArray(1)%box % BuildNeighList
        endif
        if(mod(nMoves, 100) == 0) then
-         call MCMover%Maintenance
+         call Moves(1)%Move%Maintenance
        endif
     enddo
     

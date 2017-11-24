@@ -1,5 +1,5 @@
 !================================================================================
-module Script_Sampling
+module Input_Sampling
   use VarPrecision
   use Input_Format
   use CommonSampling, only: sampling

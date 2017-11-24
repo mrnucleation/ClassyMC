@@ -9,7 +9,7 @@
       use ParallelVar
       use Units
       use Input_Forcefield
-      use Script_Sampling, only: Script_SamplingType
+      use Input_Sampling, only: Script_SamplingType
       implicit none
 !      integer(kind=8), intent(OUT) :: ncycle,nmoves
       integer :: i, ii, j, nArgs
@@ -65,8 +65,8 @@
         select case(trim(adjustl( command )))
         case("create")
            call createCommand(iLine, linestore, lineBuffer, lineStat)
-        case("forcefield")
-          call Script_Forcefield( lineStore(iLine), lineStat )
+!        case("forcefield")
+!          call Script_Forcefield( lineStore(iLine), lineStat )
         case("modify")
            call modifyCommand( lineStore(iLine), lineStat )
         case("set")
@@ -174,9 +174,11 @@
 !========================================================            
       subroutine createCommand(iLine, linestore, lineBuffer, lineStat)
       use BoxData, only: BoxArray
+      use MCMoveData, only: Moves, MoveProb
       use ForcefieldData, only: EnergyCalculator, nForceFields
-      use Script_SimBoxes, only: Script_BoxType
+      use Input_SimBoxes, only: Script_BoxType
       use Input_Forcefield, only: Script_FieldType
+      use Input_Moves, only: Script_MCMoves
       use VarPrecision
       use Units
       implicit none
@@ -220,6 +222,20 @@
              do i = 1, nItems
                curLine = iLine + i
                call Script_FieldType(linestore(curLine), i, lineStat)
+             enddo   
+           else
+             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             stop
+           endif
+
+        case("moves") 
+           if( .not. allocated(Moves) ) then
+             nForceFields = nItems
+             allocate(Moves(1:nItems), stat = AllocateStat)
+             allocate(MoveProb(1:nItems), stat = AllocateStat)
+             do i = 1, nItems
+               curLine = iLine + i
+               call Script_MCMoves(linestore(curLine), i, lineStat)
              enddo   
            else
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"

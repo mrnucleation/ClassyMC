@@ -11,6 +11,10 @@
 #    LJ_Cut
     LJ_Cut_NoNei
   end_create
+
+  create moves
+    atomtranslation 1.0
+  end_create
   modify box 1 energycalc 1
 #  modify box 1 boxlength 7.0
 #======================================

@@ -1,11 +1,11 @@
 !========================================================
-module AtomTranslation
+module MCMove_AtomTranslation
 use CoordinateTypes, only: Displacement
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
 
-  type, public, extends(MCMove) :: AtomMolTranslate
+  type, public, extends(MCMove) :: AtomTranslate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
     real(dp) :: max_dist = 0.05E0_dp
@@ -22,7 +22,7 @@ use VarPrecision
 !========================================================
   subroutine AtomTrans_Constructor(self)
     implicit none
-    class(AtomMolTranslate), intent(inout) :: self
+    class(AtomTranslate), intent(inout) :: self
     
 !    allocate(self%disp(1:
   end subroutine
@@ -30,7 +30,7 @@ use VarPrecision
   subroutine AtomTrans_GeneratePosition(self, disp)
     use RandomGen, only: grnd
     implicit none
-    class(AtomMolTranslate), intent(in) :: self
+    class(AtomTranslate), intent(in) :: self
     type(Displacement), intent(inout) :: disp
     real(dp) :: dx, dy, dz
       dx = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
@@ -44,7 +44,7 @@ use VarPrecision
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
     implicit none
-    class(AtomMolTranslate), intent(inout) :: self
+    class(AtomTranslate), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical :: accept
     integer :: nMove, iConstrain
@@ -102,7 +102,7 @@ use VarPrecision
 !=========================================================================
   subroutine AtomTrans_Maintenance(self)
     implicit none
-    class(AtomMolTranslate), intent(inout) :: self
+    class(AtomTranslate), intent(inout) :: self
     real(dp), parameter :: limit = 3.0E0_dp
       
     if(self%atmps .lt. 0.5E0_dp) then

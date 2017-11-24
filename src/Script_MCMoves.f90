@@ -1,16 +1,15 @@
 !================================================================================
-module Input_SimBoxes
+module Input_Moves
   use VarPrecision
   use Input_Format
-  use BoxData, only: BoxArray
-  use SimpleSimBox, only: Simplebox
-  use CubicBoxDef, only: CubeBox
+  use MCMoveData, only: Moves, MoveProb
+  use MCMove_AtomTranslation, only: AtomTranslate
   contains
 !================================================================================
-  subroutine Script_BoxType(line, boxNum, lineStat)
+  subroutine Script_MCMoves(line, moveNum, lineStat)
     implicit none
     character(len=*), intent(in) :: line
-    integer, intent(in) :: boxNum
+    integer, intent(in) :: moveNum
     integer, intent(out) :: lineStat
 
 
@@ -18,19 +17,17 @@ module Input_SimBoxes
       character(len=30) :: fileName      
       logical :: logicValue
       integer :: j
-      integer :: intValue
       integer :: FFNum
       real(dp) :: realValue
 
 
       lineStat  = 0
-      read(line, *) command
+      read(line, *) command, realValue
       call LowerCaseLine(command)
       select case(trim(adjustl(command)))
-        case("nobox")
-          allocate(SimpleBox::BoxArray(boxNum)%box)
-        case("cube")
-          allocate(CubeBox::BoxArray(boxNum)%box) 
+        case("atomtranslation")
+          allocate(AtomTranslate::Moves(moveNum)%move)
+          MoveProb(moveNum) = realValue
         case default
           lineStat = -1
       end select
