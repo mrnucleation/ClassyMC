@@ -13,8 +13,7 @@ module Template_ForceField
       procedure, pass :: SwapInECalc
       procedure, pass :: SwapOutECalc
 !      procedure, pass :: Exchange
-      procedure, pass :: SetParameter
-      procedure, pass :: ReadParFile
+      procedure, pass :: ProcessIO
       procedure, pass :: GetCutOff
   end type
 
@@ -68,16 +67,8 @@ module Template_ForceField
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
   end subroutine
-
 !=============================================================================+
-  subroutine SetParameter(self, parIndex,  parVal)
-    implicit none
-    class(forcefield), intent(inout) :: self
-    integer, intent(in) :: parIndex(:)
-    real(dp), intent(in) :: parVal
-  end subroutine
-!=============================================================================+
-  subroutine ReadParFile(self, fileName)
+  subroutine ProcessIO(self, fileName)
     implicit none
     class(forcefield), intent(inout) :: self
     character(len=*), intent(in) :: fileName

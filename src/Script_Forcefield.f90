@@ -29,7 +29,7 @@ module Input_Forcefield
 
         case("readfile")
           read(line,*) dummy, FFNum, command, fileName
-          call EnergyCalculator(FFNum) % Method % ReadParFile(fileName)
+!          call EnergyCalculator(FFNum) % Method % ReadParFile(fileName)
 
         case default
           lineStat = -1

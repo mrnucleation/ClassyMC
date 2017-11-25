@@ -17,8 +17,7 @@ module FF_Pair_LJ_Cut
       procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
       procedure, pass :: SwapInECalc => SwapIn_LJ_Cut
       procedure, pass :: SwapOutECalc => SwapOut_LJ_Cut
-      procedure, pass :: SetParameter => SetPar_LJ_Cut
-      procedure, pass :: ReadParFile => ReadPar_LJ_Cut
+      procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
       procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
   end type
 
@@ -274,7 +273,7 @@ module FF_Pair_LJ_Cut
   end subroutine
 
   !=====================================================================
-  subroutine ReadPar_LJ_Cut(self, fileName)
+  subroutine ProcessIO_LJ_Cut(self, fileName)
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     character(len=*), intent(in) :: fileName

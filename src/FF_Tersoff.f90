@@ -127,7 +127,7 @@ module FF_Pair_Tersoff
         if(rij .gt. rMax) then
           cycle
         endif
-
+        rij = sqrt(rij)
         Zeta = 0E0_dp
         do kAtom = 1, nPart(kType)
           if( (kAtom == iAtom) .or. (kAtom == jAtom) ) then
@@ -167,13 +167,20 @@ module FF_Pair_Tersoff
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
-    integer :: iDisp, iAtom, jNei, jAtom, dispLen
+    integer :: iDisp, iAtom, iNei, jNei, jAtom, kNei, kAtom, dispLen
 !    integer :: maxIndx, minIndx
     integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: LJ
+    real(dp) :: rxij, ryij, rzij, rij
+    real(dp) :: rxjk, ryjk, rzjk, rjk
+    real(dp) :: rxik, ryik, rzik, rik
+    real(dp) :: sub
     real(dp) :: rmin_ij      
+
+    integer :: nRecalc
+    integer :: recalcList(1:60)
+
+    nRecalc = 0
+    recalcList = 0
 
     dispLen = size(disp)
     E_Diff = 0E0_dp
@@ -183,7 +190,204 @@ module FF_Pair_Tersoff
       atmType1 = curbox % AtomType(iAtom)
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        rxij = curbox % atoms(1, jAtom)  -  disp(iDisp) % xNew
+        ryij = curbox % atoms(2, jAtom)  -  disp(iDisp) % yNew
+        rzij = curbox % atoms(3, jAtom)  -  disp(iDisp) % zNew
+        rij = rxij*rxij + ryij*ryij + rzij*rzij
+        if(rij .lt. rMax) then
+          nRecalc = nRecalc + 1
+          recalcList(nRecalc) = jAtom
+          rij = sqrt(rij)
+          Zeta = 0E0_dp
+          Zeta2 = 0E0_dp
 
+          !Compute the Tersoff U_ij component
+          do kNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+            kAtom = curbox%NeighList(1)%list(kNei, iAtom)
+            if((kAtom .eq. nMol) .or. (kAtom .eq. jMol)) then
+              cycle
+            endif
+            rxik = curbox % atoms(1, kAtom)  -  disp(iDisp) % xNew
+            ryik = curbox % atoms(2, kAtom)  -  disp(iDisp) % yNew
+            rzik = curbox % atoms(3, kAtom)  -  disp(iDisp) % zNew
+            rik = rxik*rxik + ryik*ryik + rzik*rzik
+            if(rik .lt. rMax) then
+              rik = sqrt(rik)
+              angijk = angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+              Zeta = Zeta + gik_Func(angijk, c, d, h) *  Fc_Func(rik, R_eq, D2)
+            endif     
+          enddo
+          !Compute the Tersoff U_ji component
+          do kNei = 1, curbox%NeighList(1)%nNeigh(jAtom)
+            kAtom = curbox%NeighList(1)%list(kNei, jAtom)
+            if((kAtom .eq. nMol) .or. (kAtom .eq. jMol)) then
+              cycle
+            endif
+            rxjk = curbox % atoms(1, kAtom)  -  curbox % atoms(1, jAtom)
+            ryjk = curbox % atoms(2, kAtom)  -  curbox % atoms(2, jAtom)
+            rzjk = curbox % atoms(3, kAtom)  -  curbox % atoms(3, jAtom)
+            rjk = rxij*rxij + ryij*ryij + rzij*rzij
+            if(rjk .lt. rMax) then
+              rjk = sqrt(rjk)
+              angijk = angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
+              Zeta = Zeta + gik_Func(angijk, c, d, h) *  Fc_Func(rik, R_eq, D2)
+            endif     
+          enddo
+          if(Zeta .ne. 0E0_dp) then
+            b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
+          else
+            b1 = 1E0_dp
+          endif
+          if(Zeta2 .ne. 0E0_dp) then
+            b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
+          else
+            b2 = 1E0_dp
+          endif
+          V1 = 0.5E0_dp * Fc_Func(rij, R_eq, D2) * (2d0*A*exp(-lam1*rij) - (b1+b2)*B*exp(-lam2*rij)) 
+          curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
+          curbox%dETable(jAtom) = curbox%dETable(iAtom) + V1
+          E_Diff = E_Diff + V1
+        endif
+      enddo
+
+      !Computing the contribution from the old poisition. 
+      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
+        ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
+        rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
+        rij = rxij*rxij + ryij*ryij + rzij*rzij
+        if(rij .lt. rMax) then
+          rij = sqrt(rij)
+          nRecalc = nRecalc + 1
+          recalcList(nRecalc) = jAtom
+          Zeta = 0E0_dp
+          Zeta2 = 0E0_dp
+
+          !Compute the Tersoff U_ij component
+          do kNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+            kAtom = curbox%NeighList(1)%list(kNei, iAtom)
+            if((kAtom .eq. nMol) .or. (kAtom .eq. jMol)) then
+              cycle
+            endif
+            rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
+            ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
+            rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
+            rik = rxik*rxik + ryik*ryik + rzik*rzik
+            if(rik .lt. rMax) then
+              rik = sqrt(rik)
+              angijk = angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+              Zeta = Zeta + gik_Func(angijk, c, d, h) *  Fc_Func(rik, R_eq, D2)
+            endif     
+          enddo
+          !Compute the Tersoff U_ji component
+          do kNei = 1, curbox%NeighList(1)%nNeigh(jAtom)
+            kAtom = curbox%NeighList(1)%list(kNei, jAtom)
+            if((kAtom .eq. nMol) .or. (kAtom .eq. jMol)) then
+              cycle
+            endif
+            rxjk = curbox % atoms(1, kAtom)  -  curbox % atoms(1, jAtom)
+            ryjk = curbox % atoms(2, kAtom)  -  curbox % atoms(2, jAtom)
+            rzjk = curbox % atoms(3, kAtom)  -  curbox % atoms(3, jAtom)
+            rjk = rxij*rxij + ryij*ryij + rzij*rzij
+            if(rjk .lt. rMax) then
+              rjk = sqrt(rjk)
+              angijk = angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
+              Zeta = Zeta + gik_Func(angijk, c, d, h) *  Fc_Func(rik, R_eq, D2)
+            endif     
+          enddo
+          if(Zeta .ne. 0E0_dp) then
+            b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
+          else
+            b1 = 1E0_dp
+          endif
+          if(Zeta2 .ne. 0E0_dp) then
+            b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
+          else
+            b2 = 1E0_dp
+          endif
+          V1 = 0.5E0_dp * Fc_Func(rij, R_eq, D2) * (2d0*A*exp(-lam1*rij) - (b1+b2)*B*exp(-lam2*rij)) 
+          curbox%dETable(iAtom) = curbox%dETable(iAtom) - V1
+          curbox%dETable(jAtom) = curbox%dETable(iAtom) - V1
+          E_Diff = E_Diff - V1
+        endif
+      enddo
+    enddo
+
+    !Since the Tersoff is a three body potential, moving a single particle can change the bonded interaction between the first and second
+    !neighbor shells.  Therefore these ineteractions must be recomputed. 
+    do iNei = 1, nRecalc
+      iAtom = recalcList(iNei)
+      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        if(iAtom .eq. jAtom) then
+          cycle
+        endif
+        if( any(disp(:)%indx .eq. jAtom) ) then
+          cycle
+        endif
+        rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
+        ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
+        rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
+        rij = rxij*rxij + ryij*ryij + rzij*rzij
+        if(rij < rMax) then
+          rij = sqrt(rij)
+          Zeta = 0E0_dp
+          Zeta2 = 0E0_dp
+          do kNei = 1, curbox%NeighList(1)%nNeigh(iAtom)\
+            kAtom = curbox%NeighList(1)%list(jNei, iAtom)
+            if( (kAtom == iAtom) .or. (kAtom == jAtom) ) then
+              cycle
+            endif
+            if(kAtom == disp(1)%indx) then
+              rxik = disp(1)%indx  -  curbox % atoms(1, iAtom)
+              ryik = disp(1)%indx  -  curbox % atoms(2, iAtom)
+              rzik = disp(1)%indx  -  curbox % atoms(3, iAtom)
+              rik = rxij*rxij + ryij*ryij + rzij*rzij
+              if(rik .lt. rMax) then
+                angijk = angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+                sub = gik_Func(angijk, c, d, h) *  Fc_Func(rik, R_eq, D2)
+                Zeta = Zeta + sub
+              endif
+              rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
+              ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
+              rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
+              rik = rxij*rxij + ryij*ryij + rzij*rzij
+              if(rik .lt. rMax) then
+                angijk = angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+                sub = gik_Func(angijk, c, d, h) *  Fc_Func(rik, R_eq, D2)
+                Zeta2 = Zeta2 + sub
+              endif
+
+            else
+              rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
+              ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
+              rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
+              rik = rxij*rxij + ryij*ryij + rzij*rzij
+              if(rik .lt. rMax) then
+                angijk = angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+                sub = gik_Func(angijk, c, d, h) *  Fc_Func(rik, R_eq, D2)
+                Zeta = Zeta + sub
+                Zeta2 = Zeta2 + sub
+              endif
+            endif
+          enddo
+        endif
+        if(Zeta .ne. 0E0_dp) then
+          b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
+        else
+          b1 = 1E0_dp
+        endif
+        if(Zeta2 .ne. 0E0_dp) then
+          b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
+        else
+          b2 = 1E0_dp
+        endif    
+   
+        V1 = 0.5E0_dp * Fc_Func(rij, R_eq, D2) * (B*exp(-lam2*rij))*(b2 - b1)
+        curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
+        curbox%dETable(jAtom) = curbox%dETable(iAtom) + V1
+        E_Diff = E_Diff + V1
       enddo
     enddo
  
