@@ -62,6 +62,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/RandomNew.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Cut_NoNei.f90\
+        		$(SRC)/FF_Tersoff.f90\
         		$(SRC)/AtomTranslation.f90\
  	        	$(SRC)/Script_Forcefield.f90\
 	        	$(SRC)/Script_Main.f90\
@@ -191,7 +192,7 @@ $(OBJ)/CubicBox.o: $(OBJ)/SimpleBox.o
 $(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o
-$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o
+$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o ${OBJ}/FF_Tersoff.o
 $(OBJ)/Script_Forcefield.o: ${OBJ}/AtomTranslation.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o

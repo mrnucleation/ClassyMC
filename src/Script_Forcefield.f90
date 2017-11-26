@@ -43,6 +43,7 @@ module Input_Forcefield
     use ForcefieldData, only: nForceFields
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
+    use FF_Pair_Tersoff, only: Pair_Tersoff
     use ParallelVar, only: nout
     implicit none
     character(len=*), intent(in) :: line
@@ -69,6 +70,9 @@ module Input_Forcefield
         case("lj_cut_nonei")
           allocate(Pair_LJ_Cut_NoNei::EnergyCalculator(FFNum) % Method)
           write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as LJ_Cut (No Neighbor List) style"
+        case("tersoff")
+          allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
+          write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
         case default
           write(*,*) "Here"
           lineStat = -1
