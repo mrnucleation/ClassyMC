@@ -250,29 +250,6 @@ module FF_Pair_LJ_Cut
       enddo
   end subroutine
   !=====================================================================
-  subroutine SetPar_LJ_Cut(self, parIndex,  parVal)
-    implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
-    integer, intent(in) :: parIndex(:)
-    real(dp), intent(in) :: parVal
-
-    select case( parIndex(1) )
-    case(1) !Epsilon
-      self%epsTable(parIndex(2), parIndex(3)) = parVal
-    case(2) !Sigma
-      self%sigTable(parIndex(2), parIndex(3)) = parVal
-    case(3) !rMin
-      self%rMinTable(parIndex(2), parIndex(3)) = parVal
-    case(4) !rCut
-      self%rCut = parVal
-      self%rCutSq = parVal * parVal
-    case default
-      write(*,*) "ERROR! An invalid paramter set was given to the LJ-Cut pair function."
-      stop
-    end select
-  end subroutine
-
-  !=====================================================================
   subroutine ProcessIO_LJ_Cut(self, fileName)
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self

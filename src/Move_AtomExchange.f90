@@ -1,48 +1,58 @@
 !=========================================================================
-module MoveClassDef
+module Move_AtomExchange
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
 
-  type, public :: MCMove
-    real(dp) :: atmps = 1E-30_dp
-    real(dp) :: accpt = 0E0_dp
+  type, public :: AtomExchange
+!    real(dp) :: atmps = 1E-30_dp
+!    real(dp) :: accpt = 0E0_dp
 
     contains
-      procedure, pass :: GeneratePosition 
-      procedure, pass :: FullMove
-      procedure, pass :: GetAcceptRate
-      procedure, pass :: Maintenance 
+      procedure, pass :: GeneratePosition => AtomExchange_GeneratePosition
+      procedure, pass :: FullMove => AtomExchange_FullMove
+!      procedure, pass :: GetAcceptRate
+      procedure, pass :: Maintenance => AtomExchange_Maintenance
   end type
 
  contains
 !=========================================================================
-  subroutine GeneratePosition(self, disp)
+  subroutine AtomExchange_GeneratePosition(self, disp)
     use CoordinateTypes, only: Displacement
     implicit none
-    class(MCMove), intent(in) :: self
+    class(AtomExchange), intent(in) :: self
     type(Displacement), intent(inout) :: disp
   end subroutine
 !=========================================================================
-  subroutine FullMove(self, trialBox)
-    class(MCMove), intent(inout) :: self
+  subroutine AtomExchange_FullMove(self, trialBox)
+    use Common_MolDef, only: nAtomTypes
+    implicit none
+    class(AtomExchange), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
-  end subroutine
-!=========================================================================
-  function GetAcceptRate(self) result(rate)
-    class(MCMove), intent(in) :: self
-    real(dp) :: rate
+    logical :: accept
+    integer :: oldtype, newtype
 
-    if(self%atmps > 0E0_dp) then
-      rate = 1E2_dp*self%accpt/self%atmps
-    else
-      rate = 0E0_dp
+
+    self % atmps = self % atmps + 1E0_dp
+    accept = .true.
+    !Choose 
+    oldtype = floor( trialBox% * grnd() + 1E0_dp)
+    if(trialBox%NMolMin(oldtype) > trialBox%NMol(oldtype)-1) then
+      return
     endif
 
-    return
-  end function
+    newtype = oldtype
+    do while(newtype == oldtype)
+      newtype = floor( trialBox% * grnd() + 1E0_dp)
+    enddo
+
+    nMove = floor( trialBox%nAtoms * grnd() + 1E0_dp)
+    
+
+    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
+  end subroutine
 !=========================================================================
-  subroutine Maintenance(self)
-    class(MCMove), intent(inout) :: self
+  subroutine AtomExchange_Maintenance(self)
+    class(AtomExchange), intent(inout) :: self
   end subroutine
 !=========================================================================
 end module

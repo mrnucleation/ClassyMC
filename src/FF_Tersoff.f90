@@ -5,8 +5,8 @@ module FF_Pair_Tersoff
   use Template_SimBox, only: SimBox
   use VarPrecision
 
-  type :: TersoffPar
-    
+  type :: Tersoff2Body
+    real(dp) :: A, B, lam1, lam2, R, D
   end type
 
   type, extends(forcefield) :: Pair_Tersoff
