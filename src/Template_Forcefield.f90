@@ -12,7 +12,7 @@ module Template_ForceField
       procedure, pass :: ShiftECalc_Multi
       procedure, pass :: SwapInECalc
       procedure, pass :: SwapOutECalc
-!      procedure, pass :: Exchange
+      procedure, pass :: ExchangeECalc
       procedure, pass :: ProcessIO
       procedure, pass :: GetCutOff
   end type
@@ -66,6 +66,14 @@ module Template_ForceField
       class(simBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)
+  end subroutine
+!=============================================================================+
+  subroutine ExchangeECalc(self, curbox, atmIndx, newType, E_Diff)
+    implicit none
+      class(forcefield), intent(in) :: self
+      class(simBox), intent(inout) :: curbox
+      real(dp), intent(inOut) :: E_Diff
+      integer, intent(in) :: atmIndx, newType
   end subroutine
 !=============================================================================+
   subroutine ProcessIO(self, fileName)

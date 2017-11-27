@@ -5,9 +5,12 @@ module FF_Pair_Tersoff
   use Template_SimBox, only: SimBox
   use VarPrecision
 
+  type :: TersoffPar
+    
+  end type
+
   type, extends(forcefield) :: Pair_Tersoff
-    real(dp), allocatable :: epsTable(:,:)
-    real(dp), allocatable :: sigTable(:,:)
+    type(TersoffPar), allocatable :: tersoffData(:,:)
     real(dp), allocatable :: rMinTable(:,:)
 !    real(dp) :: rCut, rCutSq
     contains
@@ -20,7 +23,6 @@ module FF_Pair_Tersoff
       procedure, pass :: ShiftECalc_Multi => Shift_Tersoff_Multi
       procedure, pass :: SwapInECalc => SwapIn_Tersoff
       procedure, pass :: SwapOutECalc => SwapOut_Tersoff
-      procedure, pass :: SetParameter => SetPar_Tersoff
       procedure, pass :: ReadParFile => ReadPar_Tersoff
       procedure, pass :: GetCutOff => GetCutOff_Tersoff
   end type
@@ -80,7 +82,7 @@ module FF_Pair_Tersoff
     class(Pair_Tersoff), intent(inout) :: self
     integer :: AllocateStat
 
-!    allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
     self%rCut = 3E0_dp
     self%rCutSq = 3E0_dp**2
@@ -192,12 +194,12 @@ module FF_Pair_Tersoff
     real(dp) :: sub
     real(dp) :: rmin_ij      
     real(dp) :: A, B, c, d, R_eq, D2 
-    real(dp) :: E_Tersoff
     real(dp) :: lam1, lam2
     real(dp) :: Zeta, Zeta2
     real(dp) :: BetaPar, n, h
     real(dp) :: b1, b2, V1, V2
     real(dp) :: angijk, angjik
+    real(dp) :: E_Tersoff
     integer :: nRecalc
     integer :: recalcList(1:60)
 
@@ -431,39 +433,8 @@ module FF_Pair_Tersoff
       real(dp), intent(inOut) :: E_Diff
       integer :: iDisp, iAtom, jAtom, dispLen
       integer :: atmType1, atmType2
-      real(dp) :: rx, ry, rz, rsq
-      real(dp) :: ep, sig_sq
-      real(dp) :: LJ
-      real(dp) :: rmin_ij      
+     
 
-      dispLen = size(disp)
-      E_Diff = 0E0
-      curbox%dETable = 0E0
-
-
-      do iDisp = 1, dispLen
-        iAtom = disp(iDisp)%atmIndx
-        atmType1 = curbox % AtomType(iAtom)
-        do jAtom = 1, curbox % nAtoms        
-          atmType2 = curbox % AtomType(jAtom)
-          ep = self%epsTable(atmType1,atmType2)
-          sig_sq = self%sigTable(atmType1,atmType2)          
-          rmin_ij = self%rMinTable(atmType1,atmType2)          
-
-          rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
-          ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
-          rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
-          rsq = rx*rx + ry*ry + rz*rz
-          if(rsq < self%rCutSq) then
-            LJ = (sig_sq/rsq)
-            LJ = LJ * LJ * LJ
-            LJ = ep * LJ * (LJ-1E0)              
-            E_Diff = E_Diff - LJ
-            curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
-            curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
-          endif
-        enddo
-      enddo
   end subroutine
   !=====================================================================
   subroutine SwapOut_Tersoff(self, curbox, atmIndx, E_Diff)
@@ -483,48 +454,7 @@ module FF_Pair_Tersoff
       E_Diff = 0E0
       curbox%dETable = 0E0
 
-
-      do iIndx = 1, remLen
-        iAtom = atmIndx(iIndx)
-        atmType1 = curbox % AtomType(iAtom)
-        do jAtom = 1, curbox % nAtoms        
-          atmType1 = curbox % AtomType(jAtom)
-          ep = self % epsTable(atmType1,atmType2)
-          sig_sq = self % sigTable(atmType1,atmType2)          
-          rmin_ij = self % rMinTable(atmType1,atmType2)          
-
-          rx = curbox % atoms(1, iAtom) - curbox % atoms(1, jAtom)
-          ry = curbox % atoms(2, iAtom) - curbox % atoms(2, jAtom)
-          rz = curbox % atoms(3, iAtom) - curbox % atoms(3, jAtom)
-          rsq = rx*rx + ry*ry + rz*rz
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
-        enddo
-      enddo
   end subroutine
-  !=====================================================================
-  subroutine SetPar_Tersoff(self, parIndex,  parVal)
-    implicit none
-    class(Pair_Tersoff), intent(inout) :: self
-    integer, intent(in) :: parIndex(:)
-    real(dp), intent(in) :: parVal
-
-    select case( parIndex(1) )
-    case(1) !Epsilon
-      self%epsTable(parIndex(2), parIndex(3)) = parVal
-    case(2) !Sigma
-      self%sigTable(parIndex(2), parIndex(3)) = parVal
-    case(3) !rMin
-      self%rMinTable(parIndex(2), parIndex(3)) = parVal
-    case(4) !rCut
-      self%rCut = parVal
-      self%rCutSq = parVal * parVal
-    case default
-      write(*,*) "ERROR! An invalid paramter set was given to the LJ-Cut pair function."
-      stop
-    end select
-  end subroutine
-
   !=====================================================================
   subroutine ReadPar_Tersoff(self, fileName)
     implicit none
