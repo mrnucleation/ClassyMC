@@ -4,17 +4,19 @@
   set NeighSkin 2.0
   SamplingType Metropolis
 
-  create boxes 1
+  Create boxes 1
     cube
-  end_create
-  create energyfunctions
+  End_Create
+
+  Create energyfunctions
 #    LJ_Cut
     LJ_Cut_NoNei
-  end_create
+  End_Create
 
-  create moves
+  Create moves
     atomtranslation 1.0
-  end_create
+  End_Create
+
   modify box 1 energycalc 1
 #  modify box 1 boxlength 7.0
 #======================================

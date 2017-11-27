@@ -9,9 +9,9 @@ FC := mpif90
 #FC := gfortran
 CC := mpicc
 OPTIMIZE_FLAGS := -O3
-OPTIMIZE_FLAGS += -xHost
+#OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
-OPTIMIZE_FLAGS += -no-prec-div
+#OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
@@ -56,7 +56,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_NeighList.f90\
          		$(SRC)/DistanceCriteria.f90\
         		$(SRC)/Sampling_Metropolis.f90\
-        		$(SRC)/AtomTranslation.f90\
+        		$(SRC)/Move_AtomTranslation.f90\
         		$(SRC)/SimpleBox.f90\
         		$(SRC)/CubicBox.f90\
         		$(SRC)/RandomNew.f90\
@@ -190,16 +190,16 @@ $(OBJ)/SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_For
 $(OBJ)/CubicBox.o: $(OBJ)/SimpleBox.o
 
 
-$(OBJ)/AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o
+$(OBJ)/Move_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o ${OBJ}/FF_Tersoff.o
-$(OBJ)/Script_Forcefield.o: ${OBJ}/AtomTranslation.o
+$(OBJ)/Script_Forcefield.o: ${OBJ}/Move_AtomTranslation.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o
 
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
-$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Neigh_RSqList.o 
+$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/Move_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Neigh_RSqList.o 
 
 
