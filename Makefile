@@ -54,7 +54,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_Sampling.f90\
         		$(SRC)/Common_MCMoves.f90\
         		$(SRC)/Common_NeighList.f90\
-         		$(SRC)/DistanceCriteria.f90\
+         		$(SRC)/Constrain_DistCriteria.f90\
         		$(SRC)/Sampling_Metropolis.f90\
         		$(SRC)/Move_AtomTranslation.f90\
         		$(SRC)/Box_SimpleBox.f90\
