@@ -285,7 +285,7 @@
 
       IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
      
-      end subroutine   
+      end subroutine
 !========================================================            
 !     The purpose of this subroutine is to lower case a given character string. 
       subroutine IO_ErrorControl(iLine, lineNumber, lineStore, lineStat)

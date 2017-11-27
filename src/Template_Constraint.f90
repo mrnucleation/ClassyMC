@@ -8,6 +8,7 @@ module ConstraintTemplate
       procedure, pass :: ShiftCheck
       procedure, pass :: SwapInCheck
       procedure, pass :: SwapOutCheck
+      procedure, pass :: ProcessIO
   end type
 
   type, public :: constrainArray
@@ -40,6 +41,11 @@ module ConstraintTemplate
   end subroutine
 !=============================================================
   subroutine SwapOutCheck(self)
+    implicit none
+    class(constraint), intent(in) :: self
+  end subroutine
+!=============================================================
+  subroutine ProcessIO(self)
     implicit none
     class(constraint), intent(in) :: self
   end subroutine
