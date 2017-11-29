@@ -3,6 +3,7 @@
 !
 module Constrain_HardWall
   use ConstraintTemplate, only: constraint
+  use Template_SimBox, only: SimBox
   use VarPrecision
 
   type, public, extends(constraint) :: hardwall
@@ -11,6 +12,7 @@ module Constrain_HardWall
     real(dp) :: xhi, xlo
     real(dp) :: yhi, ylo
     real(dp) :: zhi, zlo
+    class(SimBox), pointer :: parent => null()
     contains
       procedure, pass :: CheckInitialConstraint => HardWall_CheckInitialConstraint
       procedure, pass :: ShiftCheck => HardWall_ShiftCheck
@@ -28,7 +30,6 @@ module Constrain_HardWall
 !=============================================================
   subroutine HardWall_ShiftCheck(self, trialBox, disp, accept)
     use CoordinateTypes, only: Displacement
-    use Template_SimBox, only: SimBox
     implicit none
     class(hardwall), intent(in) :: self
     class(SimBox), intent(in) :: trialBox

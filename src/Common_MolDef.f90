@@ -21,11 +21,11 @@ module Common_MolDef
   use VarPrecision 
   use StructureTypes
 
-  integer :: nMolTypes
-  integer :: nAtomTypes
+  integer :: nMolTypes = 1
+  integer :: nAtomTypes = 1
 
-  type(AtomDef), allocatable :: AtomData(:)
-  type(BondDef), allocatable :: bondData(:)
+  type(AtomDef), allocatable :: AtomData(:, :)
+  type(BondDef), allocatable :: bondData(:, :)
 
 
 end module

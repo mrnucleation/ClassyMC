@@ -4,7 +4,8 @@ module ConstraintTemplate
 
   type, public :: constraint
     contains
-      procedure, pass :: CheckInitialConstraint 
+      procedure, pass :: Constructor
+      procedure, pass :: CheckInitialConstraint
       procedure, pass :: ShiftCheck
       procedure, pass :: SwapInCheck
       procedure, pass :: SwapOutCheck
@@ -16,6 +17,11 @@ module ConstraintTemplate
   end type
 !=============================================================
   contains
+!=============================================================
+  subroutine Constructor(self)
+    implicit none
+    class(constraint), intent(inout) :: self
+  end subroutine
 !=============================================================
   subroutine CheckInitialConstraint(self)
     implicit none

@@ -24,12 +24,10 @@ module SimpleSimBox
     integer, allocatable :: NMolMin(:), NMolMax(:)
     integer, allocatable :: NMol(:)
 !    integer, allocatable :: AtomType(:)
-    integer, allocatable :: MolIndx(:)
+    integer, allocatable :: MolIndx(:), SubIndx(:)
 
     type(constrainArray), allocatable :: Constrain(:)
     class(ECalcArray), pointer :: EFunc
-
-    integer :: ENeiList = -1
 !    class(NeighList), allocatable :: NeighList(:)
 
     contains
@@ -49,15 +47,28 @@ module SimpleSimBox
   contains
 !==========================================================================================
   subroutine SimpleBox_Constructor(self)
+    use Common_MolDef
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer :: AllocateStatus
+    intger
  
+    if( .not. allocated(self%NMolMin) ) then
+      write(*,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
+      write(*,*) "prior to box initialization!"
+      stop 
+    endif
+
     allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat= AllocateStatus)
     allocate(self%ETable(1:self%nMaxAtoms), stat= AllocateStatus)
     allocate(self%dETable(1:self%nMaxAtoms), stat= AllocateStatus)
-    allocate(self%AtomType(1:self%nMaxAtoms), stat= AllocateStatus)
 
+    allocate(self%AtomType(1:self%nMaxAtoms), stat= AllocateStatus)
+    allocate(self%MolIndx(1:self%nMaxAtoms), stat= AllocateStatus)
+    allocate(self%SubIndx(1:self%nMaxAtoms), stat= AllocateStatus)
+    self%AtomType = 0
+    self%MolIndx = 0
+    self%SubIndx = 0
 
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
@@ -74,13 +85,13 @@ module SimpleSimBox
     integer :: AllocateStatus, IOSt
 
     open(unit=50, file=fileName, status="OLD")
-    read(50,*) self%nAtoms
+    read(50,*) self%nMaxAtoms
     read(50,*) 
 
-    allocate( self%atoms(1:3, 1:self%nAtoms), stat= AllocateStatus)
-    allocate( self%AtomType(1:self%nAtoms), stat= AllocateStatus )
-    allocate( self%ETable(1:self%nAtoms), stat= AllocateStatus )
-    allocate( self%dETable(1:self%nAtoms), stat= AllocateStatus )
+    allocate( self%atoms(1:3, 1:self%nMaxAtoms), stat= AllocateStatus)
+    allocate( self%AtomType(1:self%nMaxAtoms), stat= AllocateStatus )
+    allocate( self%ETable(1:self%nMaxAtoms), stat= AllocateStatus )
+    allocate( self%dETable(1:self%nMaxAtoms), stat= AllocateStatus )
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
     do iAtom = 1, self%nAtoms
@@ -250,6 +261,10 @@ module SimpleSimBox
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         self % EFunc => EnergyCalculator(intVal)
+      case("molmin")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+
       case default
         lineStat = -1
     end select
