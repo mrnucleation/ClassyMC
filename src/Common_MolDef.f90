@@ -32,13 +32,13 @@ module StructureTypes
     integer ::　atomType(1:1)
 
     integer :: nBonds = 0
-    type(BondMem) ::　bond(1:1)
+    type(BondMem) :: bond(1:1)
 
     integer :: nAngles = 0
-!    type(AngleMem) ::　angType(1:1)
+!    type(AngleMem) :: angType(1:1)
 
     integer :: nTors = 0
-!    type(TorsMem) ::　　torsType(1:1)
+!    type(TorsMem) :: torsType(1:1)
   end type
 
 

@@ -21,9 +21,8 @@ module SimpleSimBox
 !    real(dp) :: beta, temperature
 
 !    real(dp) :: ETotal
-    integer, allocatable :: 
     integer, allocatable :: NMolMin(:), NMolMax(:)
-    integer, allocatable :: NMol(:), MolStart(:)
+    integer, allocatable :: NMol(:), MolStartIndx(:)
 !    integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:), SubIndx(:)
 
@@ -48,10 +47,11 @@ module SimpleSimBox
   contains
 !==========================================================================================
   subroutine SimpleBox_Constructor(self)
-    use Common_MolDef
+    use Common_MolInfo
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer :: AllocateStatus
+    integer :: iType, iMol, iAtom, atmIndx, molIndx, maxMol
  
     if( .not. allocated(self%NMolMin) ) then
       write(*,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
@@ -59,18 +59,47 @@ module SimpleSimBox
       stop 
     endif
 
-    allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat= AllocateStatus)
-    allocate(self%ETable(1:self%nMaxAtoms), stat= AllocateStatus)
-    allocate(self%dETable(1:self%nMaxAtoms), stat= AllocateStatus)
+    !First begin by computing the maximium number of atoms that the box can potentially contain
+    self%nMaxAtoms = 0
+    maxMol = 0
+    do iType = 1, nMolTypes
+      self%nMaxAtoms = self%nMaxAtoms + self%NMolMax(iType)*MolData(iType)%nAtoms
+      maxMol = maxMol + self%NMolMax(iType)
+    enddo
 
-    allocate(self%AtomType(1:self%nMaxAtoms), stat= AllocateStatus)
-    allocate(self%MolIndx(1:self%nMaxAtoms), stat= AllocateStatus)
-    allocate(self%SubIndx(1:self%nMaxAtoms), stat= AllocateStatus)
+    !Allocate the position and energy related arrays. 
+    allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%ETable(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%dETable(1:self%nMaxAtoms), stat=AllocateStatus)
+
+    !Allocate the arrays which contain the atom type and quick look up information.
+    allocate(self%AtomType(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%MolIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%SubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%MolStartIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+
+    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+
     self%AtomType = 0
     self%MolIndx = 0
     self%SubIndx = 0
+    self%MolStartIndx = 0
 
-    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+    atmIndx = 0
+    molIndx = 0
+    do iType = 1, nMolTypes
+      do iMol = 1, self%NMolMax(iType)
+        molIndx = molIndx + 1
+        self%MolStartIndx(molIndx) = atmIndx + 1
+        do iAtom = 1, MolData(iType)%nAtoms
+          atmIndx = atmIndx + 1
+          self%AtomType(atmIndx) = MolData(iType)%atomType(iAtom)
+          self%MolIndx(atmIndx)  = molIndx
+          self%SubIndx(atmIndx)  = iAtom
+        enddo
+      enddo 
+    enddo
+
 
   end subroutine
 
@@ -88,11 +117,9 @@ module SimpleSimBox
     read(50,*) self%nMaxAtoms
     read(50,*) 
 
-    allocate( self%atoms(1:3, 1:self%nMaxAtoms), stat= AllocateStatus)
-    allocate( self%AtomType(1:self%nMaxAtoms), stat= AllocateStatus )
-    allocate( self%ETable(1:self%nMaxAtoms), stat= AllocateStatus )
-    allocate( self%dETable(1:self%nMaxAtoms), stat= AllocateStatus )
-    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+    if( .not. allocated(self%nAtoms) ) then
+      call self%Constructor
+    endif
 
     do iAtom = 1, self%nAtoms
       read(50,*, iostat=IOSt) sym, self%atoms(1, iAtom), self%atoms(2, iAtom), self%atoms(3, iAtom)

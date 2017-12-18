@@ -29,13 +29,13 @@ use VarPrecision
     class(AtomExchange), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical :: accept
-    integer :: oldtype, newtype
+    integer :: nAtom, newtype
 
 
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
     !Choose 
-    oldtype = floor( trialBox% * grnd() + 1E0_dp)
+    nAtom = floor( trialBox%nTotal * grnd() + 1E0_dp)
     if(trialBox%NMolMin(oldtype) > trialBox%NMol(oldtype)-1) then
       return
     endif
@@ -45,7 +45,6 @@ use VarPrecision
       newtype = floor( trialBox% * grnd() + 1E0_dp)
     enddo
 
-    nMove = floor( trialBox%nAtoms * grnd() + 1E0_dp)
     
 
     call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
