@@ -21,8 +21,9 @@ module SimpleSimBox
 !    real(dp) :: beta, temperature
 
 !    real(dp) :: ETotal
+    integer, allocatable :: 
     integer, allocatable :: NMolMin(:), NMolMax(:)
-    integer, allocatable :: NMol(:)
+    integer, allocatable :: NMol(:), MolStart(:)
 !    integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:), SubIndx(:)
 
@@ -51,7 +52,6 @@ module SimpleSimBox
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer :: AllocateStatus
-    intger
  
     if( .not. allocated(self%NMolMin) ) then
       write(*,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
