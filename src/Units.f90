@@ -1,4 +1,19 @@
 !==============================================================
+! This file contains physical constants and unit conversion factors
+! that can be used in the simulation code. The factors contained
+! within
+! all units are scaled into units native to the simulation code.
+!
+! Energy = Boltzmann units (Defined so the boltzman constant = 1 K^-1)
+! Length = Angstroms
+! Temperature = Kelvin
+! Angles = Radians
+! 
+! All other units are expressed in these terms.
+! 
+! Using this convension it is also possible to work in reduced
+! units such as the Lennard-Jones units.
+!==============================================================
       module Constants
       use VarPrecision
       real(dp),parameter :: pi=4d0*datan(1d0) 

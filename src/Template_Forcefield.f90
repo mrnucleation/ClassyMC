@@ -8,6 +8,7 @@ module Template_ForceField
     contains
       procedure, pass :: Constructor 
       procedure, pass :: DetailedECalc 
+      procedure, pass :: NewECalc
       procedure, pass :: ShiftECalc_Single
       procedure, pass :: ShiftECalc_Multi
       procedure, pass :: SwapInECalc
@@ -33,6 +34,15 @@ module Template_ForceField
     class(simBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
 
+  end subroutine
+  end subroutine
+!=============================================================================+
+  subroutine NewECalc(self, curbox, disp, E_Diff)
+    implicit none
+      class(forcefield), intent(in) :: self
+      class(simBox), intent(inout) :: curbox
+      type(displacement), intent(in) :: disp(:)
+      real(dp), intent(inOut) :: E_Diff
   end subroutine
 !=============================================================================+
   subroutine ShiftECalc_Single(self, curbox, disp, E_Diff)
