@@ -29,7 +29,7 @@ module StructureTypes
 
   type MolDef 
     integer :: nAtoms = 1
-    integer ::　atomType(1:1)
+    integer :: atomType(1:1)
 
     integer :: nBonds = 0
     type(BondMem) :: bond(1:1)
