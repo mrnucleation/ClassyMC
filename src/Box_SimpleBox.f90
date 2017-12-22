@@ -41,6 +41,7 @@ module SimpleSimBox
       procedure, pass :: DummyCoords => SimpleBox_DummyCoords
       procedure, pass :: IOProcess => SimpleBox_IOProcess
       procedure, pass :: DumpXYZConfig => SimpleBox_DumpXYZConfig
+      procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
   end type
 
 !==========================================================================================
@@ -305,6 +306,26 @@ module SimpleSimBox
     character(len=maxLineLen), intent(in) :: fileName
 
   end subroutine
+!==========================================================================================
+  function SimpleBox_CheckConstraint(self, disp) result(accept)
+    use CoordinateTypes
+    implicit none
+    class(SimpleBox), intent(in) :: self
+    type(Displacement), intent(in) :: disp(:)
+    logical :: accept
+    integer :: nDisp
+
+    accept = .true.
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % ShiftCheck( trialBox, self%disp(1:nDisp), accept )
+      enddo
+      if(.not. accept) then
+        return
+      endif
+    endif     
+
+  end function
 !==========================================================================================
 end module
 !==========================================================================================

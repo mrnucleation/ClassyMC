@@ -48,16 +48,25 @@ use VarPrecision
       newtype = floor( trialBox% * grnd() + 1E0_dp)
     enddo
 
-    if( size(Constrain) > 0 ) then
-      do iConstrain = 1, size(Constrain)
-        call Constrain(iConstrain) % method % ShiftCheck( trialBox, self%disp(1:1), accept )
-      enddo
-      if(.not. accept) then
-        return
-      endif
-    endif    
+    self%disp(1)%newAtom = .true.
+    self%disp(1)%removeAtom = .true.
+    self%disp(1)%oldType = oldType
+    self%disp(1)%atmType = newType
+
+    accept = trialBox % CheckConstraint( self%disp(1:1) )
+    if(.not. accept) then
+      return
+    endif
 
     call trialbox % EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
+
+    accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
+    if(accept) then
+      self % accpt = self % accpt + 1E0_dp
+      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdatePosition(self%disp(1:1))
+    endif
+
   end subroutine
 !=========================================================================
   subroutine AtomExchange_Maintenance(self)
