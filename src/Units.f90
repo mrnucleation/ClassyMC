@@ -14,71 +14,70 @@
 ! Using this convension it is also possible to work in reduced
 ! units such as the Lennard-Jones units.
 !==============================================================
-      module Constants
-      use VarPrecision
-      real(dp),parameter :: pi=4d0*datan(1d0) 
-      real(dp),parameter :: two_pi=8d0*datan(1d0)
+module Constants
+  use VarPrecision
+  real(dp),parameter :: pi=4d0*datan(1d0) 
+  real(dp),parameter :: two_pi=8d0*datan(1d0)
         
-      end module
+end module
 !===================================================================      
-      module Units
-      use VarPrecision
-      contains
+module Units
+  use VarPrecision
+contains
         
 !     !----------------------------------------------------------
-        real(dp) function FindEngUnit(unitName)
-        implicit none 
-        character(len=*), intent(in) :: unitName       
+   real(dp) function FindEngUnit(unitName)
+     implicit none 
+     character(len=*), intent(in) :: unitName          
         
+     select case(trim(adjustl(unitName)))
+       case("j-mol")
+         FindEngUnit = 1d0/8.3144621d0
+       case("kj-mol")
+         FindEngUnit = 1d0/8.3144621d-3
+       case("cal-mol")
+         FindEngUnit = 1d0/1.9872041d0
+       case("kcal-mol")
+         FindEngUnit = 1d0/1.9872041d-3
+       case("eV") 
+         FindEngUnit = 1d0/8.6173303d-5
+       case("ev") 
+         FindEngUnit = 1d0/8.6173303d-5
+       case("kB")
+         FindEngUnit = 1d0
+       case("kb")
+         FindEngUnit = 1d0
+       case default
+         write(*,*) "Error! Invalid Energy Unit Type!"
+         write(*,*) unitName
+         stop
+       end select
         
-        select case(trim(adjustl(unitName)))
-          case("j-mol")
-                FindEngUnit = 1d0/8.3144621d0
-          case("kj-mol")
-                FindEngUnit = 1d0/8.3144621d-3
-          case("cal-mol")
-                FindEngUnit = 1d0/1.9872041d0
-          case("kcal-mol")
-                FindEngUnit = 1d0/1.9872041d-3
-          case("eV") 
-                FindEngUnit = 1d0/8.6173303d-5
-          case("ev") 
-                FindEngUnit = 1d0/8.6173303d-5
-          case("kB")
-                FindEngUnit = 1d0
-          case("kb")
-                FindEngUnit = 1d0
-          case default
-            write(*,*) "Error! Invalid Energy Unit Type!"
-            write(*,*) unitName
-            stop
-        end select
-        
-        end function
+     end function
 !    !----------------------------------------------------------
-        real(dp) function FindLengthUnit(unitName)
-        implicit none 
-        character(len=*) :: unitName       
+     real(dp) function FindLengthUnit(unitName)
+       implicit none 
+       character(len=*) :: unitName       
         
-        select case(trim(adjustl(unitName)))
-          case("nm")
-                FindLengthUnit = 1d-1
-          case("a")
-                FindLengthUnit = 1d0
-          case("ang")
-                FindLengthUnit = 1d0
-          case("sigma")
-                FindLengthUnit = 1d0                  
-          case default
-            write(*,*) "Error! Invalid Length Unit Type!"
-            write(*,*) unitName
-            stop
+       select case(trim(adjustl(unitName)))
+         case("nm")
+           FindLengthUnit = 1d-1
+         case("a")
+           FindLengthUnit = 1d0
+         case("ang")
+           FindLengthUnit = 1d0
+         case("sigma")
+           FindLengthUnit = 1d0                  
+         case default
+           write(*,*) "Error! Invalid Length Unit Type!"
+           write(*,*) unitName
+           stop
         end select
  
         
-        end function
+      end function
 !     !----------------------------------------------------------
-        real(dp) function FindAngularUnit(unitName)
+      real(dp) function FindAngularUnit(unitName)
         use Constants         
         implicit none 
         character(len=*), intent(in) :: unitName       
@@ -103,7 +102,7 @@
         end select
  
         
-        end function          
+  end function          
 !      !----------------------------------------------------------
-      end module    
+end module    
 !===================================================================
