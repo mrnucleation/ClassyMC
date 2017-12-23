@@ -39,12 +39,8 @@ contains
          FindEngUnit = 1d0/1.9872041d0
        case("kcal-mol")
          FindEngUnit = 1d0/1.9872041d-3
-       case("eV") 
-         FindEngUnit = 1d0/8.6173303d-5
        case("ev") 
          FindEngUnit = 1d0/8.6173303d-5
-       case("kB")
-         FindEngUnit = 1d0
        case("kb")
          FindEngUnit = 1d0
        case default
@@ -78,7 +74,7 @@ contains
       end function
 !     !----------------------------------------------------------
       real(dp) function FindAngularUnit(unitName)
-        use Constants         
+        use Constants, only: pi
         implicit none 
         character(len=*), intent(in) :: unitName       
         

@@ -29,16 +29,16 @@ module StructureTypes
 
   type MolDef 
     integer :: nAtoms = 1
-    integer :: atomType(1:1)
+    integer, allocatable :: atomType(:)
 
     integer :: nBonds = 0
-    type(BondMem) :: bond(1:1)
+    type(BondMem), allocatable :: bond(:)
 
     integer :: nAngles = 0
-!    type(AngleMem) :: angType(1:1)
+    type(AngleMem), allocatable :: angle(:)
 
     integer :: nTors = 0
-!    type(TorsMem) :: torsType(1:1)
+    type(TorsMem), allocatable :: torsion(:)
   end type
 
 
