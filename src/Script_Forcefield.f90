@@ -126,6 +126,7 @@ module Input_Forcefield
           call FindCommandBlock(iLine, lineStore, "end_molecule", lineBuffer)
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
           read(val, *) intValue
+          call Script_ReadMolDef( lineStore(iLine+1:iLine+lineBuffer-1), intValue, lineStat )
 
         case("moleculetypes")
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
@@ -193,7 +194,7 @@ module Input_Forcefield
 
       select case(trim(adjustl( command )))
         case("atoms")
-           if( .not. allocated(EnergyCalculator) ) then
+           if( .not. allocated(MolData(molType)%atomType) ) then
              call FindCommandBlock(iLine, cmdBlock, "end_atoms", lineBuffer)
              nItems = lineBuffer - 1
              MolData(molType)%nAtoms = nItems

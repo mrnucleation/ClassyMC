@@ -28,22 +28,60 @@ module CubicBoxDef
   contains
 !==========================================================================================
   subroutine Cube_Constructor(self)
+    use Common_MolInfo
     implicit none
     class(CubeBox), intent(inout) :: self
     integer :: AllocateStatus
+    integer :: iType, iMol, iAtom, atmIndx, molIndx, maxMol
  
-    write(*,*) "Box Type: Cubic"
+    if( .not. allocated(self%NMolMin) ) then
+      write(*,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
+      write(*,*) "prior to box initialization!"
+      stop 
+    endif
 
-    allocate(self%atoms(1:3, 1:self%nAtoms), stat= AllocateStatus)
-    allocate(self%ETable(1:self%nAtoms), stat= AllocateStatus)
-    allocate(self%dETable(1:self%nAtoms), stat= AllocateStatus)
-    allocate(self%AtomType(1:self%nAtoms), stat= AllocateStatus)
+    !First begin by computing the maximium number of atoms that the box can potentially contain
+    self%nMaxAtoms = 0
+    maxMol = 0
+    do iType = 1, nMolTypes
+      self%nMaxAtoms = self%nMaxAtoms + self%NMolMax(iType)*MolData(iType)%nAtoms
+      maxMol = maxMol + self%NMolMax(iType)
+    enddo
 
+    !Allocate the position and energy related arrays. 
+    allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%ETable(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%dETable(1:self%nMaxAtoms), stat=AllocateStatus)
+
+    !Allocate the arrays which contain the atom type and quick look up information.
+    allocate(self%AtomType(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%MolIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%SubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%MolStartIndx(1:self%nMaxAtoms), stat=AllocateStatus)
 
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
-  end subroutine
+    self%AtomType = 0
+    self%MolIndx = 0
+    self%SubIndx = 0
+    self%MolStartIndx = 0
 
+    atmIndx = 0
+    molIndx = 0
+    do iType = 1, nMolTypes
+      do iMol = 1, self%NMolMax(iType)
+        molIndx = molIndx + 1
+        self%MolStartIndx(molIndx) = atmIndx + 1
+        do iAtom = 1, MolData(iType)%nAtoms
+          atmIndx = atmIndx + 1
+          self%AtomType(atmIndx) = MolData(iType)%atomType(iAtom)
+          self%MolIndx(atmIndx)  = molIndx
+          self%SubIndx(atmIndx)  = iAtom
+        enddo
+      enddo 
+    enddo
+
+  end subroutine
 !==========================================================================================
   subroutine Cube_LoadCoordinates(self, fileName, fileType)
     implicit none
@@ -103,7 +141,6 @@ module CubicBoxDef
   class(CubeBox), intent(inout) :: self
   real(dp), intent(in) :: E_Diff
 
-    self % ETotal = self % ETotal + E_Diff
     self % ETable = self % ETable + self % dETable
 
   end subroutine

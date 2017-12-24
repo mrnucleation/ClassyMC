@@ -1,4 +1,5 @@
 
+moleculetypes 1
 
 molecule 1
   atoms

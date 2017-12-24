@@ -6,7 +6,7 @@
     use ScriptInput, only: Script_ReadParameters
     use BoxData, only: BoxArray, Constrain
     use MCMoveData, only: Moves
-    use Common_MolInfo, only: nAtomTypes, MolData
+    use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: sgrnd
     use RSqListDef, only: RSqList
@@ -14,6 +14,7 @@
 !    use CommonSampling, only: sampling, metropolis
     implicit none
  
+    integer :: i, j
     integer :: nMoves, iAtom
     real(dp) :: E_T, E_Final
     real(dp) :: avgE, cnt
@@ -25,6 +26,12 @@
     call sgrnd(1) 
 
     call Script_ReadParameters
+    do i = 1, nMolTypes
+      write(*,*) MolData(i)%nAtoms
+      do j = 1, MolData(i)%nAtoms
+        write(*,*) MolData(i)%atomType(j)
+      enddo
+    enddo
 !    allocate( Constrain(1:1) )
 !    allocate( distcriteria::Constrain(1)%Method )
     allocate( RSqList::BoxArray(1)%box%NeighList(1:1) )
@@ -74,7 +81,7 @@
     call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
     write(*,*) "Culmative Energy:", E_Final
     write(*,*) "Final Energy:",  BoxArray(1)%box%ETotal
-    write(*,*) "Difference:",  E_Final-BoxArray(1)%box%ETotal
+    write(*,*) "Difference:",  E_Final - BoxArray(1)%box%ETotal
     write(*,*) "Average Energy:", avgE/cnt
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
