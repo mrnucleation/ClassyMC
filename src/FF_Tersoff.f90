@@ -10,7 +10,7 @@ module FF_Pair_Tersoff
   end type
 
   type, extends(forcefield) :: Pair_Tersoff
-    type(TersoffPar), allocatable :: tersoffData(:,:)
+    type(Tersoff2Body), allocatable :: tersoffData(:,:)
     real(dp), allocatable :: rMinTable(:,:)
 !    real(dp) :: rCut, rCutSq
     contains
@@ -77,7 +77,7 @@ module FF_Pair_Tersoff
   end function
   !=============================================================================+
   subroutine Constructor_Tersoff(self)
-    use Common_MolDef, only: nAtomTypes
+    use Common_MolInfo, only: nAtomTypes
     implicit none
     class(Pair_Tersoff), intent(inout) :: self
     integer :: AllocateStat

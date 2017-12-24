@@ -118,7 +118,7 @@ module SimpleSimBox
     read(50,*) self%nMaxAtoms
     read(50,*) 
 
-    if( .not. allocated(self%nAtoms) ) then
+    if( .not. allocated(self%atoms) ) then
       call self%Constructor
     endif
 
@@ -313,12 +313,12 @@ module SimpleSimBox
     class(SimpleBox), intent(in) :: self
     type(Displacement), intent(in) :: disp(:)
     logical :: accept
-    integer :: nDisp
+    integer :: nDisp, iConstrain
 
     accept = .true.
     if( size(self%Constrain) > 0 ) then
       do iConstrain = 1, size(self%Constrain)
-        call self%Constrain(iConstrain) % method % ShiftCheck( trialBox, self%disp(1:nDisp), accept )
+        call self%Constrain(iConstrain) % method % ShiftCheck( self, disp(1:nDisp), accept )
       enddo
       if(.not. accept) then
         return

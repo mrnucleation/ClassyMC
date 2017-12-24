@@ -84,17 +84,18 @@ module Input_Forcefield
     use ForcefieldData, only: nForceFields
     use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile
+    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
-    character(len=30), intent(in) :: fileName      
+    character(len=50), intent(in) :: fileName      
     integer, intent(out) :: lineStat
 
-    integer :: nLines
+    integer :: nLines, AllocateStat, iLine, lineBuffer
     integer, allocatable :: lineNumber(:)
     character(len=maxLineLen), allocatable :: lineStore(:)
 
     character(len=30) :: command, val
     logical :: logicValue
-    integer :: intVal
+    integer :: intValue
     real(dp) :: realValue
 
     lineStat  = 0
@@ -118,7 +119,7 @@ module Input_Forcefield
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
           read(val, *) intValue
 
-        case("forcefieldtype")]
+        case("forcefieldtype")
           call Script_Forcefield(lineStore(iLine), lineStat)
 
         case("molecule")
@@ -166,11 +167,14 @@ module Input_Forcefield
     use ForcefieldData, only: nForceFields
     use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile
+    use Common_MolInfo, only: MolData
     implicit none
     character(len=maxLineLen), intent(in) :: cmdBlock(:)
     integer, intent(in) :: molType
     integer, intent(out) :: lineStat
-    integer :: j, intValue(1:5)
+    integer :: i, j, intValue(1:5), iLine, lineBuffer, nLines, curLine
+    integer :: AllocateStat, nItems
+    character(len=30) :: command
 
     lineStat  = 0
     lineBuffer = 0
@@ -260,29 +264,18 @@ module Input_Forcefield
              stop
            endif
 
-
-
-
         case default
-          write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
-          write(*,*) trim(adjustl(lineStore(iLine)))
+          write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line"
+          write(*,*) trim(adjustl(cmdBlock(iLine)))
           stop
       end select
-
-      ! Ensure that the called processes exited properly.
-      if(lineStat .eq. -1) then
-        write(*,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
-        write(*, "(A)") "could not be understood. Please check command for accuracy and try again."
-        write(*,*) trim(adjustl(lineStore(iLine)))
-        stop
-      endif
 
     enddo
 
   end subroutine
 !================================================================================
   subroutine Script_SetUnits(line, lineStat)
-    use Units, only: FindEngUnit, FindLengthUnit, FindAngularUnit
+    use Units
     implicit none
     character(len=maxLineLen), intent(in) :: line
     integer, intent(out) :: lineStat
@@ -292,7 +285,6 @@ module Input_Forcefield
     integer :: FFNum
 
     lineStat  = 0
-    call LowerCaseLine(line)
     call GetXCommand(line, command, 2, lineStat)
     select case(trim(adjustl(command)))
       case("energy")

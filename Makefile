@@ -14,7 +14,7 @@ OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
-DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
+DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -O0
 #DETAILEDDEBUG:= -check all -traceback -g -fpe3 -Og
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -heap-arrays 1024
@@ -69,10 +69,11 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Script_Sampling.f90\
 	        	$(SRC)/Script_MCMoves.f90\
 	        	$(SRC)/Script_SimBoxes.f90\
-				$(SRC)/Input_Format.f90\
+						$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
-        		$(SRC)/Main.f90
+        		$(SRC)/Main.f90\
+        		$(SRC)/Units.f90
 
 SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
         		$(SRC)/Template_Forcefield.f90\
@@ -194,7 +195,7 @@ $(OBJ)/Move_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Bo
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o ${OBJ}/FF_Tersoff.o
-$(OBJ)/Script_Forcefield.o: ${OBJ}/Move_AtomTranslation.o
+$(OBJ)/Script_Forcefield.o: ${OBJ}/Move_AtomTranslation.o ${OBJ}/Units.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o
 

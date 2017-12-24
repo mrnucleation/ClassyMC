@@ -16,6 +16,7 @@
       integer :: iLine, lineStat, AllocateStat
       integer :: nLines, nForceLines, lineBuffer
       integer, allocatable :: lineNumber(:)
+
       character(len=maxLineLen), allocatable :: lineStore(:)
       character(len=30) :: command, command2, dummy
       character(len=50) :: fileName
@@ -64,8 +65,9 @@
         select case(trim(adjustl( command )))
         case("create")
            call createCommand(iLine, linestore, lineBuffer, lineStat)
-!        case("forcefield")
-!          call Script_Forcefield( lineStore(iLine), lineStat )
+        case("forcefield")
+          call GetXCommand(lineStore(iLine), filename, 2, lineStat)         
+          call Script_ReadFieldFile(filename, lineStat)
         case("modify")
            call modifyCommand( lineStore(iLine), lineStat )
         case("set")
@@ -112,7 +114,7 @@
       subroutine setCommand(line, lineStat)
       use Units
       use VarPrecision
-      use Common_MolDef
+      use Common_MolInfo
       use ParallelVar
       use Common_NeighData
       implicit none

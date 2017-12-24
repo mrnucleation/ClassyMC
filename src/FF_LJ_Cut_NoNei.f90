@@ -23,7 +23,7 @@ module FF_Pair_LJ_Cut_NoNei
   contains
   !=============================================================================+
   subroutine Constructor_LJ_Cut(self)
-    use Common_MolDef, only: nAtomTypes
+    use Common_MolInfo, only: nAtomTypes
     implicit none
     class(Pair_LJ_Cut_NoNei), intent(inout) :: self
     integer :: AllocateStat
