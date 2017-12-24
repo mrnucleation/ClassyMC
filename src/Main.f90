@@ -6,7 +6,7 @@
     use ScriptInput, only: Script_ReadParameters
     use BoxData, only: BoxArray, Constrain
     use MCMoveData, only: Moves
-    use Common_MolInfo, only: nAtomTypes
+    use Common_MolInfo, only: nAtomTypes, MolData
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: sgrnd
     use RSqListDef, only: RSqList

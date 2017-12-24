@@ -9,8 +9,8 @@
   End_Create
 
   Create energyfunctions
-#    LJ_Cut
-    LJ_Cut_NoNei
+    LJ_Cut
+#    LJ_Cut_NoNei
   End_Create
 
   Create moves
@@ -20,5 +20,5 @@
   modify box 1 energycalc 1
 #  modify box 1 boxlength 7.0
 #======================================
-#  forcefield 1 fieldtype LJ_Cut
+  forcefield testfield.txt
 #======================================

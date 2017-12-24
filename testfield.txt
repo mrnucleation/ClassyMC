@@ -1,0 +1,7 @@
+
+
+molecule 1
+  atoms
+    1
+  end_atoms
+end_molecule
