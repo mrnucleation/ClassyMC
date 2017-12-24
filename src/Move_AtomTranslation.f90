@@ -73,14 +73,18 @@ use VarPrecision
 
 
     !Check Constraint
-    if( size(Constrain) > 0 ) then
-      do iConstrain = 1, size(Constrain)
-        call Constrain(iConstrain) % method % ShiftCheck( trialBox, self%disp(1:1), accept )
-      enddo
-      if(.not. accept) then
-        return
-      endif
+    accept =  trialBox%CheckConstraint(self%disp(1:1))
+    if(.not. accept) then
+      return
     endif
+!    if( size(Constrain) > 0 ) then
+!      do iConstrain = 1, size(Constrain)
+!        call Constrain(iConstrain) % method % ShiftCheck( trialBox, self%disp(1:1), accept )
+!      enddo
+!      if(.not. accept) then
+!        return
+!      endif
+!    endif
 
 
     !Energy Calculation

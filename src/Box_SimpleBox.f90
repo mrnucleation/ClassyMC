@@ -316,6 +316,9 @@ module SimpleSimBox
     integer :: nDisp, iConstrain
 
     accept = .true.
+    if( .not. allocated(self%Constrain) ) then
+      return
+    endif
     if( size(self%Constrain) > 0 ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % ShiftCheck( self, disp(1:nDisp), accept )
