@@ -65,6 +65,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_LJ_Cut_NoNei.f90\
         		$(SRC)/FF_Tersoff.f90\
  	        	$(SRC)/Script_Forcefield.f90\
+ 	        	$(SRC)/Script_FieldType.f90\
 	        	$(SRC)/Script_Main.f90\
 	        	$(SRC)/Script_Sampling.f90\
 	        	$(SRC)/Script_MCMoves.f90\
@@ -76,12 +77,12 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Units.f90
 
 SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
-        		$(SRC)/Template_Forcefield.f90\
+	              $(SRC)/Template_Forcefield.f90\
                 $(SRC)/Template_Constraint.f90\
-        		$(SRC)/Template_AcceptRule.f90\
-        		$(SRC)/Template_NeighList.f90\
+								$(SRC)/Template_AcceptRule.f90\
+								$(SRC)/Template_NeighList.f90\
                 $(SRC)/Template_MultiBoxMove.f90\
-        		$(SRC)/Template_MoveClass.f90
+								$(SRC)/Template_MoveClass.f90
 
 SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
 
@@ -194,9 +195,8 @@ $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Move_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o
-$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o ${OBJ}/FF_Tersoff.o
-$(OBJ)/Script_Forcefield.o: ${OBJ}/Move_AtomTranslation.o ${OBJ}/Units.o
-
+$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o
+$(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o ${OBJ}/FF_Tersoff.o ${OBJ}/Move_AtomTranslation.o $(OBJ)/Common_ECalc.o
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o
 
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o

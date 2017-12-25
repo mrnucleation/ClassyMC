@@ -42,7 +42,6 @@
     BoxArray(1)%box%AtomType = 1
     BoxArray(1)%box%temperature = 0.8E0_dp
     BoxArray(1)%box%beta = 1E0_dp/BoxArray(1)%box%temperature
-!    call BoxArray(1)%box%DummyCoords
     call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
     call BoxArray(1)%box % BuildNeighList
 
@@ -79,10 +78,10 @@
     E_Final = BoxArray(1)%box%ETotal
 
     call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
-    write(*,*) "Culmative Energy:", E_Final
-    write(*,*) "Final Energy:",  BoxArray(1)%box%ETotal
-    write(*,*) "Difference:",  E_Final - BoxArray(1)%box%ETotal
-    write(*,*) "Average Energy:", avgE/cnt
+    write(nout,*) "Culmative Energy:", E_Final
+    write(nout,*) "Final Energy:",  BoxArray(1)%box%ETotal
+    write(nout,*) "Difference:",  E_Final - BoxArray(1)%box%ETotal
+    write(nout,*) "Average Energy:", avgE/cnt
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
     write(nout,*) "Finished!"
