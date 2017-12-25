@@ -32,8 +32,6 @@
         write(*,*) MolData(i)%atomType(j)
       enddo
     enddo
-!    allocate( Constrain(1:1) )
-!    allocate( distcriteria::Constrain(1)%Method )
     allocate( RSqList::BoxArray(1)%box%NeighList(1:1) )
     call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
     call EnergyCalculator(1)%Method%Constructor
@@ -55,7 +53,7 @@
     write(nout,*) "Simulation Start!"
     avgE = 0E0_dp
     cnt = 0E0_dp
-    do nMoves = 1, nint(1d7)
+    do nMoves = 1, nint(1d5)
        call Moves(1) % Move % FullMove(BoxArray(1)%box)
        avgE = avgE + BoxArray(1)%box%ETotal
        cnt = cnt + 1E0_dp
@@ -68,20 +66,21 @@
          enddo
        endif
        if(mod(nMoves, 1000) == 0) then
-         call BoxArray(1)%box % BuildNeighList
+         call BoxArray(1) % box % BuildNeighList
        endif
        if(mod(nMoves, 100) == 0) then
-         call Moves(1)%Move%Maintenance
+         call Moves(1) % Move % Maintenance
        endif
     enddo
     
     E_Final = BoxArray(1)%box%ETotal
 
-    call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
-    write(nout,*) "Culmative Energy:", E_Final
-    write(nout,*) "Final Energy:",  BoxArray(1)%box%ETotal
-    write(nout,*) "Difference:",  E_Final - BoxArray(1)%box%ETotal
-    write(nout,*) "Average Energy:", avgE/cnt
+    call BoxArray(1) % box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
+!    call BoxArray(1) % box % ComputeEnergy
+    write(nout, *) "Culmative Energy:", E_Final
+    write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
+    write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal
+    write(nout, *) "Average Energy:", avgE/cnt
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
     write(nout,*) "Finished!"

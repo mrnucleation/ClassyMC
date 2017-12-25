@@ -9,8 +9,8 @@
   End_Create
 
   Create energyfunctions
-    LJ_Cut
-#    LJ_Cut_NoNei
+#    LJ_Cut
+    LJ_Cut_NoNei
   End_Create
 
   Create moves

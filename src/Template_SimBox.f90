@@ -31,6 +31,7 @@ module Template_SimBox
       procedure, public, pass :: UpdateEnergy
       procedure, public, pass :: UpdatePosition
       procedure, public, pass :: UpdateNeighLists
+      procedure, public, pass :: ComputeEnergy
       procedure, public, pass :: DummyCoords
       procedure, public, pass :: IOProcess
       procedure, public, pass :: DumpXYZConfig
@@ -89,6 +90,12 @@ module Template_SimBox
 !==========================================================================================
   subroutine DummyCoords(self)
     use CoordinateTypes
+    implicit none
+    class(SimBox), intent(inout) :: self
+  end subroutine
+
+!==========================================================================================
+  subroutine ComputeEnergy(self)
     implicit none
     class(SimBox), intent(inout) :: self
   end subroutine

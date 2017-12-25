@@ -39,6 +39,7 @@ module SimpleSimBox
       procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
       procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
       procedure, pass :: DummyCoords => SimpleBox_DummyCoords
+      procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
       procedure, pass :: IOProcess => SimpleBox_IOProcess
       procedure, pass :: DumpXYZConfig => SimpleBox_DumpXYZConfig
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
@@ -180,6 +181,13 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
+subroutine SimpleBox_ComputeEnergy(self)
+  implicit none
+  class(SimpleBox), intent(inout) :: self
+
+  call self % EFunc % Method % DetailedECalc( self, self%ETotal )
+end subroutine
+!==========================================================================================
   subroutine SimpleBox_UpdateEnergy(self, E_Diff)
     implicit none
     class(SimpleBox), intent(inout) :: self
@@ -319,6 +327,7 @@ module SimpleSimBox
     if( .not. allocated(self%Constrain) ) then
       return
     endif
+
     if( size(self%Constrain) > 0 ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % ShiftCheck( self, disp(1:nDisp), accept )
