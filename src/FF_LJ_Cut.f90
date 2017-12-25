@@ -15,8 +15,8 @@ module FF_Pair_LJ_Cut
       procedure, pass :: DetailedECalc => Detailed_LJ_Cut
       procedure, pass :: ShiftECalc_Single => Shift_LJ_Cut_Single
       procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
-      procedure, pass :: SwapInECalc => SwapIn_LJ_Cut
-      procedure, pass :: SwapOutECalc => SwapOut_LJ_Cut
+      procedure, pass :: NewECalc => New_LJ_Cut
+      procedure, pass :: OldECalc => Old_LJ_Cut
       procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
       procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
   end type
@@ -72,9 +72,7 @@ module FF_Pair_LJ_Cut
           rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
           ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
           rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
-!          write(*,*) rx, ry, rz
           call curbox%Boundary(rx, ry, rz)
-!          write(*,*) rx, ry, rz
           rsq = rx**2 + ry**2 + rz**2
           if(rsq < self%rCutSq) then
             if(rsq < rmin_ij) then
@@ -170,7 +168,7 @@ module FF_Pair_LJ_Cut
    
   end subroutine
   !=====================================================================
-  subroutine SwapIn_LJ_Cut(self, curbox, disp, E_Diff)
+  subroutine New_LJ_Cut(self, curbox, disp, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
@@ -213,7 +211,7 @@ module FF_Pair_LJ_Cut
       enddo
   end subroutine
   !=====================================================================
-  subroutine SwapOut_LJ_Cut(self, curbox, atmIndx, E_Diff)
+  subroutine Old_LJ_Cut(self, curbox, atmIndx, E_Diff)
     implicit none
       class(Pair_LJ_Cut), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
@@ -250,11 +248,40 @@ module FF_Pair_LJ_Cut
       enddo
   end subroutine
   !=====================================================================
-  subroutine ProcessIO_LJ_Cut(self, fileName)
+  subroutine ProcessIO_LJ_Cut(self, line)
+    use Common_MolInfo, only: nAtomTypes
+    use Input_Format, only: GetAllCommands
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
-    character(len=*), intent(in) :: fileName
-    write(*,*) "LJ CUT SAYING HELLO!!!"
+    character(len=*), intent(in) :: line
+    character(len=30), allocatable :: parlist(:)
+    integer :: jType, lineStat
+    integer :: type1, type2
+    real(dp) :: ep, sig
+  
+    call GetAllCommands(line, parlist, lineStat)
+    select case(size(parlist))
+      case(3)
+        read(line, *) type1, ep, sig
+        do jType = 1, nAtomTypes
+          self%epsTable(type1, jType) = ep
+          self%epsTable(jType, type1) = ep
+
+          self%sigTable(type1, jType) = sig
+          self%sigTable(jType, type1) = sig
+        enddo
+
+      case(4)
+        read(line, *) type1, type2, ep, sig
+        self%epsTable(type1, type2) = ep
+        self%epsTable(type2, type1) = ep
+
+        self%sigTable(type1, type2) = sig
+        self%sigTable(type2, type1) = sig
+    end select
+
+
+    deallocate(parlist)
   end subroutine
   !=============================================================================+
     function GetCutOff_LJ_Cut(self) result(rCut)

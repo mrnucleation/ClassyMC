@@ -85,10 +85,11 @@ module Template_ForceField
       integer, intent(in) :: atmIndx, newType
   end subroutine
 !=============================================================================+
-  subroutine ProcessIO(self, fileName)
+  subroutine ProcessIO(self, line)
     implicit none
     class(forcefield), intent(inout) :: self
-    character(len=*), intent(in) :: fileName
+    character(len=*), intent(in) :: line
+
   end subroutine
 !=============================================================================+
   function GetCutOff(self) result(rCut)

@@ -298,11 +298,41 @@ module FF_Pair_LJ_Cut_NoNei
       enddo
   end subroutine
   !=====================================================================
-  subroutine ProcessIO_LJ_Cut(self, fileName)
+  subroutine ProcessIO_LJ_Cut(self, line)
+    use Common_MolInfo, only: nAtomTypes
+    use Input_Format, only: GetAllCommands
     implicit none
     class(Pair_LJ_Cut_NoNei), intent(inout) :: self
-    character(len=*), intent(in) :: fileName
-    write(*,*) "LJ CUT SAYING HELLO!!!"
+    character(len=*), intent(in) :: line
+    character(len=30), allocatable :: parlist(:)
+    integer :: jType, lineStat
+    integer :: type1, type2
+    real(dp) :: ep, sig
+  
+    call GetAllCommands(line, parlist, lineStat)
+    select case(size(parlist))
+
+      case(3)
+       read(line, *) type1, ep, sig
+        do jType = 1, nAtomTypes
+          self%epsTable(type1, jType) = ep
+          self%epsTable(jType, type1) = ep
+
+          self%sigTable(type1, jType) = sig
+          self%sigTable(jType, type1) = sig
+        enddo
+
+      case(4)
+        read(line, *) type1, type2, ep, sig
+        self%epsTable(type1, type2) = ep
+        self%epsTable(type2, type1) = ep
+
+        self%sigTable(type1, type2) = sig
+        self%sigTable(type2, type1) = sig
+    end select
+
+
+    deallocate(parlist)
   end subroutine
   !=============================================================================+
     function GetCutOff_LJ_Cut(self) result(rCut)

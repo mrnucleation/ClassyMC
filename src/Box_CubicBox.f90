@@ -141,6 +141,7 @@ module CubicBoxDef
   class(CubeBox), intent(inout) :: self
   real(dp), intent(in) :: E_Diff
 
+    self % ETotal = self % ETotal + E_Diff
     self % ETable = self % ETable + self % dETable
 
   end subroutine

@@ -28,7 +28,7 @@ contains
     read(line, *) FF_Type
 
     !Safety check to ensure that the index number is within proper bounds
-    call LowerCaseLine(FF_Type)
+!    call LowerCaseLine(FF_Type)
     select case(trim(adjustl(FF_Type)))
       case("lj_cut")
         allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)

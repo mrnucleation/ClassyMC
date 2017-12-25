@@ -68,24 +68,19 @@ use VarPrecision
     self%disp(1)%y_new = trialBox%atoms(2, nMove) + dy
     self%disp(1)%z_new = trialBox%atoms(3, nMove) + dz
 
-!    write(*,*) self%disp(1)%x_new, self%disp(1)%y_new, self%disp(1)%z_new
-!    write(*,*) trialBox%atoms(1, nMove), trialBox%atoms(2, nMove), trialBox%atoms(3, nMove)
-
-
     !Check Constraint
-    accept = trialBox%CheckConstraint(self%disp(1:1))
+!    accept = trialBox%CheckConstraint(self%disp(1:1))
 !    if(.not. accept) then
 !      return
 !    endif
 
     !Energy Calculation
     call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
-
+!    write(*,*) E_Diff
 
     !Accept/Reject
     accept = .false.
     accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
-!    write(*,*) E_Diff, accept
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)

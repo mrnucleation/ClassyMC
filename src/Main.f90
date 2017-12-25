@@ -26,12 +26,7 @@
     call sgrnd(1) 
 
     call Script_ReadParameters
-    do i = 1, nMolTypes
-      write(*,*) MolData(i)%nAtoms
-      do j = 1, MolData(i)%nAtoms
-        write(*,*) MolData(i)%atomType(j)
-      enddo
-    enddo
+
     allocate( RSqList::BoxArray(1)%box%NeighList(1:1) )
     call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
     call EnergyCalculator(1)%Method%Constructor
@@ -40,8 +35,9 @@
     BoxArray(1)%box%AtomType = 1
     BoxArray(1)%box%temperature = 0.8E0_dp
     BoxArray(1)%box%beta = 1E0_dp/BoxArray(1)%box%temperature
-    call BoxArray(1)%box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
-    call BoxArray(1)%box % BuildNeighList
+    call BoxArray(1) % box % ComputeEnergy
+!    call BoxArray(1) % box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
+    call BoxArray(1) % box % BuildNeighList
 
     open(unit=2, file="Traj.xyz")
     write(2,*) BoxArray(1)%box%nAtoms
@@ -58,7 +54,7 @@
        avgE = avgE + BoxArray(1)%box%ETotal
        cnt = cnt + 1E0_dp
        if(mod(nMoves, 1000) == 0) then
-         write(*,*) nMoves, BoxArray(1)%box%ETotal/BoxArray(1)%box%nAtoms, Moves(1)%Move%GetAcceptRate()
+         write(*,*) nMoves, BoxArray(1)%box%ETotal, Moves(1)%Move%GetAcceptRate()
          write(2,*) BoxArray(1)%box%nAtoms
          write(2,*) 
          do iAtom = 1, BoxArray(1)%box%nAtoms
@@ -75,8 +71,8 @@
     
     E_Final = BoxArray(1)%box%ETotal
 
-    call BoxArray(1) % box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
-!    call BoxArray(1) % box % ComputeEnergy
+!    call BoxArray(1) % box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
+    call BoxArray(1) % box % ComputeEnergy
     write(nout, *) "Culmative Energy:", E_Final
     write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
     write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal

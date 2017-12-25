@@ -36,13 +36,12 @@
         write(*,*) "ERROR! No Input File has been given!"
         stop
       endif
-!      Read in the script file
-
-
-!      fileName = "ScriptTest.dat"
 
 !      This block counts the number of lines in the input file to determine how large the lineStorage array needs to be.
 
+      do iLine = 1, nLines
+        call LowerCaseLine(lineStore(iLine))
+      enddo
 !      call setDefaults(seed, screenEcho)
 
       lineBuffer = 0
@@ -52,32 +51,28 @@
           cycle
         endif
         lineStat = 0        
-!        write(*,*) trim(adjustl(lineStore(iLine)))
         call getCommand(lineStore(iLine), command, lineStat)
-!        call GetXCommand(lineStore(iLine), dummy, 2, lineStat)
-!        write(*,*) dummy, command
-        call LowerCaseLine(command)
 !         If line is empty or commented, move to the next line.         
         if(lineStat .eq. 1) then
           cycle
         endif 
 
         select case(trim(adjustl( command )))
-        case("create")
-           call createCommand(iLine, linestore, lineBuffer, lineStat)
-        case("forcefield")
-          call GetXCommand(lineStore(iLine), filename, 2, lineStat)         
-          call Script_ReadFieldFile(filename, lineStat)
-        case("modify")
-           call modifyCommand( lineStore(iLine), lineStat )
-        case("set")
-           call setCommand( lineStore(iLine), lineStat )
-        case("samplingtype")
-           call Script_SamplingType(lineStore(iLine), lineStat)
-        case default
-          write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
-          write(*,*) trim(adjustl(lineStore(iLine)))
-          stop 
+          case("create")
+            call createCommand(iLine, linestore, lineBuffer, lineStat)
+          case("forcefield")
+            call GetXCommand(lineStore(iLine), filename, 2, lineStat)         
+            call Script_ReadFieldFile(filename, lineStat)
+          case("modify")
+            call modifyCommand( lineStore(iLine), lineStat )
+          case("set")
+            call setCommand( lineStore(iLine), lineStat )
+          case("samplingtype")
+            call Script_SamplingType(lineStore(iLine), lineStat)
+          case default
+            write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
+            write(*,*) trim(adjustl(lineStore(iLine)))
+            stop 
         end select
 
         ! Ensure that the called processes exited properly.
@@ -92,22 +87,7 @@
 !      write(*,*) "Finished Reading Input Script."      
       deallocate(lineStore)
 
- 
-!      call ReadInitialConfiguration
-!      write(*,*) "Finished Reading Initial Configuration."
-!      call RecenterCoordinates
-!      call ReadInitialGasPhase     
-!      write(*,*) "Finished Setting up Gas Phase Configuration." 
-!      if(useWHAM) then
-!        if(.not. useUmbrella) then
-!          write(*,*) "ERROR! The WHAM method can not be used if no Umbrella sampling variables are given!"
-!          stop
-!        endif
-!        nWhamItter = ceiling(dble(ncycle)/dble(intervalWHAM))
-!        call WHAM_Initialize
-!      endif
-
-
+!      call Script_SafetyCheck
 
       end subroutine
 !========================================================            
@@ -264,7 +244,6 @@
 
       character(len=30) :: dummy, command, command2
       logical :: logicValue
-      integer :: i
       integer :: intValue, AllocateStat
       real(dp) :: realValue
       
@@ -279,7 +258,7 @@
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue
 
-           call BoxArray(intValue)%box%IOProcess(line, lineStat)
+           call BoxArray(intValue) % box % IOProcess(line, lineStat)
         case default
            lineStat = -1
       end select

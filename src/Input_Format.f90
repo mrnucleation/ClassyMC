@@ -76,6 +76,7 @@
         if(lineStat .eq. 0) then
           i = i + 1
           call CleanLine(rawLines(iLine), lineArray(i))
+          call LowerCaseLine(lineArray(i))
 !          lineArray(i) = rawLines(iLine)
           lineNumber(i) = iLine
         endif 
@@ -184,6 +185,87 @@
      
       end subroutine
 !========================================================            
+!     This subrotuine searches a given input line for the first command. 
+      subroutine GetAllCommands(line, commandlist, lineStat)
+      use VarPrecision
+      implicit none
+      character(len=*), intent(in) :: line
+      character(len=30), intent(inout), allocatable :: commandlist(:)
+      
+      integer, intent(out) :: lineStat
+      integer :: i, sizeLine, lowerLim, upperLim
+      integer :: curNum
+
+
+      sizeLine = len( line )
+      lineStat = 0
+      i = 1
+      curNum = 0
+      ! First task is to determine the size of the array that must be allocated.
+      do while(i <= sizeLine)
+!      Find the first non-blank character in the string
+        do while(i <= sizeLine)
+          if(ichar(line(i:i)) .ne. ichar(' ')) then
+            exit
+          endif
+          i = i + 1
+        enddo
+!        If no characters are found the line is empty, 
+        if(i >= sizeLine) then
+          lineStat = 1
+          return
+        endif
+        lowerLim = i
+      
+        do while(i <= sizeLine)
+          if(line(i:i) .eq. " ") then
+            exit
+          endif
+          i = i + 1
+        enddo
+        if(i >= sizeLine) then
+          lineStat = 1
+          return
+        endif
+        upperLim = i
+        curNum = curNum + 1
+      enddo
+
+      allocate(commandlist(1:curNum))
+      curNum = curNum + 1
+      do while(i <= sizeLine)
+        do while(i <= sizeLine)
+          if(ichar(line(i:i)) .ne. ichar(' ')) then
+            exit
+          endif
+          i = i + 1
+        enddo
+!        If no characters are found the line is empty, 
+        if(i >= sizeLine) then
+          lineStat = 1
+          return
+        endif
+        lowerLim = i
+      
+        do while(i <= sizeLine)
+          if(line(i:i) .eq. " ") then
+            exit
+          endif
+          i = i + 1
+        enddo
+        if(i >= sizeLine) then
+          lineStat = 1
+          return
+        endif
+        upperLim = i
+        curNum = curNum + 1
+        commandlist(curNum) = line(lowerLim:upperLim)
+      enddo
+
+
+     
+      end subroutine
+!========================================================            
 !     This subrotuine searches a given input line for comments 
       subroutine CleanLine(inputline, cleanedLine)
       use VarPrecision
@@ -222,7 +304,7 @@
       found = .false.
       do i = iLine + 1, nLines
         call GetCommand(lineStore(i), command, lineStat)
-        call LowerCaseLine(command)
+!        call LowerCaseLine(command)
         if( trim(adjustl(command)) .eq. trim(adjustl(endCommand)) ) then
           lineBuffer = i - iLine
           found = .true.
