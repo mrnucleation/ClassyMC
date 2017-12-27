@@ -1,7 +1,7 @@
 !==============================================================
 module BoxData
   use SimpleSimBox, only: SimpleBox
-  use ConstraintTemplate
+!  use ConstraintTemplate
 
   type BxArray 
     class(SimpleBox), allocatable:: box

@@ -131,7 +131,6 @@ module CubicBoxDef
     self%boxL2 = boxL/2.0E0_dp
 
   end subroutine
-!
 !==========================================================================================
   subroutine Cube_Boundary(self, rx, ry, rz)
   implicit none

@@ -15,6 +15,7 @@ module Template_SimBox
   type :: SimBox
     character(len=15) :: boxStr = "Empty"
     integer :: nAtoms
+    integer :: nDimension = 3
     real(dp) :: ETotal
     real(dp), allocatable :: ETable(:), dETable(:)
     real(dp) :: beta, temperature

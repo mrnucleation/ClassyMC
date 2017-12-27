@@ -72,6 +72,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Script_Sampling.f90\
 	        	$(SRC)/Script_MCMoves.f90\
 	        	$(SRC)/Script_SimBoxes.f90\
+	        	$(SRC)/Traj_XYZFormat.f90\
 						$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
@@ -79,10 +80,11 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Units.f90
 
 SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
-	              $(SRC)/Template_Forcefield.f90\
                 $(SRC)/Template_Constraint.f90\
+	              $(SRC)/Template_Forcefield.f90\
 								$(SRC)/Template_AcceptRule.f90\
 								$(SRC)/Template_NeighList.f90\
+								$(SRC)/Template_Trajectory.f90\
                 $(SRC)/Template_MultiBoxMove.f90\
 								$(SRC)/Template_MoveClass.f90
 
