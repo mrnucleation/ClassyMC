@@ -13,6 +13,7 @@ module Template_SimBox
 
   !Sim Box Definition
   type :: SimBox
+    character(len=15) :: boxStr = "Empty"
     integer :: nAtoms
     real(dp) :: ETotal
     real(dp), allocatable :: ETable(:), dETable(:)

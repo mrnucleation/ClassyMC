@@ -25,9 +25,11 @@ module Input_SimBoxes
     select case(trim(adjustl(command)))
       case("nobox")
         allocate(SimpleBox::BoxArray(boxNum)%box)
+        BoxArray(boxNum)%box%boxStr = "nobox"
 
       case("cube")
         allocate(CubeBox::BoxArray(boxNum)%box) 
+        BoxArray(boxNum)%box%boxStr = "cube"
 
       case default
         write(*,*) command

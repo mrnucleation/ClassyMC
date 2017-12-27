@@ -65,6 +65,7 @@ module SimpleSimBox
       stop 
     endif
 
+    self%boxStr = "NoBox"
     !First begin by computing the maximium number of atoms that the box can potentially contain
     self%nMaxAtoms = 0
     maxMol = 0

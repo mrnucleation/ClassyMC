@@ -12,7 +12,6 @@ module CubicBoxDef
   !Sim Box Definition
   type, public, extends(SimpleBox) :: CubeBox
     real(dp) :: boxL, boxL2
-
     contains
 !      procedure, pass :: Constructor => Cube_Constructor
       procedure, pass :: LoadCoordinates => Cube_LoadCoordinates
