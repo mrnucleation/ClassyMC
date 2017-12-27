@@ -19,14 +19,15 @@ module Input_LoadCoords
     integer, allocatable :: lineNumber(:)
     character(len=maxLineLen), allocatable :: lineStore(:)
 
-    character(len=30) :: command, val, dummy
-    logical :: logicValue
-    integer :: intValue
-    real(dp) :: realValue
+    character(len=30) :: dummy, command, val
+    character(len=maxLineLen) :: newline
+    integer :: nAtoms
 
     lineStat  = 0
+    write(*,*) "Loading file ", trim(adjustl(fileName))
     call LoadFile(lineStore, nLines, lineNumber, fileName)
     lineBuffer = 0
+    nAtoms = 0
     do iLine = 1, nLines
       if(lineBuffer .gt. 0) then
         lineBuffer = lineBuffer - 1
@@ -40,7 +41,10 @@ module Input_LoadCoords
 
       select case(trim(adjustl( command )))
         case("boxtype")
-          call Script_BoxType(lineStore(iLine), boxNum, lineStat)
+          call GetXCommand(lineStore(iLine), val, 2, lineStat)
+          newline = ""
+          newline(1:30) = val(1:30)
+          call Script_BoxType(newline, boxNum, lineStat)
         case("dimension")
           call BoxArray(boxNum)%box%LoadDimension(lineStore(iLine), lineStat)
         case("mol")
@@ -51,6 +55,7 @@ module Input_LoadCoords
           read(lineStore(iLine), *) dummy, (BoxArray(boxNum)%box%NMolMax(j), j=1,nMolTypes) 
         case default
           call BoxArray(boxNum)%box%LoadAtomCoord(lineStore(iLine), lineStat)
+          nAtoms = nAtoms + 1
       end select
 
       IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
@@ -67,6 +72,8 @@ module Input_LoadCoords
 
     deallocate(lineNumber)
     deallocate(lineStore)
+
+    BoxArray(boxNum)%box%nAtoms = nAtoms
 
   end subroutine
 !================================================================================

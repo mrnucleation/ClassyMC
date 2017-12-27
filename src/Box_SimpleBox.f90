@@ -33,6 +33,7 @@ module SimpleSimBox
 
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
+      procedure, pass :: AllocateMolBound => SimpleBox_AllocateMolBound
       procedure, pass :: LoadCoordinates => SimpleBox_LoadCoordinates
       procedure, pass :: LoadAtomCoord => Simplebox_LoadAtomCoord
       procedure, pass :: LoadDimension => Simplebox_LoadDimension
@@ -71,6 +72,7 @@ module SimpleSimBox
       self%nMaxAtoms = self%nMaxAtoms + self%NMolMax(iType)*MolData(iType)%nAtoms
       maxMol = maxMol + self%NMolMax(iType)
     enddo
+    write(*,*) "maxatoms", self%nMaxAtoms
 
     !Allocate the position and energy related arrays. 
     allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
@@ -107,7 +109,18 @@ module SimpleSimBox
 
 
   end subroutine
-
+!==========================================================================================
+  subroutine SimpleBox_AllocateMolBound(self)
+    use Common_MolInfo, only: nMolTypes
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer :: AllocateStatus
+ 
+    allocate(self%NMol(1:nMolTypes), stat=AllocateStatus)
+    allocate(self%NMolMax(1:nMolTypes), stat=AllocateStatus)
+    allocate(self%NMolMin(1:nMolTypes), stat=AllocateStatus)
+    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+  end subroutine
 !==========================================================================================
   subroutine SimpleBox_LoadCoordinates(self, fileName, fileType)
     implicit none
@@ -163,7 +176,7 @@ module SimpleSimBox
       call self%Constructor
     endif
 
-    read(line, *) molType, molIndx, atmIndx
+    read(line, *) molType, molIndx, atmIndx, x, y ,z
 
     if( molIndx > self%NMolMax(molType) ) then
       write(*,*) "ERROR! Index out of bounds!"
@@ -181,6 +194,7 @@ module SimpleSimBox
     arrayIndx = self%MolStartIndx(subIndx)
     arrayIndx = arrayIndx + atmIndx - 1
 
+    write(*,*) arrayIndx, x, y, z
     self%atoms(1, arrayIndx) = x
     self%atoms(2, arrayIndx) = y
     self%atoms(3, arrayIndx) = z
@@ -341,7 +355,6 @@ end subroutine
 
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
-    call LowerCaseLine(command)
     write(*,*) command
     select case( trim(adjustl(command)) )
       case("energycalc")

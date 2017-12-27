@@ -1,7 +1,7 @@
-  boxtype cubic
-  dimension 7.0
+  boxtype cube
+  dimension 9.0
   molmin 1 
-  molmax 1000 
+  molmax 665
   mol 665
   1	1	1	-1.81515	-1.75326	2.35234
 	1	2	1	2.35472	-3.96162	1.93205

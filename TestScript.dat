@@ -3,9 +3,10 @@
   set NeighSkin 2.0
   SamplingType Metropolis
 
+  forcefield testfield.txt
   Create boxes 1
 #    cube
-    FromFile NewStyle.cdat
+    FromFile "NewStyle.cdat"
   End_Create
 
   Create energyfunctions
@@ -19,6 +20,4 @@
 
   modify box 1 energycalc 1
 #  modify box 1 boxlength 7.0
-#======================================
-  forcefield testfield.txt
 #======================================

@@ -168,7 +168,8 @@
       character(len=maxLineLen), intent(in) :: linestore(:) 
       integer, intent(out) :: lineStat, lineBuffer
 
-      character(len=50) :: dummy, command, command2
+      character(len=30) :: dummy, command, command2
+      character(len=50) :: fileName
       logical :: logicValue
       integer :: i, curLine
       integer :: intValue, AllocateStat, nItems
@@ -188,10 +189,13 @@
              allocate(BoxArray(1:nItems), stat = AllocateStat)
              do i = 1, nItems
                curLine = iLine + i
-               call GetXCommand(lineStore(iLine), command2, 1, lineStat)
+               call GetXCommand(lineStore(curLine), command2, 1, lineStat)
+               write(*,*) i, command2
                if( trim(adjustl(command2)) == "fromfile") then
-                 call GetXCommand(lineStore(iLine), command2, 2, lineStat)
-                 call Script_ReadCoordFile(command2, i, lineStat)
+                 call GetXCommand(lineStore(curLine), command2, 2, lineStat)
+                 fileName = ""
+                 fileName(1:30) = command2(1:30)
+                 call Script_ReadCoordFile(fileName, i, lineStat)
                else
                  call Script_BoxType(linestore(curLine), i, lineStat)
                endif

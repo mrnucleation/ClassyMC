@@ -35,9 +35,9 @@ module FF_Pair_LJ_Cut
 
     self%epsTable = 4E0_dp
     self%sigTable = 1E0_dp
-    self%rMinTable = 0.5E0_dp
-    self%rCut = 3E0_dp
-    self%rCutSq = 3E0_dp**2
+    self%rMinTable = 0.05E0_dp
+    self%rCut = 5E0_dp
+    self%rCutSq = 5E0_dp**2
 
 !    write(*,*) 
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
@@ -75,9 +75,11 @@ module FF_Pair_LJ_Cut
           call curbox%Boundary(rx, ry, rz)
           rsq = rx**2 + ry**2 + rz**2
           if(rsq < self%rCutSq) then
-            if(rsq < rmin_ij) then
-              stop "ERROR! Overlaping atoms found in the current configuration!"
-            endif 
+!            if(rsq < rmin_ij) then
+!              write(*,*) sqrt(rsq)
+!              write(*,*) iAtom, jAtom
+!              stop "ERROR! Overlaping atoms found in the current configuration!"
+!            endif 
             LJ = (sig_sq/rsq)**3
             LJ = ep * LJ * (LJ-1E0)              
             E_LJ = E_LJ + LJ
@@ -202,7 +204,7 @@ module FF_Pair_LJ_Cut
           if(rsq < self%rCutSq) then
             LJ = (sig_sq/rsq)
             LJ = LJ * LJ * LJ
-            LJ = ep * LJ * (LJ-1E0)              
+            LJ = ep * LJ * (LJ-1E0_dp)
             E_Diff = E_Diff - LJ
             curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
             curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
@@ -225,8 +227,8 @@ module FF_Pair_LJ_Cut
       real(dp) :: rmin_ij      
 
       remLen = size(atmIndx)
-      E_Diff = 0E0
-      curbox%dETable = 0E0
+      E_Diff = 0E0_dp
+      curbox%dETable = 0E0_dp
 
 
       do iIndx = 1, remLen

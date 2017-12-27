@@ -35,9 +35,6 @@
     BoxArray(1)%box%AtomType = 1
     BoxArray(1)%box%temperature = 0.8E0_dp
     BoxArray(1)%box%beta = 1E0_dp/BoxArray(1)%box%temperature
-    call BoxArray(1) % box % ComputeEnergy
-!    call BoxArray(1) % box % EFunc % Method % DetailedECalc( BoxArray(1)%box, BoxArray(1)%box%ETotal )
-    call BoxArray(1) % box % BuildNeighList
 
     open(unit=2, file="Traj.xyz")
     write(2,*) BoxArray(1)%box%nAtoms
@@ -46,10 +43,12 @@
       write(2,*) "Ar",BoxArray(1)%box%atoms(1, iAtom), BoxArray(1)%box%atoms(2, iAtom), BoxArray(1)%box%atoms(3, iAtom)
     enddo
 
+    call BoxArray(1) % box % ComputeEnergy
+    call BoxArray(1) % box % BuildNeighList
     write(nout,*) "Simulation Start!"
     avgE = 0E0_dp
     cnt = 0E0_dp
-    do nMoves = 1, nint(1d5)
+    do nMoves = 1, nint(1d7)
        call Moves(1) % Move % FullMove(BoxArray(1)%box)
        avgE = avgE + BoxArray(1)%box%ETotal
        cnt = cnt + 1E0_dp

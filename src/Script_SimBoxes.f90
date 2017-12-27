@@ -13,8 +13,7 @@ module Input_SimBoxes
     integer, intent(in) :: boxNum
     integer, intent(out) :: lineStat
 
-    character(len=30) :: dummy, command 
-    character(len=30) :: fileName      
+    character(len=30) :: command 
     logical :: logicValue
     integer :: j
     integer :: intValue
@@ -31,9 +30,11 @@ module Input_SimBoxes
         allocate(CubeBox::BoxArray(boxNum)%box) 
 
       case default
+        write(*,*) command
         lineStat = -1
     end select
 
+    call BoxArray(boxNum) % box % AllocateMolBound
   end subroutine
 !================================================================================
 end module

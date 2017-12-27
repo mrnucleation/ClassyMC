@@ -12,17 +12,25 @@
       integer, allocatable, intent(inout) :: lineNumber(:)
 
       character(len=maxLineLen),allocatable :: rawLines(:)
+      character(len=50) :: modfileName
       character(len=30) :: command
       integer, intent(out) :: nLines
       integer :: i,iLine, nRawLines, lineStat, AllocateStat, InOutStat
 
-      open(unit=54, file=trim(adjustl(fileName)), status='OLD', iostat=InOutStat)    
+      modfileName = fileName
+      do i = 1, len(modfileName)
+        if(modfileName(i:i) == '"') then
+          modfileName(i:i) = ' '
+        endif
+      enddo
+
+      open(unit=54, file=trim(adjustl(modfileName)), status='OLD', iostat=InOutStat)    
 
       if(InOutStat .gt. 0) then
         if(myid .eq. 0) then
           write(*,*) "The file specified in either the input script or on the command line could not be opened."
           write(*,*) "Please double check to ensure the file exists and the name in the input is accurate."
-          write(*,*) "Attempted to open file:", trim(adjustl(fileName))
+          write(*,*) "Attempted to open file:", trim(adjustl(modfileName))
         endif
         stop
       endif
@@ -332,8 +340,11 @@
 
       do i = 1, sizeLine
         curVal = ichar(line(i:i))
-        if(curVal .le. ichar("Z")) then
-          if(curVal .ge. ichar("A")) then
+        if(curVal == ichar('"')) then
+          return
+        endif
+        if(curVal <= ichar("Z")) then
+          if(curVal >= ichar("A")) then
             newVal = curVal + offSet
             line(i:i) = char(newVal)
           endif
