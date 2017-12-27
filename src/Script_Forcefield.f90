@@ -10,34 +10,6 @@ module Input_Forcefield
   real(dp) :: angUnit = 1E0_dp
   contains
 !================================================================================
-  subroutine Script_Forcefield(line, lineStat)
-    implicit none
-    character(len=*), intent(in) :: line
-    integer, intent(out) :: lineStat
-
-    character(len=30) :: dummy, command 
-    character(len=30) :: fileName      
-    logical :: logicValue
-    integer :: j
-    integer :: intValue
-    integer :: FFNum
-    real(dp) :: realValue
-
-    lineStat  = 0
-    read(line, *) dummy, FFNum, command
-    call LowerCaseLine(command)
-    select case(trim(adjustl(command)))
-      case("readfile")
-        read(line,*) dummy, FFNum, command, fileName
-!          call EnergyCalculator(FFNum) % Method % ReadParFile(fileName)
-        case default
-          lineStat = -1
-      end select
-
-
-  end subroutine
-
-!================================================================================
   subroutine Script_ReadFieldFile(filename, lineStat)
     use ForcefieldData, only: nForceFields
     use ParallelVar, only: nout
@@ -47,7 +19,7 @@ module Input_Forcefield
     character(len=50), intent(in) :: fileName      
     integer, intent(out) :: lineStat
 
-    integer :: nLines, AllocateStat, iLine, lineBuffer
+    integer :: i, nLines, AllocateStat, iLine, lineBuffer
     integer, allocatable :: lineNumber(:)
     character(len=maxLineLen), allocatable :: lineStore(:)
 
@@ -78,7 +50,9 @@ module Input_Forcefield
           read(val, *) intValue
 
         case("forcefieldtype")
-          call Script_Forcefield(lineStore(iLine), lineStat)
+          call GetXCommand(lineStore(iLine), val, 2, lineStat)
+          read(val, *) intValue
+          call Script_FieldType(lineStore(iLine), intValue, lineStat)
 
         case("molecule")
           call FindCommandBlock(iLine, lineStore, "end_molecule", lineBuffer)
@@ -95,7 +69,6 @@ module Input_Forcefield
           endif
           nMolTypes = intValue
           allocate(MolData(1:nMolTypes), stat = AllocateStat)
-
         case("units")
           call Script_SetUnits(lineStore(iLine), lineStat)
 

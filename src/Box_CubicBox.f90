@@ -16,6 +16,7 @@ module CubicBoxDef
     contains
       procedure, pass :: Constructor => Cube_Constructor
       procedure, pass :: LoadCoordinates => Cube_LoadCoordinates
+      procedure, pass :: LoadDimension => Cube_LoadDimension
       procedure, pass :: UpdateEnergy => Cube_UpdateEnergy
       procedure, pass :: Boundary => Cube_Boundary
       procedure, pass :: UpdatePosition => Cube_UpdatePosition
@@ -115,6 +116,23 @@ module CubicBoxDef
     close(50)
 
   end subroutine
+!==========================================================================================
+  subroutine Cube_LoadDimension(self, line, lineStat)
+    use Input_Format, only: GetXCommand
+    implicit none
+    class(CubeBox), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    integer, intent(out) :: lineStat
+
+    character(len=30) :: dummy
+    real(dp) :: boxL
+
+    read(line, *) dummy, boxL
+    self%boxL = boxL
+    self%boxL2 = boxL/2.0E0_dp
+
+  end subroutine
+!
 !==========================================================================================
   subroutine Cube_Boundary(self, rx, ry, rz)
   implicit none

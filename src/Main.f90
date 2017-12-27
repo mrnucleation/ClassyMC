@@ -4,7 +4,7 @@
     use MPI
     use ParallelVar, only: myid, p_size, ierror, nout
     use ScriptInput, only: Script_ReadParameters
-    use BoxData, only: BoxArray, Constrain
+    use BoxData, only: BoxArray
     use MCMoveData, only: Moves
     use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ForcefieldData, only: EnergyCalculator
@@ -28,7 +28,7 @@
     call Script_ReadParameters
 
     allocate( RSqList::BoxArray(1)%box%NeighList(1:1) )
-    call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
+!    call BoxArray(1)%box%LoadCoordinates("Dummy.xyz")
     call EnergyCalculator(1)%Method%Constructor
     call BoxArray(1)%box%NeighList(1)%constructor(1)
 

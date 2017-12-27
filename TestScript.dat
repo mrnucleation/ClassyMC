@@ -1,11 +1,11 @@
 #======================================
   set rng_seed -1
-  set AtomTypes 2
   set NeighSkin 2.0
   SamplingType Metropolis
 
   Create boxes 1
-    cube
+#    cube
+    FromFile NewStyle.cdat
   End_Create
 
   Create energyfunctions

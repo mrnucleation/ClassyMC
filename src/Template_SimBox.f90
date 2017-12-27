@@ -26,6 +26,8 @@ module Template_SimBox
     contains
       procedure, public, pass :: Constructor
       procedure, public, pass :: LoadCoordinates
+      procedure, public, pass :: LoadAtomCoord
+      procedure, public, pass :: LoadDimension
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
       procedure, public, pass :: UpdateEnergy
@@ -54,6 +56,20 @@ module Template_SimBox
     class(SimBox), intent(inout) :: self
     character(len=*), intent(in) :: fileName
     character(len=*), intent(in), optional :: fileType
+  end subroutine
+!==========================================================================================
+  subroutine LoadAtomCoord(self, line, lineStat)
+    implicit none
+    class(SimBox), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    integer, intent(out) :: lineStat
+  end subroutine
+!==========================================================================================
+  subroutine LoadDimension(self, line, lineStat)
+    implicit none
+    class(SimBox), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    integer, intent(out) :: lineStat
   end subroutine
 !==========================================================================================
   subroutine BuildNeighList(self)

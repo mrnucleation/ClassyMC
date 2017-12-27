@@ -160,6 +160,7 @@
       use Input_SimBoxes, only: Script_BoxType
       use Input_Forcefield, only: Script_FieldType
       use Input_Moves, only: Script_MCMoves
+      use Input_LoadCoords, only: Script_ReadCoordFile
       use VarPrecision
       use Units
       implicit none
@@ -167,7 +168,7 @@
       character(len=maxLineLen), intent(in) :: linestore(:) 
       integer, intent(out) :: lineStat, lineBuffer
 
-      character(len=50) :: dummy, command!, stringValue
+      character(len=50) :: dummy, command, command2
       logical :: logicValue
       integer :: i, curLine
       integer :: intValue, AllocateStat, nItems
@@ -177,10 +178,9 @@
       lineStat  = 0
 
       read(linestore(iLine),*) dummy, command
-      call LowerCaseLine(command)
       call FindCommandBlock(iLine, lineStore, "end_create", lineBuffer)
       nItems = lineBuffer - 1
-      write(*,*) nItems
+!      write(*,*) nItems
 
       select case(trim(adjustl(command)))
         case("boxes")
@@ -188,7 +188,13 @@
              allocate(BoxArray(1:nItems), stat = AllocateStat)
              do i = 1, nItems
                curLine = iLine + i
-               call Script_BoxType(linestore(curLine), i, lineStat)
+               call GetXCommand(lineStore(iLine), command2, 1, lineStat)
+               if( trim(adjustl(command2)) == "fromfile") then
+                 call GetXCommand(lineStore(iLine), command2, 2, lineStat)
+                 call Script_ReadCoordFile(command2, i, lineStat)
+               else
+                 call Script_BoxType(linestore(curLine), i, lineStat)
+               endif
                BoxArray(i)%box%boxID = i - 1
              enddo             
            else

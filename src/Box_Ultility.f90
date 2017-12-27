@@ -1,14 +1,15 @@
 !==================================================
 module Box_Utility
 use VarPrecision
-use Template_SimBox, only: SimBox
+use SimpleSimBox, only: SimpleBox
 
 !==================================================
 contains
 !==================================================
   subroutine FindAtom(box, globindx, atmIndx)
+    use Common_MolInfo, only: MolData, nMoltypes
     implicit none
-    class(SimBox), intent(in) :: box
+    class(SimpleBox), intent(in) :: box
     integer, intent(in) :: globIndx
     integer, intent(out) :: atmIndx
     integer :: iType, nSum, nType
@@ -31,13 +32,14 @@ contains
   end subroutine
 !==================================================
   subroutine FindMolecule(box, globindx, molIndx)
+    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
-    class(SimBox), intent(in) :: box
+    class(SimpleBox), intent(in) :: box
     integer, intent(in) :: globIndx
     integer, intent(out) :: molIndx
     integer :: iType, nSum, nType
 
-    atmIndx = globindx
+    molIndx = globindx
     do iType = 1, nMolTypes
       nSum = nSum + box%NMol(iType)
       if(globIndx < nSum) then
@@ -46,9 +48,9 @@ contains
       endif
     enddo
 
-    atmIndx = globIndx
+    molIndx = globIndx
     do iType = 1, nType-1
-      atmIndx = atmIndx + box%NMolMax(iType) - box%NMol(iType)
+      molIndx = molIndx + box%NMolMax(iType) - box%NMol(iType)
     enddo
 
     

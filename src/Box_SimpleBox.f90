@@ -23,6 +23,7 @@ module SimpleSimBox
 !    real(dp) :: ETotal
     integer, allocatable :: NMolMin(:), NMolMax(:)
     integer, allocatable :: NMol(:), MolStartIndx(:)
+
 !    integer, allocatable :: AtomType(:)
     integer, allocatable :: MolIndx(:), SubIndx(:)
 
@@ -33,6 +34,8 @@ module SimpleSimBox
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
       procedure, pass :: LoadCoordinates => SimpleBox_LoadCoordinates
+      procedure, pass :: LoadAtomCoord => Simplebox_LoadAtomCoord
+      procedure, pass :: LoadDimension => Simplebox_LoadDimension
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
       procedure, pass :: Boundary => SimpleBox_Boundary
       procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
@@ -135,6 +138,55 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
+  subroutine Simplebox_LoadDimension(self, line, lineStat)
+    use Input_Format, only: GetXCommand
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    integer, intent(out) :: lineStat
+
+
+  end subroutine
+!==========================================================================================
+  subroutine Simplebox_LoadAtomCoord(self, line, lineStat)
+!    use Box_Utility, only: FindMolecule
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    integer, intent(out) :: lineStat
+    integer :: molType, molIndx, atmIndx
+    integer :: arrayIndx, subIndx
+    integer :: iType, iMol, iAtom
+    real(dp) :: x,y,z
+
+    if( .not. allocated(self%atoms) ) then
+      call self%Constructor
+    endif
+
+    read(line, *) molType, molIndx, atmIndx
+
+    if( molIndx > self%NMolMax(molType) ) then
+      write(*,*) "ERROR! Index out of bounds!"
+      write(*,*) molType, molIndx, atmIndx
+      lineStat = -1
+      return
+    endif
+
+    subIndx = 0
+    do iType = 1, molType-1
+      subIndx = self%NMolMax(iType)
+    enddo
+    subIndx = subIndx + molIndx
+!    call FindMolecule(box, subIndx, arrayIndx)
+    arrayIndx = self%MolStartIndx(subIndx)
+    arrayIndx = arrayIndx + atmIndx - 1
+
+    self%atoms(1, arrayIndx) = x
+    self%atoms(2, arrayIndx) = y
+    self%atoms(3, arrayIndx) = z
+
+  end subroutine
+!==========================================================================================
   subroutine SimpleBox_BuildNeighList(self)
     implicit none
     class(SimpleBox), intent(inout) :: self
@@ -197,7 +249,6 @@ end subroutine
     self % ETable = self % ETable + self % dETable
 
   end subroutine
-
 !==========================================================================================
   subroutine SimpleBox_UpdatePosition(self, disp)
     use CoordinateTypes

@@ -13,31 +13,28 @@ module Input_SimBoxes
     integer, intent(in) :: boxNum
     integer, intent(out) :: lineStat
 
+    character(len=30) :: dummy, command 
+    character(len=30) :: fileName      
+    logical :: logicValue
+    integer :: j
+    integer :: intValue
+    integer :: FFNum
+    real(dp) :: realValue
 
-      character(len=30) :: dummy, command 
-      character(len=30) :: fileName      
-      logical :: logicValue
-      integer :: j
-      integer :: intValue
-      integer :: FFNum
-      real(dp) :: realValue
+    lineStat  = 0
+    read(line, *) command
+    select case(trim(adjustl(command)))
+      case("nobox")
+        allocate(SimpleBox::BoxArray(boxNum)%box)
 
+      case("cube")
+        allocate(CubeBox::BoxArray(boxNum)%box) 
 
-      lineStat  = 0
-      read(line, *) command
-      call LowerCaseLine(command)
-      select case(trim(adjustl(command)))
-        case("nobox")
-          allocate(SimpleBox::BoxArray(boxNum)%box)
-        case("cube")
-          allocate(CubeBox::BoxArray(boxNum)%box) 
-        case default
-          lineStat = -1
-      end select
-
+      case default
+        lineStat = -1
+    end select
 
   end subroutine
-
 !================================================================================
 end module
 !================================================================================

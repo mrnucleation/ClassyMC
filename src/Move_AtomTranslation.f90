@@ -40,7 +40,6 @@ use VarPrecision
 !===============================================
   subroutine AtomTrans_FullMove(self, trialBox) 
     use ForcefieldData, only: EnergyCalculator
-    use BoxData, only: Constrain
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
     implicit none
