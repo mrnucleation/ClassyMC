@@ -15,7 +15,8 @@ use CoordinateTypes, only: Displacement
       integer, allocatable :: list(:,:)
       integer, allocatable :: nNeigh(:)
       integer :: maxNei
-      real(dp) :: rCut, rCutSq
+      real(dp) :: rCut = -1E0_dp
+      real(dp) :: rCutSq
 !      class(SimBox), pointer :: parent => null()
       
     contains

@@ -10,7 +10,6 @@
     use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: sgrnd
-    use RSqListDef, only: RSqList
     implicit none
  
     integer :: i, j
@@ -23,11 +22,9 @@
     call MPI_COMM_SIZE(MPI_COMM_WORLD, p_size, ierror)
     call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierror)  
 
-
     call Script_ReadParameters
     call sgrnd(1) 
 
-!    allocate( RSqList::BoxArray(1)%box%NeighList(1:1) )
     call EnergyCalculator(1)%Method%Constructor
     call BoxArray(1)%box%NeighList(1)%constructor(1)
 

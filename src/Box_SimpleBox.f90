@@ -343,7 +343,13 @@ end subroutine
         self % temperature = realVal
         self % beta = 1E0_dp/realVal
 
-      case("neighlist")
+      case("neighcut")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call GetXCommand(line, command, 6, lineStat)
+        read(command, *) realVal
+        self%NeighList(intVal)%rCut = realVal
+
 
 
       case default

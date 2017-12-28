@@ -48,9 +48,14 @@ use Template_NeighList, only: NeighListDef
       self % rCutSq = rCut * rCut
       self % maxNei = ceiling(rCut**3/atomRadius**3)
     else
-      self % rCut = self % parent % EFunc % Method % GetCutOff() + neighSkin
-      self % rCutSq = (self%rCut)**2
-      self % maxNei = ceiling(self%rCut**3/atomRadius**3)
+      if(self%rCut > 0E0_dp) then
+        self % rCutSq = (self%rCut)**2
+        self % maxNei = ceiling(self%rCut**3/atomRadius**3)
+      else
+        self % rCut = self % parent % EFunc % Method % GetCutOff() + neighSkin
+        self % rCutSq = (self%rCut)**2
+        self % maxNei = ceiling(self%rCut**3/atomRadius**3)
+      endif
     endif
 
     allocate( self%list(1:self%maxNei, 1:self%parent%nAtoms), stat=AllocateStatus )
