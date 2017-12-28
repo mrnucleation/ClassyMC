@@ -4,6 +4,12 @@ use VarPrecision
 use CoordinateTypes, only: Displacement
 !use Template_SimBox, only: SimBox
 
+  abstract interface
+    subroutine buildfunc(trialBox)
+     
+    end subroutine
+  end interface
+
   type, public :: NeighListDef
       logical :: Strict = .false.
       integer, allocatable :: list(:,:)
@@ -11,9 +17,10 @@ use CoordinateTypes, only: Displacement
       integer :: maxNei
       real(dp) :: rCut, rCutSq
 !      class(SimBox), pointer :: parent => null()
+      
     contains
       procedure, pass :: Constructor
-      procedure, pass :: InitializeList
+      procedure, pass :: BuildList
       procedure, pass :: GetNewList
   end type
 
@@ -28,7 +35,7 @@ use CoordinateTypes, only: Displacement
 
   end subroutine
 !===================================================================================
-  subroutine InitializeList(self)
+  subroutine BuildList(self)
     implicit none
     class(NeighListDef), intent(inout) :: self
 

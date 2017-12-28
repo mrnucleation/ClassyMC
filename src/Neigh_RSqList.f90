@@ -18,7 +18,7 @@ use Template_NeighList, only: NeighListDef
 !      procedure, pointer :: builder => 
     contains
       procedure, pass :: Constructor => RSqList_Constructor 
-      procedure, pass :: InitializeList => RSqList_InitializeList 
+      procedure, pass :: BuildList => RSqList_BuildList 
       procedure, pass :: GetNewList => RSqList_GetNewList
   end type
 
@@ -49,7 +49,6 @@ use Template_NeighList, only: NeighListDef
       self % maxNei = ceiling(rCut**3/atomRadius**3)
     else
       self % rCut = self % parent % EFunc % Method % GetCutOff() + neighSkin
-      write(*,*) self % rCut
       self % rCutSq = (self%rCut)**2
       self % maxNei = ceiling(self%rCut**3/atomRadius**3)
     endif
@@ -63,10 +62,11 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
-  subroutine RSqList_InitializeList(self)
+  subroutine RSqList_BuildList(self)
     implicit none
     class(RSqList), intent(inout) :: self
 
+    call Builder_RSq(self%parent)
   end subroutine
 !===================================================================================
   subroutine RSqList_GetNewList(self, disp, newList)
@@ -80,7 +80,7 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
 ! End Type Bound
 !===================================================================================
-  subroutine BuildLists_RSq(trialBox)
+  subroutine Builder_RSq(trialBox)
     implicit none
     class(SimBox), intent(inout) :: trialBox
 

@@ -27,7 +27,6 @@ module Template_SimBox
 
     contains
       procedure, public, pass :: Constructor
-      procedure, public, pass :: LoadCoordinates
       procedure, public, pass :: LoadAtomCoord
       procedure, public, pass :: LoadDimension
       procedure, public, pass :: BuildNeighList
@@ -36,9 +35,7 @@ module Template_SimBox
       procedure, public, pass :: UpdatePosition
       procedure, public, pass :: UpdateNeighLists
       procedure, public, pass :: ComputeEnergy
-      procedure, public, pass :: DummyCoords
       procedure, public, pass :: IOProcess
-      procedure, public, pass :: DumpXYZConfig
   end type
 
   public :: Constructor, LoadCoordinates, BuildNeighList,Boundary
@@ -52,13 +49,6 @@ module Template_SimBox
     class(SimBox), intent(inout) :: self
   end subroutine
 
-!==========================================================================================
-  subroutine LoadCoordinates(self, fileName, fileType)
-    implicit none
-    class(SimBox), intent(inout) :: self
-    character(len=*), intent(in) :: fileName
-    character(len=*), intent(in), optional :: fileType
-  end subroutine
 !==========================================================================================
   subroutine LoadAtomCoord(self, line, lineStat)
     implicit none
@@ -106,13 +96,6 @@ module Template_SimBox
     type(Displacement), intent(inout) :: disp(:)
   end subroutine
 !==========================================================================================
-  subroutine DummyCoords(self)
-    use CoordinateTypes
-    implicit none
-    class(SimBox), intent(inout) :: self
-  end subroutine
-
-!==========================================================================================
   subroutine ComputeEnergy(self)
     implicit none
     class(SimBox), intent(inout) :: self
@@ -126,13 +109,6 @@ module Template_SimBox
     integer, intent(out) :: lineStat
 
     lineStat = 0
-  end subroutine
-!==========================================================================================
-  subroutine DumpXYZConfig(self, fileName)
-    use Input_Format, only: maxLineLen
-    implicit none
-    class(SimBox), intent(inout) :: self
-    character(len=maxLineLen), intent(in) :: fileName
   end subroutine
 !==========================================================================================
 end module

@@ -10,6 +10,7 @@
       use Units
       use Input_Forcefield
       use Input_Sampling, only: Script_SamplingType
+      use Input_NeighType, only: Script_NeighType
       implicit none
 !      integer(kind=8), intent(OUT) :: ncycle,nmoves
       integer :: i, ii, j, nArgs
@@ -63,6 +64,8 @@
           case("forcefield")
             call GetXCommand(lineStore(iLine), filename, 2, lineStat)         
             call Script_ReadFieldFile(filename, lineStat)
+          case("neighlist")
+            call Script_NeighType( lineStore(iLine), lineStat)
           case("modify")
             call modifyCommand( lineStore(iLine), lineStat )
           case("set")

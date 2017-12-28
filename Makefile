@@ -68,6 +68,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Tersoff.f90\
  	        	$(SRC)/Script_Forcefield.f90\
  	        	$(SRC)/Script_FieldType.f90\
+ 	        	$(SRC)/Script_NeighType.f90\
  	        	$(SRC)/Script_TrajType.f90\
  	        	$(SRC)/Script_LoadCoords.f90\
 	        	$(SRC)/Script_Main.f90\
@@ -182,7 +183,7 @@ removeExec:
 #        Dependencies
 # ====================================
 $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
-$(OBJ)/Common_BoxData.o: $(OBJ)/Box_SimpleBox.o $(OBJ)/Template_Constraint.o 
+$(OBJ)/Common_BoxData.o: $(OBJ)/Box_SimpleBox.o 
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
 $(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Sampling_Metropolis.o
 
@@ -206,11 +207,12 @@ $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
 $(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o ${OBJ}/FF_Tersoff.o ${OBJ}/Move_AtomTranslation.o $(OBJ)/Common_ECalc.o
 $(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XYZFormat.o 
+$(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Common_BoxData.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o
 
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
-$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/Move_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Neigh_RSqList.o 
+$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/Move_AtomTranslation.o $(OBJ)/RandomNew.o 
 
 

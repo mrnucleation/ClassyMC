@@ -34,7 +34,6 @@ module SimpleSimBox
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
       procedure, pass :: AllocateMolBound => SimpleBox_AllocateMolBound
-      procedure, pass :: LoadCoordinates => SimpleBox_LoadCoordinates
       procedure, pass :: LoadAtomCoord => Simplebox_LoadAtomCoord
       procedure, pass :: LoadDimension => Simplebox_LoadDimension
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
@@ -42,10 +41,8 @@ module SimpleSimBox
       procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
       procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
       procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
-      procedure, pass :: DummyCoords => SimpleBox_DummyCoords
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
       procedure, pass :: IOProcess => SimpleBox_IOProcess
-      procedure, pass :: DumpXYZConfig => SimpleBox_DumpXYZConfig
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
   end type
 
@@ -121,35 +118,6 @@ module SimpleSimBox
     allocate(self%NMolMax(1:nMolTypes), stat=AllocateStatus)
     allocate(self%NMolMin(1:nMolTypes), stat=AllocateStatus)
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
-  end subroutine
-!==========================================================================================
-  subroutine SimpleBox_LoadCoordinates(self, fileName, fileType)
-    implicit none
-    class(SimpleBox), intent(inout) :: self
-    character(len=*), intent(in) :: fileName
-    character(len=*), intent(in), optional :: fileType
-    character(len=3) :: sym
-    integer :: iAtom
-    integer :: AllocateStatus, IOSt
-
-    open(unit=50, file=fileName, status="OLD")
-    read(50,*) self%nMaxAtoms
-    read(50,*) 
-
-    if( .not. allocated(self%atoms) ) then
-      call self%Constructor
-    endif
-
-    do iAtom = 1, self%nAtoms
-      read(50,*, iostat=IOSt) sym, self%atoms(1, iAtom), self%atoms(2, iAtom), self%atoms(3, iAtom)
-      if(IOSt .ne. 0) then
-        write(*,*) "ERROR! Could not properly read the configuration file."
-        stop
-      endif
-    enddo
-
-    close(50)
-
   end subroutine
 !==========================================================================================
   subroutine Simplebox_LoadDimension(self, line, lineStat)
@@ -236,7 +204,6 @@ module SimpleSimBox
         enddo        
       enddo
     enddo
-!    write(*,*) "Here"
 
 
   end subroutine
@@ -323,67 +290,6 @@ end subroutine
   end subroutine
 
 !==========================================================================================
-  subroutine SimpleBox_DummyCoords(self)
-    use CoordinateTypes
-    implicit none
-    class(SimpleBox), intent(inout) :: self
-
-    self % nAtoms = 2
-
-    self % atoms(1, 1) = 0.0
-    self % atoms(2, 1) = 0.0
-    self % atoms(3, 1) = 0.0
- 
-    self % atoms(1, 2) = 2.0**(1.0/6.0)
-    self % atoms(2, 2) = 0.0
-    self % atoms(3, 2) = 0.0
-
-  end subroutine
-
-!==========================================================================================
-  subroutine SimpleBox_IOProcess(self, line, lineStat)
-    use CoordinateTypes
-    use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
-    use ForcefieldData, only: EnergyCalculator
-    implicit none
-
-    class(SimpleBox), intent(inout) :: self
-    integer, intent(out) :: lineStat
-    character(len=maxLineLen), intent(in) :: line   
-
-    integer :: intVal
-    real(dp) :: realVal
-    character(len=30) :: command, val
-
-    lineStat = 0
-    call GetXCommand(line, command, 4, lineStat)
-!    write(*,*) command
-    select case( trim(adjustl(command)) )
-      case("energycalc")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % EFunc => EnergyCalculator(intVal)
-
-      case("temperature")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) realVal
-        self % temperature = realVal
-        self % beta = 1E0_dp/realVal
-
-      case default
-        lineStat = -1
-    end select
-  end subroutine
-!==========================================================================================
-  subroutine SimpleBox_DumpXYZConfig(self, fileName)
-    use CoordinateTypes
-    use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
-    implicit none
-    class(SimpleBox), intent(inout) :: self
-    character(len=maxLineLen), intent(in) :: fileName
-
-  end subroutine
-!==========================================================================================
   function SimpleBox_CheckConstraint(self, disp) result(accept)
     use CoordinateTypes
     implicit none
@@ -407,6 +313,44 @@ end subroutine
     endif     
 
   end function
+!==========================================================================================
+  subroutine SimpleBox_IOProcess(self, line, lineStat)
+    use CoordinateTypes
+    use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
+    use ForcefieldData, only: EnergyCalculator
+    implicit none
+
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(out) :: lineStat
+    character(len=maxLineLen), intent(in) :: line   
+
+    integer :: i, intVal
+    real(dp) :: realVal
+    character(len=30) :: command, val
+
+    lineStat = 0
+    call GetXCommand(line, command, 4, lineStat)
+!    write(*,*) command
+    select case( trim(adjustl(command)) )
+      case("energycalc")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self % EFunc => EnergyCalculator(intVal)
+
+      case("temperature")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self % temperature = realVal
+        self % beta = 1E0_dp/realVal
+
+      case("neighlist")
+
+
+      case default
+        lineStat = -1
+    end select
+  end subroutine
+!
 !==========================================================================================
 end module
 !==========================================================================================

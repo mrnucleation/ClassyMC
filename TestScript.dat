@@ -10,6 +10,8 @@
     FromFile "NewStyle.cdat"
   End_Create
 
+  neighlist 1 rsqlist 1
+
   Create energyfunctions
     LJ_Cut
 #    LJ_Cut_NoNei
