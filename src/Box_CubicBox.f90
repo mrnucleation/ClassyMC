@@ -220,8 +220,6 @@ module CubicBoxDef
 !    write(*,*) "Cube"
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
-    call LowerCaseLine(command)
-    write(*,*) command
     select case( trim(adjustl(command)) )
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)
@@ -235,6 +233,13 @@ module CubicBoxDef
         self % boxL = realVal
         self % boxL2 = realVal/2.0E0_dp
         write(*,*) "Box Length:", self%boxL
+      case("temperature")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self % temperature = realVal
+        self % beta = 1E0_dp/realVal
+        write(*,*) "Box Length:", self%boxL
+ 
       case default
         lineStat = -1
     end select

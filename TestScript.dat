@@ -4,7 +4,8 @@
   SamplingType Metropolis
 
   forcefield testfield.txt
-  Create boxes 1
+
+  Create boxes
 #    cube
     FromFile "NewStyle.cdat"
   End_Create
@@ -18,6 +19,12 @@
     atomtranslation 1.0
   End_Create
 
+  Create trajectory
+    xyz 1 1000 "Traj.xyz"
+  End_Create
+
+
   modify box 1 energycalc 1
+  modify box 1 temperature 0.8
 #  modify box 1 boxlength 7.0
 #======================================

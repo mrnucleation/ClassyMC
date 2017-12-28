@@ -52,7 +52,7 @@ module TrajectoryTemplate
     character(len=*), intent(in) :: fileName
     
     self%fileName = ""
-    self%fileName(1:50) = fileName(1:50)
+    self%fileName(1:len(fileName)) = fileName(1:len(fileName))
 
   end subroutine
 !====================================================================

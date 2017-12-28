@@ -155,10 +155,12 @@
 !========================================================            
       subroutine createCommand(iLine, linestore, lineBuffer, lineStat)
       use BoxData, only: BoxArray
+      use TrajData, only: TrajArray
       use MCMoveData, only: Moves, MoveProb
       use ForcefieldData, only: EnergyCalculator, nForceFields
       use Input_SimBoxes, only: Script_BoxType
       use Input_Forcefield, only: Script_FieldType
+      use Input_TrajType, only: Script_TrajType
       use Input_Moves, only: Script_MCMoves
       use Input_LoadCoords, only: Script_ReadCoordFile
       use VarPrecision
@@ -232,7 +234,17 @@
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
              stop
            endif
-
+        case("trajectory") 
+           if( .not. allocated(TrajArray) ) then
+             allocate(TrajArray(1:nItems), stat = AllocateStat)
+             do i = 1, nItems
+               curLine = iLine + i
+               call Script_TrajType(linestore(curLine), i, lineStat)
+             enddo   
+           else
+             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             stop
+           endif
         case default
           write(*,*) command
           lineStat = -1

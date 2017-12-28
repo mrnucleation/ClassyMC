@@ -195,7 +195,7 @@ module SimpleSimBox
     arrayIndx = self%MolStartIndx(subIndx)
     arrayIndx = arrayIndx + atmIndx - 1
 
-    write(*,*) arrayIndx, x, y, z
+!    write(*,*) arrayIndx, x, y, z
     self%atoms(1, arrayIndx) = x
     self%atoms(2, arrayIndx) = y
     self%atoms(3, arrayIndx) = z
@@ -352,19 +352,23 @@ end subroutine
     character(len=maxLineLen), intent(in) :: line   
 
     integer :: intVal
+    real(dp) :: realVal
     character(len=30) :: command, val
 
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
-    write(*,*) command
+!    write(*,*) command
     select case( trim(adjustl(command)) )
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         self % EFunc => EnergyCalculator(intVal)
-      case("molmin")
+
+      case("temperature")
         call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
+        read(command, *) realVal
+        self % temperature = realVal
+        self % beta = 1E0_dp/realVal
 
       case default
         lineStat = -1
