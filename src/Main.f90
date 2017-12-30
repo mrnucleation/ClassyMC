@@ -10,6 +10,7 @@
     use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: sgrnd
+    use Output_DumpCoords, only: Output_DumpData
     implicit none
  
     integer :: i, j
@@ -30,7 +31,9 @@
 
     call BoxArray(1) % box % ComputeEnergy
     call BoxArray(1) % box % BuildNeighList
-    write(nout,*) "Simulation Start!"
+    write(nout,*) "============================================"
+    write(nout,*) "       Simulation Start!"
+    write(nout,*) "============================================"
     avgE = 0E0_dp
     cnt = 0E0_dp
     do nMoves = 1, nint(1d5)
@@ -66,6 +69,7 @@
     write(nout, *) "Average Energy:", avgE/cnt
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
+    call Output_DumpData
     write(nout,*) "Finished!"
     close(nout)
       

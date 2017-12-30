@@ -36,11 +36,8 @@ module Template_SimBox
       procedure, public, pass :: UpdateNeighLists
       procedure, public, pass :: ComputeEnergy
       procedure, public, pass :: IOProcess
+      procedure, public, pass :: DumpData
   end type
-
-  public :: Constructor, LoadCoordinates, BuildNeighList,Boundary
-  public :: UpdateEnergy, UpdatePosition, UpdateNeighLists, DummyCoords, IOProcess
-  public :: DumpXYZConfig
 !==========================================================================================
   contains
 !==========================================================================================
@@ -109,6 +106,14 @@ module Template_SimBox
     integer, intent(out) :: lineStat
 
     lineStat = 0
+  end subroutine
+!==========================================================================================
+  subroutine DumpData(self, filename)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(SimBox), intent(inout) :: self
+    character(len=*), intent(in) :: filename
+
   end subroutine
 !==========================================================================================
 end module

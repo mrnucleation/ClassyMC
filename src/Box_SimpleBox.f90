@@ -44,6 +44,7 @@ module SimpleSimBox
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
       procedure, pass :: IOProcess => SimpleBox_IOProcess
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
+      procedure, pass :: DumpData => SimpleBox_DumpData
   end type
 
 !==========================================================================================
@@ -71,6 +72,13 @@ module SimpleSimBox
       maxMol = maxMol + self%NMolMax(iType)
     enddo
     write(*,*) "maxatoms", self%nMaxAtoms
+
+    self%nAtoms = 0
+    do iType = 1, nMolTypes
+      self%nAtoms = self%nAtoms + self%NMol(iType)*MolData(iType)%nAtoms
+    enddo
+    write(*,*) "atoms", self%nAtoms
+
 
     !Allocate the position and energy related arrays. 
     allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
@@ -143,6 +151,7 @@ module SimpleSimBox
 
     if( .not. allocated(self%atoms) ) then
       call self%Constructor
+      write(*,*) self%nAtoms
     endif
 
     read(line, *) molType, molIndx, atmIndx, x, y ,z
@@ -159,11 +168,10 @@ module SimpleSimBox
       subIndx = self%NMolMax(iType)
     enddo
     subIndx = subIndx + molIndx
-!    call FindMolecule(box, subIndx, arrayIndx)
     arrayIndx = self%MolStartIndx(subIndx)
     arrayIndx = arrayIndx + atmIndx - 1
 
-!    write(*,*) arrayIndx, x, y, z
+!    write(*,*) molType, molIndx, atmIndx, arrayIndx
     self%atoms(1, arrayIndx) = x
     self%atoms(2, arrayIndx) = y
     self%atoms(3, arrayIndx) = z
@@ -356,7 +364,43 @@ end subroutine
         lineStat = -1
     end select
   end subroutine
-!
+!==========================================================================================
+  subroutine SimpleBox_DumpData(self, filename)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    character(len=*), intent(in) :: filename
+    integer :: iType, iMol, iAtom, jType, subIndx, arrayIndx
+
+    open(unit=50, file=trim(adjustl(filename)))
+
+    write(50,*) "boxtype nobox"
+    write(50,*) 
+    write(50,*) "molmin", (self%NMolMin(iType), iType=1,nMolTypes)
+    write(50,*) "molmax", (self%NMolMax(iType), iType=1,nMolTypes)
+    write(50,*) "mol", (self%NMol(iType), iType=1,nMolTypes)
+
+    do iType = 1, nMolTypes
+      do iMol = 1, self%NMol(iType)
+        do iAtom = 1, MolData(iType)%nAtoms
+          subIndx = 0
+          do jType = 1, iType-1
+            subIndx = self%NMolMax(jType)
+          enddo
+          subIndx = subIndx + iMol
+          arrayIndx = self%MolStartIndx(subIndx)
+          arrayIndx = arrayIndx + iAtom - 1
+
+          write(50,*) iType, iMol, iAtom, self%atoms(1,arrayIndx), &
+                       self%atoms(2,arrayIndx), self%atoms(3,arrayIndx)
+        enddo
+      enddo
+    enddo
+
+
+    close(50)
+
+  end subroutine
 !==========================================================================================
 end module
 !==========================================================================================

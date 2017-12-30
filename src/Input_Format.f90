@@ -1,6 +1,6 @@
 !========================================================            
       module Input_Format
-      integer, parameter :: maxLineLen = 100   
+      integer, parameter :: maxLineLen = 300   
       contains
 !========================================================            
       subroutine LoadFile(lineArray, nLines, lineNumber, fileName)

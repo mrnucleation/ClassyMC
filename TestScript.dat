@@ -6,8 +6,8 @@
   forcefield testfield.txt
 
   Create boxes
-#    cube
-    FromFile "NewStyle.cdat"
+#    FromFile "NewStyle.cdat"
+    FromFile "Out_0_1.clssy"
   End_Create
 
   neighlist 1 rsqlist 1

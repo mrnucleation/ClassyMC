@@ -14,14 +14,12 @@ module CubicBoxDef
     real(dp) :: boxL, boxL2
     contains
 !      procedure, pass :: Constructor => Cube_Constructor
-      procedure, pass :: LoadCoordinates => Cube_LoadCoordinates
       procedure, pass :: LoadDimension => Cube_LoadDimension
       procedure, pass :: UpdateEnergy => Cube_UpdateEnergy
       procedure, pass :: Boundary => Cube_Boundary
       procedure, pass :: UpdatePosition => Cube_UpdatePosition
-      procedure, pass :: DummyCoords => Cube_DummyCoords
       procedure, pass :: IOProcess => Cube_IOProcess
-      procedure, pass :: DumpXYZConfig => Cube_DumpXYZConfig
+      procedure, pass :: DumpData => Cube_DumpData
   end type
 
 !==========================================================================================
@@ -83,39 +81,6 @@ module CubicBoxDef
 !
 !  end subroutine
 !==========================================================================================
-  subroutine Cube_LoadCoordinates(self, fileName, fileType)
-    implicit none
-    class(CubeBox), intent(inout) :: self
-    character(len=*), intent(in) :: fileName
-    character(len=*), intent(in), optional :: fileType
-    character(len=3) :: sym
-    integer :: iAtom
-    integer :: AllocateStatus, IOSt
-
-    open(unit=50, file=fileName, status="OLD")
-    read(50,*) self%nAtoms
-    read(50,*) self%boxL
-
-    self%boxL2 = self%boxL/2.0
-
-    allocate( self%atoms(1:3, 1:self%nAtoms), stat= AllocateStatus)
-    allocate( self%AtomType(1:self%nAtoms), stat= AllocateStatus )
-    allocate( self%ETable(1:self%nAtoms), stat= AllocateStatus )
-    allocate( self%dETable(1:self%nAtoms), stat= AllocateStatus )
-    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
-
-    do iAtom = 1, self%nAtoms
-      read(50,*, iostat=IOSt) sym, self%atoms(1, iAtom), self%atoms(2, iAtom), self%atoms(3, iAtom)
-      if(IOSt .ne. 0) then
-        write(*,*) "ERROR! Could not properly read the configuration file."
-        stop
-      endif
-    enddo
-
-    close(50)
-
-  end subroutine
-!==========================================================================================
   subroutine Cube_LoadDimension(self, line, lineStat)
     use Input_Format, only: GetXCommand
     implicit none
@@ -170,11 +135,7 @@ module CubicBoxDef
     type(Displacement), intent(inout) :: disp(:)
     integer :: iDisp, dispLen, dispIndx
 
-
-!  write(*,*) "cube"
-
     dispLen = size(disp)
-
     do iDisp = 1, dispLen
       dispIndx = disp(iDisp) % atmIndx
       call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
@@ -184,24 +145,6 @@ module CubicBoxDef
     enddo
 
   end subroutine
-!==========================================================================================
-  subroutine Cube_DummyCoords(self)
-    use CoordinateTypes
-    implicit none
-    class(CubeBox), intent(inout) :: self
-
-    self % nAtoms = 2
-
-    self % atoms(1, 1) = 0.0
-    self % atoms(2, 1) = 0.0
-    self % atoms(3, 1) = 0.0
- 
-    self % atoms(1, 2) = 2.0**(1.0/6.0)
-    self % atoms(2, 2) = 0.0
-    self % atoms(3, 2) = 0.0
-
-  end subroutine
-
 !==========================================================================================
   subroutine Cube_IOProcess(self, line, lineStat)
     use CoordinateTypes
@@ -246,15 +189,44 @@ module CubicBoxDef
 
   end subroutine
 !==========================================================================================
-  subroutine Cube_DumpXYZConfig(self, fileName)
-    use CoordinateTypes
-    use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
+  subroutine Cube_DumpData(self, filename)
+    use Common_MolInfo, only: nMolTypes, MolData
     implicit none
     class(CubeBox), intent(inout) :: self
-    character(len=maxLineLen), intent(in) :: fileName
+    character(len=*), intent(in) :: filename
+    integer :: iType, iMol, iAtom, jType, subIndx, arrayIndx
 
+    open(unit=50, file=trim(adjustl(filename)))
+
+    write(50,*) "boxtype cube"
+    write(50,*) "dimension", self%boxL
+    write(50,*) "molmin", (self%NMolMin(iType), iType=1,nMolTypes)
+    write(50,*) "molmax", (self%NMolMax(iType), iType=1,nMolTypes)
+    write(50,*) "mol", (self%NMol(iType), iType=1,nMolTypes)
+
+    do iType = 1, nMolTypes
+      do iMol = 1, self%NMol(iType)
+        do iAtom = 1, MolData(iType)%nAtoms
+          subIndx = 0
+          do jType = 1, iType-1
+            subIndx = self%NMolMax(jType)
+          enddo
+          subIndx = subIndx + iMol
+          arrayIndx = self%MolStartIndx(subIndx)
+          arrayIndx = arrayIndx + iAtom - 1
+
+          write(50,*) iType, iMol, iAtom, self%atoms(1,arrayIndx), &
+                       self%atoms(2,arrayIndx), self%atoms(3,arrayIndx)                     
+        enddo
+      enddo
+    enddo
+
+
+    close(50)
 
   end subroutine
+!
 !==========================================================================================
+
 end module
 !==========================================================================================
