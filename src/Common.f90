@@ -4,10 +4,11 @@ module CoordinateTypes
 
   type Displacement
     logical :: newAtom = .false.
-    logical :: removeAtom = .false.
     integer(kind=atomIntType) :: molType, atmIndx, molIndx
-    integer(kind=atomIntType) :: oldType, oldIndx, oldMolIndx
     real(dp) :: x_new, y_new, z_new
+
+    logical :: oldAtom = .false.
+    integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
   end type
 
 end module

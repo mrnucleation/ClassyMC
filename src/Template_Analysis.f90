@@ -1,49 +1,43 @@
 !=========================================================================
-module MoveClassDef
+module AnaylsisClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
 
-  type, public :: MCMove
-    real(dp) :: atmps = 1E-30_dp
-    real(dp) :: accpt = 0E0_dp
-
+  type, public :: Anaylsis
+    integer :: IOUnit = -1
     contains
-      procedure, pass :: GeneratePosition 
-      procedure, pass :: FullMove
-      procedure, pass :: GetAcceptRate
+      procedure, pass :: Initialize
+      procedure, pass :: Compute
       procedure, pass :: Maintenance 
+      procedure, pass :: ProcessIO
+      procedure, pass :: WriteInfo
   end type
 
  contains
 !=========================================================================
-  subroutine GeneratePosition(self, disp)
+  subroutine Initialize(self)
     use CoordinateTypes, only: Displacement
     implicit none
-    class(MCMove), intent(in) :: self
-    type(Displacement), intent(inout) :: disp
+    class(Analysis), intent(in) :: self
   end subroutine
 !=========================================================================
-  subroutine FullMove(self, trialBox, accept)
-    class(MCMove), intent(inout) :: self
-    class(SimpleBox), intent(inout) :: trialBox
-    logical, intent(out) :: accept
+  subroutine Compute(self, accept)
+    use CoordinateTypes, only: Displacement
+    implicit none
+    class(Analysis), intent(in) :: self
+    logical, intent(in) :: accept
   end subroutine
-!=========================================================================
-  function GetAcceptRate(self) result(rate)
-    class(MCMove), intent(in) :: self
-    real(dp) :: rate
-
-    if(self%atmps > 0E0_dp) then
-      rate = 1E2_dp*self%accpt/self%atmps
-    else
-      rate = 0E0_dp
-    endif
-
-    return
-  end function
 !=========================================================================
   subroutine Maintenance(self)
-    class(MCMove), intent(inout) :: self
+    class(Analysis), intent(inout) :: self
+  end subroutine
+!=========================================================================
+  subroutine ProcessIO(self)
+    class(Analysis), intent(inout) :: self
+  end subroutine
+!=========================================================================
+  subroutine WriteInfo(self)
+    class(Analysis), intent(inout) :: self
   end subroutine
 !=========================================================================
 end module

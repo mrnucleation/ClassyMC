@@ -1,12 +1,12 @@
 !====================================================================
 module MetropolisRule
   use VarPrecision
-  use CoordinateTypes
+  use CoordinateTypes, only: Displacement
   use AcceptRuleTemplate, only: acceptrule
  
   type, public, extends(acceptrule) :: metropolis
     contains
-       procedure, pass :: makedecision => Metropolis_MakeDecision
+       procedure, pass :: MakeDecision => Metropolis_MakeDecision
   end type
 !====================================================================
   contains
@@ -31,7 +31,6 @@ module MetropolisRule
     elseif(biasE > log(grnd())) then
       accept = .true.
     endif
-!    write(12,*) biasE, accept
 
 
   end function
