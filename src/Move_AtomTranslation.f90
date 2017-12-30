@@ -38,14 +38,14 @@ use VarPrecision
       dz = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
   end subroutine
 !===============================================
-  subroutine AtomTrans_FullMove(self, trialBox) 
+  subroutine AtomTrans_FullMove(self, trialBox, accept) 
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
     implicit none
     class(AtomTranslate), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
-    logical :: accept
+    logical, intent(out) :: accept
     integer :: nMove, iConstrain
     integer :: CalcIndex
     real(dp) :: dx, dy, dz
@@ -68,10 +68,10 @@ use VarPrecision
     self%disp(1)%z_new = trialBox%atoms(3, nMove) + dz
 
     !Check Constraint
-!    accept = trialBox%CheckConstraint(self%disp(1:1))
-!    if(.not. accept) then
-!      return
-!    endif
+    accept = trialBox%CheckConstraint(self%disp(1:1))
+    if(.not. accept) then
+      return
+    endif
 
     !Energy Calculation
     call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)

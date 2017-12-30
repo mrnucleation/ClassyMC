@@ -13,6 +13,7 @@
     use Output_DumpCoords, only: Output_DumpData
     implicit none
  
+    logical :: accept
     integer :: i, j
     integer :: nMoves, iAtom
     real(dp) :: E_T, E_Final
@@ -31,13 +32,13 @@
 
     call BoxArray(1) % box % ComputeEnergy
     call BoxArray(1) % box % BuildNeighList
-    write(nout,*) "============================================"
-    write(nout,*) "       Simulation Start!"
-    write(nout,*) "============================================"
+    write(nout, *) "============================================"
+    write(nout, *) "       Simulation Start!"
+    write(nout, *) "============================================"
     avgE = 0E0_dp
     cnt = 0E0_dp
     do nMoves = 1, nint(1d5)
-       call Moves(1) % Move % FullMove(BoxArray(1)%box)
+       call Moves(1) % Move % FullMove(BoxArray(1)%box, accept)
        avgE = avgE + BoxArray(1)%box%ETotal
        cnt = cnt + 1E0_dp
        if(mod(nMoves, 1000) == 0) then
@@ -70,7 +71,7 @@
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
     call Output_DumpData
-    write(nout,*) "Finished!"
+    write(nout, *) "Finished!"
     close(nout)
       
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
