@@ -50,8 +50,8 @@ module Common_MolInfo
   use StructureTypes
 
   integer :: nMolTypes = 1
-  integer :: nAtomTypes = 1
-  integer :: nBondTypes = 0
+  integer :: nAtomTypes = -1
+  integer :: nBondTypes = -1
 
 
   type(MolDef), allocatable :: MolData(:)

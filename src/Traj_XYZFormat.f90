@@ -12,10 +12,11 @@ module Traj_XYZ
 !====================================================================
   subroutine TrajXYZ_WriteFrame(self) 
     use BoxData, only: BoxArray
+    use Common_MolInfo, only: AtomData
     implicit none
     class(trajXYZ), intent(in) :: self
     integer :: iAtom, jDim, boxNum
-    integer :: nDim
+    integer :: nDim, atomType
 
     boxNum = self%boxNum
     nDim = BoxArray(boxNum)%box%nDimension
@@ -23,7 +24,8 @@ module Traj_XYZ
     write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
     write(self%fileUnit, *) 
     do iAtom = 1, BoxArray(boxNum)%box%nAtoms
-      write(self%fileUnit, *) "Ar", (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
+      atomType = BoxArray(boxNum)%box%AtomType(iAtom)
+      write(self%fileUnit, *) AtomData(atomType)%symb, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
     enddo
 
 

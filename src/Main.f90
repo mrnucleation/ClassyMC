@@ -27,7 +27,7 @@
     call Script_ReadParameters
     call sgrnd(1) 
 
-    call EnergyCalculator(1)%Method%Constructor
+!    call EnergyCalculator(1)%Method%Constructor
     call BoxArray(1)%box%NeighList(1)%constructor(1)
 
     call BoxArray(1) % box % ComputeEnergy

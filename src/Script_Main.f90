@@ -11,6 +11,7 @@
       use Input_Forcefield
       use Input_Sampling, only: Script_SamplingType
       use Input_NeighType, only: Script_NeighType
+      use Input_Initialize, only: Script_Initialize
       implicit none
 !      integer(kind=8), intent(OUT) :: ncycle,nmoves
       integer :: i, ii, j, nArgs
@@ -90,6 +91,7 @@
 !      write(*,*) "Finished Reading Input Script."      
       deallocate(lineStore)
 
+      call Script_Initialize
 !      call Script_SafetyCheck
 
       end subroutine
@@ -100,22 +102,20 @@
       use Common_MolInfo
       use ParallelVar
       use Common_NeighData
+      use RandomGen, only: initSeed
       implicit none
       character(len=maxLineLen), intent(in) :: line      
       integer, intent(out) :: lineStat
 
-      character(len=30) :: dummy, command, command2
-!      character(len=15) :: fileName      
+      character(len=30) :: command, command2
       logical :: logicValue
-      integer :: j
       integer :: intValue
       real(dp) :: realValue
       
 
       lineStat  = 0
 
-      read(line,*) dummy, command
-      call LowerCaseLine(command)
+      call GetXCommand(line, command, 2, lineStat)
       select case(trim(adjustl(command)))
 !        case("cycles")
 !          read(line,*) dummy, command, realValue  
@@ -126,29 +126,25 @@
 !        case("screenecho")
 !          read(line,*) dummy, command, logicValue
 !          screenEcho = logicValue
-        case("atomtypes")
-          read(line,*) dummy, command, intValue
-          nAtomTypes = intValue
-        case("rng_seed")
-          read(line,*) dummy, command, intValue
-          if(intValue < 0) then
-            call system_clock(intValue)
-            seed = mod(intValue,10000)
-          else
-            seed = intValue
-          endif
-          seed = p_size*seed + myid
-          write(nout,*) seed
+
+       case("rng_seed")
+          call GetXCommand(line, command2, 3, lineStat)
+          read(command2,*) intValue
+          initSeed = intValue
+
 !        case("out_energyunits")
 !          read(line,*) dummy, command, outputEngUnits
 !          outputEConv = FindEngUnit(outputEngUnits)
+
 !        case("out_distunits")
 !          read(line,*) dummy, command, outputLenUnits   
 !          outputLenConv = FindLengthUnit(outputLenUnits)
+
         case("neighskin")
           call GetXCommand(line, command2, 3, lineStat)
           read(command2, *) realValue
           neighSkin = realValue
+
         case default
           lineStat = -1
       end select
@@ -218,6 +214,7 @@
              do i = 1, nItems
                curLine = iLine + i
                call Script_FieldType(linestore(curLine), i, lineStat)
+               call EnergyCalculator(i)%Method%Constructor
              enddo   
            else
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"

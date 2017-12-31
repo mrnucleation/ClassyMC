@@ -11,15 +11,15 @@ module Input_Forcefield
   contains
 !================================================================================
   subroutine Script_ReadFieldFile(filename, lineStat)
-    use ForcefieldData, only: nForceFields
+    use ForcefieldData, only: nForceFields, EnergyCalculator
     use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile
-    use Common_MolInfo, only: MolData, nMolTypes
+    use Common_MolInfo, only: AtomData, MolData, nMolTypes, nAtomTypes
     implicit none
     character(len=50), intent(in) :: fileName      
     integer, intent(out) :: lineStat
 
-    integer :: i, nLines, AllocateStat, iLine, lineBuffer
+    integer :: i, nLines, nItems, curLine, AllocateStat, iLine, lineBuffer
     integer, allocatable :: lineNumber(:)
     character(len=maxLineLen), allocatable :: lineStore(:)
 
@@ -50,9 +50,35 @@ module Input_Forcefield
           read(val, *) intValue
 
         case("forcefieldtype")
-          call GetXCommand(lineStore(iLine), val, 2, lineStat)
-          read(val, *) intValue
-          call Script_FieldType(lineStore(iLine), intValue, lineStat)
+          call FindCommandBlock(iLine, lineStore, "end_forcefieldtype", lineBuffer)
+          nItems = lineBuffer - 1
+          if( .not. allocated(EnergyCalculator) ) then
+            nForceFields = nItems
+            allocate(EnergyCalculator(1:nItems), stat = AllocateStat)
+            do i = 1, nItems
+              curLine = iLine + i
+              call Script_FieldType(linestore(curLine), i, lineStat)
+              call EnergyCalculator(i)%Method%Constructor
+            enddo   
+          else
+            write(*,*) "ERROR! The forcefieldtype has already been used and can not be called twice"
+            stop
+          endif
+
+        case("atomdef")
+          call FindCommandBlock(iLine, lineStore, "end_atomdef", lineBuffer)
+          nItems = lineBuffer - 1
+          if( .not. allocated(AtomData) ) then
+            nAtomTypes = nItems
+            allocate(AtomData(1:nItems), stat = AllocateStat)
+            do i = 1, nItems
+              curLine = iLine + i
+              read(lineStore(curLine), *) AtomData(i)%symb, AtomData(i)%mass
+            enddo   
+          else
+            write(*,*) "ERROR! The forcefieldtype has already been used and can not be called twice"
+            stop
+          endif
 
         case("molecule")
           call FindCommandBlock(iLine, lineStore, "end_molecule", lineBuffer)

@@ -1,6 +1,10 @@
 
 moleculetypes 1
 
+atomdef
+  "O"  1.0
+end_atomdef
+
 molecule 1
   atoms
     1
