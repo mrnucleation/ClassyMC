@@ -5,6 +5,7 @@ module Input_SimBoxes
   use BoxData, only: BoxArray
   use SimpleSimBox, only: Simplebox
   use CubicBoxDef, only: CubeBox
+  use OrthoBoxDef, only: OrthoBox
   contains
 !================================================================================
   subroutine Script_BoxType(line, boxNum, lineStat)
@@ -31,9 +32,14 @@ module Input_SimBoxes
         allocate(CubeBox::BoxArray(boxNum)%box) 
         BoxArray(boxNum)%box%boxStr = "cube"
 
+      case("ortho")
+        allocate(OrthoBox::BoxArray(boxNum)%box) 
+        BoxArray(boxNum)%box%boxStr = "ortho"
+
       case default
         write(*,*) command
         lineStat = -1
+
     end select
 
     call BoxArray(boxNum) % box % AllocateMolBound

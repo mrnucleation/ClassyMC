@@ -76,7 +76,7 @@ module Input_Forcefield
               read(lineStore(curLine), *) AtomData(i)%symb, AtomData(i)%mass
             enddo   
           else
-            write(*,*) "ERROR! The forcefieldtype has already been used and can not be called twice"
+            write(*,*) "ERROR! The atomdef has already been used and can not be called twice"
             stop
           endif
 
@@ -95,6 +95,7 @@ module Input_Forcefield
           endif
           nMolTypes = intValue
           allocate(MolData(1:nMolTypes), stat = AllocateStat)
+
         case("units")
           call Script_SetUnits(lineStore(iLine), lineStat)
 

@@ -15,7 +15,6 @@ use Template_NeighList, only: NeighListDef
 !      integer :: maxNei
 !      real(dp) :: rCut, rCutSq
       class(SimpleBox), pointer :: parent => null()
-!      procedure, pointer :: builder => 
     contains
       procedure, pass :: Constructor => RSqList_Constructor 
       procedure, pass :: BuildList => RSqList_BuildList 

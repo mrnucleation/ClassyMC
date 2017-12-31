@@ -25,13 +25,11 @@
     call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierror)  
 
     call Script_ReadParameters
-    call sgrnd(1) 
 
-!    call EnergyCalculator(1)%Method%Constructor
-    call BoxArray(1)%box%NeighList(1)%constructor(1)
-
-    call BoxArray(1) % box % ComputeEnergy
-    call BoxArray(1) % box % BuildNeighList
+    do i = 1, size(BoxArray)
+      call BoxArray(i) % box % ComputeEnergy
+      call BoxArray(i) % box % BuildNeighList
+    enddo
 
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
@@ -47,7 +45,7 @@
          write(*,*) nMoves, BoxArray(1)%box%ETotal, Moves(1)%Move%GetAcceptRate()
        endif
        if(mod(nMoves, 1000) == 0) then
-         call BoxArray(1) % box % BuildNeighList
+         call BoxArray(1) % box % NeighList(1) % BuildList
        endif
        if(mod(nMoves, 100) == 0) then
          call Moves(1) % Move % Maintenance
@@ -64,8 +62,10 @@
     enddo
     
     E_Final = BoxArray(1)%box%ETotal
+    do i = 1, size(BoxArray)
+      call BoxArray(i) % box % ComputeEnergy
+    enddo
 
-    call BoxArray(1) % box % ComputeEnergy
     write(nout, *) "Culmative Energy:", E_Final
     write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
     write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal

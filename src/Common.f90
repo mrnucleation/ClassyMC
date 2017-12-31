@@ -23,6 +23,5 @@ module Constants
   real(dp), parameter :: pi = 4E0_dp * atan(1E0_dp)
   real(dp), parameter :: two_pi = 8E0_dp * atan(1E0_dp)
 end module  
-
 !======================================================
 

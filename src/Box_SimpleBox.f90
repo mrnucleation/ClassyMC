@@ -358,8 +358,6 @@ end subroutine
         read(command, *) realVal
         self%NeighList(intVal)%rCut = realVal
 
-
-
       case default
         lineStat = -1
     end select
