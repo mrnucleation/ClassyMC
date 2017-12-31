@@ -32,9 +32,11 @@
 
     call BoxArray(1) % box % ComputeEnergy
     call BoxArray(1) % box % BuildNeighList
+
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
     write(nout, *) "============================================"
+
     avgE = 0E0_dp
     cnt = 0E0_dp
     do nMoves = 1, nint(1d5)
