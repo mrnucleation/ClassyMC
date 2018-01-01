@@ -12,11 +12,6 @@
 
   neighlist 1 rsqlist 1
 
-#  Create energyfunctions
-#    LJ_Cut
-#    LJ_Cut_NoNei
-#  End_Create
-
   Create moves
     atomtranslation 1.0
   End_Create

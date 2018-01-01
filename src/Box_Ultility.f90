@@ -14,16 +14,25 @@ contains
     integer, intent(out) :: atmIndx
     integer :: iType, nSum, nType
 
-    atmIndx = globindx
+    if(globIndx > box%nAtoms) then
+      stop
+    endif
+
+    nSum = 0
     do iType = 1, nMolTypes
       nSum = nSum + box%NMol(iType)*MolData(iType)%nAtoms
-      if(globIndx < nSum) then
+      if(globIndx <= nSum) then
         nType = iType
         exit
       endif
     enddo
 
     atmIndx = globIndx
+    if( nType == 1 ) then
+      return
+    endif
+
+  
     do iType = 1, nType-1
       atmIndx = atmIndx + (box%NMolMax(iType) - box%NMol(iType))*MolData(iType)%nAtoms
     enddo
@@ -39,10 +48,10 @@ contains
     integer, intent(out) :: molIndx
     integer :: iType, nSum, nType
 
-    molIndx = globindx
+    nSum = 0
     do iType = 1, nMolTypes
       nSum = nSum + box%NMol(iType)
-      if(globIndx < nSum) then
+      if(globIndx <= nSum) then
         nType = iType
         exit
       endif
