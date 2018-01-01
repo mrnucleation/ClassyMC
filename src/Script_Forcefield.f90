@@ -48,6 +48,15 @@ module Input_Forcefield
           call FindCommandBlock(iLine, lineStore, "end_forcefield", lineBuffer)
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
           read(val, *) intValue
+          if( .not. allocated(EnergyCalculator) ) then
+            write(*,*) "ERROR! The forcefield type must be defined before parameters can be modifed."
+            stop
+          endif
+          nForceFields = nItems
+          do i = 1, nItems
+            curLine = iLine + i
+            call EnergyCalculator(i)%Method%ProcessIO(lineStore(curLine))
+          enddo   
 
         case("forcefieldtype")
           call FindCommandBlock(iLine, lineStore, "end_forcefieldtype", lineBuffer)

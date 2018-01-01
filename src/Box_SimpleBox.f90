@@ -21,11 +21,11 @@ module SimpleSimBox
 !    real(dp) :: beta, temperature
 
 !    real(dp) :: ETotal
-    integer, allocatable :: NMolMin(:), NMolMax(:)
-    integer, allocatable :: NMol(:), MolStartIndx(:)
+!    integer, allocatable :: NMolMin(:), NMolMax(:)
+!    integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
 
 !    integer, allocatable :: AtomType(:)
-    integer, allocatable :: MolIndx(:), SubIndx(:)
+!    integer, allocatable :: MolIndx(:), SubIndx(:)
 
     type(constrainArray), allocatable :: Constrain(:)
     class(ECalcArray), pointer :: EFunc
@@ -87,30 +87,43 @@ module SimpleSimBox
 
     !Allocate the arrays which contain the atom type and quick look up information.
     allocate(self%AtomType(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%MolType(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%MolIndx(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%SubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
-    allocate(self%MolStartIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%MolStartIndx(1:maxMol), stat=AllocateStatus)
+    allocate(self%MolEndIndx(1:maxMol), stat=AllocateStatus)
 
+    allocate(self%TypeFirst(1:nMolTypes), stat=AllocateStatus)
+    allocate(self%TypeLast(1:nMolTypes), stat=AllocateStatus)
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
     self%AtomType = 0
+    self%MolType = 0
     self%MolIndx = 0
     self%SubIndx = 0
     self%MolStartIndx = 0
+    self%MolEndIndx = 0
+
+    self%TypeFirst = 0
+    self%TypeLast = 0
 
     atmIndx = 0
     molIndx = 0
     do iType = 1, nMolTypes
+      self%TypeFirst(iType) = atmIndx + 1
       do iMol = 1, self%NMolMax(iType)
         molIndx = molIndx + 1
         self%MolStartIndx(molIndx) = atmIndx + 1
+        self%MolEndIndx(molIndx) = atmIndx + MolData(iType)%nAtoms 
         do iAtom = 1, MolData(iType)%nAtoms
           atmIndx = atmIndx + 1
+          self%MolType(atmIndx) = iType
           self%AtomType(atmIndx) = MolData(iType)%atomType(iAtom)
           self%MolIndx(atmIndx)  = molIndx
           self%SubIndx(atmIndx)  = iAtom
         enddo
       enddo 
+      self%TypeLast(iType) = atmIndx 
     enddo
 
 

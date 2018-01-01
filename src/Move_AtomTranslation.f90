@@ -42,11 +42,12 @@ use VarPrecision
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
+    use Box_Utility, only: FindAtom
     implicit none
     class(AtomTranslate), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
-    integer :: nMove, iConstrain
+    integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE
@@ -56,19 +57,22 @@ use VarPrecision
     accept = .true.
 
     !Propose move
-       !Choose Molecule
-    nMove = floor( trialBox%nAtoms * grnd() + 1E0_dp)
+    rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
+    call FindAtom(trialbox, rawIndx, nMove)
+!    write(*,*) nMove, rawIndx
     dx = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
     dy = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
     dz = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
  
+    self%disp(1)%newatom = .true.
+    self%disp(1)%oldatom = .true.
     self%disp(1)%atmIndx = nMove
     self%disp(1)%x_new = trialBox%atoms(1, nMove) + dx
     self%disp(1)%y_new = trialBox%atoms(2, nMove) + dy
     self%disp(1)%z_new = trialBox%atoms(3, nMove) + dz
 
     !Check Constraint
-    accept = trialBox%CheckConstraint(self%disp(1:1))
+    accept = trialBox % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then
       return
     endif

@@ -20,7 +20,14 @@ module Template_SimBox
     real(dp), allocatable :: ETable(:), dETable(:)
     real(dp) :: beta, temperature
     real(dp), allocatable :: atoms(:,:)
-    integer, allocatable :: AtomType(:)
+
+    integer, allocatable :: NMolMin(:), NMolMax(:)
+    integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
+
+    integer, allocatable :: AtomType(:), MolType(:)
+    integer, allocatable :: MolIndx(:), SubIndx(:)
+
+    integer, allocatable :: TypeFirst(:), TypeLast(:)
 
     integer :: nLists
     class(NeighListDef), allocatable :: NeighList(:)
@@ -45,7 +52,6 @@ module Template_SimBox
     implicit none
     class(SimBox), intent(inout) :: self
   end subroutine
-
 !==========================================================================================
   subroutine LoadAtomCoord(self, line, lineStat)
     implicit none

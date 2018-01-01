@@ -102,19 +102,23 @@ use Template_NeighList, only: NeighListDef
     molStart = 1
     do iType = 1, nMolTypes
       iLow = trialBox%MolStartIndx(molStart)
-      iUp = trialBox%MolStartIndx(trialBox%NMol(iType)) + MolData(iType)%nAtoms - 1
+      iUp = trialBox%MolEndIndx(trialBox%NMol(iType)) 
       do iAtom = iLow, iUp
         jMolStart = molStart
         do jType = iType, nMolTypes
           if(iType == jType) then
-            jLow = trialBox%MolStartIndx( trialBox%MolIndx(iAtom)+1 )
-            jUp  = trialBox%MolStartIndx( trialBox%NMol(iType) ) + MolData(iType)%nAtoms - 1
+            if( trialBox%MolIndx(iAtom)+1 <= trialBox%NMol(iType)  ) then
+              jLow = trialBox%MolStartIndx( trialBox%MolIndx(iAtom)+1 )
+              jUp  = trialBox%MolEndIndx( trialBox%NMol(jType) )
+            else
+              cycle
+            endif
           else
-            jMolStart = jMolStart + trialBox%NMolMax(jType)
+            jMolStart = trialBox%TypeFirst(jType)
             jLow = trialBox%MolStartIndx( jMolStart )
-            jUp  = trialBox%MolStartIndx( trialBox%NMol(jType) ) + MolData(iType)%nAtoms - 1
+            jUp = trialBox%MolEndIndx(trialBox%NMol(jType)) 
           endif
-          do jAtom = iAtom+1, trialBox%nAtoms
+          do jAtom = jLow, jUp
             rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
             ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
             rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)

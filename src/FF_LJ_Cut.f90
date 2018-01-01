@@ -39,18 +39,19 @@ module FF_Pair_LJ_Cut
     self%rCut = 5E0_dp
     self%rCutSq = 5E0_dp**2
 
-!    write(*,*) 
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
   end subroutine
   !===================================================================================
   subroutine Detailed_LJ_Cut(self, curbox, E_T)
     use ParallelVar, only: nout
+    use Common_MolInfo, only: nMolTypes
     implicit none
     class(Pair_LJ_Cut), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
-    integer :: iAtom,jAtom
+    integer :: iType, jType, iAtom, jAtom
+    integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: ep, sig_sq
@@ -62,13 +63,18 @@ module FF_Pair_LJ_Cut
     curbox%ETable = 0E0
     do iAtom = 1, curbox%nAtoms-1
       atmType1 = curbox % AtomType(iAtom)
+      if( curbox%MolIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+        cycle
+      endif
       do jAtom = iAtom+1, curbox%nAtoms
+        if( curbox%MolIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then
+          cycle
+        endif
         atmType2 = curbox % AtomType(jAtom)
         ep = self % epsTable(atmType1,atmType2)
         sig_sq = self % sigTable(atmType1,atmType2)          
         rmin_ij = self % rMinTable(atmType1,atmType2)          
 
-!          write(*,*) ep, sig_sq, rmin_ij
         rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
         ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
@@ -81,6 +87,8 @@ module FF_Pair_LJ_Cut
             write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
             write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
             stop "ERROR! Overlaping atoms found in the current configuration!"
+
+
           endif 
           LJ = (sig_sq/rsq)**3
           LJ = ep * LJ * (LJ-1E0)              
@@ -90,7 +98,6 @@ module FF_Pair_LJ_Cut
         endif
       enddo
     enddo
-
       
     write(nout,*) "Lennard-Jones Energy:", E_LJ
       
@@ -253,38 +260,66 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine ProcessIO_LJ_Cut(self, line)
     use Common_MolInfo, only: nAtomTypes
-    use Input_Format, only: GetAllCommands
+    use Input_Format, only: GetAllCommands, GetXCommand
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     character(len=*), intent(in) :: line
     character(len=30), allocatable :: parlist(:)
+    character(len=30) :: command
+    logical :: param = .false.
     integer :: jType, lineStat
     integer :: type1, type2
-    real(dp) :: ep, sig
+    real(dp) :: ep, sig, rCut
   
-    call GetAllCommands(line, parlist, lineStat)
-    select case(size(parlist))
-      case(3)
-        read(line, *) type1, ep, sig
-        do jType = 1, nAtomTypes
-          self%epsTable(type1, jType) = ep
-          self%epsTable(jType, type1) = ep
 
-          self%sigTable(type1, jType) = sig
-          self%sigTable(jType, type1) = sig
-        enddo
+    call GetXCommand(line, command, 1, lineStat)
 
-      case(4)
-        read(line, *) type1, type2, ep, sig
-        self%epsTable(type1, type2) = ep
-        self%epsTable(type2, type1) = ep
-
-        self%sigTable(type1, type2) = sig
-        self%sigTable(type2, type1) = sig
+    select case(trim(adjustl(command)))
+      case("rcut")
+        call GetXCommand(line, command, 2, lineStat)
+        read(command, *) rCut
+        self % rCut = rCut
+        self % rCutSq = rCut * rCut
+      case default
+        param = .true.
     end select
 
 
-    deallocate(parlist)
+    if(param) then
+      call GetAllCommands(line, parlist, lineStat)
+      select case(size(parlist))
+        case(3)
+          read(line, *) type1, ep, sig
+          do jType = 1, nAtomTypes
+            if(jType == type1) then
+              self%epsTable(type1, jType) = 4E0_dp * ep
+              self%sigTable(type1, jType) = sig
+            else
+              self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
+              self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
+
+              self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
+              self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
+            endif
+          enddo
+        case(4)
+          read(line, *) type1, type2, ep, sig
+          self%epsTable(type1, type2) = 4E0_dp * ep
+          self%epsTable(type2, type1) = 4E0_dp * ep
+
+          self%sigTable(type1, type2) = sig
+          self%sigTable(type2, type1) = sig
+
+        case default
+          lineStat = -1
+      end select
+      if( allocated(parlist) ) then 
+        deallocate(parlist)
+      endif
+    endif
+
+
+!    deallocate(parlist)
   end subroutine
   !=============================================================================+
   function GetCutOff_LJ_Cut(self) result(rCut)

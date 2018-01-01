@@ -12,18 +12,18 @@
 
   neighlist 1 rsqlist 1
 
-  Create energyfunctions
-    LJ_Cut
+#  Create energyfunctions
+#    LJ_Cut
 #    LJ_Cut_NoNei
-  End_Create
+#  End_Create
 
   Create moves
     atomtranslation 1.0
   End_Create
 
-  Create trajectory
-    xyz 1 1000 "Traj.xyz"
-  End_Create
+#  Create trajectory
+#    xyz 1 1000 "Traj.xyz"
+#  End_Create
 
 
   modify box 1 energycalc 1
