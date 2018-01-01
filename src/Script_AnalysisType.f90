@@ -1,14 +1,16 @@
 
 !================================================================================
 module Input_AnalysisType
-use Input_Format, only: GetXCommand
-use AnaylsisData, only: AnalysisArray
 use VarPrecision
 !================================================================================
 contains
 !================================================================================
-  subroutine Script_TrajType(line, AnaNum, lineStat)
+  subroutine Script_AnalysisType(line, AnaNum, lineStat)
+    use Input_Format, only: GetXCommand
+    use AnalysisData, only: AnalysisArray
     use ParallelVar, only: nout
+    use Analysis_RDF, only: rdf
+    use Anaylsis_ThermAverage, only: ThermAverage
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: AnaNum
@@ -23,34 +25,15 @@ contains
     !Safety check to ensure that the index number is within proper bounds
     select case(trim(adjustl(command)))
       case("rdf")
-        allocate(trajXYZ::TrajArray(TrajNum) % traj)
+        allocate(rdf::AnalysisArray(AnaNum) % func)
+
+      case("thermoaverage")
+        allocate(thermAverage::AnalysisArray(AnaNum) % func)
 
       case default
         lineStat = -1
         return
     end select
-
-    write(*,*) line
-    call TrajArray(TrajNum) % traj % SetUnit(1000+TrajNum)
-
-    call GetXCommand(line, command, 2, lineStat)
-    read(command, *) intVal
-    call TrajArray(TrajNum) % traj % SetBox(intVal)
-
-    call GetXCommand(line, command, 3, lineStat)
-    read(command, *) intVal
-    call TrajArray(TrajNum) % traj % SetFreq(intVal)
-
-    call GetXCommand(line, command, 4, lineStat)
-    do i = 1, len(command)
-      if(command(i:i) == '"') then
-        command(i:i) = " "
-      endif
-    enddo
-    write(*,*) command
-    call TrajArray(TrajNum) % traj % SetFileName(command)
-    call TrajArray(TrajNum) % traj % OpenFile
-
 
 
   end subroutine

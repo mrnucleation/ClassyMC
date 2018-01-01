@@ -1,9 +1,9 @@
 !=========================================================================
 module AnaylsisClassDef
-use SimpleSimBox, only: SimpleBox
 use VarPrecision
 
-  type, public :: Anaylsis
+  type, public :: Analysis
+    logical :: perMove = .false.
     integer :: IOUnit = -1
     integer :: UpdateFreq = -1
     contains
@@ -12,37 +12,46 @@ use VarPrecision
       procedure, pass :: Maintenance 
       procedure, pass :: ProcessIO
       procedure, pass :: WriteInfo
+      procedure, pass :: GetResult
       procedure, pass :: Finalize
   end type
 
  contains
 !=========================================================================
   subroutine Initialize(self)
-    use CoordinateTypes, only: Displacement
     implicit none
     class(Analysis), intent(in) :: self
   end subroutine
 !=========================================================================
   subroutine Compute(self, accept)
-    use CoordinateTypes, only: Displacement
     implicit none
     class(Analysis), intent(in) :: self
     logical, intent(in) :: accept
   end subroutine
 !=========================================================================
   subroutine Maintenance(self)
+    implicit none
     class(Analysis), intent(inout) :: self
   end subroutine
 !=========================================================================
   subroutine ProcessIO(self)
+    implicit none
     class(Analysis), intent(inout) :: self
   end subroutine
 !=========================================================================
   subroutine WriteInfo(self)
+    implicit none
     class(Analysis), intent(inout) :: self
   end subroutine
 !=========================================================================
+  function GetResult(self) result(var)
+    implicit none
+    class(Analysis), intent(in) :: self
+    real(dp) :: var
+  end function
+!=========================================================================
   subroutine Finalize(self)
+    implicit none
     class(Analysis), intent(inout) :: self
   end subroutine
 !=========================================================================

@@ -12,13 +12,16 @@ module Template_SimBox
 
 
   !Sim Box Definition
-  type :: SimBox
+  type, public :: SimBox
     character(len=15) :: boxStr = "Empty"
     integer :: nAtoms
     integer :: nDimension = 3
-    real(dp) :: ETotal
+
+    !Thermodynamic Variables
+    real(dp) :: ETotal, HTotal
+    real(dp) :: beta, temperature, pressure, volume
+
     real(dp), allocatable :: ETable(:), dETable(:)
-    real(dp) :: beta, temperature
     real(dp), allocatable :: atoms(:,:)
 
     integer, allocatable :: NMolMin(:), NMolMax(:)
@@ -44,6 +47,7 @@ module Template_SimBox
       procedure, public, pass :: ComputeEnergy
       procedure, public, pass :: IOProcess
       procedure, public, pass :: DumpData
+      procedure, public, pass :: GetThermo
   end type
 !==========================================================================================
   contains
@@ -121,6 +125,28 @@ module Template_SimBox
     character(len=*), intent(in) :: filename
 
   end subroutine
+!==========================================================================================
+  function GetThermo(self, thermInt) result(thermVal)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(SimBox), intent(in) :: self
+    integer, intent(in) :: thermInt
+    real(dp) :: thermVal
+
+    select case(thermInt)
+      case(1) !Energy
+        thermVal = self % ETotal
+      case(2) !Ethalpy
+        thermVal = self % HTotal
+      case(3) !Volume
+        thermVal = self % volume
+      case(4) !Temperature
+        thermVal = self % temperature
+      case(5) !Pressure
+        thermVal = self % pressure
+    end select
+
+  end function
 !==========================================================================================
 end module
 !==========================================================================================

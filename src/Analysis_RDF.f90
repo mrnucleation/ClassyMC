@@ -1,5 +1,7 @@
 !=========================================================================
-module Anaylsis_RDF
+module Analysis_RDF
+
+use AnaylsisClassDef, only: Analysis
 use SimpleSimBox, only: SimpleBox
 use Constants, only: pi
 use VarPrecision
@@ -25,13 +27,13 @@ use VarPrecision
 !=========================================================================
   subroutine Initialize(self)
     implicit none
-    class(Analysis), intent(in) :: self
+    class(rdf), intent(in) :: self
   end subroutine
 !=========================================================================
   subroutine Compute(self, accept)
     use BoxData, only: BoxArray
     implicit none
-    class(Analysis), intent(in) :: self
+    class(rdf), intent(in) :: self
     logical, intent(in) :: accept
  
     integer :: iAtom, jAtom
@@ -40,15 +42,15 @@ use VarPrecision
   end subroutine
 !=========================================================================
   subroutine Maintenance(self)
-    class(Analysis), intent(inout) :: self
+    class(rdf), intent(inout) :: self
   end subroutine
 !=========================================================================
   subroutine ProcessIO(self)
-    class(Analysis), intent(inout) :: self
+    class(rdf), intent(inout) :: self
   end subroutine
 !=========================================================================
   subroutine WriteInfo(self)
-    class(Analysis), intent(inout) :: self
+    class(rdf), intent(inout) :: self
   end subroutine
 !=========================================================================
 end module

@@ -7,7 +7,7 @@
     use ScriptInput, only: Script_ReadParameters
     use BoxData, only: BoxArray
     use TrajData, only: TrajArray
-!    use AnalysisData, only: AnalysisArray
+    use AnalysisData, only: AnalysisArray
     use MCMoveData, only: Moves
     use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ForcefieldData, only: EnergyCalculator
@@ -42,11 +42,26 @@
     cnt = 0E0_dp
     !-------Main Monte Carlo Simulation Loop-------
     do iCycle = 1, nCycles
+
+      !-----Start Move Loop
       do iMoves = 1, nMoves
         call Moves(1) % Move % FullMove(BoxArray(1)%box, accept)
         avgE = avgE + BoxArray(1)%box%ETotal
         cnt = cnt + 1E0_dp
-      enddo
+
+        if( allocated(AnalysisArray) ) then
+          do i = 1, size(AnalysisArray)
+            if(AnalysisArray(i)%func%perMove) then
+              if(mod(iCycle, AnalysisArray(i)%func%UpdateFreq) == 0) then
+                call AnalysisArray(i) % func % Compute(accept)
+              endif
+            endif
+          enddo
+        endif
+
+      enddo 
+      !------End Move Loop
+
       if(mod(iCycle, 100) == 0) then
         write(*,*) iCycle, BoxArray(1)%box%ETotal, Moves(1)%Move%GetAcceptRate()
       endif
@@ -57,6 +72,16 @@
         call Moves(1) % Move % Maintenance
       endif
 
+      if( allocated(AnalysisArray) ) then
+        do i = 1, size(AnalysisArray)
+          if(.not. AnalysisArray(i)%func%perMove) then
+            if(mod(iCycle, AnalysisArray(i)%func%UpdateFreq) == 0) then
+              call AnalysisArray(i) % func % Compute(accept)
+            endif
+          endif
+        enddo
+      endif
+ 
       if( allocated(TrajArray) ) then
         do i = 1, size(TrajArray)
           if(mod(iCycle, TrajArray(i)%traj%outfreq) == 0) then

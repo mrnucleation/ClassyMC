@@ -50,6 +50,7 @@ OBJ := $(CUR_DIR)/objects
 SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_BoxData.f90\
         		$(SRC)/Common_TrajData.f90\
+        		$(SRC)/Common_Analysis.f90\
         		$(SRC)/Common_ECalc.f90\
         		$(SRC)/Common_MolDef.f90\
         		$(SRC)/Common_Sampling.f90\
@@ -59,6 +60,8 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Sampling_Metropolis.f90\
         		$(SRC)/Move_AtomTranslation.f90\
         		$(SRC)/ExeptionHandling.f90\
+        		$(SRC)/Analysis_RDF.f90\
+        		$(SRC)/Analysis_ThermAverage.f90\
         		$(SRC)/Box_SimpleBox.f90\
         		$(SRC)/Box_CubicBox.f90\
         		$(SRC)/Box_OrthoBox.f90\
@@ -68,6 +71,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Cut_NoNei.f90\
         		$(SRC)/FF_Tersoff.f90\
+ 	        	$(SRC)/Script_AnalysisType.f90\
  	        	$(SRC)/Script_Forcefield.f90\
  	        	$(SRC)/Script_FieldType.f90\
  	        	$(SRC)/Script_NeighType.f90\
@@ -91,6 +95,7 @@ SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
 	              $(SRC)/Template_Forcefield.f90\
 								$(SRC)/Template_AcceptRule.f90\
 								$(SRC)/Template_NeighList.f90\
+								$(SRC)/Template_Analysis.f90\
 								$(SRC)/Template_Trajectory.f90\
                 $(SRC)/Template_MultiBoxMove.f90\
 								$(SRC)/Template_MoveClass.f90
@@ -188,12 +193,14 @@ removeExec:
 # ====================================
 $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Common_BoxData.o: $(OBJ)/Box_SimpleBox.o 
+$(OBJ)/Common_Analysis.o: $(OBJ)/Template_Analysis.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
 $(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Sampling_Metropolis.o
 
 $(OBJ)/Neigh_RSqList.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o $(OBJ)/Common_NeighList.o
 
 $(OBJ)/Template_Constraint.o: $(OBJ)/Template_SimBox.o 
+$(OBJ)/Template_Anaylsis.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_NeighList.o
 $(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o
 $(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/Box_SimpleBox.o
