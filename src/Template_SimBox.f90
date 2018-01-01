@@ -48,6 +48,7 @@ module Template_SimBox
       procedure, public, pass :: IOProcess
       procedure, public, pass :: DumpData
       procedure, public, pass :: GetThermo
+      procedure, public, pass :: ThermoLookUp
   end type
 !==========================================================================================
   contains
@@ -147,6 +148,31 @@ module Template_SimBox
     end select
 
   end function
+
+!==========================================================================================
+  function ThermoLookup(self, thermoStr) result(thermInt)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(SimBox), intent(in) :: self
+    character(len=30), intent(in) :: thermoStr
+    integer :: thermInt
+
+    select case(trim(adjustl(thermoStr)))
+      case("energy") !Energy
+        thermInt = 1
+      case("enthalpy") !Ethalpy
+        thermInt = 2
+      case("volume") !Volume
+        thermInt = 3
+      case("temperature") !Temperature
+        thermInt = 4
+      case("pressure") !Pressure
+        thermInt = 5
+    end select
+
+  end function
+
+
 !==========================================================================================
 end module
 !==========================================================================================

@@ -33,16 +33,35 @@ use VarPrecision
   end subroutine
 !=========================================================================
   subroutine Therm_ProcessIO(self, line)
-    use Input_Format, only: maxLineLen
+    use BoxData, only: BoxArray
+    use Input_Format, only: maxLineLen, GetXCommand
     implicit none
     class(ThermAverage), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
+    character(len=30) :: command
+    integer :: lineStat = 0
+    integer :: intVal
+
+    call GetXCommand(line, command, 2, lineStat)
+    read(command, *) intVal
+    self%boxNum = intVal
+
+    call GetXCommand(line, command, 3, lineStat)
+    self%thermNum = BoxArray(self%boxNum) % box % ThermoLookUp(command)
+    
+    call GetXCommand(line, command, 4, lineStat)
+    read(command, *) intVal
+    self%UpdateFreq = intVal
+
 
   end subroutine
 !=========================================================================
   subroutine Therm_WriteInfo(self)
+    use ParallelVar, only: nout
     implicit none
     class(ThermAverage), intent(inout) :: self
+
+    write(nout, *) "Thermo Average: ", self%GetResult()
   end subroutine
 !=========================================================================
   function Therm_GetResult(self) result(var)
