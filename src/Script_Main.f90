@@ -98,6 +98,7 @@
 !========================================================            
       subroutine setCommand(line, lineStat)
       use Units
+      use SimControl, only: nMoves, nCycles
       use VarPrecision
       use Common_MolInfo
       use ParallelVar
@@ -117,12 +118,16 @@
 
       call GetXCommand(line, command, 2, lineStat)
       select case(trim(adjustl(command)))
-!        case("cycles")
-!          read(line,*) dummy, command, realValue  
-!          nCycle = nint(realValue)
-!        case("moves")
-!          read(line,*) dummy, command, realValue        
-!          ncycle2 = nint(realValue)   
+        case("cycles")
+          call GetXCommand(line, command, 3, lineStat)
+          read(command, *) realValue  
+          nCycles = nint(realValue, kind=8)
+
+        case("moves")
+          call GetXCommand(line, command, 3, lineStat)
+          read(command, *) realValue  
+          nMoves = nint(realValue, kind=8)
+
 !        case("screenecho")
 !          read(line,*) dummy, command, logicValue
 !          screenEcho = logicValue

@@ -1,6 +1,8 @@
 #======================================
   set rng_seed -1
   set NeighSkin 2.0
+  set moves 1000
+  set cycles 1000
   SamplingType Metropolis
 
   forcefield testfield.txt

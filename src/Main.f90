@@ -2,10 +2,12 @@
   program Classy
     use VarPrecision
     use MPI
+    use SimControl, only: nMoves, nCycles
     use ParallelVar, only: myid, p_size, ierror, nout
     use ScriptInput, only: Script_ReadParameters
     use BoxData, only: BoxArray
     use TrajData, only: TrajArray
+!    use AnalysisData, only: AnalysisArray
     use MCMoveData, only: Moves
     use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ForcefieldData, only: EnergyCalculator
@@ -15,7 +17,8 @@
  
     logical :: accept
     integer :: i, j
-    integer :: nMoves, iAtom
+    integer :: iMoves, iAtom
+    integer(kind=8) :: iCycle, iMove
     real(dp) :: E_T, E_Final
     real(dp) :: avgE, cnt
     character(len=50) :: fileName
@@ -37,29 +40,32 @@
 
     avgE = 0E0_dp
     cnt = 0E0_dp
-    do nMoves = 1, nint(1d5)
-       call Moves(1) % Move % FullMove(BoxArray(1)%box, accept)
-       avgE = avgE + BoxArray(1)%box%ETotal
-       cnt = cnt + 1E0_dp
-       if(mod(nMoves, 1000) == 0) then
-         write(*,*) nMoves, BoxArray(1)%box%ETotal, Moves(1)%Move%GetAcceptRate()
-       endif
-       if(mod(nMoves, 1000) == 0) then
-         call BoxArray(1) % box % NeighList(1) % BuildList
-       endif
-       if(mod(nMoves, 100) == 0) then
-         call Moves(1) % Move % Maintenance
-       endif
+    !-------Main Monte Carlo Simulation Loop-------
+    do iCycle = 1, nCycles
+      do iMoves = 1, nMoves
+        call Moves(1) % Move % FullMove(BoxArray(1)%box, accept)
+        avgE = avgE + BoxArray(1)%box%ETotal
+        cnt = cnt + 1E0_dp
+      enddo
+      if(mod(iCycle, 100) == 0) then
+        write(*,*) iCycle, BoxArray(1)%box%ETotal, Moves(1)%Move%GetAcceptRate()
+      endif
+      if(mod(iCycle, 1000) == 0) then
+        call BoxArray(1) % box % NeighList(1) % BuildList
+      endif
+      if(mod(iCycle, 10) == 0) then
+        call Moves(1) % Move % Maintenance
+      endif
 
-       if( allocated(TrajArray) ) then
-         do i = 1, size(TrajArray)
-           if(mod(nMoves, TrajArray(i)%traj%outfreq) == 0) then
-             call TrajArray(i) % traj % WriteFrame
-           endif
-         enddo
-       endif
-
+      if( allocated(TrajArray) ) then
+        do i = 1, size(TrajArray)
+          if(mod(iCycle, TrajArray(i)%traj%outfreq) == 0) then
+            call TrajArray(i) % traj % WriteFrame
+          endif
+        enddo
+      endif
     enddo
+    !-------End of Main Monte Carlo Simulation Loop-------
     
     E_Final = BoxArray(1)%box%ETotal
     do i = 1, size(BoxArray)

@@ -17,6 +17,11 @@ module ParallelVar
   integer :: myid, p_size, ierror, tag, nout, seed
 end module  
 !======================================================
+module SimControl
+  integer(kind=8) :: nCycles = 0
+  integer(kind=8) :: nMoves = 0
+end module  
+!======================================================
 module Constants
   use VarPrecision
         
