@@ -24,6 +24,11 @@ contains
     enddo
 
     atmIndx = globIndx
+    if( nType == 1 ) then
+      return
+    endif
+
+  
     do iType = 1, nType-1
       atmIndx = atmIndx + (box%NMolMax(iType) - box%NMol(iType))*MolData(iType)%nAtoms
     enddo
