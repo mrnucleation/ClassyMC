@@ -32,9 +32,12 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
-  subroutine Therm_ProcessIO(self)
+  subroutine Therm_ProcessIO(self, line)
+    use Input_Format, only: maxLineLen
     implicit none
     class(ThermAverage), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line
+
   end subroutine
 !=========================================================================
   subroutine Therm_WriteInfo(self)

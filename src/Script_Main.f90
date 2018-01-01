@@ -9,6 +9,7 @@
       use ParallelVar
       use Units
       use Input_Forcefield
+      use Input_AnalysisType, only: Script_AnalysisType
       use Input_Sampling, only: Script_SamplingType
       use Input_NeighType, only: Script_NeighType
       use Input_Initialize, only: Script_Initialize
@@ -158,15 +159,19 @@
       end subroutine
 !========================================================            
       subroutine createCommand(iLine, linestore, lineBuffer, lineStat)
+      use AnalysisData, only: AnalysisArray
       use BoxData, only: BoxArray
       use TrajData, only: TrajArray
       use MCMoveData, only: Moves, MoveProb
       use ForcefieldData, only: EnergyCalculator, nForceFields
+
       use Input_SimBoxes, only: Script_BoxType
       use Input_Forcefield, only: Script_FieldType
+      use Input_AnalysisType, only: Script_AnalysisType
       use Input_TrajType, only: Script_TrajType
       use Input_Moves, only: Script_MCMoves
       use Input_LoadCoords, only: Script_ReadCoordFile
+
       use VarPrecision
       use Units
       implicit none
@@ -239,6 +244,19 @@
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
              stop
            endif
+
+        case("analysis") 
+           if( .not. allocated(AnalysisArray) ) then
+             allocate(AnalysisArray(1:nItems), stat = AllocateStat)
+             do i = 1, nItems
+               curLine = iLine + i
+               call Script_AnalysisType(linestore(curLine), i, lineStat)
+             enddo   
+           else
+             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             stop
+           endif
+
         case("trajectory") 
            if( .not. allocated(TrajArray) ) then
              allocate(TrajArray(1:nItems), stat = AllocateStat)
@@ -250,6 +268,7 @@
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
              stop
            endif
+ 
         case default
           write(*,*) command
           lineStat = -1

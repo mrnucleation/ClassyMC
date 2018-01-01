@@ -35,6 +35,11 @@ contains
         return
     end select
 
+    if(lineStat == -1) then
+      return
+    endif
+
+    call AnalysisArray(AnaNum) % func % ProcessIO(line)
 
   end subroutine
 !================================================================================

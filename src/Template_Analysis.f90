@@ -34,9 +34,11 @@ use VarPrecision
     class(Analysis), intent(inout) :: self
   end subroutine
 !=========================================================================
-  subroutine ProcessIO(self)
+  subroutine ProcessIO(self, line)
+    use Input_Format, only: maxLineLen
     implicit none
     class(Analysis), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line
   end subroutine
 !=========================================================================
   subroutine WriteInfo(self)

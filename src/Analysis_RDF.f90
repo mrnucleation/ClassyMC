@@ -16,21 +16,20 @@ use VarPrecision
     real(dp), allocatable :: hist(:)
     real(dp), allocatable :: tempHist(:)
     contains
-      procedure, pass :: Initialize
-      procedure, pass :: Compute
-      procedure, pass :: Maintenance 
-      procedure, pass :: ProcessIO
-      procedure, pass :: WriteInfo
+      procedure, pass :: Initialize => RDF_Initialize
+      procedure, pass :: Compute => RDF_Compute
+      procedure, pass :: ProcessIO => RDF_ProcessIO
+      procedure, pass :: WriteInfo => RDF_WriteInfo
   end type
 
  contains
 !=========================================================================
-  subroutine Initialize(self)
+  subroutine RDF_Initialize(self)
     implicit none
     class(rdf), intent(in) :: self
   end subroutine
 !=========================================================================
-  subroutine Compute(self, accept)
+  subroutine RDF_Compute(self, accept)
     use BoxData, only: BoxArray
     implicit none
     class(rdf), intent(in) :: self
@@ -41,15 +40,14 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
-  subroutine Maintenance(self)
+  subroutine RDF_ProcessIO(self, line)
+    use Input_Format, only: maxLineLen
+    implicit none
     class(rdf), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line
   end subroutine
 !=========================================================================
-  subroutine ProcessIO(self)
-    class(rdf), intent(inout) :: self
-  end subroutine
-!=========================================================================
-  subroutine WriteInfo(self)
+  subroutine RDF_WriteInfo(self)
     class(rdf), intent(inout) :: self
   end subroutine
 !=========================================================================
