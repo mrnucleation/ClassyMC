@@ -128,9 +128,11 @@ module FF_Pair_LJ_Cut
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
 
         atmType2 = curbox % AtomType(jAtom)
+!        write(*,*) jAtom, atmType2
         ep = self % epsTable(atmType1, atmType2)
         sig_sq = self % sigTable(atmType1, atmType2)          
         rmin_ij = self % rMinTable(atmType1, atmType2)          
+!        write(*,*) "Blah2"
 
         rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)

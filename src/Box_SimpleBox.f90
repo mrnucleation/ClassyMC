@@ -115,12 +115,14 @@ module SimpleSimBox
         molIndx = molIndx + 1
         self%MolStartIndx(molIndx) = atmIndx + 1
         self%MolEndIndx(molIndx) = atmIndx + MolData(iType)%nAtoms 
+        write(*,*) atmIndx + 1, atmIndx + MolData(iType)%nAtoms
         do iAtom = 1, MolData(iType)%nAtoms
           atmIndx = atmIndx + 1
           self%MolType(atmIndx) = iType
           self%AtomType(atmIndx) = MolData(iType)%atomType(iAtom)
           self%MolIndx(atmIndx)  = molIndx
           self%SubIndx(atmIndx)  = iAtom
+          write(*,*) self%MolType(atmIndx), self%AtomType(atmIndx), self%MolIndx(atmIndx),self%SubIndx(atmIndx) 
         enddo
       enddo 
       self%TypeLast(iType) = atmIndx 

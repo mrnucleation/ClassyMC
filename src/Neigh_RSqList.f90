@@ -89,8 +89,8 @@ use Template_NeighList, only: NeighListDef
     implicit none
     class(SimpleBox), intent(inout) :: trialBox
     integer :: iList
-    integer :: iType, jType, iAtom, jAtom
-    integer :: iUp, iLow, jUp, jLow, molStart, jMolStart
+    integer :: iType, jType, iAtom, jAtom, j
+    integer :: iUp, iLow, jUp, jLow, molStart, jMolStart, jMolEnd
     real(dp) :: rx, ry, rz, rsq
 
 
@@ -103,22 +103,28 @@ use Template_NeighList, only: NeighListDef
     do iType = 1, nMolTypes
       iLow = trialBox%MolStartIndx(molStart)
       iUp = trialBox%MolEndIndx(trialBox%NMol(iType)) 
+      write(*,*) iLow, iUp
       do iAtom = iLow, iUp
         jMolStart = molStart
         do jType = iType, nMolTypes
           if(iType == jType) then
             if( trialBox%MolIndx(iAtom)+1 <= trialBox%NMol(iType)  ) then
               jLow = trialBox%MolStartIndx( trialBox%MolIndx(iAtom)+1 )
-              jUp  = trialBox%MolEndIndx( trialBox%NMol(jType) )
+              jUp  = trialBox%MolEndIndx(  trialBox%MolIndx(iAtom) + 1 + trialBox%NMol(jType) )
             else
               cycle
             endif
           else
-            jMolStart = trialBox%TypeFirst(jType)
-            jLow = trialBox%MolStartIndx( jMolStart )
-            jUp = trialBox%MolEndIndx(trialBox%NMol(jType)) 
+            jLow = trialBox%TypeFirst(jType)
+            jMolEnd = 1
+            do j = 1, jType
+              jMolEnd = jMolEnd + trialBox%NMolMax(j)
+            enddo
+            jUp = trialBox%MolEndIndx( jMolEnd )
           endif
+          write(*,*) jLow, jUp
           do jAtom = jLow, jUp
+!            write(*,*) iAtom, jAtom
             rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
             ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
             rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)

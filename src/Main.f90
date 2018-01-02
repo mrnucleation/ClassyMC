@@ -31,7 +31,7 @@
 
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % ComputeEnergy
-      call BoxArray(i) % box % BuildNeighList
+      call BoxArray(i) % box % NeighList(1) % BuildList
     enddo
 
     write(nout, *) "============================================"
