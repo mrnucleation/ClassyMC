@@ -61,13 +61,13 @@ module FF_Pair_LJ_Cut
 
     E_LJ = 0E0
     curbox%ETable = 0E0
-    do iAtom = 1, curbox%nAtoms-1
+    do iAtom = 1, curbox%nMaxAtoms-1
       atmType1 = curbox % AtomType(iAtom)
-      if( curbox%MolIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
         cycle
       endif
-      do jAtom = iAtom+1, curbox%nAtoms
-        if( curbox%MolIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then
+      do jAtom = iAtom+1, curbox%nMaxAtoms
+        if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then
           cycle
         endif
         atmType2 = curbox % AtomType(jAtom)

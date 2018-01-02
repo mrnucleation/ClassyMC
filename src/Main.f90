@@ -65,7 +65,7 @@
       if(mod(iCycle, 100) == 0) then
         write(*,*) iCycle, BoxArray(1)%box%ETotal, Moves(1)%Move%GetAcceptRate()
       endif
-      if(mod(iCycle, 1000) == 0) then
+      if(mod(iCycle, 100) == 0) then
         call BoxArray(1) % box % NeighList(1) % BuildList
       endif
       if(mod(iCycle, 10) == 0) then
@@ -95,6 +95,7 @@
     E_Final = BoxArray(1)%box%ETotal
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % ComputeEnergy
+      call BoxArray(i) % box % NeighList(1) % BuildList
     enddo
 
 

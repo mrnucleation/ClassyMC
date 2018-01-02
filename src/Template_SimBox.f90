@@ -14,7 +14,7 @@ module Template_SimBox
   !Sim Box Definition
   type, public :: SimBox
     character(len=15) :: boxStr = "Empty"
-    integer :: nAtoms
+    integer :: nAtoms, nMaxAtoms
     integer :: nDimension = 3
 
     !Thermodynamic Variables
@@ -28,7 +28,7 @@ module Template_SimBox
     integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
 
     integer, allocatable :: AtomType(:), MolType(:)
-    integer, allocatable :: MolIndx(:), SubIndx(:)
+    integer, allocatable :: MolIndx(:), MolSubIndx(:), SubIndx(:)
 
     integer, allocatable :: TypeFirst(:), TypeLast(:)
 

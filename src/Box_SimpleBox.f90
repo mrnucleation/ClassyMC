@@ -14,7 +14,7 @@ module SimpleSimBox
   type, public, extends(SimBox) :: SimpleBox
     integer :: boxID
     integer :: nTotal
-    integer :: nMaxAtoms
+!    integer :: nMaxAtoms
 
 !    real(dp), allocatable :: atoms(:,:)
 !    real(dp), allocatable :: ETable(:), dETable(:)
@@ -71,13 +71,13 @@ module SimpleSimBox
       self%nMaxAtoms = self%nMaxAtoms + self%NMolMax(iType)*MolData(iType)%nAtoms
       maxMol = maxMol + self%NMolMax(iType)
     enddo
-    write(*,*) "maxatoms", self%nMaxAtoms
+!    write(*,*) "maxatoms", self%nMaxAtoms
 
     self%nAtoms = 0
     do iType = 1, nMolTypes
       self%nAtoms = self%nAtoms + self%NMol(iType)*MolData(iType)%nAtoms
     enddo
-    write(*,*) "atoms", self%nAtoms
+!    write(*,*) "atoms", self%nAtoms
 
 
     !Allocate the position and energy related arrays. 
@@ -89,7 +89,9 @@ module SimpleSimBox
     allocate(self%AtomType(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%MolType(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%MolIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%MolSubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%SubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+
     allocate(self%MolStartIndx(1:maxMol), stat=AllocateStatus)
     allocate(self%MolEndIndx(1:maxMol), stat=AllocateStatus)
 
@@ -100,6 +102,7 @@ module SimpleSimBox
     self%AtomType = 0
     self%MolType = 0
     self%MolIndx = 0
+    self%MolSubIndx = 0
     self%SubIndx = 0
     self%MolStartIndx = 0
     self%MolEndIndx = 0
@@ -115,14 +118,15 @@ module SimpleSimBox
         molIndx = molIndx + 1
         self%MolStartIndx(molIndx) = atmIndx + 1
         self%MolEndIndx(molIndx) = atmIndx + MolData(iType)%nAtoms 
-        write(*,*) atmIndx + 1, atmIndx + MolData(iType)%nAtoms
+!        write(*,*) atmIndx + 1, atmIndx + MolData(iType)%nAtoms
         do iAtom = 1, MolData(iType)%nAtoms
           atmIndx = atmIndx + 1
           self%MolType(atmIndx) = iType
           self%AtomType(atmIndx) = MolData(iType)%atomType(iAtom)
           self%MolIndx(atmIndx)  = molIndx
+          self%MolSubIndx(atmIndx)  = iMol
           self%SubIndx(atmIndx)  = iAtom
-          write(*,*) self%MolType(atmIndx), self%AtomType(atmIndx), self%MolIndx(atmIndx),self%SubIndx(atmIndx) 
+!          write(*,*) self%MolType(atmIndx), self%AtomType(atmIndx), self%MolIndx(atmIndx),self%SubIndx(atmIndx) 
         enddo
       enddo 
       self%TypeLast(iType) = atmIndx 

@@ -16,14 +16,19 @@ module Traj_XYZ
     implicit none
     class(trajXYZ), intent(in) :: self
     integer :: iAtom, jDim, boxNum
-    integer :: nDim, atomType
+    integer :: nDim, atomType, molType
 
     boxNum = self%boxNum
     nDim = BoxArray(boxNum)%box%nDimension
 
     write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
     write(self%fileUnit, *) 
-    do iAtom = 1, BoxArray(boxNum)%box%nAtoms
+    do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
+
+      molType = BoxArray(boxNum)%box%MolType(iAtom)
+      if(BoxArray(boxNum)%box%NMol(molType) < BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
+        cycle
+      endif
       atomType = BoxArray(boxNum)%box%AtomType(iAtom)
       write(self%fileUnit, *) AtomData(atomType)%symb, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
     enddo

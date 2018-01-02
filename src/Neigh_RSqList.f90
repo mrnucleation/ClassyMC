@@ -57,8 +57,8 @@ use Template_NeighList, only: NeighListDef
       endif
     endif
 
-    allocate( self%list(1:self%maxNei, 1:self%parent%nAtoms), stat=AllocateStatus )
-    allocate( self%nNeigh(1:self%parent%nAtoms), stat=AllocateStatus )
+    allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
+    allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
 
     self%list = 0
     self%nNeigh = 0 
@@ -101,28 +101,30 @@ use Template_NeighList, only: NeighListDef
 
     molStart = 1
     do iType = 1, nMolTypes
+!      write(*,*) "molstart", molStart
       iLow = trialBox%MolStartIndx(molStart)
-      iUp = trialBox%MolEndIndx(trialBox%NMol(iType)) 
-      write(*,*) iLow, iUp
+      iUp = trialBox%MolEndIndx(molStart + trialBox%NMol(iType) - 1) 
+!          write(*,*) "i", iType, iLow, iUp
       do iAtom = iLow, iUp
         jMolStart = molStart
         do jType = iType, nMolTypes
+          jMolEnd = 1
+          do j = 1, jType-1
+            jMolEnd = jMolEnd + trialBox%NMolMax(j)
+          enddo 
           if(iType == jType) then
-            if( trialBox%MolIndx(iAtom)+1 <= trialBox%NMol(iType)  ) then
+            if( trialBox%MolIndx(iAtom)+1 <= jMolEnd + trialBox%NMol(iType) -1  ) then
               jLow = trialBox%MolStartIndx( trialBox%MolIndx(iAtom)+1 )
-              jUp  = trialBox%MolEndIndx(  trialBox%MolIndx(iAtom) + 1 + trialBox%NMol(jType) )
             else
               cycle
             endif
           else
             jLow = trialBox%TypeFirst(jType)
-            jMolEnd = 1
-            do j = 1, jType
-              jMolEnd = jMolEnd + trialBox%NMolMax(j)
-            enddo
-            jUp = trialBox%MolEndIndx( jMolEnd )
           endif
-          write(*,*) jLow, jUp
+          jUp = trialBox%MolEndIndx( jMolEnd + trialBox%NMol(jType) - 1 )
+ 
+!          write(*,*) "i", iType, iLow, iUp
+!          write(*,*) "j", jType, jLow, jUp
           do jAtom = jLow, jUp
 !            write(*,*) iAtom, jAtom
             rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
@@ -132,7 +134,14 @@ use Template_NeighList, only: NeighListDef
             rsq = rx*rx + ry*ry + rz*rz
             do iList = 1, size(trialBox%NeighList)
               if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
-
+!                write(*,*) "NEIGH"
+!                if(trialBox%NeighList(iList)%nNeigh(iAtom) > trialBox%NeighList(iList)%maxNei) then
+!                  write(*,*) "ERROR! NeighList Overflow!"
+!                endif
+!                if(trialBox%NeighList(iList)%nNeigh(jAtom) > trialBox%NeighList(iList)%maxNei) then
+!                  write(*,*) "ERROR! NeighList Overflow!"
+!                endif
+ 
                 trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
                 trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
 
@@ -144,7 +153,7 @@ use Template_NeighList, only: NeighListDef
         enddo
       enddo  
 
-      molStart = molStart + trialBox%NMolMax(iType)
+      molStart = molStart + trialBox%NMolMax(iType) 
     enddo
 
 
