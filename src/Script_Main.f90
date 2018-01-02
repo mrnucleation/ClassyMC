@@ -98,13 +98,14 @@
       end subroutine
 !========================================================            
       subroutine setCommand(line, lineStat)
-      use Units
       use SimControl, only: nMoves, nCycles
       use VarPrecision
       use Common_MolInfo
       use ParallelVar
       use Common_NeighData
       use RandomGen, only: initSeed
+      use Units, only: outEngUnit, outLenUnit, outAngUnit,  &
+                       FindEngUnit, FindLengthUnit, FindAngularUnit
       implicit none
       character(len=maxLineLen), intent(in) :: line      
       integer, intent(out) :: lineStat
@@ -138,13 +139,17 @@
           read(command2,*) intValue
           initSeed = intValue
 
-!        case("out_energyunits")
-!          read(line,*) dummy, command, outputEngUnits
-!          outputEConv = FindEngUnit(outputEngUnits)
+        case("energyunits")
+          call GetXCommand(line, command2, 3, lineStat)
+          outEngUnit = FindEngUnit(command2)
 
-!        case("out_distunits")
-!          read(line,*) dummy, command, outputLenUnits   
-!          outputLenConv = FindLengthUnit(outputLenUnits)
+        case("distunits")
+          call GetXCommand(line, command2, 3, lineStat)
+          outLenUnit = FindLengthUnit(command2)
+
+        case("angleunits")
+          call GetXCommand(line, command2, 3, lineStat)
+          outAngUnit = FindAngularUnit(command2)
 
         case("neighskin")
           call GetXCommand(line, command2, 3, lineStat)

@@ -22,6 +22,9 @@ end module
 !===================================================================      
 module Units
   use VarPrecision
+  real(dp) :: outEngUnit = 1E0_dp
+  real(dp) :: outLenUnit = 1E0_dp
+  real(dp) :: outAngUnit = 1E0_dp
   contains
         
 !     !----------------------------------------------------------

@@ -105,6 +105,10 @@ use VarPrecision
     call MPI_REDUCE(self%varSum, dummy, 1, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror) 
 
+    dummy = self%varSumSq
+    call MPI_REDUCE(self%varSumSq, dummy, 1, &
+                    MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror) 
+
     dummy = self%nSamp
     call MPI_REDUCE(self%nSamp, dummy, 1, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror) 
