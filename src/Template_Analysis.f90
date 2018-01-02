@@ -25,7 +25,7 @@ use VarPrecision
 !=========================================================================
   subroutine Compute(self, accept)
     implicit none
-    class(Analysis), intent(in) :: self
+    class(Analysis), intent(inout) :: self
     logical, intent(in) :: accept
   end subroutine
 !=========================================================================

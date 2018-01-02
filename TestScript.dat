@@ -1,7 +1,7 @@
 #======================================
   set rng_seed -1
   set NeighSkin 2.0
-  set moves 1000
+  set moves 1
   set cycles 1000
   SamplingType Metropolis
 
@@ -17,6 +17,12 @@
   Create moves
     atomtranslation 1.0
   End_Create
+
+  Create analysis
+    ThermoAverage 1 energy 1
+  End_Create
+
+
 
 #  Create trajectory
 #    xyz 1 1000 "Traj.xyz"

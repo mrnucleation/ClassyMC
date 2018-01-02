@@ -32,7 +32,7 @@ use VarPrecision
   subroutine RDF_Compute(self, accept)
     use BoxData, only: BoxArray
     implicit none
-    class(rdf), intent(in) :: self
+    class(rdf), intent(inout) :: self
     logical, intent(in) :: accept
  
     integer :: iAtom, jAtom

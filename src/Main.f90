@@ -97,12 +97,22 @@
       call BoxArray(i) % box % ComputeEnergy
     enddo
 
+
+
+
     write(nout, *) "Culmative Energy:", E_Final
     write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
     write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal
     write(nout, *) "Average Energy:", avgE/cnt
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
+
+    if( allocated(AnalysisArray) ) then
+      do i = 1, size(AnalysisArray)
+        call AnalysisArray(i) % func % Finalize
+      enddo
+    endif
+
     call Output_DumpData
     write(nout, *) "Finished!"
     close(nout)
