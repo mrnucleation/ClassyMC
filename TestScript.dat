@@ -1,8 +1,8 @@
 #======================================
   set rng_seed -1
   set NeighSkin 2.0
-  set moves 1
-  set cycles 1000
+  set moves 100
+  set cycles 100000
   SamplingType Metropolis
 
   forcefield testfield.txt
@@ -22,14 +22,12 @@
     ThermoAverage 1 energy 1
   End_Create
 
-
-
-#  Create trajectory
-#    xyz 1 1000 "Traj.xyz"
-#  End_Create
-
+  Create trajectory
+    xyz 1 1000 "Traj.xyz"
+  End_Create
 
   modify box 1 energycalc 1
   modify box 1 temperature 0.8
 #  modify box 1 boxlength 7.0
-#======================================
+#
+#=====================================
