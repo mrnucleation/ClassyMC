@@ -153,6 +153,7 @@ module SimpleSimBox
 !==========================================================================================
   subroutine Simplebox_LoadAtomCoord(self, line, lineStat)
 !    use Box_Utility, only: FindMolecule
+    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(SimpleBox), intent(inout) :: self
     character(len=*), intent(in) :: line
@@ -169,8 +170,15 @@ module SimpleSimBox
 
     read(line, *) molType, molIndx, atmIndx, x, y ,z
 
+    if(molType > nMolTypes) then
+      write(*,*) "ERROR! Type Index out of bounds!"
+      write(*,*) molType, molIndx, atmIndx
+      lineStat = -1
+      return
+    endif
+
     if( molIndx > self%NMolMax(molType) ) then
-      write(*,*) "ERROR! Index out of bounds!"
+      write(*,*) "ERROR! Molecule Index out of bounds!"
       write(*,*) molType, molIndx, atmIndx
       lineStat = -1
       return

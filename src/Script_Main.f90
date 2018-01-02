@@ -222,20 +222,20 @@
              stop
            endif
 
-        case("energyfunctions")
-           if( .not. allocated(EnergyCalculator) ) then
-             nForceFields = nItems
-             allocate(EnergyCalculator(1:nItems), stat = AllocateStat)
-             do i = 1, nItems
-               curLine = iLine + i
-               call Script_FieldType(linestore(curLine), i, lineStat)
-               call EnergyCalculator(i)%Method%Constructor
-             enddo   
-           else
-             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
-             stop
-           endif
-
+!        case("energyfunctions")
+!           if( .not. allocated(EnergyCalculator) ) then
+!             nForceFields = nItems
+!             allocate(EnergyCalculator(1:nItems), stat = AllocateStat)
+!             do i = 1, nItems
+!               curLine = iLine + i
+!               call Script_FieldType(linestore(curLine), i, lineStat)
+!               call EnergyCalculator(i)%Method%Constructor
+!             enddo   
+!           else
+!             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+!             stop
+!           endif
+!
         case("moves") 
            if( .not. allocated(Moves) ) then
              nForceFields = nItems
@@ -246,7 +246,7 @@
                call Script_MCMoves(linestore(curLine), i, lineStat)
              enddo   
            else
-             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             write(*,*) "ERROR! The create moves command has already been used and can not be called twice"
              stop
            endif
 
@@ -258,7 +258,7 @@
                call Script_AnalysisType(linestore(curLine), i, lineStat)
              enddo   
            else
-             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             write(*,*) "ERROR! The create analysis command has already been used and can not be called twice"
              stop
            endif
 
@@ -270,7 +270,7 @@
                call Script_TrajType(linestore(curLine), i, lineStat)
              enddo   
            else
-             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             write(*,*) "ERROR! The create trajectory command has already been used and can not be called twice"
              stop
            endif
  

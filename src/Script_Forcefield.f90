@@ -93,6 +93,11 @@ module Input_Forcefield
           call FindCommandBlock(iLine, lineStore, "end_molecule", lineBuffer)
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
           read(val, *) intValue
+          if(intValue > nMolTypes) then
+            write(*,*) "ERROR! Molecule index out of bounds in the forcefield file!"
+            write(*,*) "Index Called: ", intValue
+            stop
+          endif
           call Script_ReadMolDef( lineStore(iLine+1:iLine+lineBuffer-1), intValue, lineStat )
 
         case("moleculetypes")
