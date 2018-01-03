@@ -49,7 +49,7 @@ use VarPrecision
     enddo
 
     self%disp(1)%newAtom = .true.
-    self%disp(1)%removeAtom = .true.
+    self%disp(1)%oldAtom = .false.
     self%disp(1)%oldType = oldType
     self%disp(1)%atmType = newType
 
