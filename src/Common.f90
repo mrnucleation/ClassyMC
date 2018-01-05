@@ -9,6 +9,8 @@ module CoordinateTypes
 
     logical :: oldAtom = .false.
     integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
+
+    logical :: newList = .false.
   end type
 
 end module

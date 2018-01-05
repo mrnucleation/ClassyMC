@@ -25,33 +25,46 @@ use VarPrecision
 !=========================================================================
   subroutine AtomExchange_FullMove(self, trialBox)
     use Common_MolDef, only: nAtomTypes
-    use Box_Utility, only: FindAtom
+    use Box_Utility, only: FindAtom, FindFirstEmptyMol
     implicit none
     class(AtomExchange), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical :: accept
-    integer :: nAtom, reduIndx, newtype
+    integer :: nAtom, nAtomNew, reduIndx, newtype
+    real(dp) :: OldProb, NewProb
 
 
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
-    !Choose 
+    ! Choose 
     reduIndx = floor( trialBox%nTotal * grnd() + 1E0_dp)
+    call FindAtom(trialBox, reduIndx, nAtom)
+    oldtype = trialBox%AtomType(nAtom)
     if(trialBox%NMolMin(oldtype) > trialBox%NMol(oldtype)-1) then
       return
     endif
-    call FindAtom(trialBox, reduIndx, nAtom)
-    oldtype = trialBox%AtomType(nAtom)
 
     newtype = oldtype
     do while(newtype == oldtype)
       newtype = floor( trialBox% * grnd() + 1E0_dp)
     enddo
+    if(trialBox%NMolMax(oldtype) < trialBox%NMol(oldtype)+1) then
+      return
+    endif
+    call FindFirstEmptyMol(box, newtype, nAtomNew)
 
     self%disp(1)%newAtom = .true.
-    self%disp(1)%oldAtom = .false.
-    self%disp(1)%oldType = oldType
     self%disp(1)%atmType = newType
+    self%disp(1)%MolIndx = nAtomNew
+    self%disp(1)%atmIndx = nAtomNew
+    self%disp(1)%x_new = trialBox%atoms(1, nAtom)
+    self%disp(1)%y_new = trialBox%atoms(2, nAtom)
+    self%disp(1)%z_new = trialBox%atoms(3, nAtom)
+
+    self%disp(1)%oldAtom = .false.
+    self%disp(1)%oldMolType = oldType
+    self%disp(1)%oldMolIndx = nAtom
+    self%disp(1)%oldAtmIndx = nAtom
 
     accept = trialBox % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then

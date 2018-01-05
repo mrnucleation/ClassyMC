@@ -223,12 +223,12 @@ module FF_Pair_LJ_Cut
     enddo
   end subroutine
   !=====================================================================
-  subroutine Old_LJ_Cut(self, curbox, atmIndx, E_Diff)
+  subroutine Old_LJ_Cut(self, curbox, disp, E_Diff)
     implicit none
     class(Pair_LJ_Cut), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
+    type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
-    integer, intent(in) :: atmIndx(:)
     integer :: iIndx, iAtom, jAtom, remLen
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
@@ -236,19 +236,18 @@ module FF_Pair_LJ_Cut
     real(dp) :: LJ
     real(dp) :: rmin_ij      
 
-    remLen = size(atmIndx)
+    remLen = size(disp)
     E_Diff = 0E0_dp
     curbox%dETable = 0E0_dp
 
 
     do iIndx = 1, remLen
-      iAtom = atmIndx(iIndx)
       atmType1 = curbox % AtomType(iAtom)
       do jAtom = 1, curbox % nAtoms        
         atmType1 = curbox % AtomType(jAtom)
         ep = self % epsTable(atmType1,atmType2)
         sig_sq = self % sigTable(atmType1,atmType2)          
-        rmin_ij = self % rMinTable(atmType1,atmType2)          
+!        rmin_ij = self % rMinTable(atmType1,atmType2)          
 
         rx = curbox % atoms(1, iAtom) - curbox % atoms(1, jAtom)
         ry = curbox % atoms(2, iAtom) - curbox % atoms(2, jAtom)
