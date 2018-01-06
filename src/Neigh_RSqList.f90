@@ -166,16 +166,16 @@ use Template_NeighList, only: NeighListDef
     integer, intent(in) :: molIndx, topIndx
     integer :: iAtom, iNei, jNei, nType
     integer :: nStart, topStart
-    integer :: atmIndx, topIndx
+    integer :: atmIndx, topAtom
     integer :: curNei1, curNei2 
 
-    nStart = parent % MolStartIndx(molIndx)
-    topStart = parent % MolStartIndx(topIndx)
-    nType = parent % MolType(nStart)
+    nStart = self % parent % MolStartIndx(molIndx)
+    topStart = self % parent % MolStartIndx(topIndx)
+    nType = self % parent % MolType(nStart)
 
     do iAtom = 1, MolData(nType)%nAtoms
       atmIndx = nStart + iAtom - 1
-      topIndx = topStart + iAtom - 1
+      topAtom = topStart + iAtom - 1
       do iNei = 1, self % nNeigh(atmIndx)
         curNei1 = self % list(iNei, atmIndx)
         do jNei = 1, self % nNeigh(curNei1)

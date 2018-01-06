@@ -82,6 +82,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Script_Initialize.f90\
 	        	$(SRC)/Script_MCMoves.f90\
 	        	$(SRC)/Script_SimBoxes.f90\
+	        	$(SRC)/SearchAlgorithms.f90\
 	        	$(SRC)/Output_DumpCoords.f90\
 	        	$(SRC)/Traj_XYZFormat.f90\
 						$(SRC)/Input_Format.f90\

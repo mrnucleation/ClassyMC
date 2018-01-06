@@ -456,7 +456,7 @@ end subroutine
     enddo
 
     do iList = 1, size(self%NeighList)
-      call self % NeighList(iList) % DeleteMol(molIndx)
+      call self % NeighList(iList) % DeleteMol(molIndx, lastMol)
     enddo
 
   end subroutine
