@@ -11,6 +11,7 @@ use CoordinateTypes, only: Displacement
   end interface
 
   type, public :: NeighListDef
+      logical :: Sorted = .false.
       logical :: Strict = .false.
       integer, allocatable :: list(:,:)
       integer, allocatable :: nNeigh(:)

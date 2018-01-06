@@ -20,6 +20,7 @@ module Template_SimBox
     !Thermodynamic Variables
     real(dp) :: ETotal, HTotal
     real(dp) :: beta, temperature, pressure, volume
+    real(dp), allocatable :: chempot(:)
 
     real(dp), allocatable :: ETable(:), dETable(:)
     real(dp), allocatable :: atoms(:,:)

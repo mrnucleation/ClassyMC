@@ -5,6 +5,7 @@
     use SimControl, only: nMoves, nCycles
     use ParallelVar, only: myid, p_size, ierror, nout
     use ScriptInput, only: Script_ReadParameters
+    use Debug, only: Debug_DumpNeiList
     use BoxData, only: BoxArray
     use TrajData, only: TrajArray
     use AnalysisData, only: AnalysisArray
@@ -34,6 +35,7 @@
       call BoxArray(i) % box % NeighList(1) % BuildList
     enddo
 
+    call Debug_DumpNeiList(1, 1, 1)
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
     write(nout, *) "============================================"
@@ -61,7 +63,7 @@
 
       enddo 
       !------End Move Loop
-
+      call Debug_DumpNeiList(1, 1, 1)
       if(mod(iCycle, 100) == 0) then
         write(*,*) iCycle, BoxArray(1)%box%ETotal, Moves(1)%Move%GetAcceptRate()
       endif
@@ -114,6 +116,7 @@
       enddo
     endif
 
+    call Debug_DumpNeiList(1, 1, 1)
     call Output_DumpData
     write(nout, *) "Finished!"
     close(nout)

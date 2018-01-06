@@ -56,9 +56,12 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_Sampling.f90\
         		$(SRC)/Common_MCMoves.f90\
         		$(SRC)/Common_NeighList.f90\
+        		$(SRC)/Debug.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
+	        	$(SRC)/SearchAlgorithms.f90\
         		$(SRC)/Sampling_Metropolis.f90\
         		$(SRC)/Move_AtomTranslation.f90\
+        		$(SRC)/Move_Delete.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/Analysis_RDF.f90\
         		$(SRC)/Analysis_ThermAverage.f90\
@@ -82,7 +85,6 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Script_Initialize.f90\
 	        	$(SRC)/Script_MCMoves.f90\
 	        	$(SRC)/Script_SimBoxes.f90\
-	        	$(SRC)/SearchAlgorithms.f90\
 	        	$(SRC)/Output_DumpCoords.f90\
 	        	$(SRC)/Traj_XYZFormat.f90\
 						$(SRC)/Input_Format.f90\

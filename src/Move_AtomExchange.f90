@@ -54,7 +54,7 @@ use VarPrecision
     call FindFirstEmptyMol(box, newtype, nAtomNew)
 
     self%disp(1)%newAtom = .true.
-    self%disp(1)%atmType = newType
+    self%disp(1)%MolType = newType
     self%disp(1)%MolIndx = nAtomNew
     self%disp(1)%atmIndx = nAtomNew
     self%disp(1)%x_new = trialBox%atoms(1, nAtom)

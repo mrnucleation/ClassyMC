@@ -4,6 +4,7 @@ module Input_Moves
   use Input_Format
   use MCMoveData, only: Moves, MoveProb
   use MCMove_AtomTranslation, only: AtomTranslate
+  use MCMove_Delete, only: MoveDelete
   contains
 !================================================================================
   subroutine Script_MCMoves(line, moveNum, lineStat)
@@ -28,6 +29,11 @@ module Input_Moves
         case("atomtranslation")
           allocate(AtomTranslate::Moves(moveNum)%move)
           MoveProb(moveNum) = realValue
+
+        case("debugdelete")
+          allocate(MoveDelete::Moves(moveNum)%move)
+          MoveProb(moveNum) = realValue
+
         case default
           lineStat = -1
       end select

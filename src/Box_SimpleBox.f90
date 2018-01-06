@@ -98,6 +98,8 @@ module SimpleSimBox
 
     allocate(self%TypeFirst(1:nMolTypes), stat=AllocateStatus)
     allocate(self%TypeLast(1:nMolTypes), stat=AllocateStatus)
+
+    allocate(self%chempot(1:nMolTypes), stat=AllocateStatus)
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
     self%AtomType = 0
@@ -110,6 +112,8 @@ module SimpleSimBox
 
     self%TypeFirst = 0
     self%TypeLast = 0
+
+    self%chempot = 0E0_dp
 
     atmIndx = 0
     molIndx = 0
@@ -456,9 +460,12 @@ end subroutine
     enddo
 
     do iList = 1, size(self%NeighList)
+      write(*,*) iList
       call self % NeighList(iList) % DeleteMol(molIndx, lastMol)
     enddo
 
+    self % NMol(nType) = self % NMol(nType) - 1 
+    self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
   end subroutine
 !==========================================================================================
 end module
