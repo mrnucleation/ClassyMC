@@ -23,6 +23,7 @@ use CoordinateTypes, only: Displacement
       procedure, pass :: Constructor
       procedure, pass :: BuildList
       procedure, pass :: GetNewList
+      procedure, pass :: DeleteMol
   end type
 
 !===================================================================================
@@ -49,6 +50,14 @@ use CoordinateTypes, only: Displacement
     real(dp), intent(out) :: newList(:)
 
     newList = 0E0_dp
+  end subroutine
+!===================================================================================
+  subroutine DeleteMol(self, molIndx, topIndx)
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+    integer, intent(in) :: molIndx, topIndx
+
+
   end subroutine
 !===================================================================================
 end module

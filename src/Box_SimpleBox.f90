@@ -45,6 +45,7 @@ module SimpleSimBox
       procedure, pass :: IOProcess => SimpleBox_IOProcess
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: DumpData => SimpleBox_DumpData
+      procedure, pass :: DeleteMol => SimpleBox_DeleteMol
   end type
 
 !==========================================================================================
@@ -424,6 +425,39 @@ end subroutine
 
 
     close(50)
+
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_DeleteMol(self, molIndx)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(in) :: molIndx
+    integer :: iList, iDimn, iAtom
+    integer :: lastMol, iType, nType
+    integer :: nStart, jStart
+
+    nStart = self % MolStartIndx(molIndx)
+    nType = self % MolType(nStart)
+
+    lastMol = 0
+    do iType = 1, nType-1
+      lastMol = lastMol + self%NMolMax(iType) 
+    enddo
+    lastMol = lastMol + self%NMol(nType)
+    jStart = self%MolStartIndx(lastMol)
+
+!     Take the top molecule from the atom array and move it's position in the deleted
+!     molecule's slot.
+    do iAtom = 1, MolData(nType) % nAtoms
+      do iDimn = 1, self%nDimension
+        self % atoms(iDimn, nStart+iAtom-1 ) = self % atoms(iDimn, jStart+iAtom-1 )
+      enddo
+    enddo
+
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % DeleteMol(molIndx)
+    enddo
 
   end subroutine
 !==========================================================================================

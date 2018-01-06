@@ -159,5 +159,37 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
+  subroutine RSqList_DeleteMol(self, molIndx, topIndx)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(RSqList), intent(inout) :: self
+    integer, intent(in) :: molIndx, topIndx
+    integer :: iAtom, iNei, jNei, nType
+    integer :: nStart, topStart
+    integer :: atmIndx, topIndx
+    integer :: curNei1, curNei2 
+
+    nStart = parent % MolStartIndx(molIndx)
+    topStart = parent % MolStartIndx(topIndx)
+    nType = parent % MolType(nStart)
+
+    do iAtom = 1, MolData(nType)%nAtoms
+      atmIndx = nStart + iAtom - 1
+      topIndx = topStart + iAtom - 1
+      do iNei = 1, self % nNeigh(atmIndx)
+        curNei1 = self % list(iNei, atmIndx)
+        do jNei = 1, self % nNeigh(curNei1)
+          curNei2 = self % list(jNei, curNei1)
+          if(curNei2 == atmIndx) then
+            self % list(jNei, curNei1) = topIndx
+          endif
+          
+        enddo
+
+      enddo
+    enddo
+
+  end subroutine
+!===================================================================================
 end module
 !===================================================================================
