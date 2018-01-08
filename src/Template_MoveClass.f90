@@ -7,7 +7,12 @@ use VarPrecision
     real(dp) :: atmps = 1E-30_dp
     real(dp) :: accpt = 0E0_dp
 
+    !Temporary Neighborlist Variables
+    integer, allocatable :: tempNnei(:)
+    integer, allocatable, target :: tempList(:, :)
+
     contains
+      procedure, pass :: Constructor
       procedure, pass :: GeneratePosition 
       procedure, pass :: FullMove
       procedure, pass :: GetAcceptRate
@@ -15,6 +20,11 @@ use VarPrecision
   end type
 
  contains
+!=========================================================================
+  subroutine Constructor(self)
+    implicit none
+    class(MCMove), intent(inout) :: self
+  end subroutine
 !=========================================================================
   subroutine GeneratePosition(self, disp)
     use CoordinateTypes, only: Displacement

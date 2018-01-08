@@ -75,7 +75,58 @@ use Template_NeighList, only: NeighListDef
     call Builder_RSq(self%parent)
   end subroutine
 !===================================================================================
-  subroutine RSqList_GetNewList(self, iDisp, disp)
+  subroutine RSqList_DeleteMol(self, molIndx, topIndx)
+    use Common_MolInfo, only: nMolTypes, MolData
+    use SearchSort, only: BinarySearch, SimpleSearch
+    implicit none
+    class(RSqList), intent(inout) :: self
+    integer, intent(in) :: molIndx, topIndx
+    integer :: iAtom, iNei, jNei, nType
+    integer :: nStart, topStart
+    integer :: atmIndx, topAtom
+    integer :: curNei, curIndx, nNei
+
+
+    nStart = self % parent % MolStartIndx(molIndx)
+    topStart = self % parent % MolStartIndx(topIndx)
+    nType = self % parent % MolType(nStart)
+
+    do iAtom = 1, MolData(nType)%nAtoms
+      atmIndx = nStart + iAtom - 1
+      topAtom = topStart + iAtom - 1
+      !Remove the deleted from the list of it's neighbors
+      do iNei = 1, self % nNeigh(atmIndx)
+        curNei = self % list(iNei, atmIndx)
+        nNei = self%nNeigh(curNei)
+        if(self%sorted) then
+          curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
+        else
+          curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
+        endif
+!        write(*,*) curIndx, self%list(curIndx, curNei)
+        self%list(1:nNei, curNei ) = [self%list(1:curIndx-1, curNei), &
+                                      self%list(curIndx+1:nNei, curNei) ]
+        self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
+      enddo
+
+      !Re-index the top atom to it's new location
+      do iNei = 1, self % nNeigh(topAtom)
+        curNei = self % list(iNei, topAtom)
+        nNei = self%nNeigh(curNei)
+        if(self%sorted) then
+          curIndx = BinarySearch( topAtom, self%list(1:nNei, curNei) )
+        else
+          curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
+        endif
+        self % list(curIndx, curNei) = atmIndx
+
+      enddo
+    enddo
+
+  end subroutine
+
+!===================================================================================
+  subroutine RSqList_GetNewList(self, iDisp, tempList, disp)
     use Common_NeighData, only: tempList
     implicit none
     class(RSqList), intent(inout) :: self
@@ -170,56 +221,6 @@ use Template_NeighList, only: NeighListDef
       molStart = molStart + trialBox%NMolMax(iType) 
     enddo
 
-
-  end subroutine
-!===================================================================================
-  subroutine RSqList_DeleteMol(self, molIndx, topIndx)
-    use Common_MolInfo, only: nMolTypes, MolData
-    use SearchSort, only: BinarySearch, SimpleSearch
-    implicit none
-    class(RSqList), intent(inout) :: self
-    integer, intent(in) :: molIndx, topIndx
-    integer :: iAtom, iNei, jNei, nType
-    integer :: nStart, topStart
-    integer :: atmIndx, topAtom
-    integer :: curNei, curIndx, nNei
-
-
-    nStart = self % parent % MolStartIndx(molIndx)
-    topStart = self % parent % MolStartIndx(topIndx)
-    nType = self % parent % MolType(nStart)
-
-    do iAtom = 1, MolData(nType)%nAtoms
-      atmIndx = nStart + iAtom - 1
-      topAtom = topStart + iAtom - 1
-      !Remove the deleted from the list of it's neighbors
-      do iNei = 1, self % nNeigh(atmIndx)
-        curNei = self % list(iNei, atmIndx)
-        nNei = self%nNeigh(curNei)
-        if(self%sorted) then
-          curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
-        else
-          curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
-        endif
-!        write(*,*) curIndx, self%list(curIndx, curNei)
-        self%list(1:nNei, curNei ) = [self%list(1:curIndx-1, curNei), &
-                                      self%list(curIndx+1:nNei, curNei) ]
-        self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
-      enddo
-
-      !Re-index the top atom to it's new location
-      do iNei = 1, self % nNeigh(topAtom)
-        curNei = self % list(iNei, topAtom)
-        nNei = self%nNeigh(curNei)
-        if(self%sorted) then
-          curIndx = BinarySearch( topAtom, self%list(1:nNei, curNei) )
-        else
-          curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
-        endif
-        self % list(curIndx, curNei) = atmIndx
-
-      enddo
-    enddo
 
   end subroutine
 !===================================================================================

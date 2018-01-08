@@ -10,6 +10,10 @@ use VarPrecision
 !    real(dp) :: accpt = 0E0_dp
     real(dp) :: max_dist = 0.05E0_dp
     type(Displacement) :: disp(1:1)
+
+!    integer :: tempNnei(:)
+!    integer, allocatable, target :: tempList(:, :)
+
     contains
       procedure, pass :: Constructor => AtomTrans_Constructor
       procedure, pass :: GeneratePosition => AtomTrans_GeneratePosition
@@ -21,10 +25,15 @@ use VarPrecision
  contains
 !========================================================
   subroutine AtomTrans_Constructor(self)
+    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(AtomTranslate), intent(inout) :: self
-    
-!    allocate(self%disp(1:
+!    integer :: iType, maxAtoms
+
+
+
+    allocate( self%tempNNei(1) )
+    allocate( self%tempList(1000, 1) )
   end subroutine
 !========================================================
   subroutine AtomTrans_GeneratePosition(self, disp)
