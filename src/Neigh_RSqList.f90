@@ -75,13 +75,25 @@ use Template_NeighList, only: NeighListDef
     call Builder_RSq(self%parent)
   end subroutine
 !===================================================================================
-  subroutine RSqList_GetNewList(self, disp, newList)
+  subroutine RSqList_GetNewList(self, iDisp, disp)
+    use Common_NeighData, only: tempList
     implicit none
     class(RSqList), intent(inout) :: self
-    type(Displacement), intent(in) :: disp
-    real(dp), intent(out) :: newList(:)
+    integer, intent(in) :: iDisp
+    type(Displacement), intent(inout) :: disp
+    integer :: iList
+    integer :: iType, jType, iAtom, jAtom, j
+    integer :: iUp, iLow, jUp, jLow, molStart, jMolStart, jMolEnd
+    real(dp) :: rx, ry, rz, rsq
 
-    newList = 0E0_dp
+
+
+    disp % newlist = .true.
+    disp % listIndex = iDisp
+
+    templist(:, iDisp) = 0
+    tempNNei(iDisp) = 0
+
   end subroutine
 !===================================================================================
 ! End Type Bound
@@ -199,7 +211,7 @@ use Template_NeighList, only: NeighListDef
       do iNei = 1, self % nNeigh(topAtom)
         curNei = self % list(iNei, topAtom)
         nNei = self%nNeigh(curNei)
-        if(self%sorted) then\
+        if(self%sorted) then
           curIndx = BinarySearch( topAtom, self%list(1:nNei, curNei) )
         else
           curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )

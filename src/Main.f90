@@ -40,16 +40,16 @@
     write(nout, *) "       Simulation Start!"
     write(nout, *) "============================================"
 
-    avgE = 0E0_dp
-    cnt = 0E0_dp
+!    avgE = 0E0_dp
+!    cnt = 0E0_dp
     !-------Main Monte Carlo Simulation Loop-------
     do iCycle = 1, nCycles
 
       !-----Start Move Loop
       do iMoves = 1, nMoves
         call Moves(1) % Move % FullMove(BoxArray(1)%box, accept)
-        avgE = avgE + BoxArray(1)%box%ETotal
-        cnt = cnt + 1E0_dp
+!        avgE = avgE + BoxArray(1)%box%ETotal
+!        cnt = cnt + 1E0_dp
 
         if( allocated(AnalysisArray) ) then
           do i = 1, size(AnalysisArray)
@@ -106,7 +106,7 @@
     write(nout, *) "Culmative Energy:", E_Final
     write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
     write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal
-    write(nout, *) "Average Energy:", avgE/cnt
+!    write(nout, *) "Average Energy:", avgE/cnt
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
 

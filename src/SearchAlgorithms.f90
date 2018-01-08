@@ -57,7 +57,7 @@ contains
 
   end function
 !======================================
-  subroutine FloatOrder(startIndx, list)
+  subroutine BubbleSort(startIndx, list)
     implicit none
     integer, intent(in) :: startIndx
     real(dp), intent(inout) :: list(:)

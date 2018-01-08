@@ -6,11 +6,17 @@ module FF_Pair_Tersoff
   use VarPrecision
 
   type :: Tersoff2Body
-    real(dp) :: A, B, lam1, lam2, R, D
+    real(dp) :: A, B, lam1, lam2, R, D, beta
   end type
 
+  type :: Tersoff3Body
+    real(dp) :: h, lam3, c, d
+  end type
+
+
   type, extends(forcefield) :: Pair_Tersoff
-    type(Tersoff2Body), allocatable :: tersoffData(:,:)
+    type(Tersoff2Body), allocatable :: tersoffPair(:,:)
+    type(Tersoff3Body), allocatable :: tersoffAngle(:,:)
     real(dp), allocatable :: rMinTable(:,:)
 !    real(dp) :: rCut, rCutSq
     contains
@@ -21,15 +27,15 @@ module FF_Pair_Tersoff
       procedure, pass :: DetailedECalc => Detailed_Tersoff
       procedure, pass :: ShiftECalc_Single => Shift_Tersoff_Single
       procedure, pass :: ShiftECalc_Multi => Shift_Tersoff_Multi
-      procedure, pass :: SwapInECalc => SwapIn_Tersoff
-      procedure, pass :: SwapOutECalc => SwapOut_Tersoff
+      procedure, pass :: NewECalc => New_Tersoff
+      procedure, pass :: OldECalc => Old_Tersoff
       procedure, pass :: ReadParFile => ReadPar_Tersoff
       procedure, pass :: GetCutOff => GetCutOff_Tersoff
   end type
 
-!====================================================================================== 
+!================================================================================== 
   contains
-!====================================================================================== 
+!==================================================================================
   pure function Fc_Func(self, r, R_eq, D) result(val)
     use Constants, only: pi
     implicit none
@@ -46,7 +52,7 @@ module FF_Pair_Tersoff
     endif
 
  end function
-!======================================================================================      
+!===============================================================================      
    pure function gik_Func(self, theta, c, d, h) result(val)
     implicit none
     class(Pair_Tersoff), intent(in) :: self
@@ -425,7 +431,7 @@ module FF_Pair_Tersoff
    
   end subroutine
   !=====================================================================
-  subroutine SwapIn_Tersoff(self, curbox, disp, E_Diff)
+  subroutine New_Tersoff(self, curbox, disp, E_Diff)
     implicit none
       class(Pair_Tersoff), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
@@ -437,7 +443,7 @@ module FF_Pair_Tersoff
 
   end subroutine
   !=====================================================================
-  subroutine SwapOut_Tersoff(self, curbox, atmIndx, E_Diff)
+  subroutine Old_Tersoff(self, curbox, atmIndx, E_Diff)
     implicit none
       class(Pair_Tersoff), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
@@ -454,15 +460,73 @@ module FF_Pair_Tersoff
       E_Diff = 0E0
       curbox%dETable = 0E0
 
-  end subroutine
-  !=====================================================================
-  subroutine ReadPar_Tersoff(self, fileName)
+  end subroutine  
+!=====================================================================
+  subroutine ProcessIO_LJ_Cut(self, line)
+    use Common_MolInfo, only: nAtomTypes
+    use Input_Format, only: GetAllCommands, GetXCommand
     implicit none
-    class(Pair_Tersoff), intent(inout) :: self
-    character(len=*), intent(in) :: fileName
-    write(*,*) "Tersoff SAYING HELLO!!!"
+    class(Pair_LJ_Cut), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    character(len=30), allocatable :: parlist(:)
+    character(len=30) :: command
+    logical :: param = .false.
+    integer :: jType, lineStat
+    integer :: type1, type2, type3
+    real(dp) :: ep, sig, rCut
+  
+
+    call GetXCommand(line, command, 1, lineStat)
+
+    select case(trim(adjustl(command)))
+      case("rcut")
+        call GetXCommand(line, command, 2, lineStat)
+        read(command, *) rCut
+        self % rCut = rCut
+        self % rCutSq = rCut * rCut
+      case default
+        param = .true.
+    end select
+
+
+    if(param) then
+      call GetAllCommands(line, parlist, lineStat)
+      select case(size(parlist))
+        case(3)
+          read(line, *) type1, ep, sig
+          do jType = 1, nAtomTypes
+            if(jType == type1) then
+              self%epsTable(type1, jType) = 4E0_dp * ep
+              self%sigTable(type1, jType) = sig
+            else
+              self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
+              self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
+
+              self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
+              self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
+            endif
+          enddo
+        case(4)
+          read(line, *) type1, type2, ep, sig
+          self%epsTable(type1, type2) = 4E0_dp * ep
+          self%epsTable(type2, type1) = 4E0_dp * ep
+
+          self%sigTable(type1, type2) = sig
+          self%sigTable(type2, type1) = sig
+
+        case default
+          lineStat = -1
+      end select
+      if( allocated(parlist) ) then 
+        deallocate(parlist)
+      endif
+    endif
+
+
+!    deallocate(parlist)
   end subroutine
-  !=============================================================================+
+
+ !=============================================================================+
     function GetCutOff_Tersoff(self) result(rCut)
       implicit none
       class(Pair_Tersoff), intent(inout) :: self

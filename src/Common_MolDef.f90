@@ -53,6 +53,7 @@ module Common_MolInfo
   integer :: nAtomTypes = -1
   integer :: nBondTypes = -1
 
+  integer :: mostAtoms = -1
 
   type(MolDef), allocatable :: MolData(:)
   type(AtomDef), allocatable :: AtomData(:)

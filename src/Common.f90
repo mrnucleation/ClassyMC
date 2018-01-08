@@ -11,6 +11,7 @@ module CoordinateTypes
     integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
 
     logical :: newList = .false.
+    integer :: listIndex = -1
   end type
 
 end module
