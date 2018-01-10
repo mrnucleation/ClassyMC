@@ -123,27 +123,48 @@ use Template_NeighList, only: NeighListDef
       enddo
     enddo
 
+    self % sorted = .false.
+
   end subroutine
 
 !===================================================================================
-  subroutine RSqList_GetNewList(self, iDisp, tempList, disp)
-    use Common_NeighData, only: tempList
+  subroutine RSqList_GetNewList(self, iDisp, tempList, tempNNei, disp)
+    use Common_MolInfo, only: nMolTypes
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: iDisp
     type(Displacement), intent(inout) :: disp
-    integer :: iList
-    integer :: iType, jType, iAtom, jAtom, j
-    integer :: iUp, iLow, jUp, jLow, molStart, jMolStart, jMolEnd
+    integer, intent(inout) :: tempList(:,:), tempNNei(:)
+    integer :: jType, jAtom, j
+    integer :: jUp, jLow, molStart, molIndx
     real(dp) :: rx, ry, rz, rsq
-
-
 
     disp % newlist = .true.
     disp % listIndex = iDisp
+    molIndx = self%parent%MolIndx(disp%atmIndx)
 
     templist(:, iDisp) = 0
     tempNNei(iDisp) = 0
+
+    molStart = 1
+    do jType = 1, nMolTypes
+      jLow = self%parent%TypeFirst(jType)
+      jUp = self%parent%MolEndIndx( molStart + self%parent%NMol(jType) - 1 )
+      do jAtom = jLow, jUp
+        if(self%parent%MolIndx(jAtom) == molIndx) then
+          cycle
+        endif
+        rx = disp%x_new - self%parent%atoms(1, jAtom)
+        ry = disp%y_new - self%parent%atoms(2, jAtom)
+        rz = disp%z_new - self%parent%atoms(3, jAtom)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%rCutSq) then
+          tempNNei(iDisp) = tempNNei(iDisp) + 1
+          templist(tempNNei(iDisp), iDisp) = jAtom
+        endif
+      enddo
+      molStart = molStart + self%parent%NMolMax(jType)
+    enddo
 
   end subroutine
 !===================================================================================
@@ -199,14 +220,6 @@ use Template_NeighList, only: NeighListDef
             rsq = rx*rx + ry*ry + rz*rz
             do iList = 1, size(trialBox%NeighList)
               if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
-!                write(*,*) "NEIGH"
-!                if(trialBox%NeighList(iList)%nNeigh(iAtom) > trialBox%NeighList(iList)%maxNei) then
-!                  write(*,*) "ERROR! NeighList Overflow!"
-!                endif
-!                if(trialBox%NeighList(iList)%nNeigh(jAtom) > trialBox%NeighList(iList)%maxNei) then
-!                  write(*,*) "ERROR! NeighList Overflow!"
-!                endif
- 
                 trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
                 trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
 
@@ -222,6 +235,9 @@ use Template_NeighList, only: NeighListDef
     enddo
 
 
+    do iList = 1, size(trialBox%NeighList)
+      trialBox%NeighList(iList)%sorted = .true.
+    enddo
   end subroutine
 !===================================================================================
 end module

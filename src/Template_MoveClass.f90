@@ -9,7 +9,7 @@ use VarPrecision
 
     !Temporary Neighborlist Variables
     integer, allocatable :: tempNnei(:)
-    integer, allocatable, target :: tempList(:, :)
+    integer, allocatable :: tempList(:, :)
 
     contains
       procedure, pass :: Constructor

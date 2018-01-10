@@ -44,13 +44,13 @@ use CoordinateTypes, only: Displacement
 
   end subroutine
 !===================================================================================
-  subroutine GetNewList(self, disp, newList)
+  subroutine GetNewList(self, iDisp, tempList, tempNNei, disp)
     implicit none
     class(NeighListDef), intent(inout) :: self
-    type(Displacement), intent(in) :: disp
-    real(dp), intent(out) :: newList(:)
-
-    newList = 0E0_dp
+    integer, intent(in) :: iDisp
+    type(Displacement), intent(inout) :: disp
+    integer, intent(inout) :: tempList(:,:), tempNNei(:)
+ 
   end subroutine
 !===================================================================================
   subroutine DeleteMol(self, molIndx, topIndx)

@@ -5,7 +5,6 @@ contains
 !=================================================
   subroutine Script_Initialize
     use Common_MolInfo, only: MolData, nMolTypes, mostAtoms
-    use Common_NeighData, only: tempList
     use Exceptions, only: HardError
     use ParallelVar, only: p_size, myid, nout
     use BoxData, only: BoxArray
@@ -33,13 +32,13 @@ contains
     endif
 
     
-    do i = 1, nMolTypes
-      if(MolData(i)%nAtoms > mostAtoms) then
-        mostAtoms = MolData(i)%nAtoms 
-      endif
-    enddo
-    allocate(tempList(1:1000, 1:mostAtoms), stat=AllocateStat)
-    allocate(tempNNei(1:mostAtoms), stat=AllocateStat)
+!    do i = 1, nMolTypes
+!      if(MolData(i)%nAtoms > mostAtoms) then
+!        mostAtoms = MolData(i)%nAtoms 
+!      endif
+!    enddo
+!    allocate(tempList(1:1000, 1:mostAtoms), stat=AllocateStat)
+!    allocate(tempNNei(1:mostAtoms), stat=AllocateStat)
 
     !Box Initialization and Safety Checks
     do i = 1, size(BoxArray)
