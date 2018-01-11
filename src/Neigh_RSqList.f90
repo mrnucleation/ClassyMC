@@ -240,5 +240,78 @@ use Template_NeighList, only: NeighListDef
     enddo
   end subroutine
 !===================================================================================
+  subroutine UpdateList_RSq(trialBox, disp, tempList, tempNNei)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: trialBox
+    type(Displacement), intent(in) :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    integer :: iList
+    integer :: iType, jType, iAtom, jAtom, j
+    integer :: iUp, iLow, jUp, jLow, molStart, jMolStart, jMolEnd
+    real(dp) :: rx, ry, rz, rsq
+
+
+    do iList = 1, size(trialBox%NeighList)
+      trialBox%NeighList(iList)%nNeigh = 0
+      trialBox%NeighList(iList)%list = 0
+    enddo
+
+    molStart = 1
+    do iType = 1, nMolTypes
+!      write(*,*) "molstart", molStart
+      iLow = trialBox%MolStartIndx(molStart)
+      iUp = trialBox%MolEndIndx(molStart + trialBox%NMol(iType) - 1) 
+!          write(*,*) "i", iType, iLow, iUp
+      do iAtom = iLow, iUp
+        jMolStart = molStart
+        do jType = iType, nMolTypes
+          jMolEnd = 1
+          do j = 1, jType-1
+            jMolEnd = jMolEnd + trialBox%NMolMax(j)
+          enddo 
+          if(iType == jType) then
+            if( trialBox%MolIndx(iAtom)+1 <= jMolEnd + trialBox%NMol(iType) -1  ) then
+              jLow = trialBox%MolStartIndx( trialBox%MolIndx(iAtom)+1 )
+            else
+              cycle
+            endif
+          else
+            jLow = trialBox%TypeFirst(jType)
+          endif
+          jUp = trialBox%MolEndIndx( jMolEnd + trialBox%NMol(jType) - 1 )
+ 
+!          write(*,*) "i", iType, iLow, iUp
+!          write(*,*) "j", jType, jLow, jUp
+          do jAtom = jLow, jUp
+!            write(*,*) iAtom, jAtom
+            rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
+            ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
+            rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
+            call trialBox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            do iList = 1, size(trialBox%NeighList)
+              if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
+                trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
+                trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
+
+                trialBox%NeighList(iList)%nNeigh(jAtom) = trialBox%NeighList(iList)%nNeigh(jAtom) + 1
+                trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
+              endif
+            enddo        
+          enddo
+        enddo
+      enddo  
+
+      molStart = molStart + trialBox%NMolMax(iType) 
+    enddo
+
+
+    do iList = 1, size(trialBox%NeighList)
+      trialBox%NeighList(iList)%sorted = .true.
+    enddo
+  end subroutine
+
+!===================================================================================
 end module
 !===================================================================================
