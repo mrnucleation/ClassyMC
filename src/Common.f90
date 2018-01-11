@@ -18,6 +18,7 @@ end module
 !======================================================
 module ParallelVar
   integer :: myid, p_size, ierror, tag, nout, seed
+  integer :: paraMode = 1
 end module  
 !======================================================
 module SimControl
