@@ -45,6 +45,7 @@ module SimpleSimBox
       procedure, pass :: IOProcess => SimpleBox_IOProcess
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: DumpData => SimpleBox_DumpData
+      procedure, pass :: AddMol => SimpleBox_AddMol
       procedure, pass :: DeleteMol => SimpleBox_DeleteMol
   end type
 
@@ -432,6 +433,13 @@ end subroutine
 
   end subroutine
 !==========================================================================================
+  subroutine SimpleBox_AddMol(self)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+
+  end subroutine
+!======================================================
   subroutine SimpleBox_DeleteMol(self, molIndx)
     use Common_MolInfo, only: nMolTypes, MolData
     implicit none

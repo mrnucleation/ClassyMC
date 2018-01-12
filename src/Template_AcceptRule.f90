@@ -5,7 +5,9 @@ module AcceptRuleTemplate
 
   type, public :: acceptrule
     contains
-       procedure, pass :: makedecision
+       procedure, pass :: MakeDecision
+       procedure, pass :: Maintenance
+       procedure, pass :: ProcessIO
   end type
 !====================================================================
   contains
@@ -21,6 +23,20 @@ module AcceptRuleTemplate
 
     accept = .true.
   end function
+!====================================================================
+  subroutine Maintenance(self)
+    use Template_SimBox, only: SimBox
+    implicit none
+    class(acceptrule), intent(in) :: self
+
+  end subroutine
+!====================================================================
+  subroutine ProcessIO(self)
+    use Template_SimBox, only: SimBox
+    implicit none
+    class(acceptrule), intent(in) :: self
+
+  end subroutine
 !====================================================================
 end module
 !====================================================================

@@ -20,6 +20,8 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: Constructor => RSqList_Constructor 
       procedure, pass :: BuildList => RSqList_BuildList 
       procedure, pass :: GetNewList => RSqList_GetNewList
+      procedure, pass :: AddMol => RSqList_AddMol
+!      procedure, pass :: TransferList
       procedure, pass :: DeleteMol => RSqList_DeleteMol
   end type
 
@@ -73,6 +75,13 @@ use Template_NeighList, only: NeighListDef
     class(RSqList), intent(inout) :: self
 
     call Builder_RSq(self%parent)
+  end subroutine
+!===================================================================================
+  subroutine RSqList_AddMol(self, tempList, tempNNei)
+    implicit none
+    class(RSqList), intent(inout) :: self
+    integer, intent(inout) :: tempList(:,:), tempNNei(:)
+
   end subroutine
 !===================================================================================
   subroutine RSqList_DeleteMol(self, molIndx, topIndx)

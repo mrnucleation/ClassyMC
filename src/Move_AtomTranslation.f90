@@ -51,6 +51,7 @@ use VarPrecision
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
+    use Common_NeighData, only: neighSkin
     use Box_Utility, only: FindAtom
     implicit none
     class(AtomTranslate), intent(inout) :: self
@@ -79,6 +80,15 @@ use VarPrecision
     self%disp(1)%x_new = trialBox%atoms(1, nMove) + dx
     self%disp(1)%y_new = trialBox%atoms(2, nMove) + dy
     self%disp(1)%z_new = trialBox%atoms(3, nMove) + dz
+
+    !If the particle moved a large distance get a temporary neighborlist
+    if(any([dx,dy,dz] > neighSkin)) then
+      call trialBox % NeighList(1) % GetNewList(1, self%tempList, self%tempNNei, self%disp(1))
+      self%disp(1)%newlist = .true.
+    else
+      self%disp(1)%newlist = .false.
+      self%disp(1)%listIndex = nMove
+    endif
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%disp(1:1) )

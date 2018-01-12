@@ -24,6 +24,8 @@ use CoordinateTypes, only: Displacement
       procedure, pass :: Constructor
       procedure, pass :: BuildList
       procedure, pass :: GetNewList
+      procedure, pass :: AddMol
+      procedure, pass :: TransferList
       procedure, pass :: DeleteMol
   end type
 
@@ -51,6 +53,27 @@ use CoordinateTypes, only: Displacement
     type(Displacement), intent(inout) :: disp
     integer, intent(inout) :: tempList(:,:), tempNNei(:)
  
+  end subroutine
+!===================================================================================
+  subroutine AddMol(self, tempList, tempNNei)
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+    integer, intent(inout) :: tempList(:,:), tempNNei(:)
+
+
+  end subroutine
+!===================================================================================
+  subroutine TransferList(self, indx1, indx2)
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+    integer, intent(in) :: indx1, indx2
+    integer :: iNei
+
+    do iNei = 1, self%nNeigh(indx1)
+      self%list(iNei, indx2) = self%list(iNei, indx1)
+    enddo
+    self%nNeigh(indx2) = self%nNeigh(indx1)
+
   end subroutine
 !===================================================================================
   subroutine DeleteMol(self, molIndx, topIndx)

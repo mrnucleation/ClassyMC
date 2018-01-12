@@ -7,6 +7,8 @@ module MetropolisRule
   type, public, extends(acceptrule) :: metropolis
     contains
        procedure, pass :: MakeDecision => Metropolis_MakeDecision
+!       procedure, pass :: Maintenance => Metropolis_Maintenance
+!       procedure, pass :: ProcessIO => Metropolis_ProcessIO
   end type
 !====================================================================
   contains

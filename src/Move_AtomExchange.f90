@@ -2,8 +2,9 @@
 module Move_AtomExchange
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
+use MoveClassDef
 
-  type, public :: AtomExchange
+  type, public, extends(MCMove) :: AtomExchange
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
 
@@ -30,8 +31,9 @@ use VarPrecision
     class(AtomExchange), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical :: accept
+    integer :: i
     integer :: nAtom, nAtomNew, reduIndx, newtype
-    real(dp) :: OldProb, NewProb
+    real(dp) :: OldProb, NewProb, Prob
 
 
     self % atmps = self % atmps + 1E0_dp
@@ -66,18 +68,28 @@ use VarPrecision
     self%disp(1)%oldMolIndx = nAtom
     self%disp(1)%oldAtmIndx = nAtom
 
+    self%disp(1)%newlist = .false.
+    self%disp(1)%listIndx = nAtom
+
     accept = trialBox % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then
       return
     endif
 
-    call trialbox % EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
+    call trialbox % EFunc % Method % DiffECalc(trialBox, self%disp(1:1), E_Diff)
 
-    accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
+    NewProb = 1E0_dp / real(trialBox % NMol(newType) + 1, dp)
+    OldProb = 1E0_dp / real(trialBox % NMol(oldType), dp)
+    Prob = OldProb/NewProb
+
+    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%disp(1:1))
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:1))
+      do i = 1, size(trialBox%NeighList)
+        call trialBox % NeighList(i) % TransferList(nAtom, nAtomNew)
+      enddo
     endif
 
   end subroutine
