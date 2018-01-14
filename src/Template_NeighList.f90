@@ -65,13 +65,22 @@ use CoordinateTypes, only: Displacement
   end subroutine
 !===================================================================================
   subroutine TransferList(self, indx1, indx2)
+    use SearchSort, only: SimpleSearch, BinarySearch
     implicit none
     class(NeighListDef), intent(inout) :: self
     integer, intent(in) :: indx1, indx2
-    integer :: iNei
+    integer :: iNei, jAtom, bin
 
     do iNei = 1, self%nNeigh(indx1)
-      self%list(iNei, indx2) = self%list(iNei, indx1)
+      jAtom = self%list(iNei, indx1)
+      self%list(iNei, indx2) = jAtom
+      if(self%sorted) then
+        bin = BinarySearch(indx1, self%list(:,jAtom))
+        self%sorted = .false.
+      else
+        bin = SimpleSearch(indx1, self%list(:,jAtom))
+      endif
+      self%list(bin, jAtom) = indx2
     enddo
     self%nNeigh(indx2) = self%nNeigh(indx1)
 

@@ -48,6 +48,7 @@
       !-----Start Move Loop
       do iMoves = 1, nMoves
         call Moves(1) % Move % FullMove(BoxArray(1)%box, accept)
+        call Debug_DumpNeiList(1, 1, 1)
 !        avgE = avgE + BoxArray(1)%box%ETotal
 !        cnt = cnt + 1E0_dp
 

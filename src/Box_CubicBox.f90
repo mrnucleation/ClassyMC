@@ -181,7 +181,14 @@ module CubicBoxDef
         read(command, *) realVal
         self % temperature = realVal
         self % beta = 1E0_dp/realVal
- 
+
+      case("chempot")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call GetXCommand(line, command, 6, lineStat)
+        read(command, *) realVal
+        self % chempot(intVal) = realVal
+
       case default
         lineStat = -1
     end select

@@ -1,13 +1,14 @@
 !=========================================================================
 module Move_AtomExchange
 use SimpleSimBox, only: SimpleBox
+use CoordinateTypes, only: Displacement
 use VarPrecision
 use MoveClassDef
 
   type, public, extends(MCMove) :: AtomExchange
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-
+    type(displacement) :: disp(1:1)
     contains
       procedure, pass :: GeneratePosition => AtomExchange_GeneratePosition
       procedure, pass :: FullMove => AtomExchange_FullMove
@@ -24,20 +25,27 @@ use MoveClassDef
     type(Displacement), intent(inout) :: disp
   end subroutine
 !=========================================================================
-  subroutine AtomExchange_FullMove(self, trialBox)
-    use Common_MolDef, only: nAtomTypes
+  subroutine AtomExchange_FullMove(self, trialBox, accept)
+    use Common_MolInfo, only: nMolTypes
     use Box_Utility, only: FindAtom, FindFirstEmptyMol
+    use ForcefieldData, only: EnergyCalculator
+    use RandomGen, only: grnd
+    use CommonSampling, only: sampling
+    use Common_NeighData, only: neighSkin
+
     implicit none
     class(AtomExchange), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
-    logical :: accept
+    logical, intent(out) :: accept
     integer :: i
-    integer :: nAtom, nAtomNew, reduIndx, newtype
+    integer :: nAtom, nAtomNew, reduIndx, newtype, oldtype
     real(dp) :: OldProb, NewProb, Prob
+    real(dp) :: E_Diff
 
 
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
+
     ! Choose 
     reduIndx = floor( trialBox%nTotal * grnd() + 1E0_dp)
     call FindAtom(trialBox, reduIndx, nAtom)
@@ -48,12 +56,13 @@ use MoveClassDef
 
     newtype = oldtype
     do while(newtype == oldtype)
-      newtype = floor( trialBox% * grnd() + 1E0_dp)
+      newtype = floor( nMolTypes * grnd() + 1E0_dp)
     enddo
-    if(trialBox%NMolMax(oldtype) < trialBox%NMol(oldtype)+1) then
+
+    if(trialBox%NMolMax(newtype) < trialBox%NMol(newtype)+1) then
       return
     endif
-    call FindFirstEmptyMol(box, newtype, nAtomNew)
+    call FindFirstEmptyMol(trialBox, newtype, nAtomNew)
 
     self%disp(1)%newAtom = .true.
     self%disp(1)%MolType = newType
@@ -63,20 +72,20 @@ use MoveClassDef
     self%disp(1)%y_new = trialBox%atoms(2, nAtom)
     self%disp(1)%z_new = trialBox%atoms(3, nAtom)
 
-    self%disp(1)%oldAtom = .false.
+    self%disp(1)%oldAtom = .true.
     self%disp(1)%oldMolType = oldType
     self%disp(1)%oldMolIndx = nAtom
     self%disp(1)%oldAtmIndx = nAtom
 
     self%disp(1)%newlist = .false.
-    self%disp(1)%listIndx = nAtom
+    self%disp(1)%listIndex = nAtom
 
     accept = trialBox % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then
       return
     endif
 
-    call trialbox % EFunc % Method % DiffECalc(trialBox, self%disp(1:1), E_Diff)
+    call trialbox % EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff)
 
     NewProb = 1E0_dp / real(trialBox % NMol(newType) + 1, dp)
     OldProb = 1E0_dp / real(trialBox % NMol(oldType), dp)
@@ -88,7 +97,7 @@ use MoveClassDef
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % AddMol( self%disp(1)%molType )
       call trialBox % DeleteMol( self%disp(1)%oldMolIndx )
-      call trialBox % UpdatePosition( self%disp(1:1) )
+      call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
       do i = 1, size(trialBox%NeighList)
         call trialBox % NeighList(i) % TransferList(nAtom, nAtomNew)
       enddo

@@ -61,6 +61,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/SearchSort.f90\
         		$(SRC)/Sampling_Metropolis.f90\
         		$(SRC)/Move_AtomTranslation.f90\
+        		$(SRC)/Move_AtomExchange.f90\
         		$(SRC)/Move_Delete.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/Analysis_RDF.f90\
@@ -207,6 +208,7 @@ $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_
 $(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o
 $(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/Box_SimpleBox.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o
+$(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o
 
 $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o 
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o

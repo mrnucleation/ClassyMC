@@ -339,6 +339,13 @@ end subroutine
         self % temperature = realVal
         self % beta = 1E0_dp/realVal
 
+      case("chempot")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call GetXCommand(line, command, 6, lineStat)
+        read(command, *) realVal
+        self % chempot(intVal) = realVal
+
       case("neighcut")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
@@ -395,6 +402,7 @@ end subroutine
     integer, intent(in) :: molType
 
     self % NMol(molType) = self % NMol(molType) + 1
+    self % nAtoms = self % nAtoms + MolData(molType)%nAtoms
   end subroutine
 !======================================================
   subroutine SimpleBox_DeleteMol(self, molIndx)

@@ -116,18 +116,26 @@ module OrthoBoxDef
         read(command, *) intVal
         self % EFunc => EnergyCalculator(intVal)
 
-!      case("boxlength")
-!        call GetXCommand(line, command, 5, lineStat)
-!        read(command, *) realVal
-!        self % boxL = realVal
-!        self % boxL2 = realVal/2.0E0_dp
-!        write(*,*) "Box Length:", self%boxL
       case("temperature")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal
         self % temperature = realVal
         self % beta = 1E0_dp/realVal
- 
+
+      case("chempot")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call GetXCommand(line, command, 6, lineStat)
+        read(command, *) realVal
+        self % chempot(intVal) = realVal
+
+      case("neighcut")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call GetXCommand(line, command, 6, lineStat)
+        read(command, *) realVal
+        self % NeighList(intVal) % rCut = realVal
+
       case default
         lineStat = -1
     end select

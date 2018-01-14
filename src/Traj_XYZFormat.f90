@@ -35,7 +35,6 @@ module Traj_XYZ
     write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
     write(self%fileUnit, *) 
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
-
       molType = BoxArray(boxNum)%box%MolType(iAtom)
       atomType = BoxArray(boxNum)%box%AtomType(iAtom)
       if(BoxArray(boxNum)%box%NMol(molType) < BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
@@ -54,4 +53,9 @@ module Traj_XYZ
   end subroutine
 !====================================================================
 end module
+!====================================================================
+!Notes: If the padding flag is true, the function will write dummy coordinates as a placeholder
+!       for atoms which are not currently in the system, but have the potential of being added
+!       by a swap move.  This is done because some visualization software prefer to have a fixed
+!       number of atoms for each simulation frame. 
 !====================================================================
