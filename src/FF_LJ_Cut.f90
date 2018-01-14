@@ -189,7 +189,7 @@ module FF_Pair_LJ_Cut
     real(dp) :: rmin_ij      
 
     dispLen = size(disp)
-    E_Diff = 0E0
+    E_Diff = 0E0_dp
 
     do iDisp = 1, dispLen
       if(.not. disp(iDisp)%newAtom) then
@@ -207,15 +207,15 @@ module FF_Pair_LJ_Cut
       do jNei = 1, maxNei
 
         if(disp(iDisp)%newlist) then
-          jAtom = curbox%NeighList(1)%list(jNei, listIndx)
-        else
           jAtom = tempList(jNei, listIndx)
+        else
+          jAtom = curbox%NeighList(1)%list(jNei, listIndx)
         endif
 
         atmType2 = curbox % AtomType(jAtom)
         ep = self%epsTable(atmType1,atmType2)
         sig_sq = self%sigTable(atmType1,atmType2)          
-        rmin_ij = self%rMinTable(atmType1,atmType2)          
+!        rmin_ij = self%rMinTable(atmType1,atmType2)          
 
         rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)

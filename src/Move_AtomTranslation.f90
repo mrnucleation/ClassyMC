@@ -76,7 +76,14 @@ use VarPrecision
  
     self%disp(1)%newatom = .true.
     self%disp(1)%oldatom = .true.
+    self%disp(1)%molType = trialBox%MolType(nMove)
+    self%disp(1)%molIndx = trialBox%MolIndx(nMove)
     self%disp(1)%atmIndx = nMove
+
+    self%disp(1)%oldMolType = trialBox%MolType(nMove)
+    self%disp(1)%oldMolIndx = trialBox%MolIndx(nMove)
+    self%disp(1)%oldAtmIndx = nMove
+
     self%disp(1)%x_new = trialBox%atoms(1, nMove) + dx
     self%disp(1)%y_new = trialBox%atoms(2, nMove) + dy
     self%disp(1)%z_new = trialBox%atoms(3, nMove) + dz
@@ -98,7 +105,8 @@ use VarPrecision
 
     !Energy Calculation
     call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
-!    write(*,*) E_Diff
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff)
+    write(*,*) E_Diff
 
     !Accept/Reject
     accept = .false.
