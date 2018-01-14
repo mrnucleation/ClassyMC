@@ -205,11 +205,13 @@ module FF_Pair_LJ_Cut
       endif
 
       do jNei = 1, maxNei
-
         if(disp(iDisp)%newlist) then
           jAtom = tempList(jNei, listIndx)
         else
           jAtom = curbox%NeighList(1)%list(jNei, listIndx)
+        endif
+        if( any(jAtom == disp(:)%atmIndx) ) then
+          cycle
         endif
 
         atmType2 = curbox % AtomType(jAtom)
@@ -220,6 +222,7 @@ module FF_Pair_LJ_Cut
         rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
         rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
+        call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
           LJ = (sig_sq/rsq)
@@ -254,17 +257,19 @@ module FF_Pair_LJ_Cut
       iAtom = disp(iDisp)%oldAtmIndx
 
       atmType1 = curbox % AtomType(iAtom) 
+!      write(*,*) iDisp, atmType1
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
 
         atmType2 = curbox % AtomType(jAtom)
-        ep = self % epsTable(atmType1,atmType2)
-        sig_sq = self % sigTable(atmType1,atmType2)          
-!        rmin_ij = self % rMinTable(atmType1,atmType2)          
+        ep = self % epsTable(atmType1, atmType2)
+        sig_sq = self % sigTable(atmType1, atmType2)          
+!        rmin_ij = self % rMinTable(atmType1, atmType2)          
 
         rx = curbox % atoms(1, iAtom) - curbox % atoms(1, jAtom)
         ry = curbox % atoms(2, iAtom) - curbox % atoms(2, jAtom)
         rz = curbox % atoms(3, iAtom) - curbox % atoms(3, jAtom)
+        call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
           LJ = (sig_sq/rsq)

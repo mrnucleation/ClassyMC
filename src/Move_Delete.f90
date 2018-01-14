@@ -10,7 +10,7 @@ use VarPrecision
   type, public, extends(MCMove) :: MoveDelete
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-!    type(Displacement) :: disp(1:1)
+    type(Displacement) :: disp(1:1)
     contains
       procedure, pass :: Constructor => MoveDelete_Constructor
       procedure, pass :: GeneratePosition => MoveDelete_GeneratePosition
@@ -24,7 +24,10 @@ use VarPrecision
   subroutine MoveDelete_Constructor(self)
     implicit none
     class(MoveDelete), intent(inout) :: self
-    
+
+    allocate( self%tempNNei(1) )
+    allocate( self%tempList(1000, 1) )
+
   end subroutine
 !========================================================
   subroutine MoveDelete_GeneratePosition(self, disp)
@@ -51,7 +54,21 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
 
-    E_Diff = 0E0_dp
+    self%disp(1)%newAtom = .false.
+    self%disp(1)%MolType = 1
+    self%disp(1)%MolIndx = 3
+    self%disp(1)%atmIndx = 3
+
+    self%disp(1)%oldAtom = .true.
+    self%disp(1)%oldMolType = 1
+    self%disp(1)%oldMolIndx = 3
+    self%disp(1)%oldAtmIndx = 3
+
+    self%disp(1)%newlist = .false.
+    self%disp(1)%listIndex = 3
+
+    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff)
+
     write(*,*) "Delete"
 
     !Accept/Reject

@@ -75,11 +75,11 @@ use VarPrecision
     dz = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
  
     self%disp(1)%newatom = .true.
-    self%disp(1)%oldatom = .true.
     self%disp(1)%molType = trialBox%MolType(nMove)
     self%disp(1)%molIndx = trialBox%MolIndx(nMove)
     self%disp(1)%atmIndx = nMove
 
+    self%disp(1)%oldatom = .true.
     self%disp(1)%oldMolType = trialBox%MolType(nMove)
     self%disp(1)%oldMolIndx = trialBox%MolIndx(nMove)
     self%disp(1)%oldAtmIndx = nMove
@@ -104,9 +104,8 @@ use VarPrecision
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
-!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff)
-    write(*,*) E_Diff
+!    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
+    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff)
 
     !Accept/Reject
     accept = .false.
