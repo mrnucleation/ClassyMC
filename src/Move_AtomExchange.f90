@@ -86,7 +86,9 @@ use MoveClassDef
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-      call trialBox % UpdatePosition(self%disp(1:1))
+      call trialBox % AddMol( self%disp(1)%molType )
+      call trialBox % DeleteMol( self%disp(1)%oldMolIndx )
+      call trialBox % UpdatePosition( self%disp(1:1) )
       do i = 1, size(trialBox%NeighList)
         call trialBox % NeighList(i) % TransferList(nAtom, nAtomNew)
       enddo

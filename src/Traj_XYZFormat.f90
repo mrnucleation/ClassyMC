@@ -4,8 +4,19 @@ module Traj_XYZ
   use TrajectoryTemplate, only: trajectory
 
   type, public, extends(trajectory) :: trajXYZ
+    logical :: padding = .true.
+!    integer :: fileUnit = -1
+!    integer :: boxNum = -1
+!    integer :: outFreq = 5000
+!    character(len=50) :: fileName
     contains
        procedure, pass :: WriteFrame => TrajXYZ_WriteFrame
+!       procedure, pass :: SetUnit
+!       procedure, pass :: SetBox
+!       procedure, pass :: SetFileName
+!       procedure, pass :: SetFreq
+!       procedure, pass :: OpenFile
+!       procedure, pass :: CloseFile
   end type
 !====================================================================
   contains
@@ -26,11 +37,17 @@ module Traj_XYZ
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
 
       molType = BoxArray(boxNum)%box%MolType(iAtom)
+      atomType = BoxArray(boxNum)%box%AtomType(iAtom)
       if(BoxArray(boxNum)%box%NMol(molType) < BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
-        cycle
+        if(.not. self%padding) then
+          cycle
+        else
+          write(self%fileUnit, *) AtomData(atomType)%symb, (1E15_dp, jDim=1,nDim)
+        endif
+      else
+        write(self%fileUnit, *) AtomData(atomType)%symb, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
       endif
       atomType = BoxArray(boxNum)%box%AtomType(iAtom)
-      write(self%fileUnit, *) AtomData(atomType)%symb, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
     enddo
 
 

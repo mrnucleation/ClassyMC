@@ -92,10 +92,11 @@ module Template_SimBox
     real(dp), intent(in) :: E_Diff
   end subroutine
 !==========================================================================================
-  subroutine UpdatePosition(self, disp)
+  subroutine UpdatePosition(self, disp, tempList, tempNNei)
     implicit none
     class(SimBox), intent(inout) :: self
     type(Displacement), intent(inout) :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
   end subroutine
 !==========================================================================================
   subroutine UpdateNeighLists(self, disp)

@@ -11,8 +11,8 @@ use VarPrecision
     real(dp) :: max_dist = 0.05E0_dp
     type(Displacement) :: disp(1:1)
 
-!    integer :: tempNnei(:)
-!    integer, allocatable, target :: tempList(:, :)
+!    integer, allocatable :: tempNnei(:)
+!    integer, allocatable :: tempList(:, :)
 
     contains
       procedure, pass :: Constructor => AtomTrans_Constructor
@@ -106,7 +106,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-      call trialBox % UpdatePosition(self%disp(1:1))
+      call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
     endif
 
   end subroutine

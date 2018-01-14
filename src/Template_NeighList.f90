@@ -55,10 +55,11 @@ use CoordinateTypes, only: Displacement
  
   end subroutine
 !===================================================================================
-  subroutine AddMol(self, tempList, tempNNei)
+  subroutine AddMol(self, disp, tempList, tempNNei)
     implicit none
     class(NeighListDef), intent(inout) :: self
-    integer, intent(inout) :: tempList(:,:), tempNNei(:)
+    type(Displacement), intent(in) :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
 
 
   end subroutine

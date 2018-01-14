@@ -38,15 +38,17 @@ module SimpleSimBox
       procedure, pass :: LoadDimension => Simplebox_LoadDimension
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
       procedure, pass :: Boundary => SimpleBox_Boundary
-      procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
-      procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
-      procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
       procedure, pass :: IOProcess => SimpleBox_IOProcess
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: DumpData => SimpleBox_DumpData
+
       procedure, pass :: AddMol => SimpleBox_AddMol
       procedure, pass :: DeleteMol => SimpleBox_DeleteMol
+      procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
+      procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
+      procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
+
   end type
 
 !==========================================================================================
@@ -273,24 +275,6 @@ end subroutine
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_UpdatePosition(self, disp)
-    use CoordinateTypes
-    implicit none
-    class(SimpleBox), intent(inout) :: self
-    type(Displacement), intent(inout) :: disp(:)
-    integer :: iDisp, dispLen, dispIndx
-
-    dispLen = size(disp)
-
-    do iDisp = 1, dispLen
-      dispIndx = disp(iDisp) % atmIndx
-      self % atoms(1, dispIndx) = disp(iDisp)%x_new
-      self % atoms(2, dispIndx) = disp(iDisp)%y_new
-      self % atoms(3, dispIndx) = disp(iDisp)%z_new
-    enddo
-
-  end subroutine
-!==========================================================================================
   subroutine SimpleBox_UpdateNeighLists(self, disp)
     use CoordinateTypes
     implicit none
@@ -300,36 +284,7 @@ end subroutine
     integer :: atmIndx, iAtom, jAtom
     real(dp) :: rx, ry, rz, rsq
 
-    do iDisp = 1, size(disp)
-      atmIndx = disp(iDisp)%atmIndx
-      rx = disp(iDisp)%x_new - self%atoms(1, atmIndx)
-      ry = disp(iDisp)%y_new - self%atoms(2, atmIndx)
-      rz = disp(iDisp)%z_new - self%atoms(3, atmIndx)
-      rsq = rx*rx + ry*ry + rz*rz
-      if(rsq < 1.0E0_dp) then
-        cycle
-      endif
-
-      do jAtom = 1, self%nAtoms
-        rx = self%atoms(1, atmIndx) - self%atoms(1, jAtom)
-        ry = self%atoms(2, atmIndx) - self%atoms(2, jAtom)
-        rz = self%atoms(3, atmIndx) - self%atoms(3, jAtom)
-        call self%Boundary(rx, ry, rz)
-        rsq = rx*rx + ry*ry + rz*rz
-        do iList = 1, size(self%NeighList)
-          if( rsq <= self%NeighList(iList)%rCutSq ) then 
-            self%NeighList(iList)%nNeigh(iAtom) = self%NeighList(iList)%nNeigh(iAtom) + 1
-            self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
-
-            self%NeighList(iList)%nNeigh(jAtom) = self%NeighList(iList)%nNeigh(jAtom) + 1
-            self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
-          endif
-        enddo        
-      enddo
-    enddo
-
   end subroutine
-
 !==========================================================================================
   function SimpleBox_CheckConstraint(self, disp) result(accept)
     use CoordinateTypes
@@ -433,11 +388,13 @@ end subroutine
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_AddMol(self)
+  subroutine SimpleBox_AddMol(self, molType)
     use Common_MolInfo, only: nMolTypes, MolData
     implicit none
     class(SimpleBox), intent(inout) :: self
+    integer, intent(in) :: molType
 
+    self % NMol(molType) = self % NMol(molType) + 1
   end subroutine
 !======================================================
   subroutine SimpleBox_DeleteMol(self, molIndx)
@@ -474,6 +431,32 @@ end subroutine
 
     self % NMol(nType) = self % NMol(nType) - 1 
     self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_UpdatePosition(self, disp, tempList, tempNNei)
+    use CoordinateTypes
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    type(Displacement), intent(inout) :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    integer :: iDisp, dispLen, dispIndx
+
+    dispLen = size(disp)
+
+    do iDisp = 1, dispLen
+      if( disp(iDisp)%newAtom ) then 
+        dispIndx = disp(iDisp) % atmIndx
+        call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
+        self % atoms(1, dispIndx) = disp(iDisp)%x_new
+        self % atoms(2, dispIndx) = disp(iDisp)%y_new
+        self % atoms(3, dispIndx) = disp(iDisp)%z_new
+      endif
+    enddo
+
+    if(disp(iDisp)%newlist) then
+      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
+    endif
+
   end subroutine
 !==========================================================================================
 end module

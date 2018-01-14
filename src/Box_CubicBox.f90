@@ -17,7 +17,7 @@ module CubicBoxDef
       procedure, pass :: LoadDimension => Cube_LoadDimension
       procedure, pass :: UpdateEnergy => Cube_UpdateEnergy
       procedure, pass :: Boundary => Cube_Boundary
-      procedure, pass :: UpdatePosition => Cube_UpdatePosition
+!      procedure, pass :: UpdatePosition => Cube_UpdatePosition
       procedure, pass :: IOProcess => Cube_IOProcess
       procedure, pass :: DumpData => Cube_DumpData
   end type
@@ -128,23 +128,23 @@ module CubicBoxDef
   end subroutine
 
 !==========================================================================================
-  subroutine Cube_UpdatePosition(self, disp)
-    use CoordinateTypes
-    implicit none
-    class(CubeBox), intent(inout) :: self
-    type(Displacement), intent(inout) :: disp(:)
-    integer :: iDisp, dispLen, dispIndx
-
-    dispLen = size(disp)
-    do iDisp = 1, dispLen
-      dispIndx = disp(iDisp) % atmIndx
-      call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
-      self % atoms(1, dispIndx) = disp(iDisp)%x_new
-      self % atoms(2, dispIndx) = disp(iDisp)%y_new
-      self % atoms(3, dispIndx) = disp(iDisp)%z_new
-    enddo
-
-  end subroutine
+!  subroutine Cube_UpdatePosition(self, disp)
+!    use CoordinateTypes
+!    implicit none
+!    class(CubeBox), intent(inout) :: self
+!    type(Displacement), intent(inout) :: disp(:)
+!    integer :: iDisp, dispLen, dispIndx
+!
+!    dispLen = size(disp)
+!    do iDisp = 1, dispLen
+!      dispIndx = disp(iDisp) % atmIndx
+!      call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
+!      self % atoms(1, dispIndx) = disp(iDisp)%x_new
+!      self % atoms(2, dispIndx) = disp(iDisp)%y_new
+!      self % atoms(3, dispIndx) = disp(iDisp)%z_new
+!    enddo
+!
+!  end subroutine
 !==========================================================================================
   subroutine Cube_IOProcess(self, line, lineStat)
     use CoordinateTypes
