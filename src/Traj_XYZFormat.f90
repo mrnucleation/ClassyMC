@@ -31,8 +31,11 @@ module Traj_XYZ
 
     boxNum = self%boxNum
     nDim = BoxArray(boxNum)%box%nDimension
-
-    write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
+    if(self%padding) then
+      write(self%fileUnit, *) BoxArray(boxNum)%box%nMaxAtoms
+    else
+      write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
+    endif
     write(self%fileUnit, *) 
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
       molType = BoxArray(boxNum)%box%MolType(iAtom)

@@ -10,6 +10,7 @@ use MoveClassDef
 !    real(dp) :: accpt = 0E0_dp
     type(displacement) :: disp(1:1)
     contains
+      procedure, pass :: Constructor => AtomExchange_Constructor
       procedure, pass :: GeneratePosition => AtomExchange_GeneratePosition
       procedure, pass :: FullMove => AtomExchange_FullMove
 !      procedure, pass :: GetAcceptRate
@@ -17,6 +18,17 @@ use MoveClassDef
   end type
 
  contains
+!========================================================
+  subroutine AtomExchange_Constructor(self)
+    use Common_MolInfo, only: MolData, nMolTypes
+    implicit none
+    class(AtomExchange), intent(inout) :: self
+
+
+    allocate( self%tempNNei(1) )
+    allocate( self%tempList(100, 1) )
+  end subroutine
+
 !=========================================================================
   subroutine AtomExchange_GeneratePosition(self, disp)
     use CoordinateTypes, only: Displacement
@@ -62,7 +74,12 @@ use MoveClassDef
     if(trialBox%NMolMax(newtype) < trialBox%NMol(newtype)+1) then
       return
     endif
-    call FindFirstEmptyMol(trialBox, newtype, nAtomNew)
+
+    nAtomNew = 1
+    do i = 1, newtype - 1
+      nAtomNew = nAtomNew + trialBox%NMolMax(i)
+    enddo
+    nAtomNew = nAtomNew + trialBox%NMol(newtype)
 
     self%disp(1)%newAtom = .true.
     self%disp(1)%MolType = newType
@@ -95,12 +112,13 @@ use MoveClassDef
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-      call trialBox % AddMol( self%disp(1)%molType )
       call trialBox % DeleteMol( self%disp(1)%oldMolIndx )
-      call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
+      call trialBox % AddMol( self%disp(1)%molType )
+      call trialBox % UpdatePosition(self%disp(1:1), self%tempList(:,:), self%tempNNei(:))
       do i = 1, size(trialBox%NeighList)
         call trialBox % NeighList(i) % TransferList(nAtom, nAtomNew)
       enddo
+!      write(*,*) trialBox % NMol
     endif
 
   end subroutine

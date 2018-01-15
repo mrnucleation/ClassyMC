@@ -61,12 +61,12 @@ contains
     
   end subroutine
 !==================================================
-  subroutine FindFirstEmptyMol(box, moltype, atmIndx)
+  function FindFirstEmptyMol(box, moltype) result(atmIndx)
     use Common_MolInfo, only: nMolTypes
     implicit none
     class(SimpleBox), intent(in) :: box
     integer, intent(in) :: molType
-    integer, intent(out) :: atmIndx
+    integer  :: atmIndx
     integer :: iType, molIndx
 
 
@@ -76,8 +76,8 @@ contains
     enddo
 
     molIndx = molIndx + box % NMol(molType) + 1
-    
-  end subroutine
+    write(*,*) molIndx
+  end function
 !==================================================
 end module
 !==================================================

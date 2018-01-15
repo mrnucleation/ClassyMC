@@ -433,7 +433,6 @@ end subroutine
     enddo
 
     do iList = 1, size(self%NeighList)
-      write(*,*) iList
       call self % NeighList(iList) % DeleteMol(molIndx, lastMol)
     enddo
 
@@ -455,15 +454,16 @@ end subroutine
       if( disp(iDisp)%newAtom ) then 
         dispIndx = disp(iDisp) % atmIndx
         call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
+!        write(*,*) dispIndx, disp(iDisp)%x_New, disp(iDisp)%y_New, disp(iDisp)%z_New
         self % atoms(1, dispIndx) = disp(iDisp)%x_new
         self % atoms(2, dispIndx) = disp(iDisp)%y_new
         self % atoms(3, dispIndx) = disp(iDisp)%z_new
       endif
     enddo
 
-    if(disp(iDisp)%newlist) then
-      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
-    endif
+!    if(disp(iDisp)%newlist) then
+!      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
+!    endif
 
   end subroutine
 !==========================================================================================

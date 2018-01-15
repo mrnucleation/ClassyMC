@@ -7,17 +7,17 @@ contains
   use BoxData, only: BoxArray
   implicit none
   integer, intent(in) :: iAtom, listNum, boxNum
-  integer :: iNei, jNei, nNei
+  integer :: jatom, iNei, jNei, nNei
 
 !  if(.not. inquire(file="listdump.dat", slist="od")) then
 !    open(unit=35, file="listdump.dat")
 !  endif
 
-!  do iAtom = 1, size(BoxArray(boxNum)%box%NeighList(listNum)%nNeigh)
-    nNei = BoxArray(boxNum)%box%NeighList(listNum)%nNeigh(iAtom)
-    write(35,"(I5, A, I5, A, 10000I5)") iAtom, "/", nNei,"/", &
+  do jAtom = 1, size(BoxArray(boxNum)%box%NeighList(listNum)%nNeigh)
+    nNei = BoxArray(boxNum)%box%NeighList(listNum)%nNeigh(jAtom)
+    write(35,"(I5, A, I5, A, 10000I5)") jAtom, "/", nNei,"/", &
         (BoxArray(boxNum)%box%NeighList(listNum)%list(jNei,iAtom), jNei=1,nNei)
-!  enddo
+  enddo
 
 !  close(35)
 
