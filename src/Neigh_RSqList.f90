@@ -111,12 +111,15 @@ use Template_NeighList, only: NeighListDef
       do iNei = 1, self % nNeigh(atmIndx)
         curNei = self % list(iNei, atmIndx)
         nNei = self%nNeigh(curNei)
+        if(nNei == 1) then
+          self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
+          cycle
+        endif
         if(self%sorted) then
           curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
         else
           curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
         endif
-!        write(*,*) curIndx, self%list(curIndx, curNei)
         self%list(1:nNei, curNei ) = [self%list(1:curIndx-1, curNei), &
                                       self%list(curIndx+1:nNei, curNei) ]
         self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
@@ -200,10 +203,8 @@ use Template_NeighList, only: NeighListDef
 
     molStart = 1
     do iType = 1, nMolTypes
-!      write(*,*) "molstart", molStart
       iLow = trialBox%MolStartIndx(molStart)
       iUp = trialBox%MolEndIndx(molStart + trialBox%NMol(iType) - 1) 
-!          write(*,*) "i", iType, iLow, iUp
       do iAtom = iLow, iUp
         jMolStart = molStart
         do jType = iType, nMolTypes
@@ -222,10 +223,7 @@ use Template_NeighList, only: NeighListDef
           endif
           jUp = trialBox%MolEndIndx( jMolEnd + trialBox%NMol(jType) - 1 )
  
-!          write(*,*) "i", iType, iLow, iUp
-!          write(*,*) "j", jType, jLow, jUp
           do jAtom = jLow, jUp
-!            write(*,*) iAtom, jAtom
             rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
             ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
             rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)

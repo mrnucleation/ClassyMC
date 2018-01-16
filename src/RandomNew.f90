@@ -42,5 +42,30 @@
       num = y1
 
       end function
+!=======================================================
+  function ListRNG(list, norm) result(bin)
+    use Constants
+    use VarPrecision
+    implicit none
+    real(dp), intent(in) :: list(:)
+    real(dp), intent(in), optional :: norm
+    integer :: bin, nSel
+    real(dp) :: ran_num, intSum
+
+    if( present(norm) ) then
+      ran_num = grnd()*norm
+    else
+      ran_num = grnd()
+    endif
+
+    nSel = 1 
+    intSum = list(1)
+    do while(intSum < ran_num)
+      nSel = nSel + 1 
+      intSum = intSum + list(nSel)
+    enddo
+
+    bin = nSel
+  end function
 !=========================================================
-      end module
+end module

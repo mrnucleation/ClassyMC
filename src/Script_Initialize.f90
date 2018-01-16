@@ -11,9 +11,11 @@ contains
     use TrajData, only: TrajArray
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: initSeed, sgrnd
+    use MCMoveData, only: MoveProb
     implicit none
     integer :: i, j
     integer :: AllocateStat
+    real(dp) :: norm
 
     if(initSeed < 0) then
       call system_clock(initSeed)
@@ -31,15 +33,18 @@ contains
       call HardError(-1, "forcefield function(s)")
     endif
 
-    
-!    do i = 1, nMolTypes
-!      if(MolData(i)%nAtoms > mostAtoms) then
-!        mostAtoms = MolData(i)%nAtoms 
-!      endif
-!    enddo
-!    allocate(tempList(1:1000, 1:mostAtoms), stat=AllocateStat)
-!    allocate(tempNNei(1:mostAtoms), stat=AllocateStat)
+    !Normalize the move probabilities
+    norm = 0E0_dp
+    do i = 1, size(MoveProb)
+      norm = norm + MoveProb(i)
+    enddo
 
+    do i = 1, size(MoveProb)
+      MoveProb(i) = MoveProb(i)/norm
+    enddo
+    write(nout, *) "Move Probabilities", MoveProb(:)
+
+    
     !Box Initialization and Safety Checks
     do i = 1, size(BoxArray)
       ! Check to see if an energy calculator has been assigned, if not default to 1 
@@ -51,8 +56,6 @@ contains
         call BoxArray(i)%box%NeighList(j)%constructor(i)
       enddo
     enddo
-    
-
 
 
   end subroutine

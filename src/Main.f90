@@ -9,16 +9,16 @@
     use BoxData, only: BoxArray
     use TrajData, only: TrajArray
     use AnalysisData, only: AnalysisArray
-    use MCMoveData, only: Moves
+    use MCMoveData, only: Moves, MoveProb
     use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ForcefieldData, only: EnergyCalculator
-    use RandomGen, only: sgrnd
+    use RandomGen, only: sgrnd, ListRNG
     use Output_DumpCoords, only: Output_DumpData
     implicit none
  
     logical :: accept
     integer :: i, j
-    integer :: iMoves, iAtom
+    integer :: iMoves, iAtom, moveNum
     integer(kind=8) :: iCycle, iMove
     real(dp) :: E_T, E_Final
     real(dp) :: avgE, cnt
@@ -35,6 +35,14 @@
       call BoxArray(i) % box % NeighList(1) % BuildList
     enddo
 
+    if( allocated(TrajArray) ) then
+      do i = 1, size(TrajArray)
+        if(mod(iCycle, TrajArray(i)%traj%outfreq) == 0) then
+          call TrajArray(i) % traj % WriteFrame
+        endif
+      enddo
+    endif
+ 
     call Debug_DumpNeiList(1, 1, 1)
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
@@ -47,8 +55,8 @@
 
       !-----Start Move Loop
       do iMoves = 1, nMoves
-        call Moves(1) % Move % FullMove(BoxArray(1)%box, accept)
-        call Debug_DumpNeiList(1, 1, 1)
+        moveNum = ListRNG(MoveProb)
+        call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
 !        avgE = avgE + BoxArray(1)%box%ETotal
 !        cnt = cnt + 1E0_dp
 
@@ -64,16 +72,17 @@
 
       enddo 
       !------End Move Loop
-      call Debug_DumpNeiList(1, 1, 1)
       if(mod(iCycle, 100) == 0) then
-        write(*,*) iCycle, BoxArray(1)%box%ETotal, Moves(1)%Move%GetAcceptRate()
+        write(*,*) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
       endif
+
       if(mod(iCycle, 100) == 0) then
         call BoxArray(1) % box % NeighList(1) % BuildList
       endif
-      if(mod(iCycle, 10) == 0) then
-        call Moves(1) % Move % Maintenance
-      endif
+
+!      if(mod(iCycle, 10) == 0) then
+!        call Moves(1) % Move % Maintenance
+!      endif
 
       if( allocated(AnalysisArray) ) then
         do i = 1, size(AnalysisArray)
@@ -100,9 +109,6 @@
       call BoxArray(i) % box % ComputeEnergy
       call BoxArray(i) % box % NeighList(1) % BuildList
     enddo
-
-
-
 
     write(nout, *) "Culmative Energy:", E_Final
     write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal

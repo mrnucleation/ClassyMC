@@ -4,12 +4,6 @@ use VarPrecision
 use CoordinateTypes, only: Displacement
 !use Template_SimBox, only: SimBox
 
-  abstract interface
-    subroutine buildfunc(trialBox)
-     
-    end subroutine
-  end interface
-
   type, public :: NeighListDef
       logical :: Sorted = .false.
       logical :: Strict = .false.
@@ -69,20 +63,26 @@ use CoordinateTypes, only: Displacement
     implicit none
     class(NeighListDef), intent(inout) :: self
     integer, intent(in) :: indx1, indx2
-    integer :: iNei, jAtom, bin
+    integer :: iNei, jAtom, bin, mNei, j
 
+    self%nNeigh(indx2) = self%nNeigh(indx1)
     do iNei = 1, self%nNeigh(indx1)
       jAtom = self%list(iNei, indx1)
       self%list(iNei, indx2) = jAtom
+
+      if(jAtom == indx2) then
+        cycle
+      endif
+      mNei = self%nNeigh(jAtom)
       if(self%sorted) then
-        bin = BinarySearch(indx1, self%list(:,jAtom))
+        bin = BinarySearch(indx1, self%list(1:mNei, jAtom))
         self%sorted = .false.
       else
-        bin = SimpleSearch(indx1, self%list(:,jAtom))
+        bin = SimpleSearch(indx1, self%list(1:mNei, jAtom))
       endif
       self%list(bin, jAtom) = indx2
+
     enddo
-    self%nNeigh(indx2) = self%nNeigh(indx1)
 
   end subroutine
 !===================================================================================
@@ -94,5 +94,6 @@ use CoordinateTypes, only: Displacement
 
   end subroutine
 !===================================================================================
+
 end module
 !===================================================================================

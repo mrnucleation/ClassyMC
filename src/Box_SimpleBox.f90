@@ -75,14 +75,11 @@ module SimpleSimBox
       self%nMaxAtoms = self%nMaxAtoms + self%NMolMax(iType)*MolData(iType)%nAtoms
       maxMol = maxMol + self%NMolMax(iType)
     enddo
-!    write(*,*) "maxatoms", self%nMaxAtoms
 
     self%nAtoms = 0
     do iType = 1, nMolTypes
       self%nAtoms = self%nAtoms + self%NMol(iType)*MolData(iType)%nAtoms
     enddo
-!    write(*,*) "atoms", self%nAtoms
-
 
     !Allocate the position and energy related arrays. 
     allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
@@ -126,7 +123,6 @@ module SimpleSimBox
         molIndx = molIndx + 1
         self%MolStartIndx(molIndx) = atmIndx + 1
         self%MolEndIndx(molIndx) = atmIndx + MolData(iType)%nAtoms 
-!        write(*,*) atmIndx + 1, atmIndx + MolData(iType)%nAtoms
         do iAtom = 1, MolData(iType)%nAtoms
           atmIndx = atmIndx + 1
           self%MolType(atmIndx) = iType
@@ -134,7 +130,6 @@ module SimpleSimBox
           self%MolIndx(atmIndx)  = molIndx
           self%MolSubIndx(atmIndx)  = iMol
           self%SubIndx(atmIndx)  = iAtom
-!          write(*,*) self%MolType(atmIndx), self%AtomType(atmIndx), self%MolIndx(atmIndx),self%SubIndx(atmIndx) 
         enddo
       enddo 
       self%TypeLast(iType) = atmIndx 
@@ -179,7 +174,6 @@ module SimpleSimBox
 
     if( .not. allocated(self%atoms) ) then
       call self%Constructor
-      write(*,*) self%nAtoms
     endif
 
     read(line, *) molType, molIndx, atmIndx, x, y ,z
@@ -206,7 +200,6 @@ module SimpleSimBox
     arrayIndx = self%MolStartIndx(subIndx)
     arrayIndx = arrayIndx + atmIndx - 1
 
-!    write(*,*) molType, molIndx, atmIndx, arrayIndx
     self%atoms(1, arrayIndx) = x
     self%atoms(2, arrayIndx) = y
     self%atoms(3, arrayIndx) = z
@@ -220,11 +213,9 @@ module SimpleSimBox
     integer :: iAtom, jAtom
     real(dp) :: rx, ry, rz, rsq
 
-!    write(*,*) "Here"
     do iList = 1, size(self%NeighList)
       self%NeighList(iList)%nNeigh = 0
       self%NeighList(iList)%list = 0
-!      write(*,*) iList, size(self%NeighList(iList)%nNeigh)
     enddo
 
     do iAtom = 1, self%nAtoms-1
@@ -234,7 +225,6 @@ module SimpleSimBox
         rz = self%atoms(3, iAtom) - self%atoms(3, jAtom)
         call self%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-!        write(*,*) iAtom, jAtom, rsq
         do iList = 1, size(self%NeighList)
           if( rsq <= self%NeighList(iList)%rCutSq ) then 
 
@@ -326,7 +316,6 @@ end subroutine
 
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
-!    write(*,*) command
     select case( trim(adjustl(command)) )
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)
@@ -404,7 +393,7 @@ end subroutine
     self % NMol(molType) = self % NMol(molType) + 1
     self % nAtoms = self % nAtoms + MolData(molType)%nAtoms
   end subroutine
-!======================================================
+!==========================================================================================
   subroutine SimpleBox_DeleteMol(self, molIndx)
     use Common_MolInfo, only: nMolTypes, MolData
     implicit none
@@ -422,6 +411,11 @@ end subroutine
       lastMol = lastMol + self%NMolMax(iType) 
     enddo
     lastMol = lastMol + self%NMol(nType)
+    if(molIndx == lastMol) then
+      self % NMol(nType) = self % NMol(nType) - 1 
+      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
+      return
+    endif
     jStart = self%MolStartIndx(lastMol)
 
 !     Take the top molecule from the atom array and move it's position in the deleted
@@ -435,9 +429,9 @@ end subroutine
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % DeleteMol(molIndx, lastMol)
     enddo
-
     self % NMol(nType) = self % NMol(nType) - 1 
     self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
+
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_UpdatePosition(self, disp, tempList, tempNNei)
@@ -454,7 +448,6 @@ end subroutine
       if( disp(iDisp)%newAtom ) then 
         dispIndx = disp(iDisp) % atmIndx
         call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
-!        write(*,*) dispIndx, disp(iDisp)%x_New, disp(iDisp)%y_New, disp(iDisp)%z_New
         self % atoms(1, dispIndx) = disp(iDisp)%x_new
         self % atoms(2, dispIndx) = disp(iDisp)%y_new
         self % atoms(3, dispIndx) = disp(iDisp)%z_new
