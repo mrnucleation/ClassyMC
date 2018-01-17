@@ -1,28 +1,11 @@
 !===========================================================================
   program Classy
-    use VarPrecision
     use MPI
-    use SimControl, only: nMoves, nCycles
     use ParallelVar, only: myid, p_size, ierror, nout
+    use SimMonteCarlo, only: RunMonteCarlo
     use ScriptInput, only: Script_ReadParameters
-    use Debug, only: Debug_DumpNeiList
-    use BoxData, only: BoxArray
-    use TrajData, only: TrajArray
-    use AnalysisData, only: AnalysisArray
-    use MCMoveData, only: Moves, MoveProb
-    use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
-    use ForcefieldData, only: EnergyCalculator
-    use RandomGen, only: sgrnd, ListRNG
-    use Output_DumpCoords, only: Output_DumpData
+    use VarPrecision
     implicit none
- 
-    logical :: accept
-    integer :: i, j
-    integer :: iMoves, iAtom, moveNum
-    integer(kind=8) :: iCycle, iMove
-    real(dp) :: E_T, E_Final
-    real(dp) :: avgE, cnt
-    character(len=50) :: fileName
 
     call MPI_INIT(ierror)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, p_size, ierror)
@@ -30,101 +13,7 @@
 
     call Script_ReadParameters
 
-    do i = 1, size(BoxArray)
-      call BoxArray(i) % box % ComputeEnergy
-      call BoxArray(i) % box % NeighList(1) % BuildList
-    enddo
-
-    if( allocated(TrajArray) ) then
-      do i = 1, size(TrajArray)
-        if(mod(iCycle, TrajArray(i)%traj%outfreq) == 0) then
-          call TrajArray(i) % traj % WriteFrame
-        endif
-      enddo
-    endif
- 
-    call Debug_DumpNeiList(1, 1, 1)
-    write(nout, *) "============================================"
-    write(nout, *) "       Simulation Start!"
-    write(nout, *) "============================================"
-
-!    avgE = 0E0_dp
-!    cnt = 0E0_dp
-    !-------Main Monte Carlo Simulation Loop-------
-    do iCycle = 1, nCycles
-
-      !-----Start Move Loop
-      do iMoves = 1, nMoves
-        moveNum = ListRNG(MoveProb)
-        call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
-!        avgE = avgE + BoxArray(1)%box%ETotal
-!        cnt = cnt + 1E0_dp
-
-        if( allocated(AnalysisArray) ) then
-          do i = 1, size(AnalysisArray)
-            if(AnalysisArray(i)%func%perMove) then
-              if(mod(iCycle, AnalysisArray(i)%func%UpdateFreq) == 0) then
-                call AnalysisArray(i) % func % Compute(accept)
-              endif
-            endif
-          enddo
-        endif
-
-      enddo 
-      !------End Move Loop
-      if(mod(iCycle, 100) == 0) then
-        write(*,*) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
-      endif
-
-      if(mod(iCycle, 100) == 0) then
-        call BoxArray(1) % box % NeighList(1) % BuildList
-      endif
-
-!      if(mod(iCycle, 10) == 0) then
-!        call Moves(1) % Move % Maintenance
-!      endif
-
-      if( allocated(AnalysisArray) ) then
-        do i = 1, size(AnalysisArray)
-          if(.not. AnalysisArray(i)%func%perMove) then
-            if(mod(iCycle, AnalysisArray(i)%func%UpdateFreq) == 0) then
-              call AnalysisArray(i) % func % Compute(accept)
-            endif
-          endif
-        enddo
-      endif
- 
-      if( allocated(TrajArray) ) then
-        do i = 1, size(TrajArray)
-          if(mod(iCycle, TrajArray(i)%traj%outfreq) == 0) then
-            call TrajArray(i) % traj % WriteFrame
-          endif
-        enddo
-      endif
-    enddo
-    !-------End of Main Monte Carlo Simulation Loop-------
-    
-    E_Final = BoxArray(1)%box%ETotal
-    do i = 1, size(BoxArray)
-      call BoxArray(i) % box % ComputeEnergy
-      call BoxArray(i) % box % NeighList(1) % BuildList
-    enddo
-
-    write(nout, *) "Culmative Energy:", E_Final
-    write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
-    write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal
-!    write(nout, *) "Average Energy:", avgE/cnt
-
-    call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
-
-    if( allocated(AnalysisArray) ) then
-      do i = 1, size(AnalysisArray)
-        call AnalysisArray(i) % func % Finalize
-      enddo
-    endif
-
-    call Debug_DumpNeiList(1, 1, 1)
-    call Output_DumpData
+    call RunMonteCarlo
     write(nout, *) "Finished!"
     close(nout)
       

@@ -110,10 +110,10 @@ use MoveClassDef
 
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%disp(1:1))
     if(accept) then
-!      write(*,*) oldtype, nAtom, newtype, nAtomNew
+      write(*,*) accept, oldtype, nAtom, newtype, nAtomNew
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-       do i = 1, size(trialBox%NeighList)
+      do i = 1, size(trialBox%NeighList)
         call trialBox % NeighList(i) % TransferList(nAtom, nAtomNew)
       enddo
       call trialBox % DeleteMol( self%disp(1)%oldMolIndx )

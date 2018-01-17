@@ -411,11 +411,11 @@ end subroutine
       lastMol = lastMol + self%NMolMax(iType) 
     enddo
     lastMol = lastMol + self%NMol(nType)
-    if(molIndx == lastMol) then
-      self % NMol(nType) = self % NMol(nType) - 1 
-      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
-      return
-    endif
+!    if(molIndx == lastMol) then
+!      self % NMol(nType) = self % NMol(nType) - 1 
+!      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
+!      return
+!    endif
     jStart = self%MolStartIndx(lastMol)
 
 !     Take the top molecule from the atom array and move it's position in the deleted

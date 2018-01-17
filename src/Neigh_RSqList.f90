@@ -99,7 +99,6 @@ use Template_NeighList, only: NeighListDef
     integer :: atmIndx, topAtom
     integer :: curNei, curIndx, nNei
 
-
     nStart = self % parent % MolStartIndx(molIndx)
     topStart = self % parent % MolStartIndx(topIndx)
     nType = self % parent % MolType(nStart)
@@ -111,19 +110,25 @@ use Template_NeighList, only: NeighListDef
       do iNei = 1, self % nNeigh(atmIndx)
         curNei = self % list(iNei, atmIndx)
         nNei = self%nNeigh(curNei)
-        if(nNei == 1) then
-          self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
-          cycle
-        endif
         if(self%sorted) then
           curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
         else
           curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
         endif
-        self%list(1:nNei, curNei ) = [self%list(1:curIndx-1, curNei), &
-                                      self%list(curIndx+1:nNei, curNei) ]
-        self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
+        if(curIndx /= 0) then
+          if(nNei > 2) then
+            self%list(1:nNei, curNei ) = [self%list(1:curIndx-1, curNei), &
+                                          self%list(curIndx+1:nNei, curNei) ]
+          else
+            if(curIndx == 1) then
+              self%list(1, curNei) = self%list(2,curNei)
+            endif
+          endif
+          self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
+        endif
+        write(*,*) "new",self%list(1:nNei-1, curNei)
       enddo
+      
 
       !Re-index the top atom to it's new location
       do iNei = 1, self % nNeigh(topAtom)
@@ -134,15 +139,19 @@ use Template_NeighList, only: NeighListDef
         else
           curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
         endif
-        self % list(curIndx, curNei) = atmIndx
-
+        if(curIndx /= 0) then
+          if(atmIndx == topAtom) then
+          endif
+ 
+          self % list(curIndx, curNei) = atmIndx
+        endif
       enddo
+      self%nNeigh(topAtom) = 0
     enddo
 
     self % sorted = .false.
 
   end subroutine
-
 !===================================================================================
   subroutine RSqList_GetNewList(self, iDisp, tempList, tempNNei, disp)
     use Common_MolInfo, only: nMolTypes

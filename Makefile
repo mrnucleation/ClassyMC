@@ -90,6 +90,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 						$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
+        		$(SRC)/Sim_MonteCarlo.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/Units.f90
 
@@ -230,6 +231,8 @@ $(OBJ)/RandomNew.o: $(OBJ)/Common.o
 
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
-$(OBJ)/Main.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/Move_AtomTranslation.o $(OBJ)/RandomNew.o 
+$(OB)/Main.o: $(OBJ)/Sim_MonteCarlo.o
+
+$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/Move_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o
 
 

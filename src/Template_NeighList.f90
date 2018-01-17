@@ -68,20 +68,14 @@ use CoordinateTypes, only: Displacement
     self%nNeigh(indx2) = self%nNeigh(indx1)
     do iNei = 1, self%nNeigh(indx1)
       jAtom = self%list(iNei, indx1)
-      self%list(iNei, indx2) = jAtom
-
       if(jAtom == indx2) then
         cycle
       endif
-      mNei = self%nNeigh(jAtom)
-      if(self%sorted) then
-        bin = BinarySearch(indx1, self%list(1:mNei, jAtom))
-        self%sorted = .false.
-      else
-        bin = SimpleSearch(indx1, self%list(1:mNei, jAtom))
-      endif
-      self%list(bin, jAtom) = indx2
+      self%list(iNei, indx2) = jAtom
 
+      bin = self%nNeigh(jAtom)
+      self%list(bin+1, jAtom) = indx2
+      self%nNeigh(jAtom) = self%nNeigh(jAtom) + 1
     enddo
 
   end subroutine

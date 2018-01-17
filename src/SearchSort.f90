@@ -29,6 +29,7 @@ contains
     do while( list(curIndx) /= val )
       curIndx = curIndx + 1
       if(curIndx >= upper) then
+        curIndx = 0
         exit
       endif
     enddo
@@ -60,6 +61,7 @@ contains
 !      write(*,*) "target=", val
 !      write(*,*) curIndx, list(curIndx), lower, upper
       if( lower >= upper ) then
+        curIndx = 0
         exit
       endif
     enddo
