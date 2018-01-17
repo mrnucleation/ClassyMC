@@ -1,6 +1,7 @@
 !===========================================================================
   program Classy
     use MPI
+    use SimControl, only: simType
     use ParallelVar, only: myid, p_size, ierror, nout
     use SimMonteCarlo, only: RunMonteCarlo
     use ScriptInput, only: Script_ReadParameters

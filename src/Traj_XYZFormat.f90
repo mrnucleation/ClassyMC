@@ -4,7 +4,7 @@ module Traj_XYZ
   use TrajectoryTemplate, only: trajectory
 
   type, public, extends(trajectory) :: trajXYZ
-    logical :: padding = .true.
+    logical :: padding = .false.
 !    integer :: fileUnit = -1
 !    integer :: boxNum = -1
 !    integer :: outFreq = 5000

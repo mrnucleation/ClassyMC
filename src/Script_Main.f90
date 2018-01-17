@@ -63,17 +63,25 @@
         select case(trim(adjustl( command )))
           case("create")
             call createCommand(iLine, linestore, lineBuffer, lineStat)
+
           case("forcefield")
-            call GetXCommand(lineStore(iLine), filename, 2, lineStat)         
+            call GetXCommand(lineStore(iLine), filename, 2, lineStat)  
             call Script_ReadFieldFile(filename, lineStat)
-          case("neighlist")
-            call Script_NeighType( lineStore(iLine), lineStat)
+
           case("modify")
             call modifyCommand( lineStore(iLine), lineStat )
-          case("set")
-            call setCommand( lineStore(iLine), lineStat )
+
+          case("neighlist")
+            call Script_NeighType( lineStore(iLine), lineStat)
+
           case("samplingtype")
             call Script_SamplingType(lineStore(iLine), lineStat)
+
+          case("set")
+            call setCommand( lineStore(iLine), lineStat )
+
+          case("simtype")
+
           case default
             write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
             write(*,*) trim(adjustl(lineStore(iLine)))

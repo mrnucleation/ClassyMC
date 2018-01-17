@@ -126,11 +126,15 @@ use Template_NeighList, only: NeighListDef
           endif
           self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
         endif
-        write(*,*) "new",self%list(1:nNei-1, curNei)
       enddo
       
+      !Move the top atom into the spot formerly taken up by the deleted atom.
+      do iNei = 1, self % nNeigh(topAtom)
+        self%list(iNei, atmIndx) = self%list(iNei, topAtom)
+      enddo
+      self%nNeigh(atmIndx) = self%nNeigh(topAtom)
 
-      !Re-index the top atom to it's new location
+      !Re-index the neighbor's of the top atom to it's new array location
       do iNei = 1, self % nNeigh(topAtom)
         curNei = self % list(iNei, topAtom)
         nNei = self%nNeigh(curNei)
@@ -140,9 +144,6 @@ use Template_NeighList, only: NeighListDef
           curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
         endif
         if(curIndx /= 0) then
-          if(atmIndx == topAtom) then
-          endif
- 
           self % list(curIndx, curNei) = atmIndx
         endif
       enddo

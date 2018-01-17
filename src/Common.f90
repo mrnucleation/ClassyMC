@@ -22,6 +22,7 @@ module ParallelVar
 end module  
 !======================================================
 module SimControl
+  integer :: simType = 1
   integer(kind=8) :: nCycles = 0
   integer(kind=8) :: nMoves = 0
 end module  

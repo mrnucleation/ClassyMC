@@ -46,6 +46,7 @@ use VarPrecision
     class(MoveDelete), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
+    integer, parameter :: delVal = 4
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex
     real(dp) :: E_Diff
@@ -55,17 +56,17 @@ use VarPrecision
     accept = .true.
 
     self%disp(1)%newAtom = .false.
-    self%disp(1)%MolType = 1
-    self%disp(1)%MolIndx = 3
-    self%disp(1)%atmIndx = 3
+    self%disp(1)%MolType = 2
+    self%disp(1)%MolIndx = delVal
+    self%disp(1)%atmIndx = delVal
 
     self%disp(1)%oldAtom = .true.
-    self%disp(1)%oldMolType = 1
-    self%disp(1)%oldMolIndx = 3
-    self%disp(1)%oldAtmIndx = 3
+    self%disp(1)%oldMolType = 2
+    self%disp(1)%oldMolIndx = delVal
+    self%disp(1)%oldAtmIndx = delVal
 
     self%disp(1)%newlist = .false.
-    self%disp(1)%listIndex = 3
+    self%disp(1)%listIndex = delVal
 
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff)
 
@@ -75,7 +76,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-      call trialBox % DeleteMol(3)
+      call trialBox % DeleteMol(delVal)
 !      call trialBox % UpdatePosition(self%disp(1:1))
     endif
 

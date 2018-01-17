@@ -47,10 +47,10 @@ contains
         moveNum = ListRNG(MoveProb)
         call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
         call Analyze(iCycle, iMove, accept, .true.)
-        call Debug_DumpNeiList(1, 1, 1)
+!        call Debug_DumpNeiList(1, 1, 1)
       enddo 
       !------End Move Loop
-      if(mod(iCycle, 1) == 0) then
+      if(mod(iCycle, 1000) == 0) then
         write(*,*) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
       endif
 
@@ -67,11 +67,13 @@ contains
     enddo
     !-------End of Main Monte Carlo Simulation Loop-------
     
+    call Debug_DumpNeiList(1, 1, 1)
     E_Final = BoxArray(1)%box%ETotal
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % ComputeEnergy
       call BoxArray(i) % box % NeighList(1) % BuildList
     enddo
+    call Debug_DumpNeiList(1, 1, 1)
 
     write(nout, *) "Culmative Energy:", E_Final
     write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
@@ -85,7 +87,6 @@ contains
       enddo
     endif
 
-    call Debug_DumpNeiList(1, 1, 1)
     call Output_DumpData
       
   end subroutine
