@@ -6,15 +6,14 @@
 !========================================================            
       subroutine Script_ReadParameters
       use Constants
-      use ParallelVar
-      use Units
       use Input_Forcefield
       use Input_AnalysisType, only: Script_AnalysisType
       use Input_Sampling, only: Script_SamplingType
       use Input_NeighType, only: Script_NeighType
       use Input_Initialize, only: Script_Initialize
+      use ParallelVar
+      use Units
       implicit none
-!      integer(kind=8), intent(OUT) :: ncycle,nmoves
       integer :: i, ii, j, nArgs
       integer :: iLine, lineStat, AllocateStat
       integer :: nLines, nForceLines, lineBuffer
@@ -24,7 +23,6 @@
       character(len=30) :: command, command2, dummy
       character(len=50) :: fileName
       character(len=50) :: forcefieldFile
-      
 
     
 !      Get the filename from the command line. 
@@ -81,7 +79,7 @@
             call setCommand( lineStore(iLine), lineStat )
 
           case("simtype")
-
+            
           case default
             write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
             write(*,*) trim(adjustl(lineStore(iLine)))
