@@ -95,9 +95,12 @@ module ConstraintTemplate
     accept = .true.
   end subroutine
 !=============================================================
-  subroutine ProcessIO(self)
+  subroutine ProcessIO(self, line, lineStat)
     implicit none
-    class(constraint), intent(in) :: self
+    class(constraint), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    integer, intent(out) :: lineStat
+
   end subroutine
 !=============================================================
 end module
