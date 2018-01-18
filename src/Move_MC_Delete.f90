@@ -68,7 +68,7 @@ use VarPrecision
     self%disp(1)%newlist = .false.
     self%disp(1)%listIndex = delVal
 
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff)
+    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
 
     write(*,*) "Delete"
 

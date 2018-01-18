@@ -102,12 +102,14 @@ module FF_Pair_LJ_Cut
     E_T = E_LJ    
   end subroutine
   !=====================================================================
-  subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff)
+  subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff, accept)
     implicit none
     class(Pair_LJ_Cut), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
     integer :: iDisp, iAtom, jNei, jAtom, dispLen
 !    integer :: maxIndx, minIndx
     integer :: atmType1, atmType2
@@ -118,6 +120,7 @@ module FF_Pair_LJ_Cut
 
     dispLen = size(disp)
     E_Diff = 0E0_dp
+    accept = .true.
     curbox%dETable = 0E0_dp
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
@@ -136,8 +139,10 @@ module FF_Pair_LJ_Cut
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-!            if(rsq < rmin_ij) then
-!            endif 
+          if(rsq < rmin_ij) then
+            accept = .false.
+            return
+          endif 
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)              
@@ -173,13 +178,15 @@ module FF_Pair_LJ_Cut
    
   end subroutine
   !=====================================================================
-  subroutine New_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff)
+  subroutine New_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
     class(Pair_LJ_Cut), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
     integer :: iDisp, iAtom, jAtom, dispLen, maxNei, listIndx, jNei
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
@@ -189,6 +196,7 @@ module FF_Pair_LJ_Cut
 
     dispLen = size(disp)
     E_Diff = 0E0_dp
+    accept = .true.
 
     do iDisp = 1, dispLen
       if(.not. disp(iDisp)%newAtom) then
@@ -216,7 +224,7 @@ module FF_Pair_LJ_Cut
         atmType2 = curbox % AtomType(jAtom)
         ep = self%epsTable(atmType1,atmType2)
         sig_sq = self%sigTable(atmType1,atmType2)          
-!        rmin_ij = self%rMinTable(atmType1,atmType2)          
+        rmin_ij = self%rMinTable(atmType1,atmType2)          
 
         rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
@@ -224,6 +232,10 @@ module FF_Pair_LJ_Cut
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
+          if(rsq < rmin_ij) then
+            accept = .false.
+            return
+          endif
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)

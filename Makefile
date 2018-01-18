@@ -60,9 +60,9 @@ SRC_MAIN := $(SRC)/Common.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
 	        	$(SRC)/SearchSort.f90\
         		$(SRC)/Sampling_Metropolis.f90\
-        		$(SRC)/Move_AtomTranslation.f90\
-        		$(SRC)/Move_AtomExchange.f90\
-        		$(SRC)/Move_Delete.f90\
+        		$(SRC)/Move_MC_AtomTranslation.f90\
+        		$(SRC)/Move_MC_AtomExchange.f90\
+        		$(SRC)/Move_MC_Delete.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/Analysis_RDF.f90\
         		$(SRC)/Analysis_ThermAverage.f90\
@@ -71,7 +71,6 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Box_OrthoBox.f90\
         		$(SRC)/Box_Ultility.f90\
         		$(SRC)/RandomNew.f90\
-        		$(SRC)/Constrain_HardWall.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Cut_NoNei.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
@@ -91,6 +90,7 @@ SRC_MAIN := $(SRC)/Common.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
         		$(SRC)/Sim_MonteCarlo.f90\
+        		$(SRC)/Sim_GeneticAlgor.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/Units.f90
 
@@ -217,13 +217,13 @@ $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o
 
 
-$(OBJ)/Move_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
-$(OBJ)/Move_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Box_Ultility.o
+$(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
+$(OBJ)/Move_MC_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Box_Ultility.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o
-$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o
+$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
-$(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o ${OBJ}/Move_AtomTranslation.o $(OBJ)/Common_ECalc.o
+$(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/FF_LJ_Cut_NoNei.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o
 $(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XYZFormat.o 
 $(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Common_BoxData.o
 
@@ -233,6 +233,6 @@ $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
 $(OB)/Main.o: $(OBJ)/Sim_MonteCarlo.o
 
-$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/Move_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o
+$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o
 
 

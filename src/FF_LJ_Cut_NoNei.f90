@@ -93,12 +93,13 @@ module FF_Pair_LJ_Cut_NoNei
       E_T = E_LJ    
    end subroutine
   !=====================================================================
-  subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff)
+  subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff, accept)
     implicit none
       class(Pair_LJ_Cut_NoNei), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
+      logical, intent(out) :: accept
       integer :: iDisp, iAtom, jAtom, dispLen
       integer :: maxIndx, minIndx
       integer :: atmType1, atmType2
@@ -109,6 +110,7 @@ module FF_Pair_LJ_Cut_NoNei
 
       dispLen = size(disp)
       E_Diff = 0E0_dp
+      accept = .true.
       curbox%dETable = 0E0_dp
       maxIndx = 1
       minIndx = curbox % nAtoms

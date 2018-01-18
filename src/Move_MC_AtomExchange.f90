@@ -102,7 +102,11 @@ use MoveClassDef
       return
     endif
 
-    call trialbox % EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff)
+    call trialbox % EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    if(.not. accept) then
+      return
+    endif
+
 
     NewProb = 1E0_dp / real(trialBox % NMol(newType) + 1, dp)
     OldProb = 1E0_dp / real(trialBox % NMol(oldType), dp)

@@ -16,8 +16,10 @@ contains
     use RandomGen, only: sgrnd, ListRNG
     use SimControl, only: nMoves, nCycles
 
+    use MultiBoxMoveDef, only: MCMultiBoxMove
     implicit none
  
+    logical :: accept
     integer :: iAtom, moveNum
     integer(kind=8) :: iCycle, iMove
 
@@ -28,7 +30,10 @@ contains
     !-------Main GA Simulation Loop-------
     do iCycle = 1, nCycles
       moveNum = ListRNG(MoveProb)
-      call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
+      select type( move => Moves(moveNum) % Move )
+        type is (MCMultiBoxMove)
+          call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
+      end select
     enddo
     !-------End of Main GA Simulation Loop-------
     

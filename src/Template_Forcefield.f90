@@ -36,36 +36,36 @@ module Template_ForceField
 
   end subroutine
 !============================================================================
-  subroutine DiffECalc(self, curbox, disp, tempList, tempNNei, E_Diff)
+  subroutine DiffECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
     class(forcefield), intent(in) :: self
     class(simBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
     real(dp) :: E_Half
 
+    accept = .true.
     curbox % dETable = 0E0_dp
     E_Diff = 0E0_dp
 
     if(disp(1)%newAtom .and. disp(1)%oldAtom) then
-!      if(disp(1)%oldAtmIndx == disp(1)%atmIndx) then
-!        call self % ShiftECalc_Single(curbox, disp, E_Diff)
-!      else
+      if(disp(1)%oldAtmIndx == disp(1)%atmIndx) then
+        call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+      else
         E_Diff = 0E0_dp
-        call self % NewECalc(curbox, disp, tempList, tempNNei, E_Half)
-!        write(*,*) E_Half
+        call self % NewECalc(curbox, disp, tempList, tempNNei, E_Half, accept)
         E_Diff = E_Diff + E_Half
         call self % OldECalc(curbox, disp, E_Half)
-!        write(*,*) E_Half
         E_Diff = E_Diff + E_Half
-!      endif
+      endif
 
       return
     endif
 
     if(disp(1)%newAtom) then
-      call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff)
+      call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
       return
     endif
 
@@ -77,12 +77,15 @@ module Template_ForceField
 
   end subroutine
 !=============================================================================+
-  subroutine ShiftECalc_Single(self, curbox, disp, E_Diff)
+  subroutine ShiftECalc_Single(self, curbox, disp, E_Diff, accept)
     implicit none
     class(forcefield), intent(in) :: self
     class(simBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    accept = .true.
 
   end subroutine
 !=============================================================================+
@@ -95,14 +98,16 @@ module Template_ForceField
 
   end subroutine
 !=============================================================================+
-  subroutine NewECalc(self, curbox, disp, tempList, tempNNei, E_Diff)
+  subroutine NewECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
     class(forcefield), intent(in) :: self
     class(simBox), intent(inout) :: curbox
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
 
+    accept = .true.
   end subroutine
 !=============================================================================+
   subroutine OldECalc(self, curbox, disp, E_Diff)

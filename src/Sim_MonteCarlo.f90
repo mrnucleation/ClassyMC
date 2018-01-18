@@ -34,7 +34,6 @@ contains
 
 
     call Trajectory( int(0,kind=8), int(0,kind=8) )
-    call Debug_DumpNeiList(1, 1, 1)
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
     write(nout, *) "============================================"

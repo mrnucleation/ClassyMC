@@ -2,26 +2,30 @@
 module DistanceCriteria
   use VarPrecision
   use ConstraintTemplate, only: constraint
+  use CoordinateTypes, only: Displacement
+  use Template_SimBox, only: SimBox
 
   type, public, extends(constraint) :: distcriteria
-    integer, allocatable :: neiListIndx(:)
+    integer :: neiList = -1
+    integer :: molType = -1
     contains
       procedure, pass :: CheckInitialConstraint => DistCrit_CheckInitialConstraint
+!      procedure, pass :: DiffCheck
       procedure, pass :: ShiftCheck => DistCrit_ShiftCheck
-      procedure, pass :: SwapInCheck => DistCrit_SwapInCheck
-      procedure, pass :: SwapOutCheck => DistCrit_SwapOutCheck
+      procedure, pass :: NewCheck => DistCrit_NewCheck
+      procedure, pass :: OldCheck => DistCrit_OldCheck
+!      procedure, pass :: ProcessIO => DistCrit_ProcessIO
   end type
 !=====================================================================
   contains
 !=====================================================================
-  subroutine DistCrit_CheckInitialConstraint(self)
+  subroutine DistCrit_CheckInitialConstraint(self, accept)
     implicit none
     class(distcriteria), intent(in) :: self
+    logical, intent(out) :: accept
   end subroutine
 !=====================================================================
   subroutine DistCrit_ShiftCheck(self, trialBox, disp, accept)
-    use CoordinateTypes, only: Displacement
-    use Template_SimBox, only: SimBox
     implicit none
     class(distcriteria), intent(in) :: self
     class(SimBox), intent(in) :: trialBox
@@ -33,31 +37,27 @@ module DistanceCriteria
     
 
     accept = .true.
-!    write(*,*) trialBox%atoms(1,1), trialBox%atoms(1,2)
-    if(disp(1)%atmindx == 1) then
-      indx2 = 2 
-    else
-      indx2 = 1
-    endif
-    rx = disp(1)%x_new - trialBox%atoms(1, indx2)
-    ry = disp(1)%y_new - trialBox%atoms(2, indx2)
-    rz = disp(1)%z_new - trialBox%atoms(3, indx2)
-    rsq = rx*rx + ry*ry + rz*rz
-    if(rsq > 2.0E0_dp**2) then
-      accept = .false.
-    endif
-
 
   end subroutine
 !=====================================================================
-  subroutine DistCrit_SwapInCheck(self)
+  subroutine DistCrit_NewCheck(self, trialBox, disp, accept)
     implicit none
     class(distcriteria), intent(in) :: self
+    class(SimBox), intent(in) :: trialBox
+    type(Displacement), intent(in) :: disp(:)
+    logical, intent(out) :: accept
+
+    accept = .true.
   end subroutine
 !=====================================================================
-  subroutine DistCrit_SwapOutCheck(self)
+  subroutine DistCrit_OldCheck(self, trialBox, disp, accept)
     implicit none
     class(distcriteria), intent(in) :: self
+    class(SimBox), intent(in) :: trialBox
+    type(Displacement), intent(in) :: disp(:)
+    logical, intent(out) :: accept
+
+    accept = .true.
   end subroutine
 !=====================================================================
 end module
