@@ -21,14 +21,16 @@ module ConstraintTemplate
 !=============================================================
   contains
 !=============================================================
-  subroutine Constructor(self)
+  subroutine Constructor(self, boxID)
     implicit none
     class(constraint), intent(inout) :: self
+    integer, intent(in) :: boxId
   end subroutine
 !=============================================================
-  subroutine CheckInitialConstraint(self, accept)
+  subroutine CheckInitialConstraint(self, trialBox, accept)
     implicit none
     class(constraint), intent(in) :: self
+    class(SimBox), intent(in) :: trialBox
     logical, intent(out) :: accept
 
     accept = .true.

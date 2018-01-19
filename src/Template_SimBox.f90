@@ -15,6 +15,7 @@ module Template_SimBox
   type, public :: SimBox
     character(len=15) :: boxStr = "Empty"
     integer :: nAtoms, nMaxAtoms
+    integer :: nMolTotal
     integer :: nDimension = 3
 
     !Thermodynamic Variables
