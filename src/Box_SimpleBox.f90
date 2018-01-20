@@ -99,6 +99,9 @@ module SimpleSimBox
     allocate(self%TypeFirst(1:nMolTypes), stat=AllocateStatus)
     allocate(self%TypeLast(1:nMolTypes), stat=AllocateStatus)
 
+    maxMol = maxval(self%NMolMax(:))
+    allocate(self%MolGlobalIndx(1:nMolTypes, 1:maxMol), stat=AllocateStatus)
+
     allocate(self%chempot(1:nMolTypes), stat=AllocateStatus)
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
@@ -113,6 +116,8 @@ module SimpleSimBox
     self%TypeFirst = 0
     self%TypeLast = 0
 
+    self%MolGlobalIndx = 0
+
     self%chempot = 0E0_dp
 
     atmIndx = 0
@@ -121,6 +126,7 @@ module SimpleSimBox
       self%TypeFirst(iType) = atmIndx + 1
       do iMol = 1, self%NMolMax(iType)
         molIndx = molIndx + 1
+        self%MolGlobalIndx(iType, iMol) = molIndx
         self%MolStartIndx(molIndx) = atmIndx + 1
         self%MolEndIndx(molIndx) = atmIndx + MolData(iType)%nAtoms 
         do iAtom = 1, MolData(iType)%nAtoms
@@ -279,7 +285,7 @@ end subroutine
   function SimpleBox_CheckConstraint(self, disp) result(accept)
     use CoordinateTypes
     implicit none
-    class(SimpleBox), intent(in) :: self
+    class(SimpleBox), intent(inout) :: self
     type(Displacement), intent(in) :: disp(:)
     logical :: accept
     integer :: nDisp, iConstrain
@@ -317,17 +323,6 @@ end subroutine
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
-      case("energycalc")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % EFunc => EnergyCalculator(intVal)
-
-      case("temperature")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) realVal
-        self % temperature = realVal
-        self % beta = 1E0_dp/realVal
-
       case("chempot")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
@@ -335,12 +330,28 @@ end subroutine
         read(command, *) realVal
         self % chempot(intVal) = realVal
 
+      case("energycalc")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self % EFunc => EnergyCalculator(intVal)
+
       case("neighcut")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         call GetXCommand(line, command, 6, lineStat)
         read(command, *) realVal
         self%NeighList(intVal)%rCut = realVal
+
+      case("pressure")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self % pressure = realVal
+
+      case("temperature")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self % temperature = realVal
+        self % beta = 1E0_dp/realVal
 
       case default
         lineStat = -1

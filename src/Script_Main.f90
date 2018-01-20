@@ -112,6 +112,7 @@
       use RandomGen, only: initSeed
       use Units, only: outEngUnit, outLenUnit, outAngUnit,  &
                        FindEngUnit, FindLengthUnit, FindAngularUnit
+      use VarPrecision
       implicit none
       character(len=maxLineLen), intent(in) :: line      
       integer, intent(out) :: lineStat
@@ -140,19 +141,18 @@
 !          read(line,*) dummy, command, logicValue
 !          screenEcho = logicValue
 
-       case("rng_seed")
+        case("rng_seed")
           call GetXCommand(line, command2, 3, lineStat)
           read(command2,*) intValue
           initSeed = intValue
-
-        case("energyunits")
-          call GetXCommand(line, command2, 3, lineStat)
-          outEngUnit = FindEngUnit(command2)
 
         case("distunits")
           call GetXCommand(line, command2, 3, lineStat)
           outLenUnit = FindLengthUnit(command2)
 
+        case("energyunits")
+          call GetXCommand(line, command2, 3, lineStat)
+          outEngUnit = FindEngUnit(command2)
         case("angleunits")
           call GetXCommand(line, command2, 3, lineStat)
           outAngUnit = FindAngularUnit(command2)
@@ -179,6 +179,7 @@
       use Input_SimBoxes, only: Script_BoxType
       use Input_Forcefield, only: Script_FieldType
       use Input_AnalysisType, only: Script_AnalysisType
+      use Input_Constraint, only: Script_Constraint
       use Input_TrajType, only: Script_TrajType
       use Input_Moves, only: Script_MCMoves
       use Input_LoadCoords, only: Script_ReadCoordFile
@@ -227,6 +228,15 @@
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
            endif
+
+        case("constraint")
+           if( .not. allocated(BoxArray) ) then
+             stop "Box array not allocated!"
+           endif
+           call GetXCommand(lineStore(iLine), command2, 3, lineStat)
+           read(command2,*) intValue
+           call Script_Constraint(lineStore, iLine, intValue, lineBuffer, lineStat)
+
 
 !        case("energyfunctions")
 !           if( .not. allocated(EnergyCalculator) ) then

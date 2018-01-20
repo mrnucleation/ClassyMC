@@ -74,6 +74,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Cut_NoNei.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
+ 	        	$(SRC)/Script_Constraint.f90\
  	        	$(SRC)/Script_Forcefield.f90\
  	        	$(SRC)/Script_FieldType.f90\
  	        	$(SRC)/Script_NeighType.f90\

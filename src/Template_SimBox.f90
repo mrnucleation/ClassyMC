@@ -20,7 +20,8 @@ module Template_SimBox
 
     !Thermodynamic Variables
     real(dp) :: ETotal, HTotal
-    real(dp) :: beta, temperature, pressure, volume
+    real(dp) :: pressure = 0E0_dp
+    real(dp) :: beta, temperature, volume
     real(dp), allocatable :: chempot(:)
 
     real(dp), allocatable :: ETable(:), dETable(:)
@@ -32,6 +33,7 @@ module Template_SimBox
     integer, allocatable :: AtomType(:), MolType(:)
     integer, allocatable :: MolIndx(:), MolSubIndx(:), SubIndx(:)
 
+    integer, allocatable :: MolGlobalIndx(:, :)
     integer, allocatable :: TypeFirst(:), TypeLast(:)
 
     integer :: nLists
@@ -43,14 +45,15 @@ module Template_SimBox
       procedure, public, pass :: LoadDimension
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
-      procedure, public, pass :: UpdateEnergy
-      procedure, public, pass :: UpdatePosition
-      procedure, public, pass :: UpdateNeighLists
       procedure, public, pass :: ComputeEnergy
       procedure, public, pass :: IOProcess
       procedure, public, pass :: DumpData
       procedure, public, pass :: GetThermo
       procedure, public, pass :: ThermoLookUp
+      procedure, public, pass :: UpdateEnergy
+      procedure, public, pass :: UpdatePosition
+      procedure, public, pass :: UpdateVol
+      procedure, public, pass :: UpdateNeighLists
   end type
 !==========================================================================================
   contains
@@ -105,6 +108,13 @@ module Template_SimBox
     implicit none
     class(SimBox), intent(inout) :: self
     type(Displacement), intent(inout) :: disp(:)
+  end subroutine
+!==========================================================================================
+  subroutine UpdateVol(self, scalar)
+    use CoordinateTypes
+    implicit none
+    class(SimBox), intent(inout) :: self
+    real(dp), intent(in) :: scalar(:)
   end subroutine
 !==========================================================================================
   subroutine ComputeEnergy(self)

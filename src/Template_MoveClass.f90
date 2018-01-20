@@ -16,6 +16,7 @@ use VarPrecision
       procedure, pass :: GeneratePosition 
       procedure, pass :: FullMove
       procedure, pass :: GetAcceptRate
+      procedure, pass :: ProcessIO
       procedure, pass :: Maintenance 
   end type
 
@@ -52,7 +53,16 @@ use VarPrecision
     return
   end function
 !=========================================================================
+  subroutine ProcessIO(self, line)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(MCMove), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line
+
+  end subroutine
+!=========================================================================
   subroutine Maintenance(self)
+    implicit none
     class(MCMove), intent(inout) :: self
   end subroutine
 !=========================================================================

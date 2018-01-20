@@ -12,6 +12,7 @@ module ConstraintTemplate
       procedure, pass :: ShiftCheck
       procedure, pass :: NewCheck
       procedure, pass :: OldCheck
+      procedure, pass :: VolCheck
       procedure, pass :: ProcessIO
   end type
 
@@ -25,11 +26,12 @@ module ConstraintTemplate
     implicit none
     class(constraint), intent(inout) :: self
     integer, intent(in) :: boxId
+
   end subroutine
 !=============================================================
   subroutine CheckInitialConstraint(self, trialBox, accept)
     implicit none
-    class(constraint), intent(in) :: self
+    class(constraint), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
     logical, intent(out) :: accept
 
@@ -39,7 +41,7 @@ module ConstraintTemplate
 !=============================================================
   subroutine DiffCheck(self, trialBox, disp, accept)
     implicit none
-    class(constraint), intent(in) :: self
+    class(constraint), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
     logical, intent(out) :: accept
@@ -68,7 +70,7 @@ module ConstraintTemplate
 !=============================================================
   subroutine ShiftCheck(self, trialBox, disp, accept)
     implicit none
-    class(constraint), intent(in) :: self
+    class(constraint), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
     logical, intent(out) :: accept
@@ -79,7 +81,7 @@ module ConstraintTemplate
 !=============================================================
   subroutine NewCheck(self, trialBox, disp, accept)
     implicit none
-    class(constraint), intent(in) :: self
+    class(constraint), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
     logical, intent(out) :: accept
@@ -89,9 +91,19 @@ module ConstraintTemplate
 !=============================================================
   subroutine OldCheck(self, trialBox, disp, accept)
     implicit none
-    class(constraint), intent(in) :: self
+    class(constraint), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
+    logical, intent(out) :: accept
+
+    accept = .true.
+  end subroutine
+!=============================================================
+  subroutine VolCheck(self, trialBox, scalar, accept)
+    implicit none
+    class(constraint), intent(inout) :: self
+    class(SimBox), intent(in) :: trialBox
+    real(dp), intent(in) :: scalar(:)
     logical, intent(out) :: accept
 
     accept = .true.
