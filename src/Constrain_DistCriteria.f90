@@ -7,6 +7,7 @@ module Constrain_DistanceCriteria
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Displacement
   use Template_SimBox, only: SimBox
+  use ParallelVar, only: nout
 
   type, public, extends(constraint) :: DistCriteria
     integer :: neighList = 1
@@ -141,7 +142,7 @@ module Constrain_DistanceCriteria
     integer :: totalMol, nNew, nClust, neiIndx
     integer :: iMol,jMol,jNei, iAtom, jAtom, iLimit
     integer :: molType, dispIndx
-    integer :: neiList(1:60), nOldNei, nNewNei
+    integer :: neiList(1:600), nOldNei, nNewNei
 
     real(dp) :: rx, ry, rz, rsq
 
@@ -184,6 +185,12 @@ module Constrain_DistanceCriteria
         neiList(nOldNei) = jMol
       endif
     enddo
+  
+    if(nOldNei <= 0) then
+      write(nout, *) "WARNING! Catestrophic error in distance criteria detected!"
+      write(nout, *) "No neighbors were found for the old position for a given"
+      write(nout, *) "shift move. Cluster criteria was not properly maintained!"
+    endif
 
 
      !Seed the initial cluter check by adding the first particle in the array
@@ -196,11 +203,7 @@ module Constrain_DistanceCriteria
 
     do jNei = 1, trialBox%NeighList(self%neighlist)%nNeigh(iAtom)
       jAtom = trialBox%NeighList(self%neighlist)%list(jNei, iAtom)
-!      jMolIndx = trialBox % MolGlobalIndx(self%molType, jMol)
-!      jAtom = trialBox % MolStartIndx(jMolIndx)
-!      if(iAtom == jAtom) then
-!        cycle
-!      endif
+      jMol = trialBox%MolSubIndx(jAtom)
       rx = disp(dispIndx)%x_new - trialBox%atoms(1, jAtom)
       ry = disp(dispIndx)%y_new - trialBox%atoms(2, jAtom)
       rz = disp(dispIndx)%z_new - trialBox%atoms(3, jAtom)
@@ -239,7 +242,7 @@ module Constrain_DistanceCriteria
         if( self%clustMemb(iMol) .neqv. self%flipped(iMol)) then
           do jNei = 1, trialBox%NeighList(self%neighlist)%nNeigh(iAtom)
             jAtom = trialBox%NeighList(self%neighlist)%list(jNei, iAtom)
-            jMol = trialBox%SubIndx(jAtom)
+            jMol = trialBox%MolSubIndx(jAtom)
             if(.not. self%clustMemb(jMol) )then
               molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
               jAtom = trialBox % MolStartIndx(molIndx)
