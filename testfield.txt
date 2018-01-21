@@ -1,5 +1,5 @@
 
-moleculetypes 2
+moleculetypes 1
 
 atomdef
   "O"  1.0
@@ -12,11 +12,11 @@ molecule 1
   end_atoms
 end_molecule
 
-molecule 2
-  atoms
-    2
-  end_atoms
-end_molecule
+#molecule 2
+#  atoms
+#    2
+#  end_atoms
+#end_molecule
 
 forcefieldtype
     LJ_Cut
@@ -24,7 +24,7 @@ forcefieldtype
 end_forcefieldtype
 
 forcefield 1
-  rCut 5.0
+  rCut 2.5
   1  1.0  1.0
-  2  2.0  1.0
+#  2  0.99  1.0
 end_forcefield
