@@ -168,19 +168,18 @@ module Constrain_DistanceCriteria
 
     self%flipped = .false.
     self%clustMemb = .false.
+    iAtom = trialBox % MolStartIndx(startIndx)
 
     nOldNei = 0 
-    do jMol = 1, totalMol
-      jMolIndx = trialBox % MolGlobalIndx(self%molType, jMol)
-      jAtom = trialBox % MolStartIndx(jMolIndx)
-      if(iAtom == jAtom) then
-        cycle
-      endif
+    do jNei = 1, trialBox%NeighList(self%neighlist)%nNeigh(iAtom)
+      jAtom = trialBox%NeighList(self%neighlist)%list(jNei, iAtom)
       rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
       ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
       rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
+      call trialBox%Boundary(rx,ry,rz)
       rsq = rx*rx + ry*ry + rz*rz
       if(rsq < self%rCutSq) then
+        jMol = trialBox%MolIndx(jAtom)
         nOldNei = nOldNei + 1
         neiList(nOldNei) = jMol
       endif
@@ -192,19 +191,20 @@ module Constrain_DistanceCriteria
     self%clustMemb(startIndx) = .true.
     self%flipped(startIndx) = .true.
     nClust = 1
-    iAtom = trialBox % MolStartIndx(startIndx)
-    nNew= 0
+    nNew = 0
     nNewNei = 0
 
-    do jMol = 1, totalMol
-      jMolIndx = trialBox % MolGlobalIndx(self%molType, jMol)
-      jAtom = trialBox % MolStartIndx(jMolIndx)
-      if(iAtom == jAtom) then
-        cycle
-      endif
+    do jNei = 1, trialBox%NeighList(self%neighlist)%nNeigh(iAtom)
+      jAtom = trialBox%NeighList(self%neighlist)%list(jNei, iAtom)
+!      jMolIndx = trialBox % MolGlobalIndx(self%molType, jMol)
+!      jAtom = trialBox % MolStartIndx(jMolIndx)
+!      if(iAtom == jAtom) then
+!        cycle
+!      endif
       rx = disp(dispIndx)%x_new - trialBox%atoms(1, jAtom)
       ry = disp(dispIndx)%y_new - trialBox%atoms(2, jAtom)
       rz = disp(dispIndx)%z_new - trialBox%atoms(3, jAtom)
+      call trialBox%Boundary(rx,ry,rz)
       rsq = rx*rx + ry*ry + rz*rz
       if(rsq < self%rCutSq) then
         self%clustMemb(jMol) = .true.
@@ -237,13 +237,16 @@ module Constrain_DistanceCriteria
          !If the member flag is true, but the flipped flag is false
          !the neighbors of this molecule have not been checked.
         if( self%clustMemb(iMol) .neqv. self%flipped(iMol)) then
-          do jMol = 1, totalMol
+          do jNei = 1, trialBox%NeighList(self%neighlist)%nNeigh(iAtom)
+            jAtom = trialBox%NeighList(self%neighlist)%list(jNei, iAtom)
+            jMol = trialBox%SubIndx(jAtom)
             if(.not. self%clustMemb(jMol) )then
               molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
               jAtom = trialBox % MolStartIndx(molIndx)
               rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
               ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
               rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
+              call trialBox%Boundary(rx, ry, rz)
               rsq = rx*rx + ry*ry + rz*rz
               if(rsq < self%rCutSq) then
                 self%clustMemb(jMol) = .true.

@@ -38,7 +38,7 @@ use Template_NeighList, only: NeighListDef
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 0.7E0_dp  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 0.5E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box
@@ -216,8 +216,13 @@ use Template_NeighList, only: NeighListDef
     lineStat = 0
     call GetXCommand(line, command, 6, lineStat)
     select case( trim(adjustl(command)) )
-      case("restricttype")
+      case("rcut")
+        call GetXCommand(line, command, 7, lineStat)
+        read(command,*) realVal
+        self%rCut = realVal
+        self%rCutSq = realVal * realVal
 
+      case("restricttype")
         call GetAllCommands(line, parlist, lineStat)
         self%restrictType = .true.
         if(.not. allocated(self%allowed) ) then
