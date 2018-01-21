@@ -334,6 +334,9 @@ module Constrain_DistanceCriteria
     self%rCutSq = realVal*realVal
     write(nout, *) "Distance Criteria:",self%rCut
     write(nout, *) "Distance Criteria (SQ):",self%rCutSq
+    call GetXCommand(line, command, 4, lineStat)
+    read(command, *) intVal
+    self%neighList = intVal
 
   end subroutine
 !=====================================================================

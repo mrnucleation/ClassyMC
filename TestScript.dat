@@ -1,7 +1,7 @@
 #======================================
   set rng_seed -6
   set NeighSkin 2.0
-  set moves 1
+  set moves 1000
   set cycles 10000
   SamplingType Metropolis
 #  SamplingType Min
@@ -18,7 +18,7 @@
   neighlist 1 rsqlist 2
 
   modify box 1 neighlist 2 RestrictType 1
-  modify box 1 neighlist 2 rCut 3.5
+  modify box 1 neighlist 2 rCut 2.5
 
   Create moves
 #    AtomExchange 1.0
@@ -35,7 +35,7 @@
   End_Create
 
   Create Constraint 1
-    DistanceCriteria  1  1.5d0
+    DistanceCriteria  1  1.5d0 2
   End_Create
 
   modify box 1 energycalc 1
