@@ -1,10 +1,11 @@
 !===================================================================================
 module Template_NeighList
-use VarPrecision
-use CoordinateTypes, only: Displacement
+  use MasterTemplate, only: classyClass
+  use VarPrecision
+  use CoordinateTypes, only: Displacement
 !use Template_SimBox, only: SimBox
 
-  type, public :: NeighListDef
+  type, public, extends(classyClass) :: NeighListDef
       logical :: Sorted = .false.
       logical :: Strict = .false.
       integer, allocatable :: list(:,:)

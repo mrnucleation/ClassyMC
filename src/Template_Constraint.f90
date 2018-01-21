@@ -1,10 +1,11 @@
 !=============================================================
 module ConstraintTemplate
   use VarPrecision
+  use MasterTemplate, only: classyClass
   use CoordinateTypes, only: Displacement
   use Template_SimBox, only: SimBox
 
-  type, public :: constraint
+  type, public, extends(classyClass) :: constraint
     contains
       procedure, pass :: Constructor
       procedure, pass :: CheckInitialConstraint

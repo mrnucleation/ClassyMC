@@ -53,13 +53,13 @@ contains
         write(*,*) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
       endif
 
-      if(mod(iCycle, 10) == 0) then
+      if(mod(iCycle, 100) == 0) then
         call BoxArray(1) % box % NeighList(1) % BuildList
       endif
 
-!      if(mod(iCycle, 10) == 0) then
-!        call Moves(1) % Move % Maintenance
-!      endif
+      if(mod(iCycle, 10) == 0) then
+        call Moves(1) % Move % Maintenance
+      endif
 
       call Analyze(iCycle, iMove, accept, .false.)
       call Trajectory(iCycle, iMove)
@@ -108,6 +108,25 @@ contains
       enddo
     endif
  
+  end subroutine
+!===========================================================================
+  subroutine Maintenance(iCycle, iMove)
+    use BoxData, only: BoxArray
+    use MCMoveData, only: MoveArray
+    use TrajData, only: TrajArray
+    use CommonSampling, only: Sampling
+    implicit none
+    integer(kind=8), intent(in) :: iCycle, iMove
+    integer :: iTraj
+
+    if( allocated(TrajArray) ) then
+      do iTraj = 1, size(TrajArray)
+        if(mod(iCycle, TrajArray(iTraj)%traj%outfreq) == 0) then
+          call TrajArray(iTraj) % traj % Maintenance
+        endif
+      enddo
+    endif
+
   end subroutine
 !===========================================================================
   subroutine Trajectory(iCycle, iMove)

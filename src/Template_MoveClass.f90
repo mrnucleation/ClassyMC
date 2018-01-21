@@ -1,9 +1,10 @@
 !=========================================================================
 module MoveClassDef
-use SimpleSimBox, only: SimpleBox
-use VarPrecision
+  use MasterTemplate, only: classyClass
+  use SimpleSimBox, only: SimpleBox
+  use VarPrecision
 
-  type, public :: MCMove
+  type, public, extends(classyClass) :: MCMove
     real(dp) :: atmps = 1E-30_dp
     real(dp) :: accpt = 0E0_dp
 
@@ -17,7 +18,7 @@ use VarPrecision
       procedure, pass :: FullMove
       procedure, pass :: GetAcceptRate
       procedure, pass :: ProcessIO
-      procedure, pass :: Maintenance 
+!      procedure, pass :: Maintenance 
   end type
 
  contains
@@ -61,10 +62,10 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
-  subroutine Maintenance(self)
-    implicit none
-    class(MCMove), intent(inout) :: self
-  end subroutine
+!  subroutine Maintenance(self)
+!    implicit none
+!    class(MCMove), intent(inout) :: self
+!  end subroutine
 !=========================================================================
 end module
 !=========================================================================

@@ -1,9 +1,10 @@
 module Template_ForceField
+  use MasterTemplate, only: classyClass
   use VarPrecision
   use Template_SimBox, only: SimBox
   use CoordinateTypes
 
-  type, public :: forcefield
+  type, public, extends(classyClass) :: forcefield
     real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Constructor 

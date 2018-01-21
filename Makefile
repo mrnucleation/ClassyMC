@@ -17,8 +17,6 @@ OPTIMIZE_FLAGS := -O3
 DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
 #DETAILEDDEBUG:= -check all -traceback -g -fpe3 -Og
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
-#DEBUGFLAGS += -heap-arrays 1024
-#DEBUGFLAGS += $(DETAILEDDEBUG)
 #DEBUGFLAGS += -fpe3
 #DEBUGFLAGS += -pg 
 #DEBUGFLAGS += -ffpe-trap=invalid
@@ -96,7 +94,8 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Main.f90\
         		$(SRC)/Units.f90
 
-SRC_TEMPLATE := $(SRC)/Template_SimBox.f90\
+SRC_TEMPLATE := $(SRC)/Template_Master.f90\
+	              $(SRC)/Template_SimBox.f90\
                 $(SRC)/Template_Constraint.f90\
 	              $(SRC)/Template_Forcefield.f90\
 								$(SRC)/Template_AcceptRule.f90\
@@ -208,6 +207,7 @@ $(OBJ)/Neigh_RSqList.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o $(OB
 $(OBJ)/Template_Constraint.o: $(OBJ)/Template_SimBox.o 
 $(OBJ)/Template_Anaylsis.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_NeighList.o
+$(OBJ)/Template_Master.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o
 $(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/Box_SimpleBox.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o

@@ -1,8 +1,9 @@
 !====================================================================
 module TrajectoryTemplate
+  use MasterTemplate, only: classyClass
   use VarPrecision
 
-  type, public :: trajectory
+  type, public, extends(classyClass) :: trajectory
     integer :: fileUnit = -1
     integer :: boxNum = -1
     integer :: outFreq = 5000

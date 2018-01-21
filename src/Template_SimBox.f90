@@ -4,6 +4,7 @@
 ! structure for child classes and should not be used directly. 
 !==========================================================================================
 module Template_SimBox
+  use MasterTemplate, only: classyClass
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
   use Template_NeighList, only: NeighListDef
@@ -12,7 +13,7 @@ module Template_SimBox
 
 
   !Sim Box Definition
-  type, public :: SimBox
+  type, public, extends(classyClass) :: SimBox
     character(len=15) :: boxStr = "Empty"
     integer :: nAtoms, nMaxAtoms
     integer :: nMolTotal

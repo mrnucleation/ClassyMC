@@ -1,15 +1,16 @@
 !=========================================================================
 module AnaylsisClassDef
-use VarPrecision
+  use MasterTemplate, only: classyClass
+  use VarPrecision
 
-  type, public :: Analysis
+  type, public, extends(classyClass) :: Analysis
     logical :: perMove = .false.
     integer :: IOUnit = -1
     integer :: UpdateFreq = -1
     contains
       procedure, pass :: Initialize
       procedure, pass :: Compute
-      procedure, pass :: Maintenance 
+!      procedure, pass :: Maintenance 
       procedure, pass :: ProcessIO
       procedure, pass :: WriteInfo
       procedure, pass :: GetResult
@@ -29,10 +30,10 @@ use VarPrecision
     logical, intent(in) :: accept
   end subroutine
 !=========================================================================
-  subroutine Maintenance(self)
-    implicit none
-    class(Analysis), intent(inout) :: self
-  end subroutine
+!  subroutine Maintenance(self)
+!    implicit none
+!    class(Analysis), intent(inout) :: self
+!  end subroutine
 !=========================================================================
   subroutine ProcessIO(self, line)
     use Input_Format, only: maxLineLen

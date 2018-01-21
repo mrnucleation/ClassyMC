@@ -1,12 +1,13 @@
 !====================================================================
 module AcceptRuleTemplate
+  use MasterTemplate, only: classyClass
   use VarPrecision
   use CoordinateTypes, only: Displacement
 
-  type, public :: acceptrule
+  type, public, extends(classyClass) :: acceptrule
     contains
        procedure, pass :: MakeDecision
-       procedure, pass :: Maintenance
+!       procedure, pass :: Maintenance
        procedure, pass :: ProcessIO
   end type
 !====================================================================
@@ -24,16 +25,15 @@ module AcceptRuleTemplate
     accept = .true.
   end function
 !====================================================================
-  subroutine Maintenance(self)
-    use Template_SimBox, only: SimBox
-    implicit none
-    class(acceptrule), intent(in) :: self
-
-  end subroutine
+!  subroutine Maintenance(self)
+!    implicit none
+!    class(acceptrule), intent(inout) :: self
+!
+!  end subroutine
 !====================================================================
   subroutine ProcessIO(self, line, lineStat)
     implicit none
-    class(acceptrule), intent(in) :: self
+    class(acceptrule), intent(inout) :: self
     integer, intent(out) :: lineStat
     character(len=*), intent(in) :: line   
 
