@@ -99,6 +99,8 @@ module Template_NeighList
     integer, intent(out) :: lineStat
     character(len=maxLineLen), intent(in) :: line   
 
+    lineStat = 0
+
   end subroutine
 !===================================================================================
 

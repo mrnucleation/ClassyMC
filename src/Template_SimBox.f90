@@ -69,6 +69,7 @@ module Template_SimBox
     class(SimBox), intent(inout) :: self
     character(len=*), intent(in) :: line
     integer, intent(out) :: lineStat
+    lineStat = 0
   end subroutine
 !==========================================================================================
   subroutine LoadDimension(self, line, lineStat)
@@ -76,6 +77,8 @@ module Template_SimBox
     class(SimBox), intent(inout) :: self
     character(len=*), intent(in) :: line
     integer, intent(out) :: lineStat
+
+    lineStat = 0
   end subroutine
 !==========================================================================================
   subroutine BuildNeighList(self)

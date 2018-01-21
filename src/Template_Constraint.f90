@@ -116,6 +116,7 @@ module ConstraintTemplate
     character(len=*), intent(in) :: line
     integer, intent(out) :: lineStat
 
+    lineStat = 0
   end subroutine
 !=============================================================
 end module

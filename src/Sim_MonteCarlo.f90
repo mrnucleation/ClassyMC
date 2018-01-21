@@ -171,5 +171,51 @@ contains
 
   end subroutine
 !===========================================================================
+  subroutine Prologue(iCycle, iMove)
+    use AnalysisData, only: AnalysisArray
+    use BoxData, only: BoxArray
+    use MCMoveData, only: Moves, MoveProb
+    use TrajData, only: TrajArray
+    use CommonSampling, only: Sampling
+    implicit none
+    integer(kind=8), intent(in) :: iCycle, iMove
+    integer :: i
+
+    if(mod(iCycle, Sampling%maintFreq) == 0 ) then
+      call Sampling % Prologue
+    endif
+
+    if( allocated(AnalysisArray) ) then
+      do i = 1, size(AnalysisArray)
+        if(mod(iCycle, AnalysisArray(i)%func%maintFreq) == 0) then
+          call AnalysisArray(i) % func % Prologue
+        endif
+      enddo
+    endif
+
+    if( allocated(TrajArray) ) then
+      do i = 1, size(TrajArray)
+        if(mod(iCycle, TrajArray(i)%traj%maintFreq) == 0) then
+          call TrajArray(i) % traj % Prologue
+        endif
+      enddo
+    endif
+
+    do i = 1, size(BoxArray)
+      if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
+        call BoxArray(i) % box % Prologue
+      endif
+    enddo
+
+
+    do i = 1, size(Moves)
+      if(mod(iCycle, Moves(i)%move%maintFreq) == 0) then
+        call Moves(i) % move % Prologue
+      endif
+    enddo
+
+  end subroutine
+
+!===========================================================================
 end module
 !===========================================================================

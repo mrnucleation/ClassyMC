@@ -91,6 +91,7 @@ module CubicBoxDef
     character(len=30) :: dummy
     real(dp) :: boxL
 
+    lineStat = 0
     read(line, *) dummy, boxL
     self%boxL = boxL
     self%boxL2 = boxL/2.0E0_dp

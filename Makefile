@@ -229,7 +229,7 @@ $(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${
 $(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XYZFormat.o 
 $(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Common_BoxData.o
 
-$(OBJ)/RandomNew.o: $(OBJ)/Common.o
+$(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o
 
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 

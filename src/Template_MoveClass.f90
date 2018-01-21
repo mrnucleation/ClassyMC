@@ -39,6 +39,8 @@ module MoveClassDef
     class(MCMove), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
+
+    accept = .true.
   end subroutine
 !=========================================================================
   function GetAcceptRate(self) result(rate)

@@ -76,7 +76,8 @@ contains
     enddo
 
     molIndx = molIndx + box % NMol(molType) + 1
-    write(*,*) molIndx
+
+    atmIndx = molIndx
   end function
 !==================================================
 end module

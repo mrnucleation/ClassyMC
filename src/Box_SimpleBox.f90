@@ -165,6 +165,7 @@ module SimpleSimBox
     character(len=*), intent(in) :: line
     integer, intent(out) :: lineStat
 
+    lineStat = 0
 
   end subroutine
 !==========================================================================================

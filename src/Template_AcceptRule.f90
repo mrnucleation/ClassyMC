@@ -37,6 +37,7 @@ module AcceptRuleTemplate
     integer, intent(out) :: lineStat
     character(len=*), intent(in) :: line   
 
+    lineStat = 0
   end subroutine
 !====================================================================
 end module

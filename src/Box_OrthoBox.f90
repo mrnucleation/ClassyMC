@@ -35,6 +35,8 @@ module OrthoBoxDef
     character(len=30) :: dummy
     real(dp) :: boxLx, boxLy, boxLz
 
+    lineStat = 0
+
     read(line, *) dummy, boxLx, boxLy, boxLz
     self%boxLx = boxLx
     self%boxLy = boxLy
