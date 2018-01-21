@@ -1,9 +1,6 @@
 !==========================================================================================
 module SimpleSimBox
-!  use NeighListDef, only: NeighList
   use VarPrecision
-!  use ForcefieldData, only: ECalcArray
-!  use NeighListDef
   use CoordinateTypes, only: Displacement
   use ForcefieldData, only: ECalcArray
   use ConstraintTemplate, only: constrainArray
@@ -27,9 +24,12 @@ module SimpleSimBox
 !    integer, allocatable :: AtomType(:)
 !    integer, allocatable :: MolIndx(:), SubIndx(:)
 
+
     type(constrainArray), allocatable :: Constrain(:)
     class(ECalcArray), pointer :: EFunc
 !    class(NeighList), allocatable :: NeighList(:)
+
+    logical :: zeroCoords = .false.
 
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
@@ -48,6 +48,8 @@ module SimpleSimBox
       procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
       procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
       procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
+
+      procedure, pass ::  Maintenence => SimpleBox_Maintenence
 
   end type
 
@@ -291,6 +293,7 @@ end subroutine
     integer, intent(out) :: lineStat
     character(len=maxLineLen), intent(in) :: line   
 
+    logical :: logicVal
     integer :: i, intVal
     real(dp) :: realVal
     character(len=30) :: command, val
@@ -332,6 +335,11 @@ end subroutine
         read(command, *) realVal
         self % temperature = realVal
         self % beta = 1E0_dp/realVal
+
+      case("recenter")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self % zeroCoords = logicVal
 
       case default
         lineStat = -1
@@ -449,6 +457,16 @@ end subroutine
 !    if(disp(iDisp)%newlist) then
 !      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
 !    endif
+
+  end subroutine
+
+!==========================================================================================
+  subroutine SimpleBox_Maintenence(self)
+    use CoordinateTypes
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+
+
 
   end subroutine
 !==========================================================================================

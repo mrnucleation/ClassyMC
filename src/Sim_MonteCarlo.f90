@@ -57,9 +57,9 @@ contains
         call BoxArray(1) % box % NeighList(1) % BuildList
       endif
 
-      if(mod(iCycle, 10) == 0) then
-        call Moves(1) % Move % Maintenance
-      endif
+!      if(mod(iCycle, 10) == 0) then
+!        call Moves(1) % Move % Maintenance
+!      endif
 
       call Analyze(iCycle, iMove, accept, .false.)
       call Trajectory(iCycle, iMove)
@@ -111,21 +111,47 @@ contains
   end subroutine
 !===========================================================================
   subroutine Maintenance(iCycle, iMove)
+    use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
-    use MCMoveData, only: MoveArray
+    use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
     use CommonSampling, only: Sampling
     implicit none
     integer(kind=8), intent(in) :: iCycle, iMove
-    integer :: iTraj
+    integer :: i
 
-    if( allocated(TrajArray) ) then
-      do iTraj = 1, size(TrajArray)
-        if(mod(iCycle, TrajArray(iTraj)%traj%outfreq) == 0) then
-          call TrajArray(iTraj) % traj % Maintenance
+    if(mod(iCycle, Sampling%maintFreq) == 0 ) then
+      call Sampling % Maintenance
+    endif
+
+    if( allocated(AnalysisArray) ) then
+      do i = 1, size(AnalysisArray)
+        if(mod(iCycle, AnalysisArray(i)%func%maintFreq) == 0) then
+          call AnalysisArray(i) % func % Maintenance
         endif
       enddo
     endif
+
+    if( allocated(TrajArray) ) then
+      do i = 1, size(TrajArray)
+        if(mod(iCycle, TrajArray(i)%traj%maintFreq) == 0) then
+          call TrajArray(i) % traj % Maintenance
+        endif
+      enddo
+    endif
+
+    do i = 1, size(BoxArray)
+      if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
+        call BoxArray(i) % box % Maintenance
+      endif
+    enddo
+
+
+    do i = 1, size(Moves)
+      if(mod(iCycle, Moves(i)%move%maintFreq) == 0) then
+        call Moves(i) % move % Maintenance
+      endif
+    enddo
 
   end subroutine
 !===========================================================================

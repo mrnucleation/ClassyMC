@@ -3,10 +3,11 @@ module MasterTemplate
   use VarPrecision
 
   type, public :: classyClass
-    integer :: maintFreq
+    integer :: maintFreq = 100
     contains
        procedure, pass :: Maintenance
 !       procedure, pass :: ProcessIO
+       procedure, pass :: Prologue
   end type
 !====================================================================
   contains
@@ -24,6 +25,12 @@ module MasterTemplate
 !    character(len=*), intent(in) :: line   
 !
 !  end subroutine
+!====================================================================
+  subroutine Prologue(self)
+    implicit none
+    class(classyClass), intent(inout) :: self
+
+  end subroutine
 !====================================================================
 end module
 !====================================================================
