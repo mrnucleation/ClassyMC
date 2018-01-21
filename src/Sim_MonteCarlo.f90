@@ -27,11 +27,7 @@ contains
     real(dp) :: E_T, E_Final
     character(len=50) :: fileName
 
-    do i = 1, size(BoxArray)
-      call BoxArray(i) % box % ComputeEnergy
-      call BoxArray(i) % box % NeighList(1) % BuildList
-    enddo
-
+    call Prologue(iCycle, iMove)
 
     call Trajectory( int(0,kind=8), int(0,kind=8) )
     write(nout, *) "============================================"
@@ -66,17 +62,18 @@ contains
     enddo
     !-------End of Main Monte Carlo Simulation Loop-------
     
-    call Debug_DumpNeiList(1, 1, 1)
-    E_Final = BoxArray(1)%box%ETotal
-    do i = 1, size(BoxArray)
-      call BoxArray(i) % box % ComputeEnergy
-      call BoxArray(i) % box % NeighList(1) % BuildList
-    enddo
-    call Debug_DumpNeiList(1, 1, 1)
+!    E_Final = BoxArray(1)%box%ETotal
+!    do i = 1, size(BoxArray)
+!      call BoxArray(i) % box % ComputeEnergy
+!      call BoxArray(i) % box % NeighList(1) % BuildList
+!    enddo
 
-    write(nout, *) "Culmative Energy:", E_Final
-    write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
-    write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal
+!    write(nout, *) "Culmative Energy:", E_Final
+!    write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
+!    write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal
+
+
+    call Epilogue(iCycle, iMove)
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
 
@@ -171,6 +168,42 @@ contains
 
   end subroutine
 !===========================================================================
+  subroutine Epilogue(iCycle, iMove)
+    use AnalysisData, only: AnalysisArray
+    use BoxData, only: BoxArray
+    use MCMoveData, only: Moves, MoveProb
+    use TrajData, only: TrajArray
+    use CommonSampling, only: Sampling
+    use ParallelVar, only: nout
+    implicit none
+    integer(kind=8), intent(in) :: iCycle, iMove
+    integer :: i
+
+    call Sampling % Epilogue
+    
+    if( allocated(AnalysisArray) ) then
+      do i = 1, size(AnalysisArray)
+        call AnalysisArray(i) % func % Epilogue
+      enddo
+    endif
+
+    if( allocated(TrajArray) ) then
+      do i = 1, size(TrajArray)
+        call TrajArray(i) % traj % Epilogue
+      enddo
+    endif
+
+    do i = 1, size(BoxArray)
+      call BoxArray(i) % box % Epilogue
+    enddo
+    write(nout, *) "-----------------------"
+
+    do i = 1, size(Moves)
+      call Moves(i) % move % Epilogue
+    enddo
+
+  end subroutine
+!===========================================================================
   subroutine Prologue(iCycle, iMove)
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
@@ -181,37 +214,26 @@ contains
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
 
-    if(mod(iCycle, Sampling%maintFreq) == 0 ) then
-      call Sampling % Prologue
-    endif
+    call Sampling % Prologue
 
     if( allocated(AnalysisArray) ) then
       do i = 1, size(AnalysisArray)
-        if(mod(iCycle, AnalysisArray(i)%func%maintFreq) == 0) then
-          call AnalysisArray(i) % func % Prologue
-        endif
+        call AnalysisArray(i) % func % Prologue
       enddo
     endif
 
     if( allocated(TrajArray) ) then
       do i = 1, size(TrajArray)
-        if(mod(iCycle, TrajArray(i)%traj%maintFreq) == 0) then
-          call TrajArray(i) % traj % Prologue
-        endif
+        call TrajArray(i) % traj % Prologue
       enddo
     endif
 
     do i = 1, size(BoxArray)
-      if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
-        call BoxArray(i) % box % Prologue
-      endif
+      call BoxArray(i) % box % Prologue
     enddo
 
-
     do i = 1, size(Moves)
-      if(mod(iCycle, Moves(i)%move%maintFreq) == 0) then
-        call Moves(i) % move % Prologue
-      endif
+      call Moves(i) % move % Prologue
     enddo
 
   end subroutine

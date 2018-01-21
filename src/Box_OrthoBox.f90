@@ -113,6 +113,11 @@ module OrthoBoxDef
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
+      case("buildfreq")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self % buildfreq = intVal
+
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal

@@ -50,6 +50,8 @@ module SimpleSimBox
       procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
 
       procedure, pass ::  Maintenence => SimpleBox_Maintenence
+      procedure, pass ::  Prologue => SimpleBox_Prologue
+      procedure, pass ::  Epilogue => SimpleBox_Epilogue
 
   end type
 
@@ -302,6 +304,11 @@ end subroutine
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
+      case("buildfreq")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self % buildfreq = intVal
+
       case("chempot")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
@@ -471,5 +478,55 @@ end subroutine
 
   end subroutine
 !==========================================================================================
+  subroutine SimpleBox_Prologue(self)
+    use ParallelVar, only: nout
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+
+    call self % ComputeEnergy
+    call self % NeighList(1) % BuildList
+
+    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy:", self % ETotal
+
+
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_Epilogue(self)
+    use ParallelVar, only: nout
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    real(dp) :: E_Culm
+
+    E_Culm = self%ETotal
+
+    write(nout,*) "--------Box", self%boxID , "Energy---------"
+    call self % ComputeEnergy
+    call self % NeighList(1) % BuildList
+
+    write(nout, *) "Final Energy:", self % ETotal
+    if(self%ETotal /= 0) then
+      if( abs((E_Culm-self%ETotal)/self%ETotal) > 1E-7_dp ) then
+        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "Box: ", self%boxID
+        write(nout, *) "Culmative Energy: ", E_Culm
+        write(nout, *) "Final Energy: ", self%ETotal
+        write(nout, *) "Difference: ", self%ETotal-E_Culm
+      endif
+    else
+      if( abs(E_Culm-self%ETotal) > 1E-7_dp ) then
+        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "Box: ", self%boxID
+        write(nout, *) "Culmative Energy: ", E_Culm
+        write(nout, *) "Final Energy: ", self%ETotal
+        write(nout, *) "Difference: ", self%ETotal-E_Culm
+      endif
+    endif
+
+
+  end subroutine
+
+
+!==========================================================================================
+
 end module
 !==========================================================================================

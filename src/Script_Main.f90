@@ -222,7 +222,7 @@
                else
                  call Script_BoxType(linestore(curLine), i, lineStat)
                endif
-               BoxArray(i)%box%boxID = i - 1
+               BoxArray(i)%box%boxID = i 
              enddo             
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"

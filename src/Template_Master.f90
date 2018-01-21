@@ -5,6 +5,7 @@ module MasterTemplate
   type, public :: classyClass
     integer :: maintFreq = 100
     contains
+       procedure, pass :: Epilogue
        procedure, pass :: Maintenance
 !       procedure, pass :: ProcessIO
        procedure, pass :: Prologue
@@ -25,6 +26,12 @@ module MasterTemplate
 !    character(len=*), intent(in) :: line   
 !
 !  end subroutine
+!====================================================================
+  subroutine Epilogue(self)
+    implicit none
+    class(classyClass), intent(inout) :: self
+
+  end subroutine
 !====================================================================
   subroutine Prologue(self)
     implicit none

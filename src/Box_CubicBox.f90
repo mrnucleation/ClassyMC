@@ -171,6 +171,12 @@ module CubicBoxDef
         self % boxL = realVal
         self % boxL2 = realVal/2.0E0_dp
 
+      case("buildfreq")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self % buildfreq = intVal
+
+
       case("chempot")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal

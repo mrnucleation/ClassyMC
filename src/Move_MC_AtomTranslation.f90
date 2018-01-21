@@ -19,7 +19,8 @@ use VarPrecision
       procedure, pass :: GeneratePosition => AtomTrans_GeneratePosition
       procedure, pass :: FullMove => AtomTrans_FullMove
       procedure, pass :: Maintenance => AtomTrans_Maintenance
-
+!      procedure, pass :: Prologue => AtomTrans_Prologue
+      procedure, pass :: Epilogue => AtomTrans_Epilogue
   end type
 !========================================================
  contains
@@ -141,6 +142,18 @@ use VarPrecision
       self%max_dist = self%max_dist * 0.99E0_dp
     endif
 
+ 
+
+  end subroutine
+!=========================================================================
+  subroutine AtomTrans_Epilogue(self)
+    use ParallelVar, only: nout
+    implicit none
+    class(AtomTranslate), intent(inout) :: self
+    real(dp) :: accptRate
+      
+    accptRate = self%GetAcceptRate()
+    write(nout,"(1x,A,F15.8)") "Atom Translation Accept Rate: ", accptRate
  
 
   end subroutine

@@ -38,6 +38,7 @@ module Template_SimBox
     integer, allocatable :: TypeFirst(:), TypeLast(:)
 
     integer :: nLists
+    integer :: buildFreq = 100
     class(NeighListDef), allocatable :: NeighList(:)
 
     contains
