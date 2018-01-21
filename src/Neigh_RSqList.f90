@@ -15,6 +15,8 @@ use Template_NeighList, only: NeighListDef
 !      integer, allocatable :: nNeigh(:)
 !      integer :: maxNei
 !      real(dp) :: rCut, rCutSq
+!      logical :: restrictType = .false.
+!      integer, allocatable :: allowed(:)
       class(SimpleBox), pointer :: parent => null()
     contains
       procedure, pass :: Constructor => RSqList_Constructor 
@@ -31,11 +33,12 @@ use Template_NeighList, only: NeighListDef
   subroutine RSqList_Constructor(self, parentID, rCut)
     use BoxData, only: BoxArray
     use Common_NeighData, only: neighSkin
+    use Common_MolInfo, only: nAtomTypes
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 0.5E0_dp  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 0.7E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box
@@ -183,6 +186,7 @@ use Template_NeighList, only: NeighListDef
         rx = disp%x_new - self%parent%atoms(1, jAtom)
         ry = disp%y_new - self%parent%atoms(2, jAtom)
         rz = disp%z_new - self%parent%atoms(3, jAtom)
+        call self%parent%Boundary(rx,ry,rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
           tempNNei(iDisp) = tempNNei(iDisp) + 1
@@ -191,6 +195,43 @@ use Template_NeighList, only: NeighListDef
       enddo
       molStart = molStart + self%parent%NMolMax(jType)
     enddo
+
+  end subroutine
+!====================================================================
+  subroutine RSqList_ProcessIO(self, line, lineStat)
+    use Input_Format, only: GetAllCommands, GetXCommand,maxLineLen
+    use Common_MolInfo, only: nAtomTypes
+    implicit none
+    class(RSqList), intent(inout) :: self
+    integer, intent(out) :: lineStat
+    character(len=maxLineLen), intent(in) :: line   
+
+    integer :: i, intVal
+    real(dp) :: realVal
+
+    character(len=30) :: command 
+    character(len=30), allocatable :: parlist(:)
+
+
+    lineStat = 0
+    call GetXCommand(line, command, 6, lineStat)
+    select case( trim(adjustl(command)) )
+      case("restricttype")
+
+        call GetAllCommands(line, parlist, lineStat)
+        self%restrictType = .true.
+        if(.not. allocated(self%allowed) ) then
+          allocate(self%allowed(1:nAtomTypes) )
+        endif
+        self%allowed = .false.
+        do i = 7, size(parList)
+          read(parList(i), *) intVal
+          self%allowed(intVal) = .true.
+        enddo
+
+      case default
+        lineStat = -1
+    end select
 
   end subroutine
 !===================================================================================
@@ -202,7 +243,7 @@ use Template_NeighList, only: NeighListDef
     class(SimpleBox), intent(inout) :: trialBox
     integer :: iList
     integer :: iType, jType, iAtom, jAtom, j
-    integer :: iUp, iLow, jUp, jLow, molStart, jMolStart, jMolEnd
+    integer :: iUp, iLow, jUp, jLow, molStart, jMolStart, jMolEnd, atmType
     real(dp) :: rx, ry, rz, rsq
 
 
@@ -240,6 +281,17 @@ use Template_NeighList, only: NeighListDef
             call trialBox%Boundary(rx, ry, rz)
             rsq = rx*rx + ry*ry + rz*rz
             do iList = 1, size(trialBox%NeighList)
+              if( trialBox % NeighList(iList) % restrictType ) then
+                atmType = trialBox % atomType(iAtom)
+                if( trialBox%NeighList(iList)%allowed(atmType)  ) then
+                  cycle
+                endif
+
+                atmType = trialBox % atomType(jAtom)
+                if( trialBox%NeighList(iList)%allowed(atmType)  ) then
+                  cycle
+                endif
+              endif
               if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
                 trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
                 trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom

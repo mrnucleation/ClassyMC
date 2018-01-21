@@ -18,13 +18,14 @@ contains
 
     character(len=30) :: command
     integer :: i, intVal, curLine
-    integer :: nItems
+    integer :: nItems, AllocateStat
     real(dp) :: realVal
 
     lineStat  = 0
     call FindCommandBlock(iLine, lineStore, "end_create", lineBuffer)
     nItems = lineBuffer - 1
 
+    allocate(BoxArray(BoxNum)%box%Constrain(1:nItems), stat = AllocateStat)
     !Safety check to ensure that the index number is within proper bounds
     do i = 1, nItems
       curLine = iLine + i

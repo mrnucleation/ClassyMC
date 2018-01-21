@@ -63,12 +63,11 @@ module Constrain_DistanceCriteria
     self%flipped = .false.
     self%clustMemb = .false.
 
-    totalMol = trialBox%NMol(molType)
+    totalMol = trialBox%NMol(self%molType)
     if(totalMol < 2) then
       return
     endif
 
-    neiIndx = self%neighList
 
      !Seed the initial cluter check by adding the first particle in the array
      !to the cluster
@@ -140,27 +139,29 @@ module Constrain_DistanceCriteria
     logical, intent(out) :: accept
     integer :: i, startIndx, molIndx, jMolIndx
     integer :: totalMol, nNew, nClust, neiIndx
-    integer :: iMol,jMol, iAtom, jAtom, iLimit
-    integer :: molType
+    integer :: iMol,jMol,jNei, iAtom, jAtom, iLimit
+    integer :: molType, dispIndx
+    integer :: neiList(1:60), nOldNei, nNewNei
 
     real(dp) :: rx, ry, rz, rsq
 
     accept = .true.
-    totalMol = trialBox%NMol(molType)
+    totalMol = trialBox%NMol(self%molType)
     if(totalMol < 2) then
       return
     endif
 
     do i = 1, size(disp)
       if(disp(i)%molType == self%molType) then
-        if(disp(i)%atmIndx == 1) then
+        if(disp(i)%atmIndx == trialBox%MolStartIndx(disp(i)%molIndx)) then
           accept = .false.
+          dispIndx = i
           startIndx = disp(i)%molIndx
           exit
         endif
       endif
     enddo
-
+ 
     if(accept) then
       return
     endif
@@ -168,35 +169,63 @@ module Constrain_DistanceCriteria
     self%flipped = .false.
     self%clustMemb = .false.
 
-     !Seed the initial cluter check by adding the first particle in the array
-     !to the cluster
-    self%clustMemb(molIndx) = .true.
-    self%flipped(molIndx) = .true.
-    nClust = nClust + 1
-    iAtom = trialBox % MolStartIndx(molIndx)
-    nNew = 0
+    nOldNei = 0 
     do jMol = 1, totalMol
       jMolIndx = trialBox % MolGlobalIndx(self%molType, jMol)
       jAtom = trialBox % MolStartIndx(jMolIndx)
+      if(iAtom == jAtom) then
+        cycle
+      endif
       rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
       ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
       rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
       rsq = rx*rx + ry*ry + rz*rz
       if(rsq < self%rCutSq) then
-        self%clustMemb(jMol) = .true.
-        nNew = nNew + 1
-        nClust = nClust + 1
+        nOldNei = nOldNei + 1
+        neiList(nOldNei) = jMol
       endif
     enddo
 
-    if( (nNew <= 0) .or. (nClust < totalMol) ) then
+
+     !Seed the initial cluter check by adding the first particle in the array
+     !to the cluster
+    self%clustMemb(startIndx) = .true.
+    self%flipped(startIndx) = .true.
+    nClust = 1
+    iAtom = trialBox % MolStartIndx(startIndx)
+    nNew= 0
+    nNewNei = 0
+
+    do jMol = 1, totalMol
+      jMolIndx = trialBox % MolGlobalIndx(self%molType, jMol)
+      jAtom = trialBox % MolStartIndx(jMolIndx)
+      if(iAtom == jAtom) then
+        cycle
+      endif
+      rx = disp(dispIndx)%x_new - trialBox%atoms(1, jAtom)
+      ry = disp(dispIndx)%y_new - trialBox%atoms(2, jAtom)
+      rz = disp(dispIndx)%z_new - trialBox%atoms(3, jAtom)
+      rsq = rx*rx + ry*ry + rz*rz
+      if(rsq < self%rCutSq) then
+        self%clustMemb(jMol) = .true.
+        nNew = nNew + 1
+        nClust = nClust + 1
+        if( any(jMol == neiList(1:nOldNei)) ) then
+          nNewNei = nNewNei + 1
+        endif
+      endif
+    enddo
+
+    if( (nNew <= 0) ) then
       accept = .false.
+      return
+    elseif(nNewNei == nOldNei) then
+      accept = .true.
       return
     endif
 
 
-
-    do iLimit = 1, totalMol
+    do iLimit = 1, totalMol-1
       nNew = 0
       do iMol = 1, totalMol
         if(.not. self%clustMemb(iMol)) then
@@ -220,6 +249,9 @@ module Constrain_DistanceCriteria
                 self%clustMemb(jMol) = .true.
                 nNew = nNew + 1
                 nClust = nClust + 1
+                if( any(jMol == neiList(1:nOldNei)) ) then
+                  nNewNei = nNewNei + 1
+                endif
               endif
             endif
           enddo
@@ -229,7 +261,11 @@ module Constrain_DistanceCriteria
 
        ! If no new molecules were added, the algorithm has hit a dead end
        ! and the cluster is broken.  
-       if(nNew <= 0) then
+      if(nNew <= 0) then
+        exit
+      endif
+
+      if(nNewNei == nOldNei) then
         exit
       endif
 
@@ -243,6 +279,7 @@ module Constrain_DistanceCriteria
      ! If no new particles were added or the limit has been hit without finding all the molecules
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
     if( (nNew <= 0) .or. (nClust < totalMol) ) then
+!      write(*,*) "Fail 2", nNew, nClust
       accept = .false.
       return
     endif
@@ -274,6 +311,7 @@ module Constrain_DistanceCriteria
 !=============================================================
   subroutine DistCrit_ProcessIO(self, line, lineStat)
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
+    use ParallelVar, only: nout
     implicit none
     class(DistCriteria), intent(inout) :: self
     character(len=*), intent(in) :: line
@@ -284,27 +322,15 @@ module Constrain_DistanceCriteria
     character(len=30) :: command, val
 
     lineStat = 0
-    call GetXCommand(line, command, 4, lineStat)
-    select case( trim(adjustl(command)) )
-      case("neighlist")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % neighList = intVal
-
-      case("moleculetype")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % moltype = intVal
-
-      case("rcut")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) realVal
-        self % rCut = realVal
-        self % rCutSq = realVal**2
-
-      case default
-        lineStat = -1
-    end select
+    call GetXCommand(line, command, 2, lineStat)
+    read(command, *) intVal
+    self%molType = intVal
+    call GetXCommand(line, command, 3, lineStat)
+    read(command, *) realVal
+    self%rCut = realVal
+    self%rCutSq = realVal*realVal
+    write(nout, *) "Distance Criteria:",self%rCut
+    write(nout, *) "Distance Criteria (SQ):",self%rCutSq
 
   end subroutine
 !=====================================================================

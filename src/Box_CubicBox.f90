@@ -164,23 +164,11 @@ module CubicBoxDef
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
-      case("energycalc")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % EFunc => EnergyCalculator(intVal)
-
-!        self % ECalcer = intVal
       case("boxlength")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal
         self % boxL = realVal
         self % boxL2 = realVal/2.0E0_dp
-
-      case("temperature")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) realVal
-        self % temperature = realVal
-        self % beta = 1E0_dp/realVal
 
       case("chempot")
         call GetXCommand(line, command, 5, lineStat)
@@ -188,6 +176,34 @@ module CubicBoxDef
         call GetXCommand(line, command, 6, lineStat)
         read(command, *) realVal
         self % chempot(intVal) = realVal
+
+      case("energycalc")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self % EFunc => EnergyCalculator(intVal)
+
+      case("neighcut")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call GetXCommand(line, command, 6, lineStat)
+        read(command, *) realVal
+        self%NeighList(intVal)%rCut = realVal
+
+      case("neighlist")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call self%NeighList(intVal)%ProcessIO(line, lineStat)
+
+      case("pressure")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self % pressure = realVal
+
+      case("temperature")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self % temperature = realVal
+        self % beta = 1E0_dp/realVal
 
       case default
         lineStat = -1

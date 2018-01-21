@@ -55,6 +55,13 @@ contains
       do j = 1, size(BoxArray(i)%box%NeighList)
         call BoxArray(i)%box%NeighList(j)%constructor(i)
       enddo
+
+      if( allocated(BoxArray(i)%box%Constrain) ) then
+        do j = 1, size(BoxArray(i)%box%Constrain)
+          call BoxArray(i)%box%Constrain(j)%method%Constructor(i)
+        enddo
+      endif
+
     enddo
 
 

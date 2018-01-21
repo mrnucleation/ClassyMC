@@ -60,6 +60,7 @@ SRC_MAIN := $(SRC)/Common.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
 	        	$(SRC)/SearchSort.f90\
         		$(SRC)/Sampling_Metropolis.f90\
+        		$(SRC)/Sampling_MinMetrop.f90\
         		$(SRC)/Move_MC_AtomTranslation.f90\
         		$(SRC)/Move_MC_AtomExchange.f90\
         		$(SRC)/Move_MC_Delete.f90\

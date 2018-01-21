@@ -219,32 +219,6 @@ module SimpleSimBox
     integer :: iAtom, jAtom
     real(dp) :: rx, ry, rz, rsq
 
-    do iList = 1, size(self%NeighList)
-      self%NeighList(iList)%nNeigh = 0
-      self%NeighList(iList)%list = 0
-    enddo
-
-    do iAtom = 1, self%nAtoms-1
-      do jAtom = iAtom+1, self%nAtoms
-        rx = self%atoms(1, iAtom) - self%atoms(1, jAtom)
-        ry = self%atoms(2, iAtom) - self%atoms(2, jAtom)
-        rz = self%atoms(3, iAtom) - self%atoms(3, jAtom)
-        call self%Boundary(rx, ry, rz)
-        rsq = rx*rx + ry*ry + rz*rz
-        do iList = 1, size(self%NeighList)
-          if( rsq <= self%NeighList(iList)%rCutSq ) then 
-
-            self%NeighList(iList)%nNeigh(iAtom) = self%NeighList(iList)%nNeigh(iAtom) + 1
-            self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
-
-            self%NeighList(iList)%nNeigh(jAtom) = self%NeighList(iList)%nNeigh(jAtom) + 1
-            self%NeighList(iList)%list( self%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
-          endif
-        enddo        
-      enddo
-    enddo
-
-
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_Boundary(self, rx, ry, rz)
@@ -295,6 +269,7 @@ end subroutine
       return
     endif
 
+    nDisp = size(disp)
     if( size(self%Constrain) > 0 ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % ShiftCheck( self, disp(1:nDisp), accept )
@@ -341,6 +316,11 @@ end subroutine
         call GetXCommand(line, command, 6, lineStat)
         read(command, *) realVal
         self%NeighList(intVal)%rCut = realVal
+
+      case("neighlist")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call self%NeighList(intVal)%ProcessIO(line, lineStat)
 
       case("pressure")
         call GetXCommand(line, command, 5, lineStat)

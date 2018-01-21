@@ -31,10 +31,11 @@ module AcceptRuleTemplate
 
   end subroutine
 !====================================================================
-  subroutine ProcessIO(self)
-    use Template_SimBox, only: SimBox
+  subroutine ProcessIO(self, line, lineStat)
     implicit none
     class(acceptrule), intent(in) :: self
+    integer, intent(out) :: lineStat
+    character(len=*), intent(in) :: line   
 
   end subroutine
 !====================================================================

@@ -12,7 +12,9 @@ use CoordinateTypes, only: Displacement
       integer :: maxNei
       real(dp) :: rCut = -1E0_dp
       real(dp) :: rCutSq
-!      class(SimBox), pointer :: parent => null()
+      logical :: restrictType = .false.
+      logical, allocatable :: allowed(:)
+
       
     contains
       procedure, pass :: Constructor
@@ -21,6 +23,7 @@ use CoordinateTypes, only: Displacement
       procedure, pass :: AddMol
       procedure, pass :: TransferList
       procedure, pass :: DeleteMol
+      procedure, pass :: ProcessIO
   end type
 
 !===================================================================================
@@ -85,6 +88,15 @@ use CoordinateTypes, only: Displacement
     class(NeighListDef), intent(inout) :: self
     integer, intent(in) :: molIndx, topIndx
 
+
+  end subroutine
+!====================================================================
+  subroutine ProcessIO(self, line, lineStat)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+    integer, intent(out) :: lineStat
+    character(len=maxLineLen), intent(in) :: line   
 
   end subroutine
 !===================================================================================
