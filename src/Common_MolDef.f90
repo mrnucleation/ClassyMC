@@ -8,6 +8,17 @@ module StructureTypes
     real(dp) :: mass
   end type
 
+  type BondDef 
+    real(dp) :: rEq
+    !    Insert Function Type
+  end type
+
+  type AngleDef 
+    real(dp) :: angEq
+    !    Insert Function Type
+  end type
+
+
 
   type BondMem
     integer :: bondType
@@ -26,8 +37,8 @@ module StructureTypes
     integer :: mem1, mem2, mem3, mem4
   end type
 
-
   type MolDef 
+    logical :: ridgid = .false.
     integer :: nAtoms = 1
     integer, allocatable :: atomType(:)
 
@@ -42,7 +53,6 @@ module StructureTypes
   end type
 
 
-
 end module
 !================================================================
 module Common_MolInfo
@@ -52,13 +62,15 @@ module Common_MolInfo
   integer :: nMolTypes = 1
   integer :: nAtomTypes = -1
   integer :: nBondTypes = -1
+  integer :: nAngleTypes = -1
+  integer :: nTorsionTypes = -1
 
   integer :: mostAtoms = -1
 
   type(MolDef), allocatable :: MolData(:)
   type(AtomDef), allocatable :: AtomData(:)
-!  type(BondDef), allocatable :: BondData(:)
-
+  type(BondDef), allocatable :: BondData(:)
+  type(AngleDef), allocatable :: AngleData(:)
 
 
 end module

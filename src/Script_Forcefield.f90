@@ -14,7 +14,8 @@ module Input_Forcefield
     use ForcefieldData, only: nForceFields, EnergyCalculator
     use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile
-    use Common_MolInfo, only: AtomData, MolData, nMolTypes, nAtomTypes
+    use Common_MolInfo, only: AtomData, MolData, BondData, &
+                             nMolTypes, nAtomTypes, nBondTypes
     implicit none
     character(len=50), intent(in) :: fileName      
     integer, intent(out) :: lineStat
@@ -86,6 +87,21 @@ module Input_Forcefield
             enddo   
           else
             write(*,*) "ERROR! The atomdef has already been used and can not be called twice"
+            stop
+          endif
+
+        case("bonddef")
+          call FindCommandBlock(iLine, lineStore, "end_bonddef", lineBuffer)
+          nItems = lineBuffer - 1
+          if( .not. allocated(AtomData) ) then
+            nBondTypes = nItems
+            allocate(BondData(1:nItems), stat = AllocateStat)
+            do i = 1, nItems
+              curLine = iLine + i
+              read(lineStore(curLine), *) BondData(i)%rEq
+            enddo   
+          else
+            write(*,*) "ERROR! The BondDef has already been used and can not be called twice"
             stop
           endif
 

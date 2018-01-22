@@ -61,6 +61,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Sampling_MinMetrop.f90\
         		$(SRC)/Move_MC_AtomTranslation.f90\
         		$(SRC)/Move_MC_AtomExchange.f90\
+        		$(SRC)/Move_MC_MolTranslation.f90\
         		$(SRC)/Move_MC_Delete.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/Analysis_RDF.f90\
