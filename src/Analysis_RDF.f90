@@ -12,6 +12,7 @@ use VarPrecision
 
     integer :: boxNum
     integer :: type1, type2
+    integer :: bins = 1000
     real(dp) :: dr = 0.01E0_dp
     real(dp), allocatable :: hist(:)
     real(dp), allocatable :: tempHist(:)
