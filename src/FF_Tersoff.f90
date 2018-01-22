@@ -98,12 +98,13 @@ module FF_Pair_Tersoff
 
   end subroutine
   !===================================================================================
-  subroutine Detailed_Tersoff(self, curbox, E_T)
+  subroutine Detailed_Tersoff(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     implicit none
     class(Pair_Tersoff), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
+    logical, intent(out) :: accept
     integer :: iAtom, jAtom, kAtom
     integer :: atmType1, atmType2, atmType3
     real(dp) :: A, B, c, d, R_eq, D2 

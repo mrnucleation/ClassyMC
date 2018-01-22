@@ -29,11 +29,12 @@ module Template_ForceField
 
   end subroutine
 !=============================================================================+
-  subroutine DetailedECalc(self, curbox, E_T)
+  subroutine DetailedECalc(self, curbox, E_T, accept)
     implicit none
     class(forcefield), intent(in) :: self
     class(simBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
+    logical, intent(out) :: accept
 
   end subroutine
 !============================================================================

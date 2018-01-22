@@ -15,7 +15,10 @@ module SimpleSimBox
 
 !    real(dp), allocatable :: atoms(:,:)
 !    real(dp), allocatable :: ETable(:), dETable(:)
-!    real(dp) :: beta, temperature
+
+!    real(dp) :: pressure = 0E0_dp
+!    real(dp) :: beta, temperature, volume
+!    real(dp), allocatable :: chempot(:)
 
 !    real(dp) :: ETotal
 !    integer, allocatable :: NMolMin(:), NMolMax(:)
@@ -49,9 +52,12 @@ module SimpleSimBox
       procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
       procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
 
-      procedure, pass ::  Maintenence => SimpleBox_Maintenence
-      procedure, pass ::  Prologue => SimpleBox_Prologue
-      procedure, pass ::  Epilogue => SimpleBox_Epilogue
+!      procedure, public, pass :: GetThermo
+!      procedure, public, pass :: ThermoLookUp
+
+      procedure, pass :: Maintenence => SimpleBox_Maintenence
+      procedure, pass :: Prologue => SimpleBox_Prologue
+      procedure, pass :: Epilogue => SimpleBox_Epilogue
 
   end type
 
@@ -236,8 +242,9 @@ module SimpleSimBox
 subroutine SimpleBox_ComputeEnergy(self)
   implicit none
   class(SimpleBox), intent(inout) :: self
+  logical :: accept
 
-  call self % EFunc % Method % DetailedECalc( self, self%ETotal )
+  call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
 end subroutine
 !==========================================================================================
   subroutine SimpleBox_UpdateEnergy(self, E_Diff)
@@ -277,7 +284,7 @@ end subroutine
     nDisp = size(disp)
     if( size(self%Constrain) > 0 ) then
       do iConstrain = 1, size(self%Constrain)
-        call self%Constrain(iConstrain) % method % ShiftCheck( self, disp(1:nDisp), accept )
+        call self%Constrain(iConstrain) % method % DiffCheck( self, disp(1:nDisp), accept )
       enddo
       if(.not. accept) then
         return
@@ -462,9 +469,9 @@ end subroutine
       endif
     enddo
 
-!    if(disp(iDisp)%newlist) then
-!      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
-!    endif
+    if(disp(iDisp)%newlist) then
+      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
+    endif
 
   end subroutine
 
@@ -486,7 +493,7 @@ end subroutine
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
 
-    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy:", self % ETotal
+    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
 
 
   end subroutine

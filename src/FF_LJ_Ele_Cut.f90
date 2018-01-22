@@ -1,41 +1,47 @@
 !================================================================================
-module FF_Pair_LJ_Cut
+module FF_Pair_LJ_Ele_Cut
   use Template_ForceField, only: ForceField
   use VarPrecision
   use Template_SimBox, only: SimBox
   use CoordinateTypes
 
-  type, extends(forcefield) :: Pair_LJ_Cut
+  type, extends(forcefield) :: Pair_LJ_Ele_Cut
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
+    real(dp), allocatable :: qTable(:,:)
+    real(dp), allocatable :: qVal(:)
     real(dp), allocatable :: rMinTable(:,:)
 !    real(dp) :: rCut, rCutSq
     contains
-      procedure, pass :: Constructor => Constructor_LJ_Cut
-      procedure, pass :: DetailedECalc => Detailed_LJ_Cut
-      procedure, pass :: ShiftECalc_Single => Shift_LJ_Cut_Single
-      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
-      procedure, pass :: NewECalc => New_LJ_Cut
-      procedure, pass :: OldECalc => Old_LJ_Cut
-      procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
-      procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
+      procedure, pass :: Constructor => Constructor_LJ_Ele_Cut
+      procedure, pass :: DetailedECalc => Detailed_LJ_Ele_Cut
+      procedure, pass :: ShiftECalc_Single => Shift_LJ_Ele_Cut_Single
+      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Ele_Cut_Multi
+      procedure, pass :: NewECalc => New_LJ_Ele_Cut
+      procedure, pass :: OldECalc => Old_LJ_Ele_Cut
+      procedure, pass :: ProcessIO => ProcessIO_LJ_Ele_Cut
+      procedure, pass :: GetCutOff => GetCutOff_LJ_Ele_Cut
   end type
 
   contains
   !=============================================================================+
-  subroutine Constructor_LJ_Cut(self)
+  subroutine Constructor_LJ_Ele_Cut(self)
     use Common_MolInfo, only: nAtomTypes
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Ele_Cut), intent(inout) :: self
     integer :: AllocateStat
 
     allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    allocate(self%qTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    allocate(self%qVal(1:nAtomTypes), stat = AllocateStat)
 
     self%epsTable = 4E0_dp
     self%sigTable = 1E0_dp
     self%rMinTable = 0.05E0_dp
+    self%qTable = 0.0E0_dp
+    self%qVal = 0.0E0_dp
     self%rCut = 5E0_dp
     self%rCutSq = 5E0_dp**2
 
@@ -43,11 +49,11 @@ module FF_Pair_LJ_Cut
 
   end subroutine
   !===================================================================================
-  subroutine Detailed_LJ_Cut(self, curbox, E_T, accept)
+  subroutine Detailed_LJ_Ele_Cut(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
+    class(Pair_LJ_Ele_Cut), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
@@ -60,8 +66,8 @@ module FF_Pair_LJ_Cut
     real(dp) :: E_LJ
     real(dp) :: rmin_ij      
 
-    E_LJ = 0E0
-    curbox%ETable = 0E0
+    E_LJ = 0E0_dp
+    curbox%ETable = 0E0_dp
     do iAtom = 1, curbox%nMaxAtoms-1
       atmType1 = curbox % AtomType(iAtom)
       if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
@@ -74,6 +80,7 @@ module FF_Pair_LJ_Cut
         atmType2 = curbox % AtomType(jAtom)
         ep = self % epsTable(atmType1,atmType2)
         sig_sq = self % sigTable(atmType1,atmType2)          
+        q = self % qTable(atmType1,atmType2)          
         rmin_ij = self % rMinTable(atmType1,atmType2)          
 
         rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
@@ -103,9 +110,9 @@ module FF_Pair_LJ_Cut
     E_T = E_LJ    
   end subroutine
   !=====================================================================
-  subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff, accept)
+  subroutine Shift_LJ_Ele_Cut_Single(self, curbox, disp, E_Diff, accept)
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
+    class(Pair_LJ_Ele_Cut), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -170,18 +177,18 @@ module FF_Pair_LJ_Cut
  
   end subroutine
   !=====================================================================
-  subroutine Shift_LJ_Cut_Multi(self, curbox, disp, E_Diff)
+  subroutine Shift_LJ_Ele_Cut_Multi(self, curbox, disp, E_Diff)
     implicit none
-      class(Pair_LJ_Cut), intent(in) :: self
+      class(Pair_LJ_Ele_Cut), intent(in) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inout) :: E_Diff
    
   end subroutine
   !=====================================================================
-  subroutine New_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+  subroutine New_LJ_Ele_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
+    class(Pair_LJ_Ele_Cut), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
@@ -248,9 +255,9 @@ module FF_Pair_LJ_Cut
     enddo
   end subroutine
   !=====================================================================
-  subroutine Old_LJ_Cut(self, curbox, disp, E_Diff)
+  subroutine Old_LJ_Ele_Cut(self, curbox, disp, E_Diff)
     implicit none
-    class(Pair_LJ_Cut), intent(in) :: self
+    class(Pair_LJ_Ele_Cut), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -294,18 +301,19 @@ module FF_Pair_LJ_Cut
     enddo
   end subroutine
   !=====================================================================
-  subroutine ProcessIO_LJ_Cut(self, line)
+  subroutine ProcessIO_LJ_Ele_Cut(self, line)
+    use Constants, only: coulombConst
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: GetAllCommands, GetXCommand
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Ele_Cut), intent(inout) :: self
     character(len=*), intent(in) :: line
     character(len=30), allocatable :: parlist(:)
     character(len=30) :: command
     logical :: param = .false.
     integer :: jType, lineStat
     integer :: type1, type2
-    real(dp) :: ep, sig, rCut
+    real(dp) :: ep, sig, q, rCut
   
 
     call GetXCommand(line, command, 1, lineStat)
@@ -324,22 +332,28 @@ module FF_Pair_LJ_Cut
     if(param) then
       call GetAllCommands(line, parlist, lineStat)
       select case(size(parlist))
-        case(3)
-          read(line, *) type1, ep, sig
+        case(4)
+          read(line, *) type1, ep, sig, q
+          self%qVal(type1, type1) = q
           do jType = 1, nAtomTypes
             if(jType == type1) then
               self%epsTable(type1, jType) = 4E0_dp * ep
               self%sigTable(type1, jType) = sig
+              self%qTable(type1, jType) = qVal(type1) * qVal(jType) * coulombConst
+
             else
               self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
               self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
 
               self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
               self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
+
+              self%qTable(type1, jType) = qVal(type1) * qVal(jType) * coulombConst
+              self%qTable(jType, type1) = qVal(type1) * qVal(jType) * coulombConst
             endif
           enddo
-        case(4)
-          read(line, *) type1, type2, ep, sig
+        case(5)
+          read(line, *) type1, type2, ep, sig, q
           self%epsTable(type1, type2) = 4E0_dp * ep
           self%epsTable(type2, type1) = 4E0_dp * ep
 
@@ -358,9 +372,9 @@ module FF_Pair_LJ_Cut
 !    deallocate(parlist)
   end subroutine
   !=============================================================================+
-  function GetCutOff_LJ_Cut(self) result(rCut)
+  function GetCutOff_LJ_Ele_Cut(self) result(rCut)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Ele_Cut), intent(inout) :: self
     real(dp) :: rCut
 
     rCut = self%rCut

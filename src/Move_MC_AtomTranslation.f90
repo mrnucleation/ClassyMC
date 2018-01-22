@@ -152,8 +152,10 @@ use VarPrecision
     class(AtomTranslate), intent(inout) :: self
     real(dp) :: accptRate
       
+    write(nout,"(1x,A,I15)") "Atom Translation Moves Accepted: ", nint(self%accpt)
+    write(nout,"(1x,A,I15)") "Atom Translation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()
-    write(nout,"(1x,A,F15.8)") "Atom Translation Accept Rate: ", accptRate
+    write(nout,"(1x,A,F15.8)") "Atom Translation Acceptance Rate: ", accptRate
  
 
   end subroutine

@@ -21,7 +21,7 @@ module Constrain_DistanceCriteria
     contains
       procedure, pass :: Constructor => DistCrit_Constructor
       procedure, pass :: CheckInitialConstraint => DistCrit_CheckInitialConstraint
-!      procedure, pass :: DiffCheck
+      procedure, pass :: DiffCheck => DistCrit_DiffCheck
       procedure, pass :: ShiftCheck => DistCrit_ShiftCheck
       procedure, pass :: NewCheck => DistCrit_NewCheck
       procedure, pass :: OldCheck => DistCrit_OldCheck
@@ -131,6 +131,42 @@ module Constrain_DistanceCriteria
     accept = .true.
 
   end subroutine
+!=============================================================
+  subroutine DistCrit_DiffCheck(self, trialBox, disp, accept)
+    implicit none
+    class(DistCriteria), intent(inout) :: self
+    class(SimBox), intent(in) :: trialBox
+    type(Displacement), intent(in) :: disp(:)
+    logical, intent(out) :: accept
+    accept = .true.
+
+    !Called when a particle is either moved or replaced with another particle
+    if(disp(1)%newAtom .and. disp(1)%oldAtom) then
+      if(disp(1)%molType == disp(1)%oldMolType) then
+        call self % ShiftCheck(trialBox, disp, accept)
+      elseif(self%molType == disp(1)%molType) then
+        call self % NewCheck(trialBox, disp, accept)
+      elseif(self%molType == disp(1)%oldMolType) then
+        call self % OldCheck(trialBox, disp, accept)
+      endif
+      return
+    endif
+
+    !Called when a particle is added to a system
+    if(disp(1)%newAtom) then
+      call self % NewCheck(trialBox, disp, accept)
+      return
+    endif
+
+    !Called when a particle is removed from a system.
+    if(disp(1)%oldAtom) then
+      call self % OldCheck(trialBox, disp, accept)
+      return
+    endif
+
+
+  end subroutine
+
 !=====================================================================
   subroutine DistCrit_ShiftCheck(self, trialBox, disp, accept)
     implicit none
@@ -170,6 +206,7 @@ module Constrain_DistanceCriteria
     self%flipped = .false.
     self%clustMemb = .false.
     iAtom = trialBox % MolStartIndx(startIndx)
+    iMol = trialBox % MolSubIndx(startIndx)
 
     nOldNei = 0 
     do jNei = 1, trialBox%NeighList(self%neighlist)%nNeigh(iAtom)
@@ -190,13 +227,15 @@ module Constrain_DistanceCriteria
       write(nout, *) "WARNING! Catestrophic error in distance criteria detected!"
       write(nout, *) "No neighbors were found for the old position for a given"
       write(nout, *) "shift move. Cluster criteria was not properly maintained!"
+      write(nout, *) iMol, iAtom
+      stop
     endif
 
 
      !Seed the initial cluter check by adding the first particle in the array
      !to the cluster
-    self%clustMemb(startIndx) = .true.
-    self%flipped(startIndx) = .true.
+    self%clustMemb(iMol) = .true.
+    self%flipped(iMol) = .true.
     nClust = 1
     nNew = 0
     nNewNei = 0
@@ -227,8 +266,7 @@ module Constrain_DistanceCriteria
       return
     endif
 
-
-    do iLimit = 1, totalMol-1
+    do iLimit = 1, totalMol
       nNew = 0
       do iMol = 1, totalMol
         if(.not. self%clustMemb(iMol)) then
@@ -301,8 +339,42 @@ module Constrain_DistanceCriteria
     class(SimBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
     logical, intent(out) :: accept
+    integer :: i, jMol, jAtom, dispIndx, molIndx, totalMol
+    real(dp) :: rx, ry, rz, rsq
 
     accept = .true.
+    do i = 1, size(disp)
+      if(disp(i)%MolType == self%molType) then
+        if(disp(i)%AtmIndx == trialBox%MolStartIndx(disp(i)%molIndx)) then
+          accept = .false.
+          dispIndx = i
+          exit
+        endif
+      endif
+    enddo
+ 
+    if(accept) then
+      return
+    endif
+
+    totalMol = trialBox%NMol(self%molType)
+
+    do jMol = 1, totalMol  
+      molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
+      jAtom = trialBox % MolStartIndx(molIndx)
+      rx = disp(dispIndx)%x_new - trialBox%atoms(1, jAtom)
+      ry = disp(dispIndx)%y_new - trialBox%atoms(2, jAtom)
+      rz = disp(dispIndx)%z_new - trialBox%atoms(3, jAtom)
+      call trialBox%Boundary(rx,ry,rz)
+      rsq = rx*rx + ry*ry + rz*rz
+      if(rsq < self%rCutSq) then
+        accept = .true.
+        return
+      endif
+    enddo
+
+
+
   end subroutine
 !=====================================================================
   subroutine DistCrit_OldCheck(self, trialBox, disp, accept)
@@ -311,6 +383,131 @@ module Constrain_DistanceCriteria
     class(SimBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
     logical, intent(out) :: accept
+
+    integer :: i, startIndx, molIndx, jMolIndx
+    integer :: totalMol, nNew, nClust, neiIndx
+    integer :: iMol,jMol,jNei, iAtom, jAtom, iLimit
+    integer :: molType, dispIndx, nMol
+    integer :: neiList(1:600), nOldNei, nNewNei
+
+    real(dp) :: rx, ry, rz, rsq
+
+    accept = .true.
+    totalMol = trialBox%NMol(self%molType)
+    if(totalMol-1 < 2) then
+      return
+    endif
+
+    do i = 1, size(disp)
+      if(disp(i)%oldMolType == self%molType) then
+        if(disp(i)%oldAtmIndx == trialBox%MolStartIndx(disp(i)%molIndx)) then
+          accept = .false.
+          dispIndx = i
+          exit
+        endif
+      endif
+    enddo
+ 
+    if(accept) then
+      return
+    endif
+
+    self%flipped = .false.
+    self%clustMemb = .false.
+    iAtom = trialBox % MolStartIndx(startIndx)
+    nMol = trialBox % MolSubIndx(startIndx)
+
+    nOldNei = 0 
+    do jNei = 1, trialBox%NeighList(self%neighlist)%nNeigh(iAtom)
+      jAtom = trialBox%NeighList(self%neighlist)%list(jNei, iAtom)
+      rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
+      ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
+      rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
+      call trialBox%Boundary(rx,ry,rz)
+      rsq = rx*rx + ry*ry + rz*rz
+      if(rsq < self%rCutSq) then
+        jMol = trialBox%MolIndx(jAtom)
+        nOldNei = nOldNei + 1
+        neiList(nOldNei) = jMol
+      endif
+    enddo
+  
+    if(nOldNei <= 0) then
+      write(nout, *) "WARNING! Catestrophic error in distance criteria detected!"
+      write(nout, *) "No neighbors were found for the old position for a given"
+      write(nout, *) "shift move. Cluster criteria was not properly maintained!"
+    endif
+
+
+     !Seed the initial cluter check by adding the first particle in the array
+     !to the cluster
+    nClust = 1
+    nNew = 0
+    nNewNei = 1
+    self%clustMemb( neiList(1) ) = .true.
+
+    do iLimit = 1, totalMol-1
+      nNew = 0
+      do iMol = 1, totalMol
+        if( (.not. self%clustMemb(iMol))  .and. (iMol /= nMol ) ) then
+          cycle
+        endif
+        molIndx = trialBox % MolGlobalIndx(self%molType, iMol)
+        iAtom = trialBox % MolStartIndx(molIndx)
+
+         !If the member flag is true, but the flipped flag is false
+         !the neighbors of this molecule have not been checked.
+        if( self%clustMemb(iMol) .neqv. self%flipped(iMol)) then
+          do jNei = 1, trialBox%NeighList(self%neighlist)%nNeigh(iAtom)
+            jAtom = trialBox%NeighList(self%neighlist)%list(jNei, iAtom)
+            jMol = trialBox%MolSubIndx(jAtom)
+            if( (.not. self%clustMemb(jMol)) .and. (jMol /= nMol)  )then
+              rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
+              ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
+              rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
+              call trialBox%Boundary(rx, ry, rz)
+              rsq = rx*rx + ry*ry + rz*rz
+              write(*,*) rx, ry, rz, rsq
+              if(rsq < self%rCutSq) then
+                self%clustMemb(jMol) = .true.
+                nNew = nNew + 1
+                nClust = nClust + 1
+                if( any(jMol == neiList(1:nOldNei)) ) then
+                  nNewNei = nNewNei + 1
+                endif
+              endif
+            endif
+          enddo
+          self % flipped(iMol) = .true.
+        endif
+      enddo
+
+      write(*,*) iLimit, nClust, nNew, nNewNei
+       ! If no new molecules were added, the algorithm has hit a dead end
+       ! and the cluster is broken.  
+      if(nNew <= 0) then
+        exit
+      endif
+
+      if(nNewNei == nOldNei) then
+        exit
+      endif
+
+       !If every molecule has been added then no further calculations are
+       !needed.
+      if(nClust >= totalMol-1) then
+        exit
+      endif
+    enddo
+
+    write(*,*) "Blah3"
+     ! If no new particles were added or the limit has been hit without finding all the molecules
+     ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
+    if( (nNew <= 0) .or. (nClust < totalMol-1) ) then
+!      write(*,*) "Fail 2", nNew, nClust
+      accept = .false.
+      return
+    endif
 
     accept = .true.
   end subroutine
@@ -331,12 +528,14 @@ module Constrain_DistanceCriteria
     call GetXCommand(line, command, 2, lineStat)
     read(command, *) intVal
     self%molType = intVal
+
     call GetXCommand(line, command, 3, lineStat)
     read(command, *) realVal
     self%rCut = realVal
     self%rCutSq = realVal*realVal
     write(nout, *) "Distance Criteria:",self%rCut
     write(nout, *) "Distance Criteria (SQ):",self%rCutSq
+
     call GetXCommand(line, command, 4, lineStat)
     read(command, *) intVal
     self%neighList = intVal

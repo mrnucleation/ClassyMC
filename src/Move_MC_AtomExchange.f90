@@ -15,6 +15,7 @@ use MoveClassDef
       procedure, pass :: FullMove => AtomExchange_FullMove
 !      procedure, pass :: GetAcceptRate
       procedure, pass :: Maintenance => AtomExchange_Maintenance
+      procedure, pass :: Epilogue => AtomExchange_Epilogue
   end type
 
  contains
@@ -128,6 +129,19 @@ use MoveClassDef
 !=========================================================================
   subroutine AtomExchange_Maintenance(self)
     class(AtomExchange), intent(inout) :: self
+  end subroutine
+!=========================================================================
+  subroutine AtomExchange_Epilogue(self)
+    use ParallelVar, only: nout
+    implicit none
+    class(AtomExchange), intent(inout) :: self
+    real(dp) :: accptRate
+      
+    accptRate = self%GetAcceptRate()
+    write(nout,"(1x,A,I15)") "Atom Exchange Moves Accepted: ", nint(self%accpt)
+    write(nout,"(1x,A,I15)") "Atom Exchange Moves Attempted: ", nint(self%atmps)
+    write(nout,"(1x,A,F15.8)") "Atom Exchange Acceptance Rate: ", accptRate
+
   end subroutine
 !=========================================================================
 end module

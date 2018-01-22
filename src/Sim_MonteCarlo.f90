@@ -53,15 +53,14 @@ contains
         call BoxArray(1) % box % NeighList(1) % BuildList
       endif
 
-!      if(mod(iCycle, 10) == 0) then
-!        call Moves(1) % Move % Maintenance
-!      endif
-
       call Analyze(iCycle, iMove, accept, .false.)
       call Trajectory(iCycle, iMove)
     enddo
     !-------End of Main Monte Carlo Simulation Loop-------
-    
+ 
+    write(nout,*) "======================================="
+    write(nout,*) "     Simulation End"
+    write(nout,*) "======================================="
 !    E_Final = BoxArray(1)%box%ETotal
 !    do i = 1, size(BoxArray)
 !      call BoxArray(i) % box % ComputeEnergy

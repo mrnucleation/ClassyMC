@@ -6,12 +6,19 @@ module MasterTemplate
     integer :: maintFreq = 100
     contains
        procedure, pass :: Epilogue
+       procedure, pass :: SafetyCheck
        procedure, pass :: Maintenance
 !       procedure, pass :: ProcessIO
        procedure, pass :: Prologue
   end type
 !====================================================================
   contains
+!====================================================================
+  subroutine SafetyCheck(self)
+    implicit none
+    class(classyClass), intent(inout) :: self
+
+  end subroutine
 !====================================================================
   subroutine Maintenance(self)
     implicit none

@@ -166,7 +166,6 @@ module Template_SimBox
     end select
 
   end function
-
 !==========================================================================================
   function ThermoLookup(self, thermoStr) result(thermInt)
     use Input_Format, only: maxLineLen

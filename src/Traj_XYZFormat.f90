@@ -5,6 +5,7 @@ module Traj_XYZ
 
   type, public, extends(trajectory) :: trajXYZ
     logical :: padding = .false.
+    logical :: recenter = .false.
 !    integer :: fileUnit = -1
 !    integer :: boxNum = -1
 !    integer :: outFreq = 5000
@@ -17,6 +18,8 @@ module Traj_XYZ
 !       procedure, pass :: SetFreq
 !       procedure, pass :: OpenFile
 !       procedure, pass :: CloseFile
+       procedure, pass :: Epilogue => TrajXYZ_Epilogue
+
   end type
 !====================================================================
   contains
@@ -28,6 +31,8 @@ module Traj_XYZ
     class(trajXYZ), intent(in) :: self
     integer :: iAtom, jDim, boxNum
     integer :: nDim, atomType, molType
+    real(dp) :: xcm, ycm, zcm
+
 
     boxNum = self%boxNum
     nDim = BoxArray(boxNum)%box%nDimension
@@ -37,6 +42,7 @@ module Traj_XYZ
       write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
     endif
     write(self%fileUnit, *) 
+
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
       molType = BoxArray(boxNum)%box%MolType(iAtom)
       atomType = BoxArray(boxNum)%box%AtomType(iAtom)
@@ -53,6 +59,13 @@ module Traj_XYZ
     enddo
 
 
+  end subroutine
+!====================================================================
+  subroutine TrajXYZ_Epilogue(self) 
+    implicit none
+    class(trajXYZ), intent(inout) :: self
+
+    call self % WriteFrame
   end subroutine
 !====================================================================
 end module

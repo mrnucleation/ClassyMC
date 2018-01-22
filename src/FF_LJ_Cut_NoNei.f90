@@ -42,12 +42,13 @@ module FF_Pair_LJ_Cut_NoNei
 
   end subroutine
   !===================================================================================
-  subroutine Detailed_LJ_Cut(self, curbox, E_T)
+  subroutine Detailed_LJ_Cut(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     implicit none
     class(Pair_LJ_Cut_NoNei), intent(in) :: self
     class(SimBox), intent(inout) :: curbox
-      real(dp), intent(inOut) :: E_T
+    real(dp), intent(inOut) :: E_T
+    logical, intent(out) :: accept
       integer :: iAtom,jAtom
       integer :: atmType1, atmType2
       real(dp) :: rx, ry, rz, rsq

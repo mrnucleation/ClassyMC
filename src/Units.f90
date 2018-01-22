@@ -18,6 +18,8 @@ module Constants
   real(dp), parameter :: pi=4d0*datan(1d0) 
   real(dp), parameter :: two_pi=8d0*datan(1d0)
         
+  !All units are in Boltzmann Reduced Units (kb = 1/K)
+  real(dp), parameter :: coulombConst = 1.671009770E5_dp
 end module
 !===================================================================      
 module Units
@@ -25,10 +27,11 @@ module Units
   real(dp) :: outEngUnit = 1E0_dp
   real(dp) :: outLenUnit = 1E0_dp
   real(dp) :: outAngUnit = 1E0_dp
+
+!===================================================================      
   contains
-        
-!     !----------------------------------------------------------
-   function FindEngUnit(unitName) result(units)
+!===================================================================      
+  function FindEngUnit(unitName) result(units)
      implicit none 
      character(len=*), intent(in) :: unitName          
      real(dp) :: units
@@ -53,8 +56,8 @@ module Units
        end select
         
      end function
-!    !----------------------------------------------------------
-     real(dp) function FindLengthUnit(unitName)
+!===================================================================      
+  real(dp) function FindLengthUnit(unitName)
        implicit none 
        character(len=*) :: unitName       
         
