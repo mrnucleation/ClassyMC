@@ -17,42 +17,49 @@ contains
     use MultiBoxMoveDef, only: MCMultiBoxMove
     use Output_DumpCoords, only: Output_DumpData
     use ParallelVar, only: myid, ierror, nout
-    use RandomGen, only: sgrnd, ListRNG
+    use RandomGen, only: sgrnd, grnd, ListRNG
     use SimControl, only: nMoves, nCycles
 
     implicit none
  
     logical :: accept
-    integer :: i, j
-    integer :: iAtom, moveNum
+    integer :: i, j, nBoxes
+    integer :: iAtom, moveNum, boxNum
     integer(kind=8) :: iCycle, iMove
-    real(dp) :: E_T, E_Final
     character(len=50) :: fileName
     class(MCMove), pointer :: curMove
 
+    iCycle = 0
+    iMove = 0
+
     call Prologue(iCycle, iMove)
 
-    call Trajectory( int(0,kind=8), int(0,kind=8) )
+    call Trajectory(iCycle, iMove)
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
     write(nout, *) "============================================"
 
+    nBoxes = size(BoxArray)
+    boxNum = 1
     !-------Main Monte Carlo Simulation Loop-------
     do iCycle = 1, nCycles
 
       !-----Start Move Loop
       do iMove = 1, nMoves
         moveNum = ListRNG(MoveProb)
-        curMove => Moves(moveNum) % Move
-        select type( curMove  )
-          type is (MCMove)
-            call curMove % FullMove(BoxArray(1)%box, accept)
-          type is (MCMultiBoxMove)
+        curMove => Moves(moveNum) % Move 
+        select type( curMove )
+          class is (MCMultiBoxMove)
             call curMove % MultiBox (accept)
+ 
+          class is (MCMove)
+            if(nBoxes > 1) then
+              boxNum = floor(grnd()*nBoxes + 1E0_dp)
+            endif
+            call curMove % FullMove(BoxArray(boxNum)%box, accept)
+
         end select
-!        call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
         call Analyze(iCycle, iMove, accept, .true.)
-!        call Debug_DumpNeiList(1, 1, 1)
       enddo 
       !------End Move Loop
       if(mod(iCycle, 1000) == 0) then
@@ -71,16 +78,6 @@ contains
     write(nout,*) "======================================="
     write(nout,*) "     Simulation End"
     write(nout,*) "======================================="
-!    E_Final = BoxArray(1)%box%ETotal
-!    do i = 1, size(BoxArray)
-!      call BoxArray(i) % box % ComputeEnergy
-!      call BoxArray(i) % box % NeighList(1) % BuildList
-!    enddo
-
-!    write(nout, *) "Culmative Energy:", E_Final
-!    write(nout, *) "Final Energy:",  BoxArray(1)%box%ETotal
-!    write(nout, *) "Difference:",  E_Final - BoxArray(1)%box%ETotal
-
 
     call Epilogue(iCycle, iMove)
 
@@ -114,6 +111,36 @@ contains
       enddo
     endif
  
+  end subroutine
+!===========================================================================
+  subroutine ScreenOut(iCycle, iMove)
+    use AnalysisData, only: AnalysisArray
+    use BoxData, only: BoxArray
+    use MCMoveData, only: Moves, MoveProb
+    use TrajData, only: TrajArray
+    use CommonSampling, only: Sampling
+    use SimControl, only: printBox, printAcc
+    implicit none
+    integer(kind=8), intent(in) :: iCycle, iMove
+    integer :: i
+
+    if(printBox) then
+      do i = 1, size(BoxArray)
+        if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
+          call BoxArray(i) % box % Maintenance
+        endif
+      enddo
+    endif
+
+
+    if(printAcc) then
+      do i = 1, size(Moves)
+        if(mod(iCycle, Moves(i)%move%maintFreq) == 0) then
+          call Moves(i) % move % Maintenance
+        endif
+      enddo
+    endif
+
   end subroutine
 !===========================================================================
   subroutine Maintenance(iCycle, iMove)

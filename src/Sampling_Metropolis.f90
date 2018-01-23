@@ -25,7 +25,6 @@ module MetropolisRule
     logical :: accept
     real(dp) :: biasE
 
-
     accept = .false.
     biasE = -trialBox%beta * E_Diff + log(inProb)
     if(biasE > 0.0E0_dp) then
@@ -33,7 +32,6 @@ module MetropolisRule
     elseif(biasE > log(grnd())) then
       accept = .true.
     endif
-
 
   end function
 !====================================================================

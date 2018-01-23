@@ -26,6 +26,10 @@ module SimControl
   integer(kind=8) :: nCycles = 0
   integer(kind=8) :: nMoves = 0
 
+  integer :: screenFreq = 1000
+  logical :: printBox = .true.
+  logical :: printAcc = .true.
+
 end module  
 !======================================================
 

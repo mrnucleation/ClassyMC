@@ -113,7 +113,6 @@ use VarPrecision
 
 
     !Accept/Reject
-    accept = .false.
     accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
     if(accept) then
       self % accpt = self % accpt + 1E0_dp

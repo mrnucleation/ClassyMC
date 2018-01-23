@@ -33,10 +33,10 @@ contains
     !-------Main GA Simulation Loop-------
     do iCycle = 1, nCycles
       moveNum = ListRNG(MoveProb)
-!      select type( move => Moves(moveNum) % Move )
-!        type is (MCMultiBoxMove)
-!          call Moves(moveNum) % Move % MultiBox(accept)
-!      end select
+      select type( GAMove => Moves(moveNum) % Move )
+        type is (MCMultiBoxMove)
+          call GAMove % MultiBox(accept)
+      end select
     enddo
     !-------End of Main GA Simulation Loop-------
     
