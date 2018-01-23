@@ -11,6 +11,7 @@ contains
     use ForcefieldData, only: nForceFields
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
+    use FF_Pair_LJ_Ele_Cut, only: Pair_LJ_Ele_Cut
 !    use FF_Pair_Tersoff, only: Pair_Tersoff
     use ParallelVar, only: nout
     implicit none
@@ -31,11 +32,15 @@ contains
     select case(trim(adjustl(FF_Type)))
       case("lj_cut")
         allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as LJ_Cut style"
+        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
+
+      case("lj_q_cut")
+        allocate(Pair_LJ_Ele_Cut::EnergyCalculator(FFNum) % Method)
+        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
 
       case("lj_cut_nonei")
         allocate(Pair_LJ_Cut_NoNei::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as LJ_Cut (No Neighbor List) style"
+        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut (No Neighbor List) style"
 
 !      case("tersoff")
 !        allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
