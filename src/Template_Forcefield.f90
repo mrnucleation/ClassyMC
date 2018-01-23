@@ -36,6 +36,7 @@ module Template_ForceField
     real(dp), intent(inout) :: E_T
     logical, intent(out) :: accept
 
+    accept = .true.
   end subroutine
 !============================================================================
   subroutine DiffECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)

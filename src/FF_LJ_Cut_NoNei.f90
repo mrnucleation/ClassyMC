@@ -59,6 +59,7 @@ module FF_Pair_LJ_Cut_NoNei
 
       E_LJ = 0E0
       curbox%ETable = 0E0
+      accept = .true.
       do iAtom = 1, curbox%nAtoms-1
         atmType1 = curbox % AtomType(iAtom)
         do jAtom = iAtom+1, curbox%nAtoms

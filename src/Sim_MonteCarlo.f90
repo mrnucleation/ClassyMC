@@ -13,6 +13,8 @@ contains
     use Debug, only: Debug_DumpNeiList
     use ForcefieldData, only: EnergyCalculator
     use MCMoveData, only: Moves, MoveProb
+    use MoveClassDef, only: MCMove
+    use MultiBoxMoveDef, only: MCMultiBoxMove
     use Output_DumpCoords, only: Output_DumpData
     use ParallelVar, only: myid, ierror, nout
     use RandomGen, only: sgrnd, ListRNG
@@ -26,6 +28,7 @@ contains
     integer(kind=8) :: iCycle, iMove
     real(dp) :: E_T, E_Final
     character(len=50) :: fileName
+    class(MCMove), pointer :: curMove
 
     call Prologue(iCycle, iMove)
 
@@ -40,7 +43,14 @@ contains
       !-----Start Move Loop
       do iMove = 1, nMoves
         moveNum = ListRNG(MoveProb)
-        call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
+        curMove => Moves(moveNum) % Move
+        select type( curMove  )
+          type is (MCMove)
+            call curMove % FullMove(BoxArray(1)%box, accept)
+          type is (MCMultiBoxMove)
+            call curMove % MultiBox (accept)
+        end select
+!        call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
         call Analyze(iCycle, iMove, accept, .true.)
 !        call Debug_DumpNeiList(1, 1, 1)
       enddo 

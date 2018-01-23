@@ -60,14 +60,16 @@ module FF_Pair_LJ_Ele_Cut
     integer :: iType, jType, iAtom, jAtom
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: LJ
-    real(dp) :: E_LJ
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: ep, sig_sq, q_ij
+    real(dp) :: LJ, Ele
+    real(dp) :: E_LJ, E_Ele
     real(dp) :: rmin_ij      
 
     E_LJ = 0E0_dp
+    E_Ele = 0E0_dp
     curbox%ETable = 0E0_dp
+    accept = .true.
     do iAtom = 1, curbox%nMaxAtoms-1
       atmType1 = curbox % AtomType(iAtom)
       if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
@@ -80,7 +82,7 @@ module FF_Pair_LJ_Ele_Cut
         atmType2 = curbox % AtomType(jAtom)
         ep = self % epsTable(atmType1,atmType2)
         sig_sq = self % sigTable(atmType1,atmType2)          
-        q = self % qTable(atmType1,atmType2)          
+        q_ij = self % qTable(atmType1,atmType2)          
         rmin_ij = self % rMinTable(atmType1,atmType2)          
 
         rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
@@ -90,22 +92,30 @@ module FF_Pair_LJ_Ele_Cut
         rsq = rx**2 + ry**2 + rz**2
         if(rsq < self%rCutSq) then
           if(rsq < rmin_ij) then
-            write(*,*) sqrt(rsq)
-            write(*,*) iAtom, jAtom
-            write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
-            write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
-            stop "ERROR! Overlaping atoms found in the current configuration!"
+!            write(*,*) sqrt(rsq)
+!            write(*,*) iAtom, jAtom
+!            write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
+!            write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
+!            stop "ERROR! Overlaping atoms found in the current configuration!"
+            accept = .false.
+            return
           endif 
           LJ = (sig_sq/rsq)**3
           LJ = ep * LJ * (LJ-1E0)              
           E_LJ = E_LJ + LJ
-          curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
-          curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ 
+
+          r = sqrt(rsq)
+          Ele = q_ij/r
+          E_Ele = E_Ele + Ele
+
+          curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ + Ele
+          curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ + Ele
         endif
       enddo
     enddo
       
     write(nout,*) "Lennard-Jones Energy:", E_LJ
+    write(nout,*) "Eletrostatic Energy:", E_Ele
       
     E_T = E_LJ    
   end subroutine
@@ -121,9 +131,9 @@ module FF_Pair_LJ_Ele_Cut
     integer :: iDisp, iAtom, jNei, jAtom, dispLen
 !    integer :: maxIndx, minIndx
     integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: LJ
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: ep, sig_sq, q_ij
+    real(dp) :: LJ, Ele
     real(dp) :: rmin_ij      
 
     dispLen = size(disp)
@@ -139,6 +149,7 @@ module FF_Pair_LJ_Ele_Cut
         atmType2 = curbox % AtomType(jAtom)
         ep = self % epsTable(atmType1, atmType2)
         sig_sq = self % sigTable(atmType1, atmType2)          
+        q_ij = self % qTable(atmType1, atmType2)          
         rmin_ij = self % rMinTable(atmType1, atmType2)          
 
         rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
@@ -151,12 +162,23 @@ module FF_Pair_LJ_Ele_Cut
             accept = .false.
             return
           endif 
-          LJ = (sig_sq/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)              
-          E_Diff = E_Diff + LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
+
+          if(ep /= 0) then
+            LJ = (sig_sq/rsq)
+            LJ = LJ * LJ * LJ
+            LJ = ep * LJ * (LJ-1E0_dp)              
+            E_Diff = E_Diff + LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
+          endif
+
+          if(q_ij /= 0) then
+            r = sqrt(rsq)
+            Ele = q_ij/r
+            E_Diff = E_Diff + Ele
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) + Ele
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) + Ele
+          endif
         endif
 
         rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
@@ -165,12 +187,22 @@ module FF_Pair_LJ_Ele_Cut
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-          LJ = (sig_sq/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)              
-          E_Diff = E_Diff - LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
+          if(ep /= 0E0_dp) then
+            LJ = (sig_sq/rsq)
+            LJ = LJ * LJ * LJ
+            LJ = ep * LJ * (LJ-1E0_dp)              
+            E_Diff = E_Diff - LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
+          endif
+
+          if(q_ij /= 0E0_dp) then
+            r = sqrt(rsq)
+            Ele = q_ij/r
+            E_Diff = E_Diff - Ele
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) - Ele
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) - Ele
+          endif
         endif
       enddo
     enddo
@@ -197,9 +229,9 @@ module FF_Pair_LJ_Ele_Cut
 
     integer :: iDisp, iAtom, jAtom, dispLen, maxNei, listIndx, jNei
     integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: LJ
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: ep, sig_sq, q_ij
+    real(dp) :: LJ, Ele
     real(dp) :: rmin_ij      
 
     dispLen = size(disp)
@@ -232,6 +264,7 @@ module FF_Pair_LJ_Ele_Cut
         atmType2 = curbox % AtomType(jAtom)
         ep = self%epsTable(atmType1,atmType2)
         sig_sq = self%sigTable(atmType1,atmType2)          
+        q_ij = self % qTable(atmType1, atmType2)          
         rmin_ij = self%rMinTable(atmType1,atmType2)          
 
         rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
@@ -244,12 +277,21 @@ module FF_Pair_LJ_Ele_Cut
             accept = .false.
             return
           endif
-          LJ = (sig_sq/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)
-          E_Diff = E_Diff + LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
+          if(ep /= 0E0_dp) then
+            LJ = (sig_sq/rsq)
+            LJ = LJ * LJ * LJ
+            LJ = ep * LJ * (LJ-1E0_dp)
+            E_Diff = E_Diff + LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
+          endif
+          if(q_ij /= 0E0_dp) then
+            r = sqrt(rsq)
+            Ele = q_ij/r
+            E_Diff = E_Diff + Ele
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) + Ele
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) + Ele
+          endif
         endif
       enddo
     enddo
@@ -263,9 +305,9 @@ module FF_Pair_LJ_Ele_Cut
     real(dp), intent(inOut) :: E_Diff
     integer :: iDisp, iAtom, jAtom, remLen, jNei
     integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: LJ
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: ep, sig_sq, q_ij
+    real(dp) :: LJ, Ele
     real(dp) :: rmin_ij      
 
     E_Diff = 0E0_dp
@@ -282,6 +324,7 @@ module FF_Pair_LJ_Ele_Cut
         atmType2 = curbox % AtomType(jAtom)
         ep = self % epsTable(atmType1, atmType2)
         sig_sq = self % sigTable(atmType1, atmType2)          
+        q_ij = self % qTable(atmType1, atmType2)          
 !        rmin_ij = self % rMinTable(atmType1, atmType2)          
 
         rx = curbox % atoms(1, iAtom) - curbox % atoms(1, jAtom)
@@ -290,12 +333,21 @@ module FF_Pair_LJ_Ele_Cut
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-          LJ = (sig_sq/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)
-          E_Diff = E_Diff - LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
+          if(ep /= 0E0_dp) then
+            LJ = (sig_sq/rsq)
+            LJ = LJ * LJ * LJ
+            LJ = ep * LJ * (LJ-1E0_dp)
+            E_Diff = E_Diff - LJ
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
+          endif
+          if(q_ij /= 0E0_dp) then
+            r = sqrt(rsq)
+            Ele = q_ij/r
+            E_Diff = E_Diff - Ele
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) - Ele
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) - Ele
+          endif
         endif
       enddo
     enddo
@@ -334,12 +386,12 @@ module FF_Pair_LJ_Ele_Cut
       select case(size(parlist))
         case(4)
           read(line, *) type1, ep, sig, q
-          self%qVal(type1, type1) = q
+          self%qVal(type1) = q
           do jType = 1, nAtomTypes
             if(jType == type1) then
               self%epsTable(type1, jType) = 4E0_dp * ep
               self%sigTable(type1, jType) = sig
-              self%qTable(type1, jType) = qVal(type1) * qVal(jType) * coulombConst
+              self%qTable(type1, jType) = self%qVal(type1) * self%qVal(jType) * coulombConst
 
             else
               self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
@@ -348,8 +400,8 @@ module FF_Pair_LJ_Ele_Cut
               self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
               self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
 
-              self%qTable(type1, jType) = qVal(type1) * qVal(jType) * coulombConst
-              self%qTable(jType, type1) = qVal(type1) * qVal(jType) * coulombConst
+              self%qTable(type1, jType) = self%qVal(type1) * self%qVal(jType) * coulombConst
+              self%qTable(jType, type1) = self%qVal(type1) * self%qVal(jType) * coulombConst
             endif
           enddo
         case(5)

@@ -28,9 +28,12 @@ use MoveClassDef, only: MCMove
 !    class(SimpleBox), intent(inout) :: trialBox
 !  end subroutine
 !=========================================================================
-  subroutine MultiBox(self, trialBox)
+  subroutine MultiBox(self, accept)
     class(MCMultiBoxMove), intent(inout) :: self
-    class(SimpleBox), intent(inout) :: trialBox(:)
+!    class(SimpleBox), intent(inout) :: trialBox(:)
+    logical, intent(out) :: accept
+
+    accept = .true.
   end subroutine
 !=========================================================================
 end module

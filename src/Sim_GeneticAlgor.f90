@@ -1,5 +1,7 @@
 !===========================================================================
 module SimGeneticAlgorithm
+  integer :: poolSize 
+  integer :: maxSize
 !===========================================================================
 contains
 !===========================================================================
@@ -23,6 +25,7 @@ contains
     integer :: iAtom, moveNum
     integer(kind=8) :: iCycle, iMove
 
+
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
     write(nout, *) "============================================"
@@ -30,10 +33,10 @@ contains
     !-------Main GA Simulation Loop-------
     do iCycle = 1, nCycles
       moveNum = ListRNG(MoveProb)
-      select type( move => Moves(moveNum) % Move )
-        type is (MCMultiBoxMove)
-          call Moves(moveNum) % Move % FullMove(BoxArray(1)%box, accept)
-      end select
+!      select type( move => Moves(moveNum) % Move )
+!        type is (MCMultiBoxMove)
+!          call Moves(moveNum) % Move % MultiBox(accept)
+!      end select
     enddo
     !-------End of Main GA Simulation Loop-------
     

@@ -32,7 +32,6 @@ module SimpleSimBox
     class(ECalcArray), pointer :: EFunc
 !    class(NeighList), allocatable :: NeighList(:)
 
-    logical :: zeroCoords = .false.
 
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
@@ -58,6 +57,8 @@ module SimpleSimBox
       procedure, pass :: Maintenence => SimpleBox_Maintenence
       procedure, pass :: Prologue => SimpleBox_Prologue
       procedure, pass :: Epilogue => SimpleBox_Epilogue
+
+!      GENERIC, PUBLIC :: ASSIGNMENT(=) => SimpleBox_CopyBox
 
   end type
 
@@ -351,10 +352,10 @@ end subroutine
         self % temperature = realVal
         self % beta = 1E0_dp/realVal
 
-      case("recenter")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) logicVal
-        self % zeroCoords = logicVal
+!      case("recenter")
+!        call GetXCommand(line, command, 5, lineStat)
+!        read(command, *) logicVal
+!        self % zeroCoords = logicVal
 
       case default
         lineStat = -1
@@ -531,9 +532,23 @@ end subroutine
 
 
   end subroutine
-
-
 !==========================================================================================
+  pure subroutine SimpleBox_CopyBox(box1, box2) 
+    implicit none
+    type(SimpleBox), intent(out) :: box1
+    type(SimpleBox), intent(in) :: box2
+    integer :: iAtom, iDim
 
+    do iAtom = 1,box1%nMaxAtoms
+      do iDim = 1, box1%nDimension
+        box1%atoms(iDim, iatom) = box2%atoms(iDim, iatom)
+      enddo
+      box1%ETable(iAtom) = box2%ETable(iAtom)
+    enddo
+    box1%ETotal = box2%ETotal
+    box1%Volume = box2%Volume
+
+  end subroutine
+!==========================================================================================
 end module
 !==========================================================================================
