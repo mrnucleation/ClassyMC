@@ -10,6 +10,7 @@ contains
     use BoxData, only: BoxArray
     use ParallelVar, only: nout
     use Constrain_DistanceCriteria, only: DistCriteria
+    use Constrain_HardWall, only: HardWall
 
     implicit none
     character(len=maxLineLen), intent(in) :: linestore(:) 
@@ -33,6 +34,9 @@ contains
       select case(trim(adjustl(command)))
         case("distancecriteria")
           allocate( DistCriteria::BoxArray(BoxNum)%box%Constrain(i)%method )
+
+        case("hardwall")
+          allocate( HardWall ::BoxArray(BoxNum)%box%Constrain(i)%method )
 
         case default
           lineStat = -1

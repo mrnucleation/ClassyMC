@@ -190,8 +190,9 @@ contains
      
       end subroutine
 !========================================================            
-!     This subrotuine searches a given input line for the first command. 
-      subroutine GetAllCommands(line, commandlist, lineStat)
+!     This subroutine collects all commands on a line and returns them as an array.
+
+    subroutine GetAllCommands(line, commandlist, lineStat)
       use VarPrecision
       implicit none
       character(len=*), intent(in) :: line

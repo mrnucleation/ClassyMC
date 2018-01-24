@@ -62,6 +62,10 @@ module SimpleSimBox
 
   end type
 
+  interface assignment(=)
+    module procedure SimpleBox_CopyBox
+  end interface
+
 !==========================================================================================
   contains
 !==========================================================================================

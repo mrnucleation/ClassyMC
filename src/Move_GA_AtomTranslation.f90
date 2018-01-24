@@ -26,13 +26,13 @@ use VarPrecision
   subroutine AtomTrans_Constructor(self)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
-    class(AtomTranslate), intent(inout) :: self
+    class(GA_AtomTranslate), intent(inout) :: self
 
 
   end subroutine
 !========================================================
   subroutine MultiBox(self, trialBox)
-    class(MCMultiBoxMove), intent(inout) :: self
+    class(GA_AtomTranslate), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox(:)
 
   end subroutine
@@ -41,9 +41,10 @@ use VarPrecision
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
     use Common_NeighData, only: neighSkin
+    use BoxData, only: BoxArray
     use Box_Utility, only: FindAtom
     implicit none
-    class(AtomTranslate), intent(inout) :: self
+    class(GA_AtomTranslate), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
     integer :: nMove, rawIndx, iConstrain
@@ -65,16 +66,17 @@ use VarPrecision
  
 
     !Check Constraint
-    accept = trialBox % CheckConstraint( self%disp(1:1) )
-    if(.not. accept) then
-      return
-    endif
+!    accept = trialBox % CheckConstraint( self%disp(1:1) )
+!    if(.not. accept) then
+!      return
+!    endif
 
+    BoxArray(1) % box =  BoxArray(2) % box
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
-    if(.not. accept) then
-      return
-    endif
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+!    if(.not. accept) then
+!      return
+!    endif
 
 
     !Accept/Reject
@@ -86,7 +88,7 @@ use VarPrecision
 !=========================================================================
   subroutine AtomTrans_Maintenance(self)
     implicit none
-    class(AtomTranslate), intent(inout) :: self
+    class(GA_AtomTranslate), intent(inout) :: self
     real(dp), parameter :: limit = 3.0E0_dp
       
  
@@ -96,7 +98,7 @@ use VarPrecision
   subroutine AtomTrans_Epilogue(self)
     use ParallelVar, only: nout
     implicit none
-    class(AtomTranslate), intent(inout) :: self
+    class(GA_AtomTranslate), intent(inout) :: self
     real(dp) :: accptRate
       
     write(nout,"(1x,A,I15)") "Atom Translation Moves Accepted: ", nint(self%accpt)

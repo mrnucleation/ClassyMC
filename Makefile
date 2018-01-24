@@ -56,6 +56,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_NeighList.f90\
         		$(SRC)/Debug.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
+         		$(SRC)/Constrain_HardWall.f90\
 	        	$(SRC)/SearchSort.f90\
         		$(SRC)/Sampling_Metropolis.f90\
         		$(SRC)/Sampling_MinMetrop.f90\
@@ -223,6 +224,8 @@ $(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o
 
 $(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Box_Ultility.o
+
+$(OBJ)/Move_GA_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_Ultility.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o
