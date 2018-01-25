@@ -9,6 +9,7 @@ module MasterTemplate
        procedure, pass :: SafetyCheck
        procedure, pass :: ScreenWrite
        procedure, pass :: Maintenance
+       procedure, pass :: ModifyIO
 !       procedure, pass :: ProcessIO
        procedure, pass :: Prologue
   end type
@@ -24,6 +25,16 @@ module MasterTemplate
   subroutine Maintenance(self)
     implicit none
     class(classyClass), intent(inout) :: self
+
+  end subroutine
+!====================================================================
+  subroutine ModifyIO(self, line, lineStat)
+    implicit none
+    class(classyClass), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    integer, intent(out) :: lineStat
+
+    lineStat = 0
 
   end subroutine
 !====================================================================

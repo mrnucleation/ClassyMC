@@ -14,8 +14,8 @@ OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
-DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-#DETAILEDDEBUG:= -check all -traceback -g -fpe3 -Og
+#DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
+DETAILEDDEBUG:= -check all -traceback -g -fpe3 -Og
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe3
 #DEBUGFLAGS += -pg 
@@ -72,9 +72,11 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Box_OrthoBox.f90\
         		$(SRC)/Box_Ultility.f90\
         		$(SRC)/RandomNew.f90\
+        		$(SRC)/FF_Einstein.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Ele_Cut.f90\
         		$(SRC)/FF_LJ_Cut_NoNei.f90\
+        		$(SRC)/FF_ThermoInt.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
  	        	$(SRC)/Script_Constraint.f90\
  	        	$(SRC)/Script_Forcefield.f90\

@@ -9,6 +9,7 @@ contains
 !================================================================================
   subroutine Script_FieldType(line, FFNum, lineStat)
     use ForcefieldData, only: nForceFields
+    use FF_Einstein, only: Einstein
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Ele_Cut, only: Pair_LJ_Ele_Cut
@@ -41,6 +42,10 @@ contains
       case("lj_cut_nonei")
         allocate(Pair_LJ_Cut_NoNei::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut (No Neighbor List) style"
+      case("einstein")
+        allocate(Einstein::EnergyCalculator(FFNum) % Method)
+        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Einstein Crystal"
+
 
 !      case("tersoff")
 !        allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)

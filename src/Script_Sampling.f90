@@ -6,11 +6,13 @@ module Input_Sampling
 !================================================================================
   contains
 !================================================================================
-  subroutine Script_SamplingType(line, lineStat)
+  subroutine Script_SamplingType(iLine, lineStore, lineStat)
     use MetropolisRule, only: metropolis
     use MinMetroRule, only: MinMetro
     implicit none
-    character(len=*), intent(in) :: line
+
+    character(len=maxLineLen), allocatable :: lineStore(:)
+    integer, intent(in) :: iLine
     integer, intent(out) :: lineStat
 
     character(len=30) :: dummy, command 
@@ -18,7 +20,7 @@ module Input_Sampling
     real(dp) :: realValue
 
     lineStat  = 0
-    call GetXCommand(line, command, 2, lineStat)
+    call GetXCommand(lineStore(iLine), command, 2, lineStat)
     if(lineStat < 0) then
       return
     endif
@@ -26,6 +28,7 @@ module Input_Sampling
     select case(trim(adjustl(command)))
       case("metropolis")
         allocate(metropolis::sampling)
+
       case("min")
         allocate(MinMetro::sampling)
 

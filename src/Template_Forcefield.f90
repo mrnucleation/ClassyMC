@@ -31,7 +31,7 @@ module Template_ForceField
 !=============================================================================+
   subroutine DetailedECalc(self, curbox, E_T, accept)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
     logical, intent(out) :: accept
@@ -41,7 +41,7 @@ module Template_ForceField
 !============================================================================
   subroutine DiffECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)

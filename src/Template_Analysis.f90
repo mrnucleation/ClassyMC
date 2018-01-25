@@ -7,8 +7,10 @@ module AnaylsisClassDef
     logical :: perMove = .false.
     integer :: IOUnit = -1
     integer :: UpdateFreq = -1
+    integer :: analyID = -1
     contains
       procedure, pass :: Initialize
+      procedure, pass :: CalcNewState
       procedure, pass :: Compute
 !      procedure, pass :: Maintenance 
       procedure, pass :: ProcessIO
@@ -22,6 +24,14 @@ module AnaylsisClassDef
   subroutine Initialize(self)
     implicit none
     class(Analysis), intent(in) :: self
+  end subroutine
+!=========================================================================
+  subroutine CalcNewState(self, disp, newVal)
+    use CoordinateTypes, only: Displacement
+    implicit none
+    class(Analysis), intent(inout) :: self
+    type(Displacement), intent(in) :: disp(:)
+    real(dp), intent(in), optional :: newVal
   end subroutine
 !=========================================================================
   subroutine Compute(self, accept)

@@ -73,7 +73,7 @@
             call Script_NeighType( lineStore(iLine), lineStat)
 
           case("samplingtype")
-            call Script_SamplingType(lineStore(iLine), lineStat)
+            call Script_SamplingType(iLine, lineStore, lineStat)
 
           case("set")
             call setCommand( lineStore(iLine), lineStat )
@@ -170,7 +170,7 @@
       end subroutine
 !========================================================            
       subroutine createCommand(iLine, linestore, lineBuffer, lineStat)
-      use AnalysisData, only: AnalysisArray
+      use AnalysisData, only: AnalysisArray, analyCommon
       use BoxData, only: BoxArray
       use TrajData, only: TrajArray
       use MCMoveData, only: Moves, MoveProb
@@ -207,6 +207,19 @@
 !      write(*,*) nItems
 
       select case(trim(adjustl(command)))
+        case("analysis") 
+           if( .not. allocated(AnalysisArray) ) then
+             allocate(AnalysisArray(1:nItems), stat = AllocateStat)
+             allocate(analyCommon(1:nItems), stat = AllocateStat)
+             do i = 1, nItems
+               curLine = iLine + i
+               call Script_AnalysisType(linestore(curLine), i, lineStat)
+             enddo   
+           else
+             write(*,*) "ERROR! The create analysis command has already been used and can not be called twice"
+             stop
+           endif
+
         case("boxes")
            if( .not. allocated(BoxArray) ) then
              allocate(BoxArray(1:nItems), stat = AllocateStat)
@@ -266,17 +279,6 @@
              stop
            endif
 
-        case("analysis") 
-           if( .not. allocated(AnalysisArray) ) then
-             allocate(AnalysisArray(1:nItems), stat = AllocateStat)
-             do i = 1, nItems
-               curLine = iLine + i
-               call Script_AnalysisType(linestore(curLine), i, lineStat)
-             enddo   
-           else
-             write(*,*) "ERROR! The create analysis command has already been used and can not be called twice"
-             stop
-           endif
 
         case("trajectory") 
            if( .not. allocated(TrajArray) ) then

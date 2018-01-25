@@ -45,7 +45,7 @@ module FF_Pair_LJ_Cut_NoNei
   subroutine Detailed_LJ_Cut(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     implicit none
-    class(Pair_LJ_Cut_NoNei), intent(in) :: self
+    class(Pair_LJ_Cut_NoNei), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept

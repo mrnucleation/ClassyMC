@@ -53,7 +53,7 @@ module FF_Pair_LJ_Ele_Cut
     use ParallelVar, only: nout
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(Pair_LJ_Ele_Cut), intent(in) :: self
+    class(Pair_LJ_Ele_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
