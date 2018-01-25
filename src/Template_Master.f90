@@ -10,6 +10,7 @@ module MasterTemplate
        procedure, pass :: ScreenWrite
        procedure, pass :: Maintenance
        procedure, pass :: ModifyIO
+       procedure, pass :: Update
 !       procedure, pass :: ProcessIO
        procedure, pass :: Prologue
   end type
@@ -51,6 +52,12 @@ module MasterTemplate
 !    character(len=*), intent(in) :: line   
 !
 !  end subroutine
+!====================================================================
+  subroutine Update(self)
+    implicit none
+    class(classyClass), intent(inout) :: self
+
+  end subroutine
 !====================================================================
   subroutine Epilogue(self)
     implicit none

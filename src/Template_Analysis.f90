@@ -5,6 +5,7 @@ module AnaylsisClassDef
 
   type, public, extends(classyClass) :: Analysis
     logical :: perMove = .false.
+    logical :: usedInMove = .false.
     integer :: IOUnit = -1
     integer :: UpdateFreq = -1
     integer :: analyID = -1

@@ -14,6 +14,7 @@ contains
     use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Ele_Cut, only: Pair_LJ_Ele_Cut
 !    use FF_Pair_Tersoff, only: Pair_Tersoff
+    use FF_ThermoIntegration, only: ThermoIntegration
     use ParallelVar, only: nout
     implicit none
     character(len=*), intent(in) :: line
@@ -45,6 +46,11 @@ contains
       case("einstein")
         allocate(Einstein::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Einstein Crystal"
+
+      case("thermointegration")
+        allocate(Einstein::EnergyCalculator(FFNum) % Method)
+        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
+
 
 
 !      case("tersoff")

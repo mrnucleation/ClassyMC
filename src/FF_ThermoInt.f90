@@ -12,8 +12,11 @@ module FF_ThermoIntegration
     real(dp) :: lambda = 0E0_dp
     integer :: ECalc1 = -1
     integer :: ECalc2 = -1
+
     real(dp) :: E1 = 0E0_dp
     real(dp) :: E2 = 0E0_dp
+    real(dp) :: EDiff1 = 0E0_dp
+    real(dp) :: EDiff2 = 0E0_dp
     contains
       procedure, pass :: Constructor => ThermoInt_Constructor
       procedure, pass :: DetailedECalc => ThermoInt_DetailedECalc
@@ -23,8 +26,11 @@ module FF_ThermoIntegration
       procedure, pass :: NewECalc => ThermoInt_NewECalc
       procedure, pass :: OldECalc => ThermoInt_OldECalc
       procedure, pass :: VolECalc => ThermoInt_VolECalc
+      procedure, pass :: LambdaShift => ThermoInt_LambdaShift
+      procedure, pass :: GetLambda => ThermoInt_GetLambda
       procedure, pass :: ProcessIO => ThermoInt_ProcessIO
       procedure, pass :: GetCutOff => ThermoInt_GetCutOff
+      procedure, pass :: Update => ThermoInt_Update
   end type
 
   contains
@@ -73,15 +79,17 @@ module FF_ThermoIntegration
     E_Diff = 0E0_dp
 
     call EnergyCalculator(self%ECalc1) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
-    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
     if(.not. accept) then
       return
     endif
+    self%EDiff1 = ESub
+    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
 
     call EnergyCalculator(self%ECalc2) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
     if(.not. accept) then
       return
     endif
+    self%EDiff2 = ESub
     E_Diff = E_Diff + self%lambda * ESub
 
   end subroutine
@@ -101,16 +109,17 @@ module FF_ThermoIntegration
     E_Diff = 0E0_dp
 
     call EnergyCalculator(self%ECalc1) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
-
-    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
     if(.not. accept) then
       return
     endif
+    self%EDiff1 = ESub
+    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
 
     call EnergyCalculator(self%ECalc2) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
     if(.not. accept) then
       return
     endif
+    self%EDiff2 = ESub
     E_Diff = E_Diff + self%lambda * ESub
 
   end subroutine
@@ -127,11 +136,12 @@ module FF_ThermoIntegration
     E_Diff = 0E0_dp
 
     call EnergyCalculator(self%ECalc1) % Method %OldECalc(curbox, disp, ESub)
+    self%EDiff1 = ESub
     E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
 
     call EnergyCalculator(self%ECalc2) % Method %OldECalc(curbox, disp, ESub)
+    self%EDiff2 = ESub
     E_Diff = E_Diff + self%lambda * ESub
-
 
   end subroutine
 !=============================================================================+
@@ -143,31 +153,87 @@ module FF_ThermoIntegration
     real(dp), intent(inOut) :: E_Diff
 
     real(dp) :: ESub
+
     call EnergyCalculator(self%ECalc1) % Method %VolECalc(curbox, scalars, ESub)
+    self%EDiff1 = ESub
     E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
 
-
     call EnergyCalculator(self%ECalc2) % Method %VolECalc(curbox, scalars, ESub)
+    self%EDiff2 = ESub
     E_Diff = E_Diff + self%lambda * ESub
 
 
   end subroutine
 !=============================================================================+
+  subroutine ThermoInt_LambdaShift(self, lambdaNew, E_Diff)
+    implicit none
+    class(thermointegration), intent(in) :: self
+    real(dp), intent(in) :: lambdaNew
+    real(dp), intent(inOut) :: E_Diff
+
+    real(dp) :: ESub
+
+    E_Diff =  -(lambdaNew - self%lambda) * self%E1 + (lambdaNew - self%lambda) * self%E2
+
+  end subroutine
+!=============================================================================+
+  function ThermoInt_GetLambda(self) result(lambda)
+    implicit none
+    class(thermointegration), intent(in) :: self
+    real(dp) :: lambda
+
+    lambda = self%lambda
+
+  end function
+!=============================================================================+
   subroutine ThermoInt_ProcessIO(self, line)
+    use Input_Format, only: GetXCommand
     implicit none
     class(thermointegration), intent(inout) :: self
     character(len=*), intent(in) :: line
+
+    integer :: intVal, intVal2
+    integer :: lineStat
+    character(len=30) :: command
+
+    call GetXCommand(line, command, 1, lineStat)
+    select case(trim(adjustl(command)))
+      case("functions")
+        call GetXCommand(line, command, 2, lineStat)
+        read(command, *) intVal
+        self%ECalc1 = intVal
+
+        call GetXCommand(line, command, 3, lineStat)
+        read(command, *) intVal2
+        self%ECalc2 = intVal2
+
+      case default
+        lineStat = -1
+    end select
+
 
   end subroutine
 !=============================================================================+
   function ThermoInt_GetCutOff(self) result(rCut)
     implicit none
     class(thermointegration), intent(inout) :: self
-    real(dp) :: rCut
+    real(dp) :: rCut, rCut1, rCut2
 
-!    write(*,*) self%rCut
-    rCut = self%rCut
+
+    rCut1 = EnergyCalculator(self%ECalc1) % Method % GetCutOff()
+    rCut2 = EnergyCalculator(self%ECalc2) % Method % GetCutOff()
+    rCut = max(rCut1, rCut2)
+
   end function
+!=============================================================================+
+  subroutine ThermoInt_Update(self)
+    implicit none
+    class(thermointegration), intent(in) :: self
+
+    self%E1 = self%E1 + self%EDiff1
+    self%E2 = self%E2 + self%EDiff2
+
+  end subroutine
 !=============================================================================+
 end module
 !=============================================================================+
