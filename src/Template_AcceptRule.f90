@@ -16,7 +16,7 @@ module AcceptRuleTemplate
   function MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
     use Template_SimBox, only: SimBox
     implicit none
-    class(acceptrule), intent(in) :: self
+    class(acceptrule), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
     real(dp), intent(in) :: E_Diff, inProb

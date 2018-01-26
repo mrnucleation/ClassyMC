@@ -53,10 +53,10 @@ module Input_Forcefield
             write(*,*) "ERROR! The forcefield type must be defined before parameters can be modifed."
             stop
           endif
-          nForceFields = nItems
+          nItems = lineBuffer - 1
           do i = 1, nItems
             curLine = iLine + i
-            call EnergyCalculator(i)%Method%ProcessIO(lineStore(curLine))
+            call EnergyCalculator(intValue)%Method%ProcessIO(lineStore(curLine))
           enddo   
 
         case("forcefieldtype")

@@ -206,7 +206,7 @@ use Template_NeighList, only: NeighListDef
     integer, intent(out) :: lineStat
     character(len=maxLineLen), intent(in) :: line   
 
-    integer :: i, intVal
+    integer :: i, intVal, nPar
     real(dp) :: realVal
 
     character(len=30) :: command 
@@ -223,7 +223,7 @@ use Template_NeighList, only: NeighListDef
         self%rCutSq = realVal * realVal
 
       case("restricttype")
-        call GetAllCommands(line, parlist, lineStat)
+        call GetAllCommands(line, parlist, nPar, lineStat)
         self%restrictType = .true.
         if(.not. allocated(self%allowed) ) then
           allocate(self%allowed(1:nAtomTypes) )

@@ -14,6 +14,7 @@ module FF_Pair_LJ_Ele_Cut
 !    real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Constructor => Constructor_LJ_Ele_Cut
+      procedure, pass :: Prologue => Prologue_LJ_Ele_Cut
       procedure, pass :: DetailedECalc => Detailed_LJ_Ele_Cut
       procedure, pass :: ShiftECalc_Single => Shift_LJ_Ele_Cut_Single
       procedure, pass :: ShiftECalc_Multi => Shift_LJ_Ele_Cut_Multi
@@ -46,6 +47,23 @@ module FF_Pair_LJ_Ele_Cut
     self%rCutSq = 5E0_dp**2
 
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+
+  end subroutine
+  !===================================================================================
+  subroutine Prologue_LJ_Ele_Cut(self)
+    use Common_MolInfo, only: nAtomTypes
+    implicit none
+    class(Pair_LJ_Ele_Cut), intent(inout) :: self
+
+    integer :: i, j
+
+    write(*,*) 
+    write(*,*) "Charges:", (self%qVal(j), j = 1, nAtomTypes)
+
+    write(*,*) "Charge Table: "
+    do i = 1, nAtomTypes
+      write(*,*) (self%qTable(i,j), j = 1, nAtomTypes)
+    enddo
 
   end subroutine
   !===================================================================================
@@ -364,7 +382,7 @@ module FF_Pair_LJ_Ele_Cut
     character(len=30) :: command
     logical :: param = .false.
     integer :: jType, lineStat
-    integer :: type1, type2
+    integer :: type1, type2, nPar
     real(dp) :: ep, sig, q, rCut
   
 
@@ -376,16 +394,20 @@ module FF_Pair_LJ_Ele_Cut
         read(command, *) rCut
         self % rCut = rCut
         self % rCutSq = rCut * rCut
+        write(*,*) "BLAH!"
       case default
         param = .true.
+        write(*,*) "BLAH2!"
     end select
 
-
     if(param) then
-      call GetAllCommands(line, parlist, lineStat)
-      select case(size(parlist))
+      call GetAllCommands(line, parlist, nPar, lineStat)
+      write(*,*) "BLAH3!", nPar
+      select case(nPar)
         case(4)
           read(line, *) type1, ep, sig, q
+          write(*, *) type1, ep, sig, q
+
           self%qVal(type1) = q
           do jType = 1, nAtomTypes
             if(jType == type1) then
@@ -411,6 +433,9 @@ module FF_Pair_LJ_Ele_Cut
 
           self%sigTable(type1, type2) = sig
           self%sigTable(type2, type1) = sig
+
+          self%qTable(type1, type2) = q * coulombConst
+          self%qTable(type2, type1) = q * coulombConst
 
         case default
           lineStat = -1

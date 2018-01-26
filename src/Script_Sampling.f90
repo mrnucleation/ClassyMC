@@ -7,8 +7,9 @@ module Input_Sampling
   contains
 !================================================================================
   subroutine Script_SamplingType(iLine, lineStore, lineStat)
-    use MetropolisRule, only: metropolis
+    use MetropolisRule, only: Metropolis
     use MinMetroRule, only: MinMetro
+    use UmbrellaRule, only: Umbrella
     implicit none
 
     character(len=maxLineLen), allocatable :: lineStore(:)
@@ -31,6 +32,9 @@ module Input_Sampling
 
       case("min")
         allocate(MinMetro::sampling)
+
+      case("umbrella")
+        allocate(Umbrella::sampling)
 
       case default
         lineStat = -1

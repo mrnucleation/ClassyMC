@@ -92,10 +92,10 @@ module Constrain_HardWall
     integer :: i, intVal
     real(dp) :: realVal
     character(len=30), allocatable :: parlist(:)
-    integer :: buffer
+    integer :: buffer, nPar
 
     lineStat = 0
-    call GetAllCommands(line, parlist, lineStat)
+    call GetAllCommands(line, parlist, nPar, lineStat)
     
     buffer = 0
     i = 2

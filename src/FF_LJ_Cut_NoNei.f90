@@ -310,11 +310,11 @@ module FF_Pair_LJ_Cut_NoNei
     character(len=*), intent(in) :: line
     character(len=30), allocatable :: parlist(:)
     integer :: jType, lineStat
-    integer :: type1, type2
+    integer :: type1, type2, nPar
     real(dp) :: ep, sig
   
-    call GetAllCommands(line, parlist, lineStat)
-    select case(size(parlist))
+    call GetAllCommands(line, parlist, nPar, lineStat)
+    select case(nPar)
 
       case(3)
        read(line, *) type1, ep, sig

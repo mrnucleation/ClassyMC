@@ -243,6 +243,7 @@ contains
   subroutine Prologue(iCycle, iMove)
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
+    use ForcefieldData, only: EnergyCalculator
     use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
     use CommonSampling, only: Sampling
@@ -270,6 +271,10 @@ contains
 
     do i = 1, size(Moves)
       call Moves(i) % move % Prologue
+    enddo
+
+    do i = 1, size(EnergyCalculator)
+      call EnergyCalculator(i)%method%Prologue
     enddo
 
   end subroutine

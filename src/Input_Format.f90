@@ -191,14 +191,13 @@ contains
       end subroutine
 !========================================================            
 !     This subroutine collects all commands on a line and returns them as an array.
-
-    subroutine GetAllCommands(line, commandlist, lineStat)
+    subroutine GetAllCommands(line, commandlist, nItems, lineStat)
       use VarPrecision
       implicit none
       character(len=*), intent(in) :: line
       character(len=30), intent(inout), allocatable :: commandlist(:)
-      
-      integer, intent(out) :: lineStat
+      integer, intent(out) :: lineStat, nItems
+
       integer :: i, sizeLine, lowerLim, upperLim
       integer :: curNum
 
@@ -207,6 +206,7 @@ contains
       lineStat = 0
       i = 1
       curNum = 0
+      nItems = 0
       ! First task is to determine the size of the array that must be allocated.
       do while(i <= sizeLine)
 !      Find the first non-blank character in the string
@@ -266,7 +266,9 @@ contains
         upperLim = i
         curNum = curNum + 1
         commandlist(curNum) = line(lowerLim:upperLim)
+        nItems = nItems + 1
       enddo
+
 
 
      

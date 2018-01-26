@@ -305,6 +305,7 @@
       use BoxData, only: BoxArray
       use Template_SimBox
       use ForcefieldData, only: EnergyCalculator, nForceFields
+      use CommonSampling, only: sampling
       use VarPrecision
       use Units
       implicit none
@@ -326,8 +327,13 @@
         case("box")
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue
-
            call BoxArray(intValue) % box % IOProcess(line, lineStat)
+
+        case("sampling")
+           call GetXCommand(line, command2, 3, lineStat)
+           read(command2, *) intValue
+           call BoxArray(intValue) % box % IOProcess(line, lineStat)
+
         case default
            lineStat = -1
       end select

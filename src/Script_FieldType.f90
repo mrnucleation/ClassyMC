@@ -52,7 +52,6 @@ contains
         allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
 
-
 !      case("tersoff")
 !        allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
 !        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"

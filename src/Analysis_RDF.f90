@@ -27,7 +27,7 @@ use VarPrecision
 !=========================================================================
   subroutine RDF_Initialize(self)
     implicit none
-    class(rdf), intent(in) :: self
+    class(rdf), intent(inout) :: self
   end subroutine
 !=========================================================================
   subroutine RDF_Compute(self, accept)

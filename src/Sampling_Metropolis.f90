@@ -17,7 +17,7 @@ module MetropolisRule
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     implicit none
-    class(metropolis), intent(in) :: self
+    class(metropolis), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
     real(dp), intent(in) :: inProb

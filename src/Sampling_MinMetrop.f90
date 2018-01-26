@@ -17,7 +17,7 @@ module MinMetroRule
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     implicit none
-    class(minmetro), intent(in) :: self
+    class(minmetro), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
     type(Displacement), intent(in) :: disp(:)
     real(dp), intent(in) :: inProb
