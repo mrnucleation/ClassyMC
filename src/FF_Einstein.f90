@@ -6,36 +6,36 @@ module FF_Einstein
   use Template_SimBox, only: SimBox
   use CoordinateTypes
 
-  type, extends(forcefield) :: Einstein
+  type, extends(forcefield) :: Pair_Einstein
 !    real(dp) :: rCut, rCutSq
     real(dp) :: kSpring
     real(dp), allocatable :: initPos(:,:)
     contains
-      procedure, pass :: Constructor => Constructor_Einstein
-      procedure, pass :: DetailedECalc => Detailed_Einstein
-      procedure, pass :: ShiftECalc_Single => Shift_Einstein_Single
-      procedure, pass :: NewECalc => New_Einstein
-      procedure, pass :: OldECalc => Old_Einstein
-      procedure, pass :: ProcessIO => ProcessIO_Einstein
+      procedure, pass :: Constructor => Constructor_Pair_Einstein
+      procedure, pass :: DetailedECalc => Detailed_Pair_Einstein
+      procedure, pass :: ShiftECalc_Single => Shift_Pair_Einstein_Single
+      procedure, pass :: NewECalc => New_Pair_Einstein
+      procedure, pass :: OldECalc => Old_Pair_Einstein
+      procedure, pass :: ProcessIO => ProcessIO_Pair_Einstein
   end type
 
   contains
   !=============================================================================+
-  subroutine Constructor_Einstein(self)
+  subroutine Constructor_Pair_Einstein(self)
     use Common_MolInfo, only: nAtomTypes
     implicit none
-    class(Einstein), intent(inout) :: self
+    class(Pair_Einstein), intent(inout) :: self
 !    integer :: AllocateStat
 
 !    IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
   end subroutine
   !===================================================================================
-  subroutine Detailed_Einstein(self, curbox, E_T, accept)
+  subroutine Detailed_Pair_Einstein(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(Einstein), intent(inout) :: self
+    class(Pair_Einstein), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
@@ -71,14 +71,14 @@ module FF_Einstein
       enddo
     endif
       
-    write(nout, *) "Einstein Energy:", E_Ein
+    write(nout, *) "Pair_Einstein Energy:", E_Ein
       
     E_T = E_Ein
   end subroutine
   !=====================================================================
-  subroutine Shift_Einstein_Single(self, curbox, disp, E_Diff, accept)
+  subroutine Shift_Pair_Einstein_Single(self, curbox, disp, E_Diff, accept)
     implicit none
-    class(Einstein), intent(in) :: self
+    class(Pair_Einstein), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -113,9 +113,9 @@ module FF_Einstein
  
   end subroutine
   !=====================================================================
-  subroutine New_Einstein(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+  subroutine New_Pair_Einstein(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(Einstein), intent(in) :: self
+    class(Pair_Einstein), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
@@ -141,9 +141,9 @@ module FF_Einstein
     enddo
   end subroutine
   !=====================================================================
-  subroutine Old_Einstein(self, curbox, disp, E_Diff)
+  subroutine Old_Pair_Einstein(self, curbox, disp, E_Diff)
     implicit none
-    class(Einstein), intent(in) :: self
+    class(Pair_Einstein), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -164,11 +164,11 @@ module FF_Einstein
 
   end subroutine
   !=====================================================================
-  subroutine ProcessIO_Einstein(self, line)
+  subroutine ProcessIO_Pair_Einstein(self, line)
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: GetAllCommands, GetXCommand
     implicit none
-    class(Einstein), intent(inout) :: self
+    class(Pair_Einstein), intent(inout) :: self
     character(len=*), intent(in) :: line
     character(len=30), allocatable :: parlist(:)
     character(len=30) :: command

@@ -24,14 +24,14 @@ module AnaylsisClassDef
 !=========================================================================
   subroutine Initialize(self)
     implicit none
-    class(Analysis), intent(in) :: self
+    class(Analysis), intent(inout) :: self
   end subroutine
 !=========================================================================
   subroutine CalcNewState(self, disp, newVal)
     use CoordinateTypes, only: Displacement
     implicit none
     class(Analysis), intent(inout) :: self
-    type(Displacement), intent(in) :: disp(:)
+    type(Displacement), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
   end subroutine
 !=========================================================================

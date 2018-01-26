@@ -7,7 +7,7 @@ module FF_ThermoIntegration
   use Template_SimBox, only: SimBox
   use CoordinateTypes
 
-  type, public, extends(forcefield) :: thermointegration
+  type, public, extends(forcefield) :: pair_thermointegration
 !    real(dp) :: rCut, rCutSq
     real(dp) :: lambda = 0E0_dp
     integer :: ECalc1 = -1
@@ -31,6 +31,7 @@ module FF_ThermoIntegration
       procedure, pass :: ProcessIO => ThermoInt_ProcessIO
       procedure, pass :: GetCutOff => ThermoInt_GetCutOff
       procedure, pass :: Update => ThermoInt_Update
+      procedure, pass :: UpdateLambda => ThermoInt_UpdateLambda
   end type
 
   contains
@@ -38,7 +39,7 @@ module FF_ThermoIntegration
   subroutine ThermoInt_Constructor(self)
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(thermointegration), intent(inout) :: self
+    class(pair_thermointegration), intent(inout) :: self
 
 
   end subroutine
@@ -46,7 +47,7 @@ module FF_ThermoIntegration
   subroutine ThermoInt_DetailedECalc(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     implicit none
-    class(thermointegration), intent(inout) :: self
+    class(pair_thermointegration), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
     logical, intent(out) :: accept
@@ -67,7 +68,7 @@ module FF_ThermoIntegration
 !=============================================================================+
   subroutine ThermoInt_ShiftECalc_Single(self, curbox, disp, E_Diff, accept)
     implicit none
-    class(thermointegration), intent(in) :: self
+    class(pair_thermointegration), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -96,7 +97,7 @@ module FF_ThermoIntegration
 !=============================================================================+
   subroutine ThermoInt_NewECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(thermointegration), intent(in) :: self
+    class(pair_thermointegration), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     type(displacement), intent(in) :: disp(:)
@@ -126,7 +127,7 @@ module FF_ThermoIntegration
 !=============================================================================+
   subroutine ThermoInt_OldECalc(self, curbox, disp, E_Diff)
     implicit none
-    class(thermointegration), intent(in) :: self
+    class(pair_thermointegration), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -147,7 +148,7 @@ module FF_ThermoIntegration
 !=============================================================================+
   subroutine ThermoInt_VolECalc(self, curbox, scalars, E_Diff)
     implicit none
-    class(thermointegration), intent(in) :: self
+    class(pair_thermointegration), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     real(dp), intent(in) :: scalars(:)
     real(dp), intent(inOut) :: E_Diff
@@ -167,7 +168,7 @@ module FF_ThermoIntegration
 !=============================================================================+
   subroutine ThermoInt_LambdaShift(self, lambdaNew, E_Diff)
     implicit none
-    class(thermointegration), intent(in) :: self
+    class(pair_thermointegration), intent(in) :: self
     real(dp), intent(in) :: lambdaNew
     real(dp), intent(inOut) :: E_Diff
 
@@ -179,7 +180,7 @@ module FF_ThermoIntegration
 !=============================================================================+
   function ThermoInt_GetLambda(self) result(lambda)
     implicit none
-    class(thermointegration), intent(in) :: self
+    class(pair_thermointegration), intent(in) :: self
     real(dp) :: lambda
 
     lambda = self%lambda
@@ -189,7 +190,7 @@ module FF_ThermoIntegration
   subroutine ThermoInt_ProcessIO(self, line)
     use Input_Format, only: GetXCommand
     implicit none
-    class(thermointegration), intent(inout) :: self
+    class(pair_thermointegration), intent(inout) :: self
     character(len=*), intent(in) :: line
 
     integer :: intVal, intVal2
@@ -216,7 +217,7 @@ module FF_ThermoIntegration
 !=============================================================================+
   function ThermoInt_GetCutOff(self) result(rCut)
     implicit none
-    class(thermointegration), intent(inout) :: self
+    class(pair_thermointegration), intent(inout) :: self
     real(dp) :: rCut, rCut1, rCut2
 
 
@@ -228,10 +229,19 @@ module FF_ThermoIntegration
 !=============================================================================+
   subroutine ThermoInt_Update(self)
     implicit none
-    class(thermointegration), intent(in) :: self
+    class(pair_thermointegration), intent(inout) :: self
 
     self%E1 = self%E1 + self%EDiff1
     self%E2 = self%E2 + self%EDiff2
+
+  end subroutine
+!=============================================================================+
+  subroutine ThermoInt_UpdateLambda(self, lambdaNew)
+    implicit none
+    class(pair_thermointegration), intent(inout) :: self
+    real(dp), intent(in) :: lambdaNew
+
+    self%lambda = lambdaNew
 
   end subroutine
 !=============================================================================+

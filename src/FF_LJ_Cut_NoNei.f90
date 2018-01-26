@@ -97,7 +97,7 @@ module FF_Pair_LJ_Cut_NoNei
   !=====================================================================
   subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff, accept)
     implicit none
-      class(Pair_LJ_Cut_NoNei), intent(in) :: self
+      class(Pair_LJ_Cut_NoNei), intent(inout) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
@@ -215,7 +215,7 @@ module FF_Pair_LJ_Cut_NoNei
   !=====================================================================
   subroutine Shift_LJ_Cut_Multi(self, curbox, disp, E_Diff)
     implicit none
-      class(Pair_LJ_Cut_NoNei), intent(in) :: self
+      class(Pair_LJ_Cut_NoNei), intent(inout) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inout) :: E_Diff
@@ -224,7 +224,7 @@ module FF_Pair_LJ_Cut_NoNei
   !=====================================================================
   subroutine SwapIn_LJ_Cut(self, curbox, disp, E_Diff)
     implicit none
-      class(Pair_LJ_Cut_NoNei), intent(in) :: self
+      class(Pair_LJ_Cut_NoNei), intent(inout) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inOut) :: E_Diff
@@ -267,7 +267,7 @@ module FF_Pair_LJ_Cut_NoNei
   !=====================================================================
   subroutine SwapOut_LJ_Cut(self, curbox, atmIndx, E_Diff)
     implicit none
-      class(Pair_LJ_Cut_NoNei), intent(in) :: self
+      class(Pair_LJ_Cut_NoNei), intent(inout) :: self
       class(SimBox), intent(inout) :: curbox
       real(dp), intent(inOut) :: E_Diff
       integer, intent(in) :: atmIndx(:)

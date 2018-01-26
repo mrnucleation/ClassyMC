@@ -67,6 +67,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/Analysis_RDF.f90\
         		$(SRC)/Analysis_ThermAverage.f90\
+        		$(SRC)/Analysis_ThermoIntegration.f90\
         		$(SRC)/Box_SimpleBox.f90\
         		$(SRC)/Box_CubicBox.f90\
         		$(SRC)/Box_OrthoBox.f90\
@@ -241,6 +242,8 @@ $(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
 $(OB)/Main.o: $(OBJ)/Sim_MonteCarlo.o
+
+$(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Script_Main.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o
 

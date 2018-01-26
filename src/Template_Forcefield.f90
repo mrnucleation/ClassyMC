@@ -82,7 +82,7 @@ module Template_ForceField
 !=============================================================================+
   subroutine ShiftECalc_Single(self, curbox, disp, E_Diff, accept)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -94,7 +94,7 @@ module Template_ForceField
 !=============================================================================+
   subroutine ShiftECalc_Multi(self, curbox, disp, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inout) :: E_Diff
@@ -103,7 +103,7 @@ module Template_ForceField
 !=============================================================================+
   subroutine NewECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     type(displacement), intent(in) :: disp(:)
@@ -115,7 +115,7 @@ module Template_ForceField
 !=============================================================================+
   subroutine OldECalc(self, curbox, disp, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -123,7 +123,7 @@ module Template_ForceField
 !=============================================================================+
   subroutine VolECalc(self, curbox, scalars, E_Diff)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     real(dp), intent(in) :: scalars(:)
     real(dp), intent(inOut) :: E_Diff

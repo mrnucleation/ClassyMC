@@ -9,12 +9,12 @@ contains
 !================================================================================
   subroutine Script_FieldType(line, FFNum, lineStat)
     use ForcefieldData, only: nForceFields
-    use FF_Einstein, only: Einstein
+    use FF_Einstein, only: Pair_Einstein
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Ele_Cut, only: Pair_LJ_Ele_Cut
 !    use FF_Pair_Tersoff, only: Pair_Tersoff
-    use FF_ThermoIntegration, only: ThermoIntegration
+    use FF_ThermoIntegration, only: Pair_ThermoIntegration
     use ParallelVar, only: nout
     implicit none
     character(len=*), intent(in) :: line
@@ -43,14 +43,14 @@ contains
       case("lj_cut_nonei")
         allocate(Pair_LJ_Cut_NoNei::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut (No Neighbor List) style"
+
       case("einstein")
-        allocate(Einstein::EnergyCalculator(FFNum) % Method)
+        allocate(Pair_Einstein::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Einstein Crystal"
 
       case("thermointegration")
-        allocate(Einstein::EnergyCalculator(FFNum) % Method)
+        allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
-
 
 
 !      case("tersoff")

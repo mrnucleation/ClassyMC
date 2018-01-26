@@ -5,7 +5,7 @@ module Move_ThermoLambda
   use VarPrecision
   use MoveClassDef
 
-  use FF_ThermoIntegration, only: ThermoIntegration
+  use FF_ThermoIntegration, only: Pair_ThermoIntegration
   use ForcefieldData, only: EnergyCalculator
   use AnalysisData, only: AnalysisArray
 
@@ -15,6 +15,7 @@ module Move_ThermoLambda
 !    real(dp) :: accpt = 0E0_dp
     integer :: AnalyFunc = -1
     integer :: EFunc = -1
+    type(Displacement) :: disp(1:1)
     contains
       procedure, pass :: Constructor => ThermoLambda_Constructor
 !      procedure, pass :: GeneratePosition => ThermoLambda_GeneratePosition
@@ -27,19 +28,50 @@ module Move_ThermoLambda
  contains
 !========================================================
   subroutine ThermoLambda_Constructor(self)
-    use Common_MolInfo, only: MolData, nMolTypes
+    use AnalysisData, only: AnalysisArray
+    use ForcefieldData, only: EnergyCalculator
+    use Anaylsis_ThermoIntegration, only: ThermoIntegration
     implicit none
     class(ThermoLambda), intent(inout) :: self
+    integer :: i
+
+    do i = 1, size(EnergyCalculator)
+      select type(eng => EnergyCalculator(i)%Method)
+        class is(Pair_ThermoIntegration)
+          self%EFunc = i
+          exit
+      end select
+    enddo
+
+    if(self%Efunc <= 0) then
+      write(*,*) "ERROR! To perform thermodynamical integration the cooresponding"
+      write(*,*) "forcefield function must be defined."
+      stop
+    endif
+
+    do i = 1, size(AnalysisArray)
+      select type(analy => AnalysisArray(i)%func)
+        class is(ThermoIntegration)
+          self%AnalyFunc = i
+          exit
+      end select
+    enddo
+
+    if(self%AnalyFunc <= 0) then
+      write(*,*) "ERROR! To perform thermodynamical integration the cooresponding"
+      write(*,*) "analysis function must be defined."
+      stop
+    endif
 
 
   end subroutine
 !=========================================================================
   subroutine ThermoLambda_FullMove(self, trialBox, accept)
-    use Common_MolInfo, only: nMolTypes
-    use Box_Utility, only: FindAtom, FindFirstEmptyMol
+
+    use AnalysisData, only: AnalysisArray
+    use CommonSampling, only: Sampling
+    use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
-    use CommonSampling, only: sampling
-    use Common_NeighData, only: neighSkin
 
     implicit none
     class(ThermoLambda), intent(inout) :: self
@@ -48,16 +80,29 @@ module Move_ThermoLambda
     integer :: i
     integer :: nAtom, nAtomNew, reduIndx, newtype, oldtype
     real(dp) :: OldProb, NewProb, Prob
-    real(dp) :: E_Diff
+    real(dp) :: E_Diff, lambdaNew
 
 
     self % atmps = self % atmps + 1E0_dp
-    accept = .true.
+    lambdaNew = grnd()
+
+    call AnalysisArray(self%AnalyFunc)%func%CalcNewState(newVal=lambdaNew)
+
+    select type(eng => EnergyCalculator(self%EFunc)%Method)
+      class is(Pair_ThermoIntegration)
+        call eng%LambdaShift(lambdaNew, E_Diff)
+    end select
 
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%disp(1:1))
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
+      select type(eng => EnergyCalculator(self%EFunc)%Method)
+        class is(Pair_ThermoIntegration)
+          call eng%UpdateLambda(lambdaNew)
+      end select
+
+
     endif
 
   end subroutine
