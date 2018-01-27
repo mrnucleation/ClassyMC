@@ -11,7 +11,7 @@ contains
     use ForcefieldData, only: nForceFields
     use FF_Einstein, only: Pair_Einstein
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
-    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
+!    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Ele_Cut, only: Pair_LJ_Ele_Cut
 !    use FF_Pair_Tersoff, only: Pair_Tersoff
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
@@ -40,9 +40,9 @@ contains
         allocate(Pair_LJ_Ele_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
 
-      case("lj_cut_nonei")
-        allocate(Pair_LJ_Cut_NoNei::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut (No Neighbor List) style"
+!      case("lj_cut_nonei")
+!        allocate(Pair_LJ_Cut_NoNei::EnergyCalculator(FFNum) % Method)
+!        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut (No Neighbor List) style"
 
       case("einstein")
         allocate(Pair_Einstein::EnergyCalculator(FFNum) % Method)

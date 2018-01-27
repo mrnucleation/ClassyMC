@@ -19,6 +19,7 @@ use SimpleSimBox, only: SimpleBox
 
     contains
 !      procedure, pass :: Initialize
+      procedure, pass :: Prologue => DistPair_Prologue
       procedure, pass :: Compute => DistPair_Compute
       procedure, pass :: CalcNewState => DistPair_CalcNewState
 !      procedure, pass :: Maintenance 
@@ -29,6 +30,15 @@ use SimpleSimBox, only: SimpleBox
   end type
 
  contains
+!=========================================================================
+  subroutine DistPair_Prologue(self)
+    use BoxData, only: BoxArray
+    implicit none
+    class(DistPair), intent(inout) :: self
+
+    self%box => BoxArray(self%boxNum)%box
+
+  end subroutine
 !=========================================================================
   subroutine DistPair_Compute(self, accept)
     implicit none
