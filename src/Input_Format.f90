@@ -7,9 +7,9 @@ contains
     use ParallelVar, only: myid
 !      use SimParameters, only: echoInput
     implicit none
-    character(len=maxLineLen),allocatable,intent(inout) :: lineArray(:)
+    character(len=maxLineLen),allocatable,intent(out) :: lineArray(:)
     character(len=50), intent(in) :: fileName
-    integer, allocatable, intent(inout) :: lineNumber(:)
+    integer, allocatable, intent(out) :: lineNumber(:)
 
     character(len=maxLineLen),allocatable :: rawLines(:)
     character(len=50) :: modfileName
@@ -92,7 +92,9 @@ contains
 
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
-    deallocate(rawLines)
+    if(allocated(rawLines)) then
+      deallocate(rawLines)
+    endif
     
   end subroutine
 !========================================================            
@@ -203,6 +205,7 @@ contains
 
 
       sizeLine = len( line )
+      write(*,*) line
       lineStat = 0
       i = 1
       curNum = 0
@@ -219,7 +222,7 @@ contains
 !        If no characters are found the line is empty, 
         if(i >= sizeLine) then
           lineStat = 1
-          return
+          exit
         endif
         lowerLim = i
       
@@ -231,13 +234,16 @@ contains
         enddo
         if(i >= sizeLine) then
           lineStat = 1
-          return
+          exit
         endif
         upperLim = i
         curNum = curNum + 1
       enddo
 
+      write(*,*) curNum
       allocate(commandlist(1:curNum))
+      i = 1
+      nItems = curNum
       curNum = curNum + 1
       do while(i <= sizeLine)
         do while(i <= sizeLine)
@@ -249,7 +255,7 @@ contains
 !        If no characters are found the line is empty, 
         if(i >= sizeLine) then
           lineStat = 1
-          return
+          exit
         endif
         lowerLim = i
       
@@ -261,18 +267,64 @@ contains
         enddo
         if(i >= sizeLine) then
           lineStat = 1
-          return
+          exit
         endif
         upperLim = i
         curNum = curNum + 1
         commandlist(curNum) = line(lowerLim:upperLim)
-        nItems = nItems + 1
       enddo
 
 
 
      
       end subroutine
+!========================================================            
+!     This subroutine collects all commands on a line and returns them as an array.
+    subroutine CountCommands(line, nItems)
+      use VarPrecision
+      implicit none
+      character(len=*), intent(in) :: line
+      integer, intent(out) :: nItems
+
+      integer :: i, sizeLine, lowerLim, upperLim
+      integer :: curNum
+
+
+      sizeLine = len( line )
+      i = 1
+      curNum = 0
+      nItems = 0
+      ! First task is to determine the size of the array that must be allocated.
+      do while(i <= sizeLine)
+!      Find the first non-blank character in the string
+        do while(i <= sizeLine)
+          if(ichar(line(i:i)) .ne. ichar(' ')) then
+            exit
+          endif
+          i = i + 1
+        enddo
+!        If no characters are found the line is empty, 
+        if(i >= sizeLine) then
+          exit
+        endif
+        lowerLim = i
+      
+        do while(i <= sizeLine)
+          if(line(i:i) .eq. " ") then
+            exit
+          endif
+          i = i + 1
+        enddo
+        if(i >= sizeLine) then
+          exit
+        endif
+        upperLim = i
+        curNum = curNum + 1
+      enddo
+      nItems = curNum
+     
+      end subroutine
+
 !========================================================            
 !     This subrotuine searches a given input line for comments 
       subroutine CleanLine(inputline, cleanedLine)

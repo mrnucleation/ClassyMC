@@ -96,7 +96,9 @@
         
       enddo
 !      write(*,*) "Finished Reading Input Script."      
-      deallocate(lineStore)
+      if(allocated(lineStore)) then
+        deallocate(lineStore)
+      endif
 
       call Script_Initialize
 !      call Script_SafetyCheck

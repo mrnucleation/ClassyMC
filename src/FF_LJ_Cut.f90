@@ -33,7 +33,7 @@ module FF_Pair_LJ_Cut
     allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
-    self%epsTable = 4E0_dp
+    self%epsTable = 1E0_dp
     self%sigTable = 1E0_dp
     self%rMinTable = 0.05E0_dp
     self%rCut = 5E0_dp
@@ -327,13 +327,15 @@ module FF_Pair_LJ_Cut
       select case(nPar)
         case(3)
           read(line, *) type1, ep, sig
+          self%epsTable(type1, jType) = ep
+          self%sigTable(type1, jType) = sig
+
           do jType = 1, nAtomTypes
             if(jType == type1) then
-              self%epsTable(type1, jType) = 4E0_dp * ep
-              self%sigTable(type1, jType) = sig
+              cycle
             else
-              self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
-              self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
+              self%epsTable(type1, jType) = sqrt(ep * self%epsTable(jType, jType))
+              self%epsTable(jType, type1) = sqrt(ep * self%epsTable(jType, jType))
 
               self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
               self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
@@ -341,8 +343,8 @@ module FF_Pair_LJ_Cut
           enddo
         case(4)
           read(line, *) type1, type2, ep, sig
-          self%epsTable(type1, type2) = 4E0_dp * ep
-          self%epsTable(type2, type1) = 4E0_dp * ep
+          self%epsTable(type1, type2) = ep
+          self%epsTable(type2, type1) = ep
 
           self%sigTable(type1, type2) = sig
           self%sigTable(type2, type1) = sig
@@ -366,6 +368,15 @@ module FF_Pair_LJ_Cut
 
     rCut = self%rCut
   end function
+
+  !=====================================================================
+  subroutine Prologue_LJ_Cut(self)
+    implicit none
+    class(Pair_LJ_Cut), intent(inout) :: self
+
+    self%epsTable = self%epsTable * 4E0_dp
+
+  end subroutine
   !=====================================================================
 end module
 !=====================================================================

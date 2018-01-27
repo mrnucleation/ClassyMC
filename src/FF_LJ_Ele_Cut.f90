@@ -57,6 +57,8 @@ module FF_Pair_LJ_Ele_Cut
 
     integer :: i, j
 
+    self%epsTable = 4E0_dp * self%epsTable
+
     write(*,*) 
     write(*,*) "Charges:", (self%qVal(j), j = 1, nAtomTypes)
 
@@ -135,7 +137,7 @@ module FF_Pair_LJ_Ele_Cut
     write(nout,*) "Lennard-Jones Energy:", E_LJ
     write(nout,*) "Eletrostatic Energy:", E_Ele
       
-    E_T = E_LJ    
+    E_T = E_LJ + E_Ele
   end subroutine
   !=====================================================================
   subroutine Shift_LJ_Ele_Cut_Single(self, curbox, disp, E_Diff, accept)
@@ -374,11 +376,10 @@ module FF_Pair_LJ_Ele_Cut
   subroutine ProcessIO_LJ_Ele_Cut(self, line)
     use Constants, only: coulombConst
     use Common_MolInfo, only: nAtomTypes
-    use Input_Format, only: GetAllCommands, GetXCommand
+    use Input_Format, only: CountCommands, GetXCommand
     implicit none
     class(Pair_LJ_Ele_Cut), intent(inout) :: self
     character(len=*), intent(in) :: line
-    character(len=30), allocatable :: parlist(:)
     character(len=30) :: command
     logical :: param = .false.
     integer :: jType, lineStat
@@ -394,30 +395,25 @@ module FF_Pair_LJ_Ele_Cut
         read(command, *) rCut
         self % rCut = rCut
         self % rCutSq = rCut * rCut
-        write(*,*) "BLAH!"
       case default
         param = .true.
-        write(*,*) "BLAH2!"
     end select
 
     if(param) then
-      call GetAllCommands(line, parlist, nPar, lineStat)
-      write(*,*) "BLAH3!", nPar
+      call CountCommands(line, nPar)
+
       select case(nPar)
         case(4)
           read(line, *) type1, ep, sig, q
-          write(*, *) type1, ep, sig, q
-
+          self%epsTable(type1, jType) = ep
+          self%sigTable(type1, jType) = sig
           self%qVal(type1) = q
           do jType = 1, nAtomTypes
             if(jType == type1) then
-              self%epsTable(type1, jType) = 4E0_dp * ep
-              self%sigTable(type1, jType) = sig
               self%qTable(type1, jType) = self%qVal(type1) * self%qVal(jType) * coulombConst
-
             else
-              self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
-              self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
+              self%epsTable(type1, jType) = sqrt(ep * self%epsTable(jType, jType))
+              self%epsTable(jType, type1) = sqrt(ep * self%epsTable(jType, jType))
 
               self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
               self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
@@ -428,8 +424,8 @@ module FF_Pair_LJ_Ele_Cut
           enddo
         case(5)
           read(line, *) type1, type2, ep, sig, q
-          self%epsTable(type1, type2) = 4E0_dp * ep
-          self%epsTable(type2, type1) = 4E0_dp * ep
+          self%epsTable(type1, type2) = ep
+          self%epsTable(type2, type1) = ep
 
           self%sigTable(type1, type2) = sig
           self%sigTable(type2, type1) = sig
@@ -440,13 +436,9 @@ module FF_Pair_LJ_Ele_Cut
         case default
           lineStat = -1
       end select
-      if( allocated(parlist) ) then 
-        deallocate(parlist)
-      endif
     endif
 
 
-!    deallocate(parlist)
   end subroutine
   !=============================================================================+
   function GetCutOff_LJ_Ele_Cut(self) result(rCut)
