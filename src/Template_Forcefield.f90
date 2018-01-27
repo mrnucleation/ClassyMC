@@ -130,9 +130,10 @@ module Template_ForceField
   end subroutine
 !=============================================================================+
   subroutine ProcessIO(self, line)
+    use Input_Format, only: maxLineLen
     implicit none
     class(forcefield), intent(inout) :: self
-    character(len=*), intent(in) :: line
+    character(len=maxLineLen), intent(in) :: line
 
   end subroutine
 !=============================================================================+

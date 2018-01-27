@@ -10,6 +10,8 @@ contains
     use ParallelVar, only: nout
     use Analysis_RDF, only: rdf
     use Anaylsis_ThermAverage, only: ThermAverage
+    use Anaylsis_DistPair, only: DistPair
+    use Anaylsis_ThermoIntegration, only: ThermoIntegration
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: AnaNum
@@ -29,6 +31,12 @@ contains
       case("thermoaverage")
         allocate(thermAverage::AnalysisArray(AnaNum) % func)
 
+      case("thermointegration")
+        allocate(ThermoIntegration::AnalysisArray(AnaNum) % func)
+
+      case("distpair")
+        allocate(DistPair::AnalysisArray(AnaNum) % func)
+
       case default
         lineStat = -1
         return
@@ -38,6 +46,7 @@ contains
       return
     endif
 
+     AnalysisArray(AnaNum) % func % analyID = AnaNum
     call AnalysisArray(AnaNum) % func % ProcessIO(line)
 
   end subroutine

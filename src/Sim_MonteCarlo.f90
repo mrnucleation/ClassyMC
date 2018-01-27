@@ -265,16 +265,17 @@ contains
       enddo
     endif
 
+    do i = 1, size(EnergyCalculator)
+      call EnergyCalculator(i)%method%Prologue
+    enddo
+
+
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % Prologue
     enddo
 
     do i = 1, size(Moves)
       call Moves(i) % move % Prologue
-    enddo
-
-    do i = 1, size(EnergyCalculator)
-      call EnergyCalculator(i)%method%Prologue
     enddo
 
   end subroutine

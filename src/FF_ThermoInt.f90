@@ -188,10 +188,10 @@ module FF_ThermoIntegration
   end function
 !=============================================================================+
   subroutine ThermoInt_ProcessIO(self, line)
-    use Input_Format, only: GetXCommand
+    use Input_Format, only: GetXCommand, maxLineLen
     implicit none
     class(pair_thermointegration), intent(inout) :: self
-    character(len=*), intent(in) :: line
+    character(len=maxLineLen), intent(in) :: line
 
     integer :: intVal, intVal2
     integer :: lineStat

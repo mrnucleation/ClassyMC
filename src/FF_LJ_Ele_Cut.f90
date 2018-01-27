@@ -6,6 +6,9 @@ module FF_Pair_LJ_Ele_Cut
   use CoordinateTypes
 
   type, extends(forcefield) :: Pair_LJ_Ele_Cut
+    real(dp), allocatable :: eps(:)
+    real(dp), allocatable :: sig(:)
+
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: qTable(:,:)
@@ -32,11 +35,17 @@ module FF_Pair_LJ_Ele_Cut
     class(Pair_LJ_Ele_Cut), intent(inout) :: self
     integer :: AllocateStat
 
+    allocate(self%eps(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%sig(1:nAtomTypes), stat = AllocateStat)
+
     allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%qTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%qVal(1:nAtomTypes), stat = AllocateStat)
+
+    self%eps = 4E0_dp
+    self%sig = 4E0_dp
 
     self%epsTable = 4E0_dp
     self%sigTable = 1E0_dp
@@ -57,9 +66,6 @@ module FF_Pair_LJ_Ele_Cut
 
     integer :: i, j
 
-    self%epsTable = 4E0_dp * self%epsTable
-
-    write(*,*) 
     write(*,*) "Charges:", (self%qVal(j), j = 1, nAtomTypes)
 
     write(*,*) "Charge Table: "
@@ -376,10 +382,10 @@ module FF_Pair_LJ_Ele_Cut
   subroutine ProcessIO_LJ_Ele_Cut(self, line)
     use Constants, only: coulombConst
     use Common_MolInfo, only: nAtomTypes
-    use Input_Format, only: CountCommands, GetXCommand
+    use Input_Format, only: CountCommands, GetXCommand, maxLineLen
     implicit none
     class(Pair_LJ_Ele_Cut), intent(inout) :: self
-    character(len=*), intent(in) :: line
+    character(len=maxLineLen), intent(in) :: line
     character(len=30) :: command
     logical :: param = .false.
     integer :: jType, lineStat
@@ -405,18 +411,18 @@ module FF_Pair_LJ_Ele_Cut
       select case(nPar)
         case(4)
           read(line, *) type1, ep, sig, q
-          self%epsTable(type1, jType) = ep
-          self%sigTable(type1, jType) = sig
+          self%eps(type1) = ep
+          self%sig(type1) = sig
           self%qVal(type1) = q
           do jType = 1, nAtomTypes
             if(jType == type1) then
               self%qTable(type1, jType) = self%qVal(type1) * self%qVal(jType) * coulombConst
             else
-              self%epsTable(type1, jType) = sqrt(ep * self%epsTable(jType, jType))
-              self%epsTable(jType, type1) = sqrt(ep * self%epsTable(jType, jType))
+              self%epsTable(type1, jType) = sqrt(ep * self%eps(jType))
+              self%epsTable(jType, type1) = sqrt(ep * self%eps(jType))
 
-              self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
-              self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
+              self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sig(jType) )
+              self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sig(jType) )
 
               self%qTable(type1, jType) = self%qVal(type1) * self%qVal(jType) * coulombConst
               self%qTable(jType, type1) = self%qVal(type1) * self%qVal(jType) * coulombConst

@@ -166,10 +166,10 @@ module FF_Einstein
   !=====================================================================
   subroutine ProcessIO_Pair_Einstein(self, line)
     use Common_MolInfo, only: nAtomTypes
-    use Input_Format, only: GetAllCommands, GetXCommand
+    use Input_Format, only: GetAllCommands, GetXCommand, maxLineLen
     implicit none
     class(Pair_Einstein), intent(inout) :: self
-    character(len=*), intent(in) :: line
+    character(len=maxLineLen), intent(in) :: line
     character(len=30), allocatable :: parlist(:)
     character(len=30) :: command
     logical :: param = .false.

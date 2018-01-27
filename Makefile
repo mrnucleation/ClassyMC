@@ -66,6 +66,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_MolTranslation.f90\
         		$(SRC)/Move_MC_Delete.f90\
         		$(SRC)/ExeptionHandling.f90\
+        		$(SRC)/Analysis_DistPair.f90\
         		$(SRC)/Analysis_RDF.f90\
         		$(SRC)/Analysis_ThermAverage.f90\
         		$(SRC)/Analysis_ThermoIntegration.f90\

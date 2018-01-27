@@ -47,14 +47,20 @@ module UmbrellaRule
   end subroutine
 !====================================================================
   subroutine Umbrella_Prologue(self)
+    use AnalysisData, only: AnalysisArray
     use ParallelVar, only: nout
     implicit none
     class(Umbrella), intent(inout) :: self
-    integer :: i,j, AllocateStatus
+    integer :: i,j, indx, AllocateStatus
 
     if(.not. allocated(self%indexCoeff) ) then
       call self % Constructor
     endif
+
+    do i = 1, self%nBiasVar
+      indx = self%AnalysisIndex(i)
+      AnalysisArray(indx)%func%usedInMove = .true.
+    enddo
 
      ! Since the number of biasing variables is only known at run time, the bias matrix
      ! must be stored in a 1D array.  The index coefficient variables are used to emulate a N dimension matrix
@@ -75,6 +81,7 @@ module UmbrellaRule
       self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * (self%binMax(i) - self%binMin(i))
     enddo
 
+    write(nout,*) "Sampling Style: Histogram based Umbrella Sampling"
     write(nout,*) "Number of Umbrella Bins:", self%umbrellaLimit
        
     allocate(self%UBias(1:self%umbrellaLimit+1), STAT = AllocateStatus)
@@ -87,6 +94,7 @@ module UmbrellaRule
   end subroutine
 !====================================================================
   function Umbrella_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
+    use AnalysisData, only: AnalysisArray
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     implicit none
@@ -97,8 +105,13 @@ module UmbrellaRule
     real(dp), intent(in) :: E_Diff
 
     logical :: accept
-    integer :: oldIndx, newIndx
+    integer :: iBias, oldIndx, newIndx, indx
     real(dp) :: biasE, biasOld, biasNew
+
+    do iBias = 1, self%nBiasVar
+      indx = self%AnalysisIndex(iBias)
+      call AnalysisArray(indx)%func%CalcNewState(disp)
+    enddo
 
     oldIndx = self%GetBiasIndex()
     call self%GetNewBiasIndex(newIndx, accept)

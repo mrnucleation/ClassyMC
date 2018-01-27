@@ -6,6 +6,8 @@ module FF_Pair_LJ_Cut
   use CoordinateTypes
 
   type, extends(forcefield) :: Pair_LJ_Cut
+    real(dp), allocatable :: eps(:)
+    real(dp), allocatable :: sig(:)
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
@@ -18,6 +20,7 @@ module FF_Pair_LJ_Cut
       procedure, pass :: NewECalc => New_LJ_Cut
       procedure, pass :: OldECalc => Old_LJ_Cut
       procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
+      procedure, pass :: Prologue => Prologue_LJ_Cut
       procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
   end type
 
@@ -29,9 +32,15 @@ module FF_Pair_LJ_Cut
     class(Pair_LJ_Cut), intent(inout) :: self
     integer :: AllocateStat
 
+    allocate(self%eps(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%sig(1:nAtomTypes), stat = AllocateStat)
+
     allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+
+    self%eps = 1E0_dp
+    self%sig = 1E0_dp
 
     self%epsTable = 1E0_dp
     self%sigTable = 1E0_dp
@@ -98,7 +107,7 @@ module FF_Pair_LJ_Cut
         endif
       enddo
     enddo
-      
+  
     write(nout,*) "Lennard-Jones Energy:", E_LJ
       
     E_T = E_LJ    
@@ -297,11 +306,11 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine ProcessIO_LJ_Cut(self, line)
     use Common_MolInfo, only: nAtomTypes
-    use Input_Format, only: GetAllCommands, GetXCommand
+    use Input_Format, only: CountCommands, GetXCommand
+    use Input_Format, only: maxLineLen
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
-    character(len=*), intent(in) :: line
-    character(len=30), allocatable :: parlist(:)
+    character(len=maxLineLen), intent(in) :: line
     character(len=30) :: command
     logical :: param = .false.
     integer :: jType, lineStat
@@ -323,23 +332,21 @@ module FF_Pair_LJ_Cut
 
 
     if(param) then
-      call GetAllCommands(line, parlist, nPar, lineStat)
+!      call GetAllCommands(line, parlist, nPar, lineStat)
+      call CountCommands(line, nPar)
       select case(nPar)
         case(3)
           read(line, *) type1, ep, sig
-          self%epsTable(type1, jType) = ep
-          self%sigTable(type1, jType) = sig
+
+          self%eps(type1) = ep
+          self%sig(type1) = sig
 
           do jType = 1, nAtomTypes
-            if(jType == type1) then
-              cycle
-            else
-              self%epsTable(type1, jType) = sqrt(ep * self%epsTable(jType, jType))
-              self%epsTable(jType, type1) = sqrt(ep * self%epsTable(jType, jType))
+            self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%eps(jType))
+            self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%eps(jType))
 
-              self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
-              self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
-            endif
+            self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sig(jType) )
+            self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sig(jType) )
           enddo
         case(4)
           read(line, *) type1, type2, ep, sig
@@ -352,13 +359,8 @@ module FF_Pair_LJ_Cut
         case default
           lineStat = -1
       end select
-      if( allocated(parlist) ) then 
-        deallocate(parlist)
-      endif
     endif
 
-
-!    deallocate(parlist)
   end subroutine
   !=============================================================================+
   function GetCutOff_LJ_Cut(self) result(rCut)
@@ -371,10 +373,19 @@ module FF_Pair_LJ_Cut
 
   !=====================================================================
   subroutine Prologue_LJ_Cut(self)
+    use Common_MolInfo, only: nAtomTypes
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
+    integer :: i, j
 
-    self%epsTable = self%epsTable * 4E0_dp
+    do i = 1, nAtomTypes
+      write(*,*) (self%epsTable(i,j), j=1,nAtomTypes)
+    enddo
+
+    do i = 1, nAtomTypes
+      write(*,*) (self%sigTable(i,j), j=1,nAtomTypes)
+    enddo
+
 
   end subroutine
   !=====================================================================
