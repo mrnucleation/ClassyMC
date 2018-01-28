@@ -41,6 +41,9 @@ contains
 
     nBoxes = size(BoxArray)
     boxNum = 1
+
+    call Analyze(iCycle, iMove, accept, .true.)
+    call Analyze(iCycle, iMove, accept, .false.)
     !-------Main Monte Carlo Simulation Loop-------
     do iCycle = 1, nCycles
 
@@ -63,7 +66,7 @@ contains
       enddo 
       !------End Move Loop
       if(mod(iCycle, 1000) == 0) then
-        write(*,*) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
+        write(nout, *) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
       endif
 
       if(mod(iCycle, 100) == 0) then
@@ -71,6 +74,7 @@ contains
       endif
 
       call Analyze(iCycle, iMove, accept, .false.)
+      call Maintenance(iCycle, iMove)
       call Trajectory(iCycle, iMove)
     enddo
     !-------End of Main Monte Carlo Simulation Loop-------

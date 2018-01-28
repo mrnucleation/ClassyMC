@@ -58,6 +58,7 @@
           cycle
         endif 
 
+!        write(*,*) trim(adjustl(lineStore(iLine)))
         select case(trim(adjustl( command )))
           case("create")
             call createCommand(iLine, linestore, lineBuffer, lineStat)
@@ -332,7 +333,7 @@
            call BoxArray(intValue) % box % IOProcess(line, lineStat)
 
         case("sampling")
-           call BoxArray(intValue) % box % IOProcess(line, lineStat)
+           call Sampling % ProcessIO(line, lineStat)
 
         case default
            lineStat = -1

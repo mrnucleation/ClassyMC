@@ -66,12 +66,11 @@ module FF_Pair_LJ_Ele_Cut
 
     integer :: i, j
 
-    write(*,*) "Charges:", (self%qVal(j), j = 1, nAtomTypes)
-
-    write(*,*) "Charge Table: "
-    do i = 1, nAtomTypes
-      write(*,*) (self%qTable(i,j), j = 1, nAtomTypes)
-    enddo
+!    write(*,*) "Charges:", (self%qVal(j), j = 1, nAtomTypes)
+!    write(*,*) "Charge Table: "
+!    do i = 1, nAtomTypes
+!      write(*,*) (self%qTable(i,j), j = 1, nAtomTypes)
+!    enddo
 
   end subroutine
   !===================================================================================

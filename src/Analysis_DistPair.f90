@@ -35,8 +35,13 @@ use SimpleSimBox, only: SimpleBox
     use BoxData, only: BoxArray
     implicit none
     class(DistPair), intent(inout) :: self
+    logical :: accept
 
     self%box => BoxArray(self%boxNum)%box
+
+    self%perMove = .true.
+    accept = .true.
+    call self%Compute(accept)
 
   end subroutine
 !=========================================================================
@@ -47,6 +52,7 @@ use SimpleSimBox, only: SimpleBox
 
     real(dp) :: rx, ry, rz, rsq, r
 
+!    accept = .true.
     if(.not. accept) then
       return
     endif
@@ -58,6 +64,7 @@ use SimpleSimBox, only: SimpleBox
     rsq = rx*rx + ry*ry + rz*rz
     r = sqrt(rsq)
  
+!    write(*,*) r
     self%dist = r
 
   end subroutine
@@ -72,16 +79,16 @@ use SimpleSimBox, only: SimpleBox
 
     if(disp(1)%atmIndx == self%atom1 ) then
       rx = disp(1)%x_new - self%box % atoms(1, self%atom2)
-      ry = disp(1)%y_new - self%box % atoms(1, self%atom2)
-      rz = disp(1)%z_new - self%box % atoms(1, self%atom2)
+      ry = disp(1)%y_new - self%box % atoms(2, self%atom2)
+      rz = disp(1)%z_new - self%box % atoms(3, self%atom2)
       call self%box% Boundary(rx, ry, rz)
       rsq = rx*rx + ry*ry + rz*rz
       r = sqrt(rsq)
        
     elseif(disp(1)%atmIndx == self%atom2 ) then
       rx = disp(1)%x_new - self%box % atoms(1, self%atom1)
-      ry = disp(1)%y_new - self%box % atoms(1, self%atom1)
-      rz = disp(1)%z_new - self%box % atoms(1, self%atom1)
+      ry = disp(1)%y_new - self%box % atoms(2, self%atom1)
+      rz = disp(1)%z_new - self%box % atoms(3, self%atom1)
       call self%box% Boundary(rx, ry, rz)
       rsq = rx*rx + ry*ry + rz*rz
       r = sqrt(rsq)
@@ -89,6 +96,7 @@ use SimpleSimBox, only: SimpleBox
       r = self%dist
     endif
 
+!    write(*,*) r
     analyCommon(self%analyID) = r
 
   end subroutine
@@ -124,6 +132,7 @@ use SimpleSimBox, only: SimpleBox
   function DistPair_GetResult(self) result(var)
     implicit none
     class(DistPair), intent(in) :: self
+    logical :: accept
     real(dp) :: var
 
     var = self%dist

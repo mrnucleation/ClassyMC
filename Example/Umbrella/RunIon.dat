@@ -1,23 +1,26 @@
 #======================================
-  set rng_seed -6
+  set rng_seed -1
   set NeighSkin 2.0
-  set moves 600
-  set cycles 10000
-  SamplingType Umbrella
-#  SamplingType Metropolis
-#  SamplingType Min
 
-#  forcefield testfield.txt
+#  1000 moves per cycle
+  set moves 1000
+  set cycles 1000000
+
+#  Histogram Based Umbrella Sampling
+  SamplingType Umbrella
+
   forcefield "IonPair.clFF"
 
   Create boxes
     FromFile "PairConfig.clssy"
   End_Create
 
-  neighlist 1 rsqlist 1
-
+#  Points the Umbrella Sampling Module to the first Analysis function.
   modify Sampling biasvariables 1
-  modify Sampling analysis 2
+  modify Sampling analysis 1
+  modify Sampling bounds 1 0.01 1.0 7.0 
+
+  neighlist 1 rsqlist 1
 
   Create moves
     atomtranslation 1.0
@@ -32,5 +35,5 @@
   End_Create
 
   modify box 1 energycalc 1
-  modify box 1 temperature 0.8
+  modify box 1 temperature 300
 #=====================================

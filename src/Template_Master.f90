@@ -3,7 +3,7 @@ module MasterTemplate
   use VarPrecision
 
   type, public :: classyClass
-    integer :: maintFreq = 100
+    integer :: maintFreq = 10
     contains
        procedure, pass :: Epilogue
        procedure, pass :: SafetyCheck

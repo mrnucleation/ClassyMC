@@ -32,10 +32,11 @@ module AcceptRuleTemplate
 !  end subroutine
 !====================================================================
   subroutine ProcessIO(self, line, lineStat)
+    use Input_Format, only: maxLineLen
     implicit none
     class(acceptrule), intent(inout) :: self
     integer, intent(out) :: lineStat
-    character(len=*), intent(in) :: line   
+    character(len=maxLineLen), intent(in) :: line   
 
     lineStat = 0
   end subroutine
