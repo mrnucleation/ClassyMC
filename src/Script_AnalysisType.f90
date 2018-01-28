@@ -8,6 +8,7 @@ contains
     use Input_Format, only: GetXCommand
     use AnalysisData, only: AnalysisArray
     use ParallelVar, only: nout
+    use Anaylsis_ClusterSize, only: ClusterSize
     use Analysis_RDF, only: rdf
     use Anaylsis_ThermAverage, only: ThermAverage
     use Anaylsis_DistPair, only: DistPair
@@ -37,7 +38,10 @@ contains
       case("distpair")
         allocate(DistPair::AnalysisArray(AnaNum) % func)
 
-      case default
+      case("clustersize")
+        allocate(ClusterSize::AnalysisArray(AnaNum) % func)
+
+     case default
         lineStat = -1
         return
     end select
