@@ -10,6 +10,7 @@ module Input_Sampling
     use MetropolisRule, only: Metropolis
     use MinMetroRule, only: MinMetro
     use UmbrellaRule, only: Umbrella
+    use UmbrellaWHAMRule, only: UmbrellaWHAM
     implicit none
 
     character(len=maxLineLen), allocatable :: lineStore(:)
@@ -35,6 +36,9 @@ module Input_Sampling
 
       case("umbrella")
         allocate(Umbrella::sampling)
+
+      case("umbrellawham")
+        allocate(UmbrellaWHAM::sampling)
 
       case default
         lineStat = -1

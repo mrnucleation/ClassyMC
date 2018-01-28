@@ -31,7 +31,7 @@ contains
         return
     end select
 
-    write(*,*) line
+!    write(*,*) line
     call TrajArray(TrajNum) % traj % SetUnit(1000+TrajNum)
 
     call GetXCommand(line, command, 2, lineStat)
@@ -48,7 +48,7 @@ contains
         command(i:i) = " "
       endif
     enddo
-    write(*,*) command
+!    write(*,*) command
     call TrajArray(TrajNum) % traj % SetFileName(command)
     call TrajArray(TrajNum) % traj % OpenFile
 
