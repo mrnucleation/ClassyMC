@@ -8,6 +8,8 @@ module FF_Pair_LJ_Cut
   type, extends(forcefield) :: Pair_LJ_Cut
     real(dp), allocatable :: eps(:)
     real(dp), allocatable :: sig(:)
+    real(dp), allocatable :: rMin(:)
+
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
@@ -34,6 +36,7 @@ module FF_Pair_LJ_Cut
 
     allocate(self%eps(1:nAtomTypes), stat = AllocateStat)
     allocate(self%sig(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
 
     allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
@@ -140,9 +143,9 @@ module FF_Pair_LJ_Cut
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
 
         atmType2 = curbox % AtomType(jAtom)
-        ep = self % epsTable(atmType1, atmType2)
-        sig_sq = self % sigTable(atmType1, atmType2)          
-        rmin_ij = self % rMinTable(atmType1, atmType2)          
+        ep = self % epsTable(atmType2, atmType1)
+        sig_sq = self % sigTable(atmType2, atmType1)  
+        rmin_ij = self % rMinTable(atmType2, atmType1)          
 
         rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
@@ -161,7 +164,14 @@ module FF_Pair_LJ_Cut
           curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
           curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
         endif
+      enddo
 
+      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+
+        atmType2 = curbox % AtomType(jAtom)
+        ep = self % epsTable(atmType2, atmType1)
+        sig_sq = self % sigTable(atmType2, atmType1)  
         rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
         ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
@@ -176,6 +186,7 @@ module FF_Pair_LJ_Cut
           curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
         endif
       enddo
+
     enddo
  
   end subroutine
@@ -315,7 +326,7 @@ module FF_Pair_LJ_Cut
     logical :: param = .false.
     integer :: jType, lineStat
     integer :: type1, type2, nPar
-    real(dp) :: ep, sig, rCut
+    real(dp) :: ep, sig, rCut, rMin
   
 
     call GetXCommand(line, command, 1, lineStat)
@@ -336,10 +347,11 @@ module FF_Pair_LJ_Cut
       call CountCommands(line, nPar)
       select case(nPar)
         case(3)
-          read(line, *) type1, ep, sig
+          read(line, *) type1, ep, sig, rMin
 
           self%eps(type1) = ep
           self%sig(type1) = sig
+          self%rMin(type1) = rMin
 
           do jType = 1, nAtomTypes
             self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%eps(jType))
@@ -347,14 +359,21 @@ module FF_Pair_LJ_Cut
 
             self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sig(jType) )
             self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sig(jType) )
+
+            self%rMinTable(type1, jType) = max(rMin, self%rMin(jType))
+            self%rMinTable(jType, type1) = max(rMin, self%rMin(jType))
           enddo
         case(4)
-          read(line, *) type1, type2, ep, sig
+          read(line, *) type1, type2, ep, sig, rMin
           self%epsTable(type1, type2) = ep
           self%epsTable(type2, type1) = ep
 
           self%sigTable(type1, type2) = sig
           self%sigTable(type2, type1) = sig
+
+          self%rMinTable(type1, type2) = rMin
+          self%rMinTable(type2, type1) = rMin
+
 
         case default
           lineStat = -1
