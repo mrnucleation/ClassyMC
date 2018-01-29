@@ -9,7 +9,7 @@ module FF_ThermoIntegration
 
   type, public, extends(forcefield) :: pair_thermointegration
 !    real(dp) :: rCut, rCutSq
-    real(dp) :: lambda = 0.5E0_dp
+    real(dp) :: lambda = 0.0E0_dp
     integer :: ECalc1 = -1
     integer :: ECalc2 = -1
 

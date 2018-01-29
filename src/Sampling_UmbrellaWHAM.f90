@@ -245,7 +245,7 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = AnalysisArray(analyIndx)%func%GetResult()
-      self%binIndx(iBias) = nint(biasVal/self%UBinSize(iBias))
+      self%binIndx(iBias) = ceiling(biasVal/self%UBinSize(iBias))
 !      write(*,*) biasVal, self%binIndx(iBias), self%UBinSize(iBias)
     enddo
 
@@ -278,7 +278,7 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = analyCommon(analyIndx)
-      self%binIndx(iBias) = nint(biasVal/self%UBinSize(iBias))
+      self%binIndx(iBias) = ceiling(biasVal/self%UBinSize(iBias))
 
 !      write(*,*) biasVal, self%binIndx(iBias)
       if(self%binIndx(iBias) > self%binMax(iBias) ) then
@@ -353,7 +353,7 @@ module UmbrellaWHAMRule
     stat = 0
     do iBias = 1, self%nBiasVar
 !       binIndx(iBias) = floor( varArray(iBias) / UBinSize(iBias) + 1E-8 )
-      self%binIndx(iBias) = nint( varArray(iBias) / self%UBinSize(iBias) )
+      self%binIndx(iBias) = ceiling( varArray(iBias) / self%UBinSize(iBias) )
       if(self%binIndx(iBias) > self%binMax(iBias)) then
         stat = 1
         return
@@ -464,12 +464,12 @@ module UmbrellaWHAMRule
 
           call GetXCommand(line, command, 6, lineStat)
           read(command, *) realVal
-          self%binMin(intVal) = nint(realVal/self%UBinSize(intVal))
+          self%binMin(intVal) = ceiling(realVal/self%UBinSize(intVal))
 
 
           call GetXCommand(line, command, 7, lineStat)
           read(command, *) realVal
-          self%binMax(intVal) = nint(realVal/self%UBinSize(intVal))
+          self%binMax(intVal) = ceiling(realVal/self%UBinSize(intVal))
         endif
 
       case("reference")
@@ -482,7 +482,7 @@ module UmbrellaWHAMRule
       case("whamfreq")
           call GetXCommand(line, command, 4, lineStat)
           read(command, *) realVal
-          self%maintFreq = nint(realVal)
+          self%maintFreq = ceiling(realVal)
 
       case default
         lineStat = -1
