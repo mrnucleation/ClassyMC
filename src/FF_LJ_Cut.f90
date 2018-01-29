@@ -346,7 +346,7 @@ module FF_Pair_LJ_Cut
 !      call GetAllCommands(line, parlist, nPar, lineStat)
       call CountCommands(line, nPar)
       select case(nPar)
-        case(3)
+        case(4)
           read(line, *) type1, ep, sig, rMin
 
           self%eps(type1) = ep
@@ -363,7 +363,7 @@ module FF_Pair_LJ_Cut
             self%rMinTable(type1, jType) = max(rMin, self%rMin(jType))
             self%rMinTable(jType, type1) = max(rMin, self%rMin(jType))
           enddo
-        case(4)
+        case(5)
           read(line, *) type1, type2, ep, sig, rMin
           self%epsTable(type1, type2) = ep
           self%epsTable(type2, type1) = ep
