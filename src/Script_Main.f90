@@ -32,7 +32,7 @@
       elseif(nArgs == 1) then
         call get_command_argument(1, fileName)
         call LoadFile(lineStore, nLines, lineNumber, fileName)
-        write(*,*) "File successfully loaded!"
+        write(nout, *) "File successfully loaded!"
       elseif(nArgs == 0) then
         write(*,*) "ERROR! No Input File has been given!"
         stop
