@@ -12,11 +12,14 @@ use VarPrecision
 !    integer :: UpdateFreq = -1
 !    integer :: analyID = -1
 
+    logical :: pushedValue = .false.
     integer :: ECalc = -1
-    real(dp) :: lambda
+    real(dp) :: lambda, newLambda
 
     contains
-      procedure, pass :: Initialize => ThermoInt_Initialize
+!      procedure, pass :: Initialize => ThermoInt_Initialize
+      procedure, pass :: Prologue => ThermoInt_Prologue
+      procedure, pass :: PushLambda => ThermoInt_PushLambda
       procedure, pass :: Compute => ThermoInt_Compute
 !      procedure, pass :: Maintenance 
       procedure, pass :: CalcNewState => ThermoInt_CalcNewState
@@ -28,12 +31,13 @@ use VarPrecision
 
  contains
 !=========================================================================
-  subroutine ThermoInt_Initialize(self)
+  subroutine ThermoInt_Prologue(self)
     use ForcefieldData, only: EnergyCalculator
     implicit none
     class(ThermoIntegration), intent(inout) :: self
     integer :: i
 
+    self%perMove = .true.
     do i = 1, size(EnergyCalculator)
       select type(eng => EnergyCalculator(i)%Method)
         class is(pair_ThermoIntegration)
@@ -54,14 +58,24 @@ use VarPrecision
     real(dp) :: lambda
 
 
-    if(accept) then
-      select type(eng => EnergyCalculator(self%ECalc)%Method)
-        class is(pair_ThermoIntegration)
-           self%lambda = eng%GetLambda()
-      end select
-    endif
+    select type(eng => EnergyCalculator(self%ECalc)%Method)
+      class is(pair_ThermoIntegration)
+         self%lambda = eng%GetLambda()
+    end select
 
     
+  end subroutine
+!=========================================================================
+  subroutine ThermoInt_PushLambda(self, newVal)
+    use AnalysisData, only: analyCommon
+    use CoordinateTypes, only: Displacement
+    implicit none
+    class(ThermoIntegration), intent(inout) :: self
+    real(dp), intent(in) :: newVal
+
+    self%newLambda = newVal
+    self%pushedValue = .true.
+
   end subroutine
 !=========================================================================
   subroutine ThermoInt_CalcNewState(self, disp, newVal)
@@ -72,8 +86,11 @@ use VarPrecision
     type(Displacement), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
 
-    if( present(newVal) ) then
-      analyCommon(self%analyID) = newVal
+    if( self%pushedValue ) then
+      analyCommon(self%analyID) = self%newLambda
+      self%pushedValue = .false.
+    else
+      analyCommon(self%analyID) = self%lambda
     endif
   end subroutine
 !=========================================================================

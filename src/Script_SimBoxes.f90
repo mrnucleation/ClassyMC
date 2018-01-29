@@ -37,7 +37,7 @@ module Input_SimBoxes
         BoxArray(boxNum)%box%boxStr = "ortho"
 
       case default
-        write(*,*) command
+!        write(*,*) command
         lineStat = -1
 
     end select

@@ -229,7 +229,7 @@
              do i = 1, nItems
                curLine = iLine + i
                call GetXCommand(lineStore(curLine), command2, 1, lineStat)
-               write(*,*) i, command2
+!               write(*,*) i, command2
                if( trim(adjustl(command2)) == "fromfile") then
                  call GetXCommand(lineStore(curLine), command2, 2, lineStat)
                  fileName = ""

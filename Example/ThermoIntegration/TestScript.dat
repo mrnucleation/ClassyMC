@@ -1,0 +1,45 @@
+#======================================
+  set rng_seed 6
+#  set rng_seed 21448
+  set NeighSkin 1.5
+  set moves 1000
+  set cycles 500000
+  SamplingType UmbrellaWHAM
+#  SamplingType Metropolis
+#  SamplingType Min
+
+#  forcefield testfield.txt
+  forcefield "LJThermo.clFF"
+
+  Create boxes
+    FromFile "FCC_LJ.clssy"
+#    FromFile "Simple.clssy"
+  End_Create
+
+  modify Sampling biasvariables 1
+  modify Sampling analysis 1
+  modify Sampling bounds 1 0.001 0.0 1.0 
+  modify Sampling reference 0.5
+  modify Sampling whamfreq 20000
+
+
+  neighlist 1 rsqlist 1
+ 
+  modify box 1 buildfreq 10000
+
+  Create moves
+    ThermoLambda 0.2
+    atomtranslation 1.0
+  End_Create
+
+  Create analysis
+    thermointegration 
+  End_Create
+
+  Create trajectory
+    xyz 1 1000 "Traj.xyz"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 0.8
+#=====================================

@@ -125,17 +125,12 @@ module UmbrellaWHAMRule
         self%indexCoeff(i) = self%indexCoeff(i) + self%indexCoeff(j) * (self%binMax(j) - self%binMin(j))
       enddo
     enddo      
-!    write(*,*) self%indexCoeff
-!    write(*,*) self%binMin
-!    write(*,*) self%binMax
-!    write(*,*) self%UBinSize
-
     self%umbrellaLimit = 1
     do i = 1, self%nBiasVar 
       self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * (self%binMax(i) - self%binMin(i))
     enddo
 
-    write(nout,*) "Sampling Style: Histogram based Umbrella Sampling"
+    write(nout,*) "Sampling Style: Histogram based Umbrella Sampling \w Auto WHAM method"
     write(nout,*) "Number of Umbrella Bins:", self%umbrellaLimit
        
     allocate(self%UBias(1:self%umbrellaLimit+1), STAT = AllocateStatus)
@@ -162,9 +157,9 @@ module UmbrellaWHAMRule
       self%BiasStorage = 0E0
       self%nCurWhamItter = 1
 !        tolLimit = 1d-2
-      open(unit = 96, file="WHAM_.incomp")
-      open(unit = 97, file="WHAM_Potential.incomp")
-      open(unit = 98, file="WHAM_Mid_DG.incomp")
+      open(unit = 96, file="Umbrella_Histogram.dat")
+      open(unit = 97, file="Umbrella_Potential.dat")
+      open(unit = 98, file="Umbrella_WHAMDG.dat")
     endif
 
     allocate(self%TempHist(1:self%umbrellaLimit), STAT = AllocateStatus)      
@@ -173,6 +168,8 @@ module UmbrellaWHAMRule
     self%TempHist = 0E0
 
 
+    call self%GetUIndexArray(self%refVals, i, j) 
+    self%refBin = i
   end subroutine
 !====================================================================
   function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
@@ -207,10 +204,12 @@ module UmbrellaWHAMRule
 
 !    write(*,*) oldIndx, self%UBias(oldIndx)
 !    write(*,*) newIndx, self%UBias(newIndx)
+!    write(*,*) E_Diff, trialBox%beta, log(inProb)
 !    write(*,*) 
     biasOld = self%UBias(oldIndx)
     biasNew = self%UBias(newIndx)
  
+!    write(*,*)
 
 
     accept = .false.
@@ -479,8 +478,6 @@ module UmbrellaWHAMRule
           read(command, *) realVal
           self%refVals(i) = realVal
         enddo
-        call self%GetUIndexArray(self%refVals, intVal, lineStat) 
-        self%refBin = intVal
 
       case("whamfreq")
           call GetXCommand(line, command, 4, lineStat)
@@ -585,17 +582,14 @@ module UmbrellaWHAMRule
     call MPI_REDUCE(self%UHist, self%TempHist, arraySize, &
               MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)       
 
-!      write(*,*) "UHIST!"
     if(myid .eq. 0) then
 !        This block calculates the terms needed to 
       norm = sum(self%TempHist)
       do i = 1, self%umbrellaLimit
         self%BiasStorage(i, self%nCurWhamItter) = self%UBias(i) 
-        if(self%TempHist(i) .ne. 0E0) then
+        if(self%TempHist(i) /= 0E0_dp) then
           self%WHAM_Numerator(i) = self%WHAM_Numerator(i) + self%TempHist(i)*self%TempHist(i)/norm
           self%WHAM_Denominator(i, self%nCurWhamItter) = self%TempHist(i)*exp(self%UBias(i))
-!            WHAM_Numerator(i) = WHAM_Numerator(i) + (i)
-!            WHAM_Denominator(i, nCurWhamItter) = norm*exp(UBias(i))
           self%HistStorage(i) = self%HistStorage(i) + self%TempHist(i)
         endif
       enddo 
@@ -610,7 +604,6 @@ module UmbrellaWHAMRule
         cnt = cnt + 1
 !          Infinite Loop protection
         if(cnt > self%maxSelfConsist) then 
-          write(35,*) "Self Consistent Limit Hit"
           exit
         endif
 
@@ -623,7 +616,6 @@ module UmbrellaWHAMRule
         do i = 1, self%umbrellaLimit
           if(self%WHAM_Numerator(i) /= 0E0) then
             denomSum = 0E0
-!              maxBias = minval(F_Estimate)
             do j = 1, self%nCurWhamItter
               if(self%WHAM_Denominator(i,j) > 0E0) then
                 denomSum = denomSum + self%WHAM_Denominator(i,j)*exp(-F_Estimate(j))
@@ -645,14 +637,11 @@ module UmbrellaWHAMRule
 !          to calculate a new estimate for F
         do j = 1, self%nCurWhamItter
           fSum = 0E0
-!            maxBias = maxval(BiasStorage(:,j))
           do i = 1, self%umbrellaLimit
             if(self%ProbArray(i) .ne. 0E0) then
               fSum = fSum + self%ProbArray(i)*exp(self%BiasStorage(i,j))
-!                fSum = fSum + ProbArray(i)*exp(BiasStorage(i,j) - maxBias)
             endif
           enddo
-!            F_Estimate(j) = log(fSum)
           F_Estimate(j) = log(fSum)
           F_Estimate(j) = (F_Estimate(j) + F_Old(j))*0.5E0
        enddo 
@@ -691,7 +680,6 @@ module UmbrellaWHAMRule
       do i = 1, self%umbrellaLimit
         self%FreeEnergyEst(i) = self%FreeEnergyEst(i) - refBias
       enddo
-!      endif
 
     endif      !End of processor 0 only block
 
@@ -703,7 +691,6 @@ module UmbrellaWHAMRule
     call MPI_BCast(self%NewBias, arraySize, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror) 
 
     do i = 1, self%umbrellaLimit
-!        write(*,*) i, UBias(i), Newbias(i)
       self%UBias(i) = self%NewBias(i)
       self%UHist(i) = 0E0
     enddo 

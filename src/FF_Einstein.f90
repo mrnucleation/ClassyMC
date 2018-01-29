@@ -71,7 +71,7 @@ module FF_Einstein
       enddo
     endif
       
-    write(nout, *) "Pair_Einstein Energy:", E_Ein
+    write(nout, *) "Einstein Crystal Energy:", E_Ein
       
     E_T = E_Ein
   end subroutine

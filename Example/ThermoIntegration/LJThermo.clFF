@@ -2,8 +2,7 @@
 moleculetypes 1
 
 atomdef
-  "O"  1.0
-  "Ar" 1.0
+  "Na"  1.0
 end_atomdef
 
 molecule 1
@@ -19,12 +18,25 @@ end_molecule
 #end_molecule
 
 forcefieldtype
-    LJ_Cut
-#    LJ_Cut_NoNei
+  ThermoIntegration
+  LJ_Cut
+#  Einstein
+  Einstein
 end_forcefieldtype
 
 forcefield 1
+  functions 2 3
+end_forcefield
+
+forcefield 2
   rCut 2.5
-  1  1.0  1.0
-#  2  0.99  1.0
+  1  1.0  1.0  
+end_forcefield
+
+#forcefield 2
+#  kSpring 0.95
+#end_forcefield
+
+forcefield 3
+  kSpring 10.0
 end_forcefield

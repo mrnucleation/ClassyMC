@@ -374,17 +374,18 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine Prologue_LJ_Cut(self)
     use Common_MolInfo, only: nAtomTypes
+!    use
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     integer :: i, j
 
-    do i = 1, nAtomTypes
-      write(*,*) (self%epsTable(i,j), j=1,nAtomTypes)
-    enddo
+!    do i = 1, nAtomTypes
+!      write(*,*) (self%epsTable(i,j), j=1,nAtomTypes)
+!    enddo
 
-    do i = 1, nAtomTypes
-      write(*,*) (self%sigTable(i,j), j=1,nAtomTypes)
-    enddo
+!    do i = 1, nAtomTypes
+!      write(*,*) (self%sigTable(i,j), j=1,nAtomTypes)
+!    enddo
 
 
   end subroutine

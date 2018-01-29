@@ -4,12 +4,12 @@ module Input_LoadCoords
   contains
 !================================================================================
   subroutine Script_ReadCoordFile(filename, boxNum, lineStat)
+    use BoxData, only: BoxArray
+    use Common_MolInfo, only: nMolTypes
     use ForcefieldData, only: nForceFields
-    use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile, GetXCommand
     use Input_SimBoxes, only: Script_BoxType
-    use Common_MolInfo, only: nMolTypes
-    use BoxData, only: BoxArray
+    use ParallelVar, only: nout
     implicit none
     character(len=50), intent(in) :: fileName      
     integer, intent(in) :: boxNum
@@ -24,7 +24,7 @@ module Input_LoadCoords
     integer :: nAtoms
 
     lineStat  = 0
-    write(*,*) "Loading file ", trim(adjustl(fileName))
+    write(nout,*) "Loading file ", trim(adjustl(fileName))
     call LoadFile(lineStore, nLines, lineNumber, fileName)
     lineBuffer = 0
     nAtoms = 0
@@ -39,6 +39,7 @@ module Input_LoadCoords
         cycle
       endif
 
+!      write(nout,*) trim(adjustl(lineStore(iLine)))
       select case(trim(adjustl( command )))
         case("boxtype")
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
@@ -54,8 +55,13 @@ module Input_LoadCoords
         case("molmax")
           read(lineStore(iLine), *) dummy, (BoxArray(boxNum)%box%NMolMax(j), j=1,nMolTypes) 
         case default
-          call BoxArray(boxNum)%box%LoadAtomCoord(lineStore(iLine), lineStat)
-          nAtoms = nAtoms + 1
+          if(allocated(BoxArray(boxNum)%box) ) then
+            call BoxArray(boxNum)%box%LoadAtomCoord(lineStore(iLine), lineStat)
+            nAtoms = nAtoms + 1
+          else
+            write(nout,*) "ERROR! Boxed must be defined before loading atomic coorindates!"
+            stop
+          endif
       end select
 
       IF (AllocateStat /= 0) STOP "*** Not enough memory ***"

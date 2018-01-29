@@ -200,14 +200,14 @@ module SimpleSimBox
 
     read(line, *) molType, molIndx, atmIndx, x, y ,z
 
-    if(molType > nMolTypes) then
+    if((molType > nMolTypes) .or. (molType < 1)) then
       write(*,*) "ERROR! Type Index out of bounds!"
       write(*,*) molType, molIndx, atmIndx
       lineStat = -1
       return
     endif
 
-    if( molIndx > self%NMolMax(molType) ) then
+    if( (molIndx > self%NMolMax(molType)) .or. (molIndx < 1) ) then
       write(*,*) "ERROR! Molecule Index out of bounds!"
       write(*,*) molType, molIndx, atmIndx
       lineStat = -1
@@ -320,6 +320,7 @@ end subroutine
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         self % buildfreq = intVal
+        self % maintFreq = intVal
 
       case("chempot")
         call GetXCommand(line, command, 5, lineStat)
@@ -355,6 +356,7 @@ end subroutine
         read(command, *) realVal
         self % temperature = realVal
         self % beta = 1E0_dp/realVal
+
 
 !      case("recenter")
 !        call GetXCommand(line, command, 5, lineStat)
@@ -486,6 +488,7 @@ end subroutine
     implicit none
     class(SimpleBox), intent(inout) :: self
 
+    call self % NeighList(1) % BuildList
 
 
   end subroutine
@@ -499,6 +502,7 @@ end subroutine
     call self % NeighList(1) % BuildList
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
+    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
 
 
   end subroutine

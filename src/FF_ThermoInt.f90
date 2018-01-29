@@ -9,7 +9,7 @@ module FF_ThermoIntegration
 
   type, public, extends(forcefield) :: pair_thermointegration
 !    real(dp) :: rCut, rCutSq
-    real(dp) :: lambda = 0E0_dp
+    real(dp) :: lambda = 0.5E0_dp
     integer :: ECalc1 = -1
     integer :: ECalc2 = -1
 
@@ -58,12 +58,15 @@ module FF_ThermoIntegration
     E_T = 0E0_dp
 
     call EnergyCalculator(self%ECalc1) % Method % DetailedECalc(curbox, ESub, accept)
+    self%E1 = ESub
     E_T = E_T + (1E0_dp - self%lambda) * ESub
 
     call EnergyCalculator(self%ECalc2) % Method % DetailedECalc(curbox, ESub, accept)
+    self%E2 = ESub
     E_T = E_T + self%lambda * ESub
 
     write(nout, *) "Thermo Integration Energy:", E_T
+    write(nout, *) "Thermo Integration Lambda:", self%lambda
   end subroutine
 !=============================================================================+
   subroutine ThermoInt_ShiftECalc_Single(self, curbox, disp, E_Diff, accept)
@@ -78,6 +81,8 @@ module FF_ThermoIntegration
 
     accept = .true.
     E_Diff = 0E0_dp
+    self%EDiff1 = 0E0_dp
+    self%EDiff2 = 0E0_dp
 
     call EnergyCalculator(self%ECalc1) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
     if(.not. accept) then
@@ -108,6 +113,8 @@ module FF_ThermoIntegration
 
     accept = .true.
     E_Diff = 0E0_dp
+    self%EDiff1 = 0E0_dp
+    self%EDiff2 = 0E0_dp
 
     call EnergyCalculator(self%ECalc1) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
     if(.not. accept) then
@@ -135,7 +142,8 @@ module FF_ThermoIntegration
     real(dp) :: ESub
 
     E_Diff = 0E0_dp
-
+    self%EDiff1 = 0E0_dp
+    self%EDiff2 = 0E0_dp
     call EnergyCalculator(self%ECalc1) % Method %OldECalc(curbox, disp, ESub)
     self%EDiff1 = ESub
     E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
@@ -155,6 +163,10 @@ module FF_ThermoIntegration
 
     real(dp) :: ESub
 
+    E_Diff = 0E0_dp
+    self%EDiff1 = 0E0_dp
+    self%EDiff2 = 0E0_dp
+
     call EnergyCalculator(self%ECalc1) % Method %VolECalc(curbox, scalars, ESub)
     self%EDiff1 = ESub
     E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
@@ -166,15 +178,19 @@ module FF_ThermoIntegration
 
   end subroutine
 !=============================================================================+
-  subroutine ThermoInt_LambdaShift(self, lambdaNew, E_Diff)
+  subroutine ThermoInt_LambdaShift(self, curbox, lambdaNew, E_Diff)
     implicit none
-    class(pair_thermointegration), intent(in) :: self
+    class(pair_thermointegration), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
     real(dp), intent(in) :: lambdaNew
     real(dp), intent(inOut) :: E_Diff
 
-    real(dp) :: ESub
+    logical :: accept
+    real(dp) :: ESub, E_Temp
 
     E_Diff =  -(lambdaNew - self%lambda) * self%E1 + (lambdaNew - self%lambda) * self%E2
+    self%EDiff1 = 0E0_dp
+    self%EDiff2 = 0E0_dp
 
   end subroutine
 !=============================================================================+
@@ -234,6 +250,8 @@ module FF_ThermoIntegration
     self%E1 = self%E1 + self%EDiff1
     self%E2 = self%E2 + self%EDiff2
 
+    self%EDiff1 = 0E0_dp
+    self%EDiff2 = 0E0_dp
   end subroutine
 !=============================================================================+
   subroutine ThermoInt_UpdateLambda(self, lambdaNew)

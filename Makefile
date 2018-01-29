@@ -9,13 +9,13 @@ FC := mpif90
 #FC := gfortran
 CC := mpicc
 OPTIMIZE_FLAGS := -O3
-#OPTIMIZE_FLAGS += -xHost
+OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
-#OPTIMIZE_FLAGS += -no-prec-div
+OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 #DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-DETAILEDDEBUG:= -check all -traceback -g -fpe0 -Og -fp-stack-check
+DETAILEDDEBUG:= -check all -check bounds -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0
 #DEBUGFLAGS += -pg 
@@ -65,6 +65,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_AtomTranslation.f90\
         		$(SRC)/Move_MC_AtomExchange.f90\
         		$(SRC)/Move_MC_MolTranslation.f90\
+        		$(SRC)/Move_MC_ThermoLambda.f90\
         		$(SRC)/Move_MC_Delete.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
@@ -230,6 +231,7 @@ $(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o
 
 $(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Box_Ultility.o
+$(OBJ)/Move_MC_ThermoLambda.o: $(OBJ)/FF_ThermoInt.o $(OBJ)/Analysis_ThermoIntegration.o 
 
 $(OBJ)/Move_GA_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_Ultility.o
 

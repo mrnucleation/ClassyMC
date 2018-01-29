@@ -57,7 +57,7 @@ contains
 !        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
 
       case default
-        write(*,*) "Here"
+!        write(*,*) "Here"
         lineStat = -1
 
     end select

@@ -62,6 +62,7 @@ contains
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
 
         end select
+        call Update(iCycle, iMove, accept)
         call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
@@ -69,9 +70,9 @@ contains
         write(nout, *) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
       endif
 
-      if(mod(iCycle, 100) == 0) then
-        call BoxArray(1) % box % NeighList(1) % BuildList
-      endif
+!      if(mod(iCycle, 100) == 0) then
+!        call BoxArray(1) % box % NeighList(1) % BuildList
+!      endif
 
       call Analyze(iCycle, iMove, accept, .false.)
       call Maintenance(iCycle, iMove)
@@ -207,6 +208,53 @@ contains
     endif
 
   end subroutine
+!===========================================================================
+  subroutine Update(iCycle, iMove, accept)
+    use AnalysisData, only: AnalysisArray
+    use BoxData, only: BoxArray
+    use ForcefieldData, only: EnergyCalculator
+    use MCMoveData, only: Moves, MoveProb
+    use TrajData, only: TrajArray
+    use CommonSampling, only: Sampling
+    implicit none
+    integer(kind=8), intent(in) :: iCycle, iMove
+    logical, intent(in) :: accept
+    integer :: i
+
+    if( .not. accept) then
+      return
+    endif
+
+    call Sampling % Update
+
+    if( allocated(AnalysisArray) ) then
+      do i = 1, size(AnalysisArray)
+        call AnalysisArray(i) % func % Update
+      enddo
+    endif
+
+    if( allocated(TrajArray) ) then
+      do i = 1, size(TrajArray)
+        call TrajArray(i) % traj % Update
+      enddo
+    endif
+
+    do i = 1, size(EnergyCalculator)
+      call EnergyCalculator(i)%method%Update
+    enddo
+
+
+    do i = 1, size(BoxArray)
+      call BoxArray(i) % box % Update
+    enddo
+
+    do i = 1, size(Moves)
+      call Moves(i) % move % Update
+    enddo
+
+  end subroutine
+
+
 !===========================================================================
   subroutine Epilogue(iCycle, iMove)
     use AnalysisData, only: AnalysisArray

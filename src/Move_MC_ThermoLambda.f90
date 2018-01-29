@@ -17,7 +17,8 @@ module Move_ThermoLambda
     integer :: EFunc = -1
     type(Displacement) :: disp(1:1)
     contains
-      procedure, pass :: Constructor => ThermoLambda_Constructor
+      procedure, pass :: Prologue => ThermoLambda_Prologue
+!      procedure, pass :: Constructor => ThermoLambda_Constructor
 !      procedure, pass :: GeneratePosition => ThermoLambda_GeneratePosition
       procedure, pass :: FullMove => ThermoLambda_FullMove
 !      procedure, pass :: GetAcceptRate
@@ -27,7 +28,7 @@ module Move_ThermoLambda
 
  contains
 !========================================================
-  subroutine ThermoLambda_Constructor(self)
+  subroutine ThermoLambda_Prologue(self)
     use AnalysisData, only: AnalysisArray
     use ForcefieldData, only: EnergyCalculator
     use Anaylsis_ThermoIntegration, only: ThermoIntegration
@@ -52,6 +53,7 @@ module Move_ThermoLambda
     do i = 1, size(AnalysisArray)
       select type(analy => AnalysisArray(i)%func)
         class is(ThermoIntegration)
+          analy%usedInMove = .true.
           self%AnalyFunc = i
           exit
       end select
@@ -63,12 +65,12 @@ module Move_ThermoLambda
       stop
     endif
 
-
   end subroutine
 !=========================================================================
   subroutine ThermoLambda_FullMove(self, trialBox, accept)
 
     use AnalysisData, only: AnalysisArray
+    use Anaylsis_ThermoIntegration, only: ThermoIntegration
     use CommonSampling, only: Sampling
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
@@ -86,13 +88,19 @@ module Move_ThermoLambda
     self % atmps = self % atmps + 1E0_dp
     lambdaNew = grnd()
 
-    call AnalysisArray(self%AnalyFunc)%func%CalcNewState(newVal=lambdaNew)
+    select type(analy => AnalysisArray(self%AnalyFunc)%func)
+      class is(ThermoIntegration)
+        call analy%pushLambda(lambdaNew)
+    end select
+
 
     select type(eng => EnergyCalculator(self%EFunc)%Method)
       class is(Pair_ThermoIntegration)
-        call eng%LambdaShift(lambdaNew, E_Diff)
+        call eng%LambdaShift(trialBox, lambdaNew, E_Diff)
     end select
 
+    prob = 1E0_dp
+!    write(*,*) lambdaNew
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%disp(1:1))
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
