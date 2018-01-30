@@ -164,7 +164,6 @@ module FF_Pair_LJ_Ele_Cut
     dispLen = size(disp)
     E_Diff = 0E0_dp
     accept = .true.
-    curbox%dETable = 0E0_dp
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)

@@ -38,7 +38,7 @@ use Template_NeighList, only: NeighListDef
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 0.5E0_dp  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 0.85E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box
@@ -57,11 +57,16 @@ use Template_NeighList, only: NeighListDef
       if(self%rCut > 0E0_dp) then
         self % rCutSq = (self%rCut)**2
         self % maxNei = ceiling(self%rCut**3/atomRadius**3)
+
       else
         self % rCut = self % parent % EFunc % Method % GetCutOff() + neighSkin
         self % rCutSq = (self%rCut)**2
         self % maxNei = ceiling(self%rCut**3/atomRadius**3)
       endif
+    endif
+ 
+    if(self%maxNei > self%parent%nMaxAtoms-1) then
+      self%maxNei = self%parent%nMaxAtoms-1
     endif
 
     allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
