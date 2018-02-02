@@ -499,7 +499,9 @@ end subroutine
     class(SimpleBox), intent(inout) :: self
 
     call self % ComputeEnergy
+    write(nout,*) "NeighList"
     call self % NeighList(1) % BuildList
+    write(nout,*) "NeighList"
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol

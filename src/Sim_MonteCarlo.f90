@@ -1,5 +1,6 @@
 !===========================================================================
 module SimMonteCarlo
+  use ParallelVar, only: myid, ierror, nout
 !===========================================================================
 contains
 !===========================================================================
@@ -16,7 +17,6 @@ contains
     use MoveClassDef, only: MCMove
     use MultiBoxMoveDef, only: MCMultiBoxMove
     use Output_DumpCoords, only: Output_DumpData
-    use ParallelVar, only: myid, ierror, nout
     use RandomGen, only: sgrnd, grnd, ListRNG
     use SimControl, only: nMoves, nCycles
 
@@ -33,12 +33,13 @@ contains
     iMove = 0
 
     call Prologue(iCycle, iMove)
-
+    write(nout, *) "Prologue Over"
     call Trajectory(iCycle, iMove)
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
     write(nout, *) "============================================"
 
+    flush(nout)
     nBoxes = size(BoxArray)
     boxNum = 1
 
@@ -68,6 +69,7 @@ contains
       !------End Move Loop
       if(mod(iCycle, 1000) == 0) then
         write(nout, *) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
+        flush(nout)
       endif
 
 !      if(mod(iCycle, 100) == 0) then
@@ -295,10 +297,10 @@ contains
   subroutine Prologue(iCycle, iMove)
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
+    use CommonSampling, only: Sampling
     use ForcefieldData, only: EnergyCalculator
     use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
-    use CommonSampling, only: Sampling
     implicit none
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
@@ -311,21 +313,26 @@ contains
       enddo
     endif
 
+    write(nout, *) "Traj"
     if( allocated(TrajArray) ) then
       do i = 1, size(TrajArray)
         call TrajArray(i) % traj % Prologue
       enddo
     endif
 
+    write(nout,*) "ECalc"
     do i = 1, size(EnergyCalculator)
       call EnergyCalculator(i)%method%Prologue
     enddo
 
 
+    write(nout,*) "Box"
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % Prologue
     enddo
 
+    write(nout,*) "Moves"
+    flush(nout)
     do i = 1, size(Moves)
       call Moves(i) % move % Prologue
     enddo

@@ -20,6 +20,7 @@ module CubicBoxDef
 !      procedure, pass :: UpdatePosition => Cube_UpdatePosition
       procedure, pass :: IOProcess => Cube_IOProcess
       procedure, pass :: DumpData => Cube_DumpData
+      procedure, pass :: Prologue => Cube_Prologue
   end type
 
 !==========================================================================================
@@ -254,7 +255,38 @@ module CubicBoxDef
     close(50)
 
   end subroutine
-!
+
+!==========================================================================================
+  subroutine Cube_Prologue(self)
+    use ParallelVar, only: nout
+    implicit none
+    class(CubeBox), intent(inout) :: self
+    integer :: iAtom, iDims
+
+    call self % ComputeEnergy
+    call self % NeighList(1) % BuildList
+
+    do iAtom = 1, self%nMaxAtoms
+      if( self%MolSubIndx(iAtom) > self%NMol(self%MolType(iAtom)) ) then
+        cycle
+      endif
+      do iDims = 1, self%nDimension
+        if(abs(self%atoms(iDims, iAtom)) > self%boxL2) then
+          write(nout, *) "Warning! Particle out of bounds!"
+          write(nout, *) "Particle Number:", iAtom
+          write(nout, *) "Box Length:", self%boxL2
+          write(nout, *) self%atoms(:, iAtom)
+          stop
+        endif
+      enddo
+    enddo
+    
+
+    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
+    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
+
+
+  end subroutine
 !==========================================================================================
 
 end module

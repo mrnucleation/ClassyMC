@@ -38,7 +38,7 @@ use Template_NeighList, only: NeighListDef
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 0.85E0_dp  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 0.55E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box
@@ -76,6 +76,7 @@ use Template_NeighList, only: NeighListDef
     self%nNeigh = 0 
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
+    self%restrictType = .false.
   end subroutine
 !===================================================================================
   subroutine RSqList_BuildList(self)
@@ -249,6 +250,7 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
   subroutine Builder_RSq(trialBox)
     use Common_MolInfo, only: nMolTypes, MolData
+    use ParallelVar, only: nout
     implicit none
     class(SimpleBox), intent(inout) :: trialBox
     integer :: iList
@@ -264,6 +266,7 @@ use Template_NeighList, only: NeighListDef
 
     molStart = 1
     do iType = 1, nMolTypes
+
       iLow = trialBox%MolStartIndx(molStart)
       iUp = trialBox%MolEndIndx(molStart + trialBox%NMol(iType) - 1) 
       do iAtom = iLow, iUp
@@ -304,9 +307,16 @@ use Template_NeighList, only: NeighListDef
               endif
               if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
                 trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
+                if(trialBox%NeighList(iList)%nNeigh(iAtom) > trialBox%NeighList(iList)%maxNei) then
+                  write(nout, *) "Neighborlist overflow!"
+                endif
                 trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
 
                 trialBox%NeighList(iList)%nNeigh(jAtom) = trialBox%NeighList(iList)%nNeigh(jAtom) + 1
+                if(trialBox%NeighList(iList)%nNeigh(jAtom) > trialBox%NeighList(iList)%maxNei) then
+                  write(nout, *) "Neighborlist overflow!"
+                endif
+ 
                 trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
               endif
             enddo        
