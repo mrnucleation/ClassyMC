@@ -10,13 +10,14 @@ module FF_Pair_Tersoff
   end type
 
   type :: Tersoff3Body
-    real(dp) :: h, lam3, c, d
+    real(dp) :: h, lam3, c, d, gam
   end type
 
 
   type, extends(forcefield) :: Pair_Tersoff
+    logical :: symetric = .true.
     type(Tersoff2Body), allocatable :: tersoffPair(:,:)
-    type(Tersoff3Body), allocatable :: tersoffAngle(:,:)
+    type(Tersoff3Body), allocatable :: tersoffAngle(:,:,:)
     real(dp), allocatable :: rMinTable(:,:)
 !    real(dp) :: rCut, rCutSq
     contains
@@ -74,7 +75,7 @@ module FF_Pair_Tersoff
              
     Angle = rx12*rx23 + ry12*ry23 + rz12*rz23
     Angle = Angle/(r12*r23)
-    if(abs(Angle) .gt. 1E0_dp) then
+    if(abs(Angle) > 1E0_dp) then
       Angle = sign(1E0_dp, Angle)
     endif
     Angle = acos(Angle)
@@ -89,6 +90,8 @@ module FF_Pair_Tersoff
     integer :: AllocateStat
 
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    allocate(self%tersoffPair(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    allocate(self%tersoffAngle(1:nAtomTypes,1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
     self%rCut = 3E0_dp
     self%rCutSq = 3E0_dp**2
@@ -107,7 +110,7 @@ module FF_Pair_Tersoff
     logical, intent(out) :: accept
     integer :: iAtom, jAtom, kAtom
     integer :: atmType1, atmType2, atmType3
-    real(dp) :: A, B, c, d, R_eq, D2 
+    real(dp) :: A, B, c, d, Reqij, Reqik, Dij, Dik
     real(dp) :: E_Tersoff
     real(dp) :: lam1, lam2
     real(dp) :: Zeta
@@ -136,50 +139,80 @@ module FF_Pair_Tersoff
 !    lam1 = tersoffData(atmType1)%lam1
 !    lam2 = tersoffData(atmType1)%lam2
 
-    rMax = R_eq + D2
-    rMax_sq = rMax * rMax
+    do iAtom = 1, curbox%nMaxAtoms
+      atmType1 = curbox % AtomType(iAtom)
+      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+        cycle
+      endif
 
-    do iAtom = 1, curbox%nAtoms
-      do jAtom = 1, curbox%nAtoms
+      do jAtom = 1, curbox%nMaAtoms
         if(iAtom .eq. jAtom) then
           cycle
         endif
+        atmType2 = curbox % AtomType(jAtom)
+        if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then        
+          cycle
+        endif
+        Reqij = tersoffPair(atmType2, atmType1) % R_Eq
+        Dij = tersoffPair(atmType2, atmType1) % D
+        rMax = Reqij + Dij
+        rMax_sq = rMax * rMax
+
         rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
         ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
         rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
         rij = rxij*rxij + ryij*ryij + rzij*rzij
-        if(rij .gt. rMax) then
+        if(rij > rMax_Sq) then
           cycle
         endif
         rij = sqrt(rij)
         Zeta = 0E0_dp
-        do kAtom = 1, curbox%nAtoms
+        do kAtom = 1, curbox%nMaxAtoms
           if( (kAtom == iAtom) .or. (kAtom == jAtom) ) then
             cycle
           endif
+          atmType3 = curbox % AtomType(kAtom)
+          if( curbox%MolSubIndx(kAtom) > curbox%NMol(curbox%MolType(kAtom)) ) then        
+            cycle
+          endif
+          Reqik = tersoffPair(atmType3, atmType1) % R_Eq
+          Dik = tersoffPair(atmType3, atmType1) % D
+          rMax = Reqik + Dik
+          rMax_sq = rMax * rMax
+
           rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
           ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
           rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
           rik = rxij*rxij + ryij*ryij + rzij*rzij
           if(rik .lt. rMax) then
+
+            c = tersoffAngle(atmType1, atmType2, atmType3)%c
+            d = tersoffAngle(atmType1, atmType2, atmType3)%d
+            h = tersoffAngle(atmType1, atmType2, atmType3)%h
             angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-            Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
+            Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Reqik, Dik)
           endif
         enddo
+
         if(Zeta .ne. 0E0_dp) then
+          BetaPar = tersoffPair(atmType2, atmType1)%beta
+          n =  tersoffPair(atmType2, atmType1)%n
           b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
         else
           b1 = 1E0_dp
         endif      
    
-        V1 = 0.5E0_dp * self%Fc_Func(rij, R_eq, D2) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij))
+        A = tersoffPair(atmType2, atmType1) % A
+        B = tersoffPair(atmType2, atmType1) % B
+        lam1 = tersoffPair(atmType2, atmType1)%lam1
+        lam2 = tersoffPair(atmType2, atmType1)%lam2
+        V1 = 0.5E0_dp * self%Fc_Func(rij, Reqij, Dij) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij))
         E_Tersoff = E_Tersoff + V1
-!          write(*,*) "V1:", b1, V1
         curbox%ETable(iAtom) = curbox%ETable(iAtom) + V1
         curbox%ETable(jAtom) = curbox%ETable(jAtom) + V1
       enddo
     enddo
-!      E_Short = 0.5E0_dp*E_Short 
+
     write(nout,*) "Tersoff Energy:", E_Tersoff
     E_T = E_Tersoff
 
@@ -472,59 +505,54 @@ module FF_Pair_Tersoff
     character(len=30), allocatable :: parlist(:)
     character(len=30) :: command
     logical :: param = .false.
-    integer :: jType, lineStat
+
+    integer :: iPar, lineStat
     integer :: type1, type2, type3
-    real(dp) :: ep, sig, rCut
+    real(dp) :: parList(1:10)
   
 
     call GetXCommand(line, command, 1, lineStat)
 
     select case(trim(adjustl(command)))
-      case("rcut")
+      case("pair")
         call GetXCommand(line, command, 2, lineStat)
-        read(command, *) rCut
-        self % rCut = rCut
-        self % rCutSq = rCut * rCut
+        read(command, *) type1
+        call GetXCommand(line, command, 3, lineStat)
+        read(command, *) type2
+        do iPar = 1, 7
+          call GetXCommand(line, command, 3+iPar, lineStat)
+          read(command, *) parList(iPar)
+        enddo
+        self%tersoffPair(type1, type2)%A = parList(1)
+        self%tersoffPair(type1, type2)%B = parList(2)
+        self%tersoffPair(type1, type2)%lam1 = parList(3)
+        self%tersoffPair(type1, type2)%lam2 = parList(4)
+        self%tersoffPair(type1, type2)%R = parList(5)
+        self%tersoffPair(type1, type2)%D = parList(6)
+        self%tersoffPair(type1, type2)%beta = parList(7)
+
+      case("angle")
+        call GetXCommand(line, command, 2, lineStat)
+        read(command, *) type1
+        call GetXCommand(line, command, 3, lineStat)
+        read(command, *) type2
+        call GetXCommand(line, command, 4, lineStat)
+        read(command, *) type3
+        do iPar = 1, 5
+          call GetXCommand(line, command, 4+iPar, lineStat)
+          read(command, *) parList(iPar)
+        enddo
+        self%(type1, type2, type3)%h = parList(1)
+        self%(type1, type2, type3)%lam3 = parList(2)
+        self%(type1, type2, type3)%c = parList(3)
+        self%(type1, type2, type3)%d = parList(4)
+        self%(type1, type2, type3)%gam = parList(5)
+
       case default
-        param = .true.
+        linestat = -1
     end select
 
 
-    if(param) then
-      call GetAllCommands(line, parlist, lineStat)
-      select case(size(parlist))
-        case(3)
-          read(line, *) type1, ep, sig
-          do jType = 1, nAtomTypes
-            if(jType == type1) then
-              self%epsTable(type1, jType) = 4E0_dp * ep
-              self%sigTable(type1, jType) = sig
-            else
-              self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
-              self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%epsTable(jType, jType))
-
-              self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
-              self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sigTable(jType, jType) )
-            endif
-          enddo
-        case(4)
-          read(line, *) type1, type2, ep, sig
-          self%epsTable(type1, type2) = 4E0_dp * ep
-          self%epsTable(type2, type1) = 4E0_dp * ep
-
-          self%sigTable(type1, type2) = sig
-          self%sigTable(type2, type1) = sig
-
-        case default
-          lineStat = -1
-      end select
-      if( allocated(parlist) ) then 
-        deallocate(parlist)
-      endif
-    endif
-
-
-!    deallocate(parlist)
   end subroutine
 
  !=============================================================================+
