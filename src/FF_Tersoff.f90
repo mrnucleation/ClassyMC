@@ -6,7 +6,7 @@ module FF_Pair_Tersoff
   use VarPrecision
 
   type :: Tersoff2Body
-    real(dp) :: A, B, lam1, lam2, Req, D, beta, n
+    real(dp) :: A, B, lam1, lam2, Req, D, beta, n, rMax, rMaxSq
   end type
 
   type :: Tersoff3Body
@@ -144,8 +144,9 @@ module FF_Pair_Tersoff
         endif
         Reqij = self%tersoffPair(atmType2, atmType1) % REq
         Dij = self%tersoffPair(atmType2, atmType1) % D
-        rMax = Reqij + Dij
-        rMax_sq = rMax * rMax
+        rMax = Dij + Reqij
+!        rMax = self%tersoffPair(atmType2, atmType1) % D
+!        rMax_sq = self%tersoffPair(atmType2, atmType1) % rMaxSq
 
         rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
         ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
@@ -217,7 +218,7 @@ module FF_Pair_Tersoff
     logical, intent(out) :: accept
     integer :: iDisp, iAtom, iNei, jNei, jAtom, kNei, kAtom, dispLen
 !    integer :: maxIndx, minIndx
-    integer :: atmType1, atmType2
+    integer :: atmType1, atmType2, atmType3
     real(dp) :: rMax, rMax_sq
     real(dp) :: rxij, ryij, rzij, rij
     real(dp) :: rxjk, ryjk, rzjk, rjk
@@ -246,11 +247,17 @@ module FF_Pair_Tersoff
       atmType1 = curbox % AtomType(iAtom)
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        atmType2 = curbox % AtomType(jAtom)
+
         rxij = curbox % atoms(1, jAtom)  -  disp(iDisp) % x_New
         ryij = curbox % atoms(2, jAtom)  -  disp(iDisp) % y_New
         rzij = curbox % atoms(3, jAtom)  -  disp(iDisp) % z_New
         rij = rxij*rxij + ryij*ryij + rzij*rzij
-        if(rij < rMax) then
+!        Reqij = self%tersoffPair(atmType2, atmType1) % REq
+!        Dij = self%tersoffPair(atmType2, atmType1) % D
+        rMaxSq = self%tersoffPair(atmType2, atmType1) % rMaxSq
+
+        if(rij < rMaxSq) then
           nRecalc = nRecalc + 1
           recalcList(nRecalc) = jAtom
           rij = sqrt(rij)
@@ -263,12 +270,19 @@ module FF_Pair_Tersoff
             if((kAtom .eq. iAtom) .or. (kAtom .eq. jAtom)) then
               cycle
             endif
+            atmType3 = curbox % AtomType(kAtom)
+            rMaxSq = self%tersoffPair(atmType1, atmType3) % rMaxSq
             rxik = curbox % atoms(1, kAtom)  -  disp(iDisp) % x_New
             ryik = curbox % atoms(2, kAtom)  -  disp(iDisp) % y_New
             rzik = curbox % atoms(3, kAtom)  -  disp(iDisp) % z_New
             rik = rxik*rxik + ryik*ryik + rzik*rzik
-            if(rik < rMax) then
+            if(rik < rMaxSq) then
               rik = sqrt(rik)
+              D2 = self%tersoffPair(atmType1, atmType3) % D
+              Req = self%tersoffPair(atmType1, atmType3) % Req
+              c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
+              d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
+              h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
             endif     
@@ -279,11 +293,19 @@ module FF_Pair_Tersoff
             if((kAtom .eq. iAtom) .or. (kAtom .eq. jAtom)) then
               cycle
             endif
+            atmType3 = curbox % AtomType(kAtom)
+            rMaxSq = self%tersoffPair(atmType2, atmType3) % rMaxSq
+
             rxjk = curbox % atoms(1, kAtom)  -  curbox % atoms(1, jAtom)
             ryjk = curbox % atoms(2, kAtom)  -  curbox % atoms(2, jAtom)
             rzjk = curbox % atoms(3, kAtom)  -  curbox % atoms(3, jAtom)
             rjk = rxij*rxij + ryij*ryij + rzij*rzij
-            if(rjk < rMax) then
+            if(rjk < rMaxSq) then
+              D2 = self%tersoffPair(atmType1, atmType3) % D
+              Req = self%tersoffPair(atmType1, atmType3) % Req
+              c = self%tersoffAngle(atmType2, atmType1, atmType3) % c
+              d = self%tersoffAngle(atmType2, atmType1, atmType3) % d
+              h = self%tersoffAngle(atmType2, atmType1, atmType3) % h            
               rjk = sqrt(rjk)
               angijk = self%angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
@@ -299,9 +321,14 @@ module FF_Pair_Tersoff
           else
             b2 = 1E0_dp
           endif
+
+          A = self%tersoffPair(atmType1, atmType2) % A
+          B = self%tersoffPair(atmType1, atmType2) % B
+          lam1 = self%tersoffPair(atmType1, atmType2) % lam1
+          lam2 = self%tersoffPair(atmType1, atmType2) % lam2
           V1 = 0.5E0_dp * self%Fc_Func(rij, R_eq, D2) * (2d0*A*exp(-lam1*rij) - (b1+b2)*B*exp(-lam2*rij)) 
           curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
-          curbox%dETable(jAtom) = curbox%dETable(iAtom) + V1
+          curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
           E_Diff = E_Diff + V1
         endif
       enddo
@@ -309,6 +336,8 @@ module FF_Pair_Tersoff
       !Computing the contribution from the old poisition. 
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        atmType2 = curbox % AtomType(jAtom)
+        rMaxSq = self%tersoffPair(atmType1, atmType2) % rMaxSq
         rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
         ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
         rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
@@ -329,8 +358,10 @@ module FF_Pair_Tersoff
             rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
             ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
             rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
+
+            rMaxSq = self%tersoffPair(atmType1, atmType3) % rMaxSq
             rik = rxik*rxik + ryik*ryik + rzik*rzik
-            if(rik < rMax) then
+            if(rik < rMaxSq) then
               rik = sqrt(rik)
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
@@ -345,23 +376,33 @@ module FF_Pair_Tersoff
             rxjk = curbox % atoms(1, kAtom)  -  curbox % atoms(1, jAtom)
             ryjk = curbox % atoms(2, kAtom)  -  curbox % atoms(2, jAtom)
             rzjk = curbox % atoms(3, kAtom)  -  curbox % atoms(3, jAtom)
+            rMaxSq = self%tersoffPair(atmType2, atmType3) % rMaxSq
             rjk = rxij*rxij + ryij*ryij + rzij*rzij
-            if(rjk < rMax) then
+            if(rjk < rMaxSq) then
               rjk = sqrt(rjk)
               angijk = self%angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
             endif     
           enddo
           if(Zeta .ne. 0E0_dp) then
+            BetaPar = self%tersoffPair(atmType1, atmType2) % beta
+            n = self%tersoffPair(atmType1, atmType2) % n
             b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
             b1 = 1E0_dp
           endif
           if(Zeta2 .ne. 0E0_dp) then
+            BetaPar = self%tersoffPair(atmType2, atmType1) % beta
+            n = self%tersoffPair(atmType2, atmType1) % n
             b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
           else
             b2 = 1E0_dp
           endif
+
+          A = self%tersoffPair(atmType1, atmType2) % A
+          B = self%tersoffPair(atmType1, atmType2) % B
+          lam1 = self%tersoffPair(atmType1, atmType2) % lam1
+          lam2 = self%tersoffPair(atmType1, atmType2) % lam2
           V1 = 0.5E0_dp * self%Fc_Func(rij, R_eq, D2) * (2d0*A*exp(-lam1*rij) - (b1+b2)*B*exp(-lam2*rij)) 
           curbox%dETable(iAtom) = curbox%dETable(iAtom) - V1
           curbox%dETable(jAtom) = curbox%dETable(iAtom) - V1
@@ -386,7 +427,7 @@ module FF_Pair_Tersoff
         ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
         rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
         rij = rxij*rxij + ryij*ryij + rzij*rzij
-        if(rij < rMax) then
+        if(rij < rMaxSq) then
           rij = sqrt(rij)
           Zeta = 0E0_dp
           Zeta2 = 0E0_dp
@@ -489,6 +530,8 @@ module FF_Pair_Tersoff
         self%tersoffPair(type2, type1)%D = parList(6) * outLenUnit
         self%tersoffPair(type2, type1)%beta = parList(7)
         self%tersoffPair(type2, type1)%n = parList(8)
+        self%tersoffPair(type2, type1)%rMax = (parList(5) + parList(6))*outLenUnit
+        self%tersoffPair(type2, type1)%rMaxSq = ((parList(5) + parList(6))*outLenUnit)**2
         if(self%symetric) then
           self%tersoffPair(type1, type2)%A = parList(1) * outEngUnit
           self%tersoffPair(type1, type2)%B = parList(2) * outEngUnit
@@ -498,6 +541,8 @@ module FF_Pair_Tersoff
           self%tersoffPair(type1, type2)%D = parList(6) * outLenUnit
           self%tersoffPair(type1, type2)%beta = parList(7)
           self%tersoffPair(type1, type2)%n = parList(8)
+          self%tersoffPair(type1, type2)%rMax = (parList(5) + parList(6))*outLenUnit
+          self%tersoffPair(type1, type2)%rMaxSq = ((parList(5) + parList(6))*outLenUnit)**2
         endif
 
       case("angle")
