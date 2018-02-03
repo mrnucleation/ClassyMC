@@ -19,6 +19,7 @@ contains
     use Output_DumpCoords, only: Output_DumpData
     use RandomGen, only: sgrnd, grnd, ListRNG
     use SimControl, only: nMoves, nCycles
+    use Units, only: outEngUnit
 
     implicit none
  
@@ -313,26 +314,26 @@ contains
       enddo
     endif
 
-    write(nout, *) "Traj"
+!    write(nout, *) "Traj"
     if( allocated(TrajArray) ) then
       do i = 1, size(TrajArray)
         call TrajArray(i) % traj % Prologue
       enddo
     endif
 
-    write(nout,*) "ECalc"
+!    write(nout,*) "ECalc"
     do i = 1, size(EnergyCalculator)
       call EnergyCalculator(i)%method%Prologue
     enddo
 
 
-    write(nout,*) "Box"
+!    write(nout,*) "Box"
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % Prologue
     enddo
 
-    write(nout,*) "Moves"
-    flush(nout)
+!    write(nout,*) "Moves"
+!    flush(nout)
     do i = 1, size(Moves)
       call Moves(i) % move % Prologue
     enddo

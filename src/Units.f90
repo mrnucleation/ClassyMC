@@ -27,15 +27,22 @@ module Units
   real(dp) :: outEngUnit = 1E0_dp
   real(dp) :: outLenUnit = 1E0_dp
   real(dp) :: outAngUnit = 1E0_dp
+  character(len=6) :: engStr = "kb"
+  character(len=6) :: lenStr = "ang"
+  character(len=6) :: angStr = "rad"
+
 
 !===================================================================      
   contains
 !===================================================================      
   function FindEngUnit(unitName) result(units)
+    use ParallelVar, only: nout
      implicit none 
      character(len=*), intent(in) :: unitName          
      real(dp) :: units
         
+     write(nout, *) "Setting Energy Units to: ", trim(adjustl(unitName))
+!     engStr = 
      select case(trim(adjustl(unitName)))
        case("j-mol")
          units = 1d0/8.3144621d0
@@ -58,27 +65,27 @@ module Units
      end function
 !===================================================================      
   real(dp) function FindLengthUnit(unitName)
-       implicit none 
-       character(len=*) :: unitName       
-        
-       select case(trim(adjustl(unitName)))
-         case("nm")
-           FindLengthUnit = 1d-1
-         case("a")
-           FindLengthUnit = 1d0
-         case("ang")
-           FindLengthUnit = 1d0
-         case("sigma")
-           FindLengthUnit = 1d0                  
-         case default
-           write(*,*) "Error! Invalid Length Unit Type!"
-           write(*,*) unitName
-           stop
-        end select
- 
-        
-      end function
-!     !----------------------------------------------------------
+     implicit none 
+     character(len=*) :: unitName       
+      
+     select case(trim(adjustl(unitName)))
+       case("nm")
+         FindLengthUnit = 1d-1
+       case("a")
+         FindLengthUnit = 1d0
+       case("ang")
+         FindLengthUnit = 1d0
+       case("sigma")
+         FindLengthUnit = 1d0                  
+       case default
+         write(*,*) "Error! Invalid Length Unit Type!"
+         write(*,*) unitName
+         stop
+      end select
+
+      
+  end function
+!===================================================================      
   real(dp) function FindAngularUnit(unitName)
     use Constants, only: pi
     implicit none 
@@ -104,6 +111,6 @@ module Units
       end select
    
   end function          
-!      !----------------------------------------------------------
+!===================================================================      
 end module    
 !===================================================================

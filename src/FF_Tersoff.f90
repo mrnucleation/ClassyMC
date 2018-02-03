@@ -6,7 +6,7 @@ module FF_Pair_Tersoff
   use VarPrecision
 
   type :: Tersoff2Body
-    real(dp) :: A, B, lam1, lam2, R, D, beta
+    real(dp) :: A, B, lam1, lam2, Req, D, beta, n
   end type
 
   type :: Tersoff3Body
@@ -26,11 +26,11 @@ module FF_Pair_Tersoff
       procedure, pass :: angleCalc
       procedure, pass :: Constructor => Constructor_Tersoff
       procedure, pass :: DetailedECalc => Detailed_Tersoff
-      procedure, pass :: ShiftECalc_Single => Shift_Tersoff_Single
-      procedure, pass :: ShiftECalc_Multi => Shift_Tersoff_Multi
-      procedure, pass :: NewECalc => New_Tersoff
-      procedure, pass :: OldECalc => Old_Tersoff
-      procedure, pass :: ReadParFile => ReadPar_Tersoff
+!      procedure, pass :: ShiftECalc_Single => Shift_Tersoff_Single
+!      procedure, pass :: ShiftECalc_Multi => Shift_Tersoff_Multi
+!      procedure, pass :: NewECalc => New_Tersoff
+!      procedure, pass :: OldECalc => Old_Tersoff
+      procedure, pass :: ProcessIO => ProcessIO_Tersoff
       procedure, pass :: GetCutOff => GetCutOff_Tersoff
   end type
 
@@ -44,9 +44,9 @@ module FF_Pair_Tersoff
     real(dp), intent(in) :: r, R_eq, D
     real(dp) :: val  
  
-    if( r .lt. (R_eq-D) ) then
+    if( r < (R_eq-D) ) then
       val = 1E0_dp
-    elseif( r .lt. (R_eq+D) ) then
+    elseif( r < (R_eq+D) ) then
       val = 0.5E0_dp * (1E0_dp - sin(pi*(r-R_eq)/(2E0_dp*D)) )
     else
       val = 0E0_dp
@@ -54,7 +54,7 @@ module FF_Pair_Tersoff
 
  end function
 !===============================================================================      
-   pure function gik_Func(self, theta, c, d, h) result(val)
+  pure function gik_Func(self, theta, c, d, h) result(val)
     implicit none
     class(Pair_Tersoff), intent(in) :: self
     real(dp), intent(in) :: theta, c, d, h
@@ -67,7 +67,7 @@ module FF_Pair_Tersoff
 
   end function
 !======================================================================================
-  pure function angleCalc(self, rx12, ry12, rz12, r12, rx23, ry23, rz23, r23) result(Angle)
+   pure function angleCalc(self, rx12, ry12, rz12, r12, rx23, ry23, rz23, r23) result(Angle)
     implicit none
     class(Pair_Tersoff), intent(in) :: self
     real(dp), intent(in) :: rx12, ry12, rz12, r12, rx23, ry23, rz23, r23
@@ -104,7 +104,7 @@ module FF_Pair_Tersoff
   subroutine Detailed_Tersoff(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     implicit none
-    class(Pair_Tersoff), intent(in) :: self
+    class(Pair_Tersoff), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
@@ -127,25 +127,14 @@ module FF_Pair_Tersoff
     E_Tersoff = 0E0_dp
     curbox%ETable = 0E0_dp
 
-!    A = tersoffData(atmType1)%A
-!    B = tersoffData(atmType1)%B
-!    c = tersoffData(atmType1)%c
-!    d = tersoffData(atmType1)%d
-!    R_eq = tersoffData(atmType1)%R
-!    D2 = tersoffData(atmType1)%D2
-!    BetaPar = tersoffData(atmType1)%beta
-!    n = tersoffData(atmType1)%n
-!    h = tersoffData(atmType1)%h
-!    lam1 = tersoffData(atmType1)%lam1
-!    lam2 = tersoffData(atmType1)%lam2
-
+    accept = .true.
     do iAtom = 1, curbox%nMaxAtoms
       atmType1 = curbox % AtomType(iAtom)
       if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
         cycle
       endif
 
-      do jAtom = 1, curbox%nMaAtoms
+      do jAtom = 1, curbox%nMaxAtoms
         if(iAtom .eq. jAtom) then
           cycle
         endif
@@ -153,8 +142,8 @@ module FF_Pair_Tersoff
         if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then        
           cycle
         endif
-        Reqij = tersoffPair(atmType2, atmType1) % R_Eq
-        Dij = tersoffPair(atmType2, atmType1) % D
+        Reqij = self%tersoffPair(atmType2, atmType1) % REq
+        Dij = self%tersoffPair(atmType2, atmType1) % D
         rMax = Reqij + Dij
         rMax_sq = rMax * rMax
 
@@ -171,41 +160,42 @@ module FF_Pair_Tersoff
           if( (kAtom == iAtom) .or. (kAtom == jAtom) ) then
             cycle
           endif
-          atmType3 = curbox % AtomType(kAtom)
           if( curbox%MolSubIndx(kAtom) > curbox%NMol(curbox%MolType(kAtom)) ) then        
             cycle
           endif
-          Reqik = tersoffPair(atmType3, atmType1) % R_Eq
-          Dik = tersoffPair(atmType3, atmType1) % D
+          atmType3 = curbox % AtomType(kAtom)
+          Reqik = self%tersoffPair(atmType3, atmType1) % REq
+          Dik = self%tersoffPair(atmType3, atmType1) % D
           rMax = Reqik + Dik
           rMax_sq = rMax * rMax
 
           rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
           ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
           rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
-          rik = rxij*rxij + ryij*ryij + rzij*rzij
-          if(rik .lt. rMax) then
+          rik = rxik*rxik + ryik*ryik + rzik*rzik
+          if(rik < rMax_sq) then
+            rik = sqrt(rik)
 
-            c = tersoffAngle(atmType1, atmType2, atmType3)%c
-            d = tersoffAngle(atmType1, atmType2, atmType3)%d
-            h = tersoffAngle(atmType1, atmType2, atmType3)%h
+            c = self%tersoffAngle(atmType1, atmType2, atmType3)%c
+            d = self%tersoffAngle(atmType1, atmType2, atmType3)%d
+            h = self%tersoffAngle(atmType1, atmType2, atmType3)%h
             angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
             Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Reqik, Dik)
           endif
         enddo
 
         if(Zeta .ne. 0E0_dp) then
-          BetaPar = tersoffPair(atmType2, atmType1)%beta
-          n =  tersoffPair(atmType2, atmType1)%n
+          BetaPar = self%tersoffPair(atmType2, atmType1)%beta
+          n =  self%tersoffPair(atmType2, atmType1)%n
           b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
         else
           b1 = 1E0_dp
         endif      
    
-        A = tersoffPair(atmType2, atmType1) % A
-        B = tersoffPair(atmType2, atmType1) % B
-        lam1 = tersoffPair(atmType2, atmType1)%lam1
-        lam2 = tersoffPair(atmType2, atmType1)%lam2
+        A = self%tersoffPair(atmType2, atmType1) % A
+        B = self%tersoffPair(atmType2, atmType1) % B
+        lam1 = self%tersoffPair(atmType2, atmType1)%lam1
+        lam2 = self%tersoffPair(atmType2, atmType1)%lam2
         V1 = 0.5E0_dp * self%Fc_Func(rij, Reqij, Dij) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij))
         E_Tersoff = E_Tersoff + V1
         curbox%ETable(iAtom) = curbox%ETable(iAtom) + V1
@@ -218,12 +208,13 @@ module FF_Pair_Tersoff
 
    end subroutine
   !=====================================================================
-  subroutine Shift_Tersoff_Single(self, curbox, disp, E_Diff)
+  subroutine Shift_Tersoff_Single(self, curbox, disp, E_Diff, accept)
     implicit none
-    class(Pair_Tersoff), intent(in) :: self
+    class(Pair_Tersoff), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
     integer :: iDisp, iAtom, iNei, jNei, jAtom, kNei, kAtom, dispLen
 !    integer :: maxIndx, minIndx
     integer :: atmType1, atmType2
@@ -249,6 +240,7 @@ module FF_Pair_Tersoff
     dispLen = size(disp)
     E_Diff = 0E0_dp
     curbox%dETable = 0E0_dp
+    accept = .true.
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
@@ -258,7 +250,7 @@ module FF_Pair_Tersoff
         ryij = curbox % atoms(2, jAtom)  -  disp(iDisp) % y_New
         rzij = curbox % atoms(3, jAtom)  -  disp(iDisp) % z_New
         rij = rxij*rxij + ryij*ryij + rzij*rzij
-        if(rij .lt. rMax) then
+        if(rij < rMax) then
           nRecalc = nRecalc + 1
           recalcList(nRecalc) = jAtom
           rij = sqrt(rij)
@@ -275,7 +267,7 @@ module FF_Pair_Tersoff
             ryik = curbox % atoms(2, kAtom)  -  disp(iDisp) % y_New
             rzik = curbox % atoms(3, kAtom)  -  disp(iDisp) % z_New
             rik = rxik*rxik + ryik*ryik + rzik*rzik
-            if(rik .lt. rMax) then
+            if(rik < rMax) then
               rik = sqrt(rik)
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
@@ -291,7 +283,7 @@ module FF_Pair_Tersoff
             ryjk = curbox % atoms(2, kAtom)  -  curbox % atoms(2, jAtom)
             rzjk = curbox % atoms(3, kAtom)  -  curbox % atoms(3, jAtom)
             rjk = rxij*rxij + ryij*ryij + rzij*rzij
-            if(rjk .lt. rMax) then
+            if(rjk < rMax) then
               rjk = sqrt(rjk)
               angijk = self%angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
@@ -321,7 +313,7 @@ module FF_Pair_Tersoff
         ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
         rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
         rij = rxij*rxij + ryij*ryij + rzij*rzij
-        if(rij .lt. rMax) then
+        if(rij < rMax) then
           rij = sqrt(rij)
           nRecalc = nRecalc + 1
           recalcList(nRecalc) = jAtom
@@ -338,7 +330,7 @@ module FF_Pair_Tersoff
             ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
             rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
             rik = rxik*rxik + ryik*ryik + rzik*rzik
-            if(rik .lt. rMax) then
+            if(rik < rMax) then
               rik = sqrt(rik)
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
@@ -354,7 +346,7 @@ module FF_Pair_Tersoff
             ryjk = curbox % atoms(2, kAtom)  -  curbox % atoms(2, jAtom)
             rzjk = curbox % atoms(3, kAtom)  -  curbox % atoms(3, jAtom)
             rjk = rxij*rxij + ryij*ryij + rzij*rzij
-            if(rjk .lt. rMax) then
+            if(rjk < rMax) then
               rjk = sqrt(rjk)
               angijk = self%angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
@@ -408,7 +400,7 @@ module FF_Pair_Tersoff
               ryik = disp(1)%y_new  -  curbox % atoms(2, iAtom)
               rzik = disp(1)%z_new  -  curbox % atoms(3, iAtom)
               rik = rxij*rxij + ryij*ryij + rzij*rzij
-              if(rik .lt. rMax) then
+              if(rik < rMax) then
                 angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
                 sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, R_eq, D2)
                 Zeta = Zeta + sub
@@ -417,7 +409,7 @@ module FF_Pair_Tersoff
               ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
               rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
               rik = rxij*rxij + ryij*ryij + rzij*rzij
-              if(rik .lt. rMax) then
+              if(rik < rMax) then
                 angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
                 sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, R_eq, D2)
                 Zeta2 = Zeta2 + sub
@@ -427,7 +419,7 @@ module FF_Pair_Tersoff
               ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
               rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
               rik = rxij*rxij + ryij*ryij + rzij*rzij
-              if(rik .lt. rMax) then
+              if(rik < rMax) then
                 angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
                 sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, R_eq, D2)
                 Zeta = Zeta + sub
@@ -455,81 +447,58 @@ module FF_Pair_Tersoff
     enddo
  
   end subroutine
-  !=====================================================================
-  subroutine Shift_Tersoff_Multi(self, curbox, disp, E_Diff)
-    implicit none
-      class(Pair_Tersoff), intent(in) :: self
-      class(SimBox), intent(inout) :: curbox
-      type(displacement), intent(in) :: disp(:)
-      real(dp), intent(inout) :: E_Diff
-   
-  end subroutine
-  !=====================================================================
-  subroutine New_Tersoff(self, curbox, disp, E_Diff)
-    implicit none
-      class(Pair_Tersoff), intent(in) :: self
-      class(SimBox), intent(inout) :: curbox
-      type(displacement), intent(in) :: disp(:)
-      real(dp), intent(inOut) :: E_Diff
-      integer :: iDisp, iAtom, jAtom, dispLen
-      integer :: atmType1, atmType2
-     
-
-  end subroutine
-  !=====================================================================
-  subroutine Old_Tersoff(self, curbox, atmIndx, E_Diff)
-    implicit none
-      class(Pair_Tersoff), intent(in) :: self
-      class(SimBox), intent(inout) :: curbox
-      real(dp), intent(inOut) :: E_Diff
-      integer, intent(in) :: atmIndx(:)
-      integer :: iIndx, iAtom, jAtom, remLen
-      integer :: atmType1, atmType2
-      real(dp) :: rx, ry, rz, rsq
-      real(dp) :: ep, sig_sq
-      real(dp) :: LJ
-      real(dp) :: rmin_ij      
-
-      remLen = size(atmIndx)
-      E_Diff = 0E0
-      curbox%dETable = 0E0
-
-  end subroutine  
 !=====================================================================
-  subroutine ProcessIO_LJ_Cut(self, line)
+  subroutine ProcessIO_Tersoff(self, line)
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: GetAllCommands, GetXCommand
+    use Input_Format, only: maxLineLen
+    use Units, only: outEngUnit, outLenUnit
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
-    character(len=*), intent(in) :: line
-    character(len=30), allocatable :: parlist(:)
-    character(len=30) :: command
-    logical :: param = .false.
+    class(Pair_Tersoff), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line
 
+    character(len=30) :: command
+    logical :: logicVal
     integer :: iPar, lineStat
     integer :: type1, type2, type3
-    real(dp) :: parList(1:10)
+    real(dp) :: parList(1:8)
   
 
     call GetXCommand(line, command, 1, lineStat)
 
     select case(trim(adjustl(command)))
+      case("symetric")
+        call GetXCommand(line, command, 2, lineStat)
+        read(command, *) logicVal
+        self%symetric = logicVal
+
       case("pair")
         call GetXCommand(line, command, 2, lineStat)
         read(command, *) type1
         call GetXCommand(line, command, 3, lineStat)
         read(command, *) type2
-        do iPar = 1, 7
+        do iPar = 1, 8
           call GetXCommand(line, command, 3+iPar, lineStat)
           read(command, *) parList(iPar)
         enddo
-        self%tersoffPair(type1, type2)%A = parList(1)
-        self%tersoffPair(type1, type2)%B = parList(2)
-        self%tersoffPair(type1, type2)%lam1 = parList(3)
-        self%tersoffPair(type1, type2)%lam2 = parList(4)
-        self%tersoffPair(type1, type2)%R = parList(5)
-        self%tersoffPair(type1, type2)%D = parList(6)
-        self%tersoffPair(type1, type2)%beta = parList(7)
+        self%tersoffPair(type2, type1)%A = parList(1) * outEngUnit
+        self%tersoffPair(type2, type1)%B = parList(2) * outEngUnit
+        self%tersoffPair(type2, type1)%lam1 = parList(3) * outLenUnit
+        self%tersoffPair(type2, type1)%lam2 = parList(4) * outLenUnit
+        self%tersoffPair(type2, type1)%Req = parList(5) * outLenUnit
+        self%tersoffPair(type2, type1)%D = parList(6) * outLenUnit
+        self%tersoffPair(type2, type1)%beta = parList(7)
+        self%tersoffPair(type2, type1)%n = parList(8)
+        if(self%symetric) then
+          self%tersoffPair(type1, type2)%A = parList(1) * outEngUnit
+          self%tersoffPair(type1, type2)%B = parList(2) * outEngUnit
+          self%tersoffPair(type1, type2)%lam1 = parList(3) * outLenUnit
+          self%tersoffPair(type1, type2)%lam2 = parList(4) * outLenUnit
+          self%tersoffPair(type1, type2)%Req = parList(5) * outLenUnit
+          self%tersoffPair(type1, type2)%D = parList(6) * outLenUnit
+          self%tersoffPair(type1, type2)%beta = parList(7)
+          self%tersoffPair(type1, type2)%n = parList(8)
+        endif
 
       case("angle")
         call GetXCommand(line, command, 2, lineStat)
@@ -542,11 +511,18 @@ module FF_Pair_Tersoff
           call GetXCommand(line, command, 4+iPar, lineStat)
           read(command, *) parList(iPar)
         enddo
-        self%(type1, type2, type3)%h = parList(1)
-        self%(type1, type2, type3)%lam3 = parList(2)
-        self%(type1, type2, type3)%c = parList(3)
-        self%(type1, type2, type3)%d = parList(4)
-        self%(type1, type2, type3)%gam = parList(5)
+        self%tersoffAngle(type1, type2, type3)%h = parList(1)
+        self%tersoffAngle(type1, type2, type3)%lam3 = parList(2)* outLenUnit
+        self%tersoffAngle(type1, type2, type3)%c = parList(3)
+        self%tersoffAngle(type1, type2, type3)%d = parList(4)
+        self%tersoffAngle(type1, type2, type3)%gam = parList(5)
+        if(self%symetric) then
+          self%tersoffAngle(type2, type1, type3)%h = parList(1)
+          self%tersoffAngle(type2, type1, type3)%lam3 = parList(2)* outLenUnit
+          self%tersoffAngle(type2, type1, type3)%c = parList(3)
+          self%tersoffAngle(type2, type1, type3)%d = parList(4)
+          self%tersoffAngle(type2, type1, type3)%gam = parList(5)
+        endif
 
       case default
         linestat = -1
@@ -557,9 +533,25 @@ module FF_Pair_Tersoff
 
  !=============================================================================+
     function GetCutOff_Tersoff(self) result(rCut)
+      use Common_MolInfo, only: nAtomTypes
       implicit none
       class(Pair_Tersoff), intent(inout) :: self
       real(dp) :: rCut
+
+      integer :: type1, type2
+      real(dp) :: Req, D, rMax
+
+      rCut = -1E0_dp
+      do type1 = 1, nAtomTypes
+        do type2 = 1, nAtomTypes
+          Req = self%tersoffPair(type1, type2) % REq
+          D = self%tersoffPair(type1, type2) % D
+          rMax = Req + D
+          if(rCut < rMax) then
+            rCut = rMax
+          endif
+        enddo
+      enddo
 
       rCut = self%rCut
     end function

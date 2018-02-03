@@ -68,6 +68,10 @@ module Input_Forcefield
             do i = 1, nItems
               curLine = iLine + i
               call Script_FieldType(linestore(curLine), i, lineStat)
+              if(lineStat < 0) then
+                write(*,*) "ERROR! Unknown forcefield type."
+                stop
+              endif
               call EnergyCalculator(i)%Method%Constructor
             enddo   
           else
@@ -278,13 +282,13 @@ module Input_Forcefield
     select case(trim(adjustl(command)))
       case("energy")
         call GetXCommand(line, unitType, 3, lineStat)
-        engUnit = FindEngUnit(unitType)
+        outEngUnit = FindEngUnit(unitType)
       case("angle")
         call GetXCommand(line, unitType, 3, lineStat)
-        angUnit = FindAngularUnit(unitType)
+        outAngUnit = FindAngularUnit(unitType)
       case("length")
         call GetXCommand(line, unitType, 3, lineStat)
-        lenUnit = FindLengthUnit(unitType)
+        outLenUnit = FindLengthUnit(unitType)
       case default
         lineStat = -1
     end select

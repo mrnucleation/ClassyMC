@@ -13,7 +13,7 @@ contains
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Ele_Cut, only: Pair_LJ_Ele_Cut
-!    use FF_Pair_Tersoff, only: Pair_Tersoff
+    use FF_Pair_Tersoff, only: Pair_Tersoff
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
     use ParallelVar, only: nout
     implicit none
@@ -52,9 +52,9 @@ contains
         allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
 
-!      case("tersoff")
-!        allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
-!        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
+      case("tersoff")
+        allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
+        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
 
       case default
 !        write(*,*) "Here"
