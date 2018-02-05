@@ -235,6 +235,8 @@ module FF_Pair_Tersoff
     integer :: nRecalc
     integer :: recalcList(1:60)
 
+     ! The recalcList is a list of particles close enough to the displaced particles
+     ! 
     nRecalc = 0
     recalcList = 0
 
@@ -253,8 +255,6 @@ module FF_Pair_Tersoff
         ryij = curbox % atoms(2, jAtom)  -  disp(iDisp) % y_New
         rzij = curbox % atoms(3, jAtom)  -  disp(iDisp) % z_New
         rij = rxij*rxij + ryij*ryij + rzij*rzij
-!        Reqij = self%tersoffPair(atmType2, atmType1) % REq
-!        Dij = self%tersoffPair(atmType2, atmType1) % D
         rMaxSq = self%tersoffPair(atmType2, atmType1) % rMaxSq
 
         if(rij < rMaxSq) then
@@ -312,24 +312,47 @@ module FF_Pair_Tersoff
             endif     
           enddo
           if(Zeta .ne. 0E0_dp) then
+            BetaPar = self%tersoffPair(atmType1, atmType2)%beta
+            n =  self%tersoffPair(atmType1, atmType2)%n
             b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
             b1 = 1E0_dp
           endif
           if(Zeta2 .ne. 0E0_dp) then
+            BetaPar = self%tersoffPair(atmType2, atmType1)%beta
+            n =  self%tersoffPair(atmType2, atmType1)%n
             b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
           else
             b2 = 1E0_dp
           endif
 
-          A = self%tersoffPair(atmType1, atmType2) % A
-          B = self%tersoffPair(atmType1, atmType2) % B
-          lam1 = self%tersoffPair(atmType1, atmType2) % lam1
-          lam2 = self%tersoffPair(atmType1, atmType2) % lam2
-          V1 = 0.5E0_dp * self%Fc_Func(rij, R_eq, D2) * (2d0*A*exp(-lam1*rij) - (b1+b2)*B*exp(-lam2*rij)) 
-          curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
-          curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
-          E_Diff = E_Diff + V1
+          if(self%symetric) then
+            A = self%tersoffPair(atmType1, atmType2) % A
+            B = self%tersoffPair(atmType1, atmType2) % B
+            lam1 = self%tersoffPair(atmType1, atmType2) % lam1
+            lam2 = self%tersoffPair(atmType1, atmType2) % lam2
+            V1 = 0.5E0_dp * self%Fc_Func(rij, R_eq, D2) * (2d0*A*exp(-lam1*rij) - (b1+b2)*B*exp(-lam2*rij)) 
+            curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
+            curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
+            E_Diff = E_Diff + V1
+          else
+            A = self%tersoffPair(atmType1, atmType2) % A
+            B = self%tersoffPair(atmType1, atmType2) % B
+            lam1 = self%tersoffPair(atmType1, atmType2) % lam1
+            lam2 = self%tersoffPair(atmType1, atmType2) % lam2
+            V1 = 0.5E0_dp * self%Fc_Func(rij, R_eq, D2) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij)) 
+
+            A = self%tersoffPair(atmType2, atmType1) % A
+            B = self%tersoffPair(atmType2, atmType1) % B
+            lam1 = self%tersoffPair(atmType2, atmType1) % lam1
+            lam2 = self%tersoffPair(atmType2, atmType1) % lam2
+            V1 = V1 + 0.5E0_dp * self%Fc_Func(rij, R_eq, D2) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij)) 
+
+            curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
+            curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
+            E_Diff = E_Diff + V1
+
+          endif
         endif
       enddo
 
@@ -363,6 +386,11 @@ module FF_Pair_Tersoff
             rik = rxik*rxik + ryik*ryik + rzik*rzik
             if(rik < rMaxSq) then
               rik = sqrt(rik)
+              D2 = self%tersoffPair(atmType1, atmType3) % D
+              Req = self%tersoffPair(atmType1, atmType3) % Req
+              c = self%tersoffAngle(atmType2, atmType1, atmType3) % c
+              d = self%tersoffAngle(atmType2, atmType1, atmType3) % d
+              h = self%tersoffAngle(atmType2, atmType1, atmType3) % h            
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, R_eq, D2)
             endif     

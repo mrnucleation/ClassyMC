@@ -107,12 +107,11 @@
       end subroutine
 !========================================================            
       subroutine setCommand(line, lineStat)
-      use SimControl, only: nMoves, nCycles
-      use VarPrecision
       use Common_MolInfo
-      use ParallelVar
       use Common_NeighData
+      use ParallelVar
       use RandomGen, only: initSeed
+      use SimControl, only: nMoves, nCycles
       use Units, only: outEngUnit, outLenUnit, outAngUnit,  &
                        FindEngUnit, FindLengthUnit, FindAngularUnit
       use VarPrecision
