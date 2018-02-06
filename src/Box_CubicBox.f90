@@ -15,9 +15,7 @@ module CubicBoxDef
     contains
 !      procedure, pass :: Constructor => Cube_Constructor
       procedure, pass :: LoadDimension => Cube_LoadDimension
-      procedure, pass :: UpdateEnergy => Cube_UpdateEnergy
       procedure, pass :: Boundary => Cube_Boundary
-!      procedure, pass :: UpdatePosition => Cube_UpdatePosition
       procedure, pass :: IOProcess => Cube_IOProcess
       procedure, pass :: DumpData => Cube_DumpData
       procedure, pass :: Prologue => Cube_Prologue
@@ -119,17 +117,6 @@ module CubicBoxDef
 
   end subroutine
 !==========================================================================================
-  subroutine Cube_UpdateEnergy(self, E_Diff)
-  implicit none
-  class(CubeBox), intent(inout) :: self
-  real(dp), intent(in) :: E_Diff
-
-    self % ETotal = self % ETotal + E_Diff
-    self % ETable = self % ETable + self % dETable
-
-  end subroutine
-
-!==========================================================================================
 !  subroutine Cube_UpdatePosition(self, disp)
 !    use CoordinateTypes
 !    implicit none
@@ -152,6 +139,7 @@ module CubicBoxDef
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     use ForcefieldData, only: EnergyCalculator
+    use ParallelVar, only: nout
     implicit none
 
     class(CubeBox), intent(inout) :: self
@@ -175,7 +163,9 @@ module CubicBoxDef
       case("buildfreq")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
-        self % buildfreq = intVal
+        self % maintFreq = intVal
+        write(nout,*) "Neigh Update Frequency:", self % maintFreq
+
 
 
       case("chempot")

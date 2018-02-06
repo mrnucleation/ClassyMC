@@ -244,13 +244,13 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-subroutine SimpleBox_ComputeEnergy(self)
-  implicit none
-  class(SimpleBox), intent(inout) :: self
-  logical :: accept
+  subroutine SimpleBox_ComputeEnergy(self)
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    logical :: accept
 
-  call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
-end subroutine
+    call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
+  end subroutine
 !==========================================================================================
   subroutine SimpleBox_UpdateEnergy(self, E_Diff)
     implicit none
@@ -319,7 +319,6 @@ end subroutine
       case("buildfreq")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
-        self % buildfreq = intVal
         self % maintFreq = intVal
 
       case("chempot")
@@ -489,6 +488,7 @@ end subroutine
     class(SimpleBox), intent(inout) :: self
 
     call self % NeighList(1) % BuildList
+    call self % ComputeEnergy
 
 
   end subroutine

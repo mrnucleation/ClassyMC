@@ -55,10 +55,18 @@ module Template_ForceField
 
     if(disp(1)%newAtom .and. disp(1)%oldAtom) then
       if(disp(1)%oldAtmIndx == disp(1)%atmIndx) then
+!      if(.false.) then
         call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+        if(.not. accept) then
+          return
+        endif
       else
         E_Diff = 0E0_dp
         call self % NewECalc(curbox, disp, tempList, tempNNei, E_Half, accept)
+        if(.not. accept) then
+          return
+        endif
+
         E_Diff = E_Diff + E_Half
         call self % OldECalc(curbox, disp, E_Half)
         E_Diff = E_Diff + E_Half

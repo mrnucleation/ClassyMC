@@ -106,7 +106,7 @@ module OrthoBoxDef
       case("buildfreq")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
-        self % buildfreq = intVal
+        self % maintFreq = intVal
 
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)

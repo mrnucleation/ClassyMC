@@ -8,7 +8,7 @@ use VarPrecision
   type, public, extends(MCMove) :: AtomTranslate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    real(dp) :: max_dist = 0.05E0_dp
+    real(dp) :: max_dist = 0.005E0_dp
     type(Displacement) :: disp(1:1)
 
 !    integer, allocatable :: tempNnei(:)
@@ -155,6 +155,7 @@ use VarPrecision
     write(nout,"(1x,A,I15)") "Atom Translation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()
     write(nout,"(1x,A,F15.8)") "Atom Translation Acceptance Rate: ", accptRate
+    write(nout,"(1x,A,F15.8)") "Final Maximum Displacement: ", self%max_dist
  
 
   end subroutine

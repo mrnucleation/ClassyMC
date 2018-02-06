@@ -132,13 +132,13 @@ contains
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
 
-    if(printBox) then
+!    if(printBox) then
       do i = 1, size(BoxArray)
         if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
           call BoxArray(i) % box % Maintenance
         endif
       enddo
-    endif
+!    endif
 
 
     if(printAcc) then
@@ -183,6 +183,7 @@ contains
 
     do i = 1, size(BoxArray)
       if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
+        write(*,*) "BLAH!"
         call BoxArray(i) % box % Maintenance
       endif
     enddo

@@ -42,11 +42,11 @@ module FF_Pair_LJ_Cut
     allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
-    self%eps = 1E0_dp
+    self%eps = 4E0_dp
     self%sig = 1E0_dp
     self%rMin = 0.5E0_dp
 
-    self%epsTable = 1E0_dp
+    self%epsTable = 4E0_dp
     self%sigTable = 1E0_dp
     self%rMinTable = 0.5E0_dp
     self%rCut = 5E0_dp
@@ -142,22 +142,21 @@ module FF_Pair_LJ_Cut
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
 
-        atmType2 = curbox % AtomType(jAtom)
-        rmin_ij = self % rMinTable(atmType2, atmType1)          
-
         rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
         rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-        if(rsq < rmin_ij) then
-          accept = .false.
-          return
-        endif 
-
-        ep = self % epsTable(atmType2, atmType1)
-        sig_sq = self % sigTable(atmType2, atmType1)  
         if(rsq < self%rCutSq) then
+          atmType2 = curbox % AtomType(jAtom)
+          rmin_ij = self % rMinTable(atmType2, atmType1)          
+          if(rsq < rmin_ij) then
+            accept = .false.
+            return
+          endif 
+          ep = self % epsTable(atmType2, atmType1)
+          sig_sq = self % sigTable(atmType2, atmType1)  
+
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)              
@@ -237,16 +236,15 @@ module FF_Pair_LJ_Cut
           cycle
         endif
 
-        atmType2 = curbox % AtomType(jAtom)
-        rmin_ij = self%rMinTable(atmType2, atmType1)          
-
         rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
         rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-         
+          atmType2 = curbox % AtomType(jAtom)
+          rmin_ij = self%rMinTable(atmType2, atmType1)          
+        
           if(rsq < rmin_ij) then
             accept = .false.
             return

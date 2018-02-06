@@ -47,7 +47,7 @@
 
       lineBuffer = 0
       do iLine = 1, nLines
-        write(*,*) trim(adjustl(lineStore(iLine)))
+!        write(*,*) trim(adjustl(lineStore(iLine)))
         if(lineBuffer .gt. 0) then
           lineBuffer = lineBuffer - 1
           cycle

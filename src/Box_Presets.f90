@@ -124,7 +124,7 @@ contains
           do while(abs(box%atoms(3,iAtom)) > boxL*0.5E0_dp)  
             box%atoms(3, iAtom) = box%atoms(3, iAtom) - sign(boxL, box%atoms(3, iAtom))
           enddo
-          write(*,*) "Ar", box%atoms(1, iAtom), box%atoms(2, iAtom), box%atoms(3, iAtom)
+!          write(*,*) "Ar", box%atoms(1, iAtom), box%atoms(2, iAtom), box%atoms(3, iAtom)
 
         enddo
 
