@@ -15,6 +15,7 @@ module Template_SimBox
   !Sim Box Definition
   type, public, extends(classyClass) :: SimBox
     character(len=15) :: boxStr = "Empty"
+    integer :: boxID
     integer :: nAtoms, nMaxAtoms
     integer :: nMolTotal
     integer :: nDimension = 3

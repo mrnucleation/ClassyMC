@@ -47,6 +47,7 @@
 
       lineBuffer = 0
       do iLine = 1, nLines
+        write(*,*) trim(adjustl(lineStore(iLine)))
         if(lineBuffer .gt. 0) then
           lineBuffer = lineBuffer - 1
           cycle
@@ -58,7 +59,6 @@
           cycle
         endif 
 
-!        write(*,*) trim(adjustl(lineStore(iLine)))
         select case(trim(adjustl( command )))
           case("create")
             call createCommand(iLine, linestore, lineBuffer, lineStat)
@@ -174,6 +174,7 @@
       subroutine createCommand(iLine, linestore, lineBuffer, lineStat)
       use AnalysisData, only: AnalysisArray, analyCommon
       use BoxData, only: BoxArray
+      use BoxPresets, only: Preset
       use TrajData, only: TrajArray
       use MCMoveData, only: Moves, MoveProb
       use ForcefieldData, only: EnergyCalculator, nForceFields
@@ -228,16 +229,22 @@
              do i = 1, nItems
                curLine = iLine + i
                call GetXCommand(lineStore(curLine), command2, 1, lineStat)
-!               write(*,*) i, command2
+               write(*,*) i, command2
                if( trim(adjustl(command2)) == "fromfile") then
-                 call GetXCommand(lineStore(curLine), command2, 2, lineStat)
-                 fileName = ""
-                 fileName(1:30) = command2(1:30)
-                 call Script_ReadCoordFile(fileName, i, lineStat)
+                   call GetXCommand(lineStore(curLine), command2, 2, lineStat)
+                   fileName = ""
+                   fileName(1:30) = command2(1:30)
+                   call Script_ReadCoordFile(fileName, i, lineStat)
+
+               elseif( trim(adjustl(command2)) == "preset") then
+                   call Preset(curLine, lineStore, i, lineStat)
+
                else
-                 call Script_BoxType(linestore(curLine), i, lineStat)
+                   call Script_BoxType(linestore(curLine), i, lineStat)
                endif
+               writE(*,*) "Preset"
                BoxArray(i)%box%boxID = i 
+               writE(*,*) "Preset"
              enddo             
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"

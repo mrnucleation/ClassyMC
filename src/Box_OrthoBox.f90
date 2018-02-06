@@ -15,7 +15,7 @@ module OrthoBoxDef
     contains
 !      procedure, pass :: Constructor => Ortho_Constructor
       procedure, pass :: LoadDimension => Ortho_LoadDimension
-      procedure, pass :: UpdateEnergy => Ortho_UpdateEnergy
+!      procedure, pass :: UpdateEnergy => Ortho_UpdateEnergy
       procedure, pass :: Boundary => Ortho_Boundary
 !      procedure, pass :: UpdatePosition => Ortho_UpdatePosition
       procedure, pass :: IOProcess => Ortho_IOProcess
@@ -64,16 +64,6 @@ module OrthoBoxDef
   if(abs(rz) > self%boxLz2) then
     rz = rz - sign(self%boxLz, rz)
   endif
-
-  end subroutine
-!==========================================================================================
-  subroutine Ortho_UpdateEnergy(self, E_Diff)
-    implicit none
-    class(OrthoBox), intent(inout) :: self
-    real(dp), intent(in) :: E_Diff
-
-    self % ETotal = self % ETotal + E_Diff
-    self % ETable = self % ETable + self % dETable
 
   end subroutine
 !==========================================================================================

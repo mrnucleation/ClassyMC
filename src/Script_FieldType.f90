@@ -35,31 +35,31 @@ contains
     select case(trim(adjustl(FF_Type)))
       case("lj_cut")
         allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
 
       case("lj_q_cut")
         allocate(Pair_LJ_Ele_Cut::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
 
 !      case("lj_cut_nonei")
 !        allocate(Pair_LJ_Cut_NoNei::EnergyCalculator(FFNum) % Method)
-!        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut (No Neighbor List) style"
+!        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut (No Neighbor List) style"
 
       case("einstein")
         allocate(Pair_Einstein::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Einstein Crystal"
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Einstein Crystal"
 
       case("hardsphere")
         allocate(Pair_HardSphere::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Hard Sphere"
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Hard Sphere"
 
       case("thermointegration")
         allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
 
       case("tersoff")
         allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
-        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
 
       case default
 !        write(*,*) "Here"

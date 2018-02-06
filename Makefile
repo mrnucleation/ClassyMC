@@ -73,6 +73,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Analysis_RDF.f90\
         		$(SRC)/Analysis_ThermAverage.f90\
         		$(SRC)/Analysis_ThermoIntegration.f90\
+        		$(SRC)/Box_Presets.f90\
         		$(SRC)/Box_SimpleBox.f90\
         		$(SRC)/Box_CubicBox.f90\
         		$(SRC)/Box_OrthoBox.f90\
@@ -229,6 +230,8 @@ $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o
+$(OBJ)/Box_Presets.o: $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
+
 
 
 $(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o

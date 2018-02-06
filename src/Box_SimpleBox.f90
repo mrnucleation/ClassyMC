@@ -9,7 +9,7 @@ module SimpleSimBox
 
   !Sim Box Definition
   type, public, extends(SimBox) :: SimpleBox
-    integer :: boxID
+!    integer :: boxID
     integer :: nTotal
 !    integer :: nMaxAtoms
 

@@ -79,11 +79,11 @@ module FF_HardSphere
         call curbox%Boundary(rx, ry, rz)
         rsq = rx**2 + ry**2 + rz**2
         if(rsq < rmin_ij) then
-          write(*,*) sqrt(rsq)
-          write(*,*) iAtom, jAtom
-          write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
-          write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
-          write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
+!          write(*,*) sqrt(rsq)
+!          write(*,*) iAtom, jAtom
+!          write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
+!          write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
+!          write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
         endif
       enddo
     enddo
