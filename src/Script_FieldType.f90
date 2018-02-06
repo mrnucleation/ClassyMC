@@ -10,6 +10,7 @@ contains
   subroutine Script_FieldType(line, FFNum, lineStat)
     use ForcefieldData, only: nForceFields
     use FF_Einstein, only: Pair_Einstein
+    use FF_HardSphere, only: Pair_HardSphere
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Ele_Cut, only: Pair_LJ_Ele_Cut
@@ -47,6 +48,10 @@ contains
       case("einstein")
         allocate(Pair_Einstein::EnergyCalculator(FFNum) % Method)
         write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Einstein Crystal"
+
+      case("hardsphere")
+        allocate(Pair_HardSphere::EnergyCalculator(FFNum) % Method)
+        write(nout,"(A,I2,A)") "Forcefield", FFNum, " allocated as Hard Sphere"
 
       case("thermointegration")
         allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
