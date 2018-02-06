@@ -520,9 +520,9 @@ module UmbrellaWHAMRule
     integer :: UArray(1:self%nBiasVar)
     character(len = 100) :: outputString
 
-    write(outputString, *) "(", ("2x, F10.8,", j =1,self%nBiasVar), "2x, F18.8)"
+    write(outputString, *) "(", ("2x, F10.8,", j =1,self%nBiasVar), "2x, F22.1)"
 
-!        This block exports the calculated free energy to a file
+!        This block exports the histogram 
     rewind(96)
     do i = 1, self%umbrellaLimit
       if(self%HistStorage(i) .ne. 0E0 ) then

@@ -9,7 +9,7 @@ module FF_ThermoIntegration
 
   type, public, extends(forcefield) :: pair_thermointegration
 !    real(dp) :: rCut, rCutSq
-    real(dp) :: lambda = 0.0E0_dp
+    real(dp) :: lambda = 0.001E0_dp
     integer :: ECalc1 = -1
     integer :: ECalc2 = -1
 
@@ -86,6 +86,8 @@ module FF_ThermoIntegration
 
     call EnergyCalculator(self%ECalc1) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
     if(.not. accept) then
+      self%EDiff1 = 0E0_dp
+      self%EDiff2 = 0E0_dp
       return
     endif
     self%EDiff1 = ESub
@@ -93,6 +95,8 @@ module FF_ThermoIntegration
 
     call EnergyCalculator(self%ECalc2) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
     if(.not. accept) then
+      self%EDiff1 = 0E0_dp
+      self%EDiff2 = 0E0_dp
       return
     endif
     self%EDiff2 = ESub
@@ -113,8 +117,6 @@ module FF_ThermoIntegration
 
     accept = .true.
     E_Diff = 0E0_dp
-    self%EDiff1 = 0E0_dp
-    self%EDiff2 = 0E0_dp
 
     call EnergyCalculator(self%ECalc1) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
     if(.not. accept) then
@@ -142,8 +144,6 @@ module FF_ThermoIntegration
     real(dp) :: ESub
 
     E_Diff = 0E0_dp
-    self%EDiff1 = 0E0_dp
-    self%EDiff2 = 0E0_dp
     call EnergyCalculator(self%ECalc1) % Method %OldECalc(curbox, disp, ESub)
     self%EDiff1 = ESub
     E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub

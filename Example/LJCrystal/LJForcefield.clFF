@@ -18,6 +18,6 @@ end_forcefieldtype
 # type epsilon sigma rmin
 forcefield 1
   rCut 3.5
-  1  1.0  1.0 1.8
+  1  1.0  1.0 0.8
 end_forcefield
 

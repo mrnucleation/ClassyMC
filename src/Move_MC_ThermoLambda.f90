@@ -15,6 +15,7 @@ module Move_ThermoLambda
 !    real(dp) :: accpt = 0E0_dp
     integer :: AnalyFunc = -1
     integer :: EFunc = -1
+    real(dp) :: maxLam = 0.001E0_dp
     type(Displacement) :: disp(1:1)
     contains
       procedure, pass :: Prologue => ThermoLambda_Prologue
@@ -22,7 +23,7 @@ module Move_ThermoLambda
 !      procedure, pass :: GeneratePosition => ThermoLambda_GeneratePosition
       procedure, pass :: FullMove => ThermoLambda_FullMove
 !      procedure, pass :: GetAcceptRate
-!      procedure, pass :: Maintenance => ThermoLambda_Maintenance
+      procedure, pass :: Maintenance => ThermoLambda_Maintenance
       procedure, pass :: Epilogue => ThermoLambda_Epilogue
   end type
 
@@ -82,11 +83,24 @@ module Move_ThermoLambda
     integer :: i
     integer :: nAtom, nAtomNew, reduIndx, newtype, oldtype
     real(dp) :: OldProb, NewProb, Prob
-    real(dp) :: E_Diff, lambdaNew
+    real(dp) :: E_Diff, lambdaNew, lambda
 
 
     self % atmps = self % atmps + 1E0_dp
-    lambdaNew = grnd()
+
+    select type(eng => EnergyCalculator(self%EFunc)%Method)
+      class is(Pair_ThermoIntegration)
+        lambda = eng%GetLambda()
+    end select
+
+
+    lambdaNew = lambda + self%maxLam * (2E0_dp*grnd()-1E0_dp)
+    if(lambdaNew > 1E0_dp) then
+      return
+    elseif(lambdaNew < 0E0_dp) then
+      return
+    endif
+
 
     select type(analy => AnalysisArray(self%AnalyFunc)%func)
       class is(ThermoIntegration)
@@ -109,8 +123,6 @@ module Move_ThermoLambda
         class is(Pair_ThermoIntegration)
           call eng%UpdateLambda(lambdaNew)
       end select
-
-
     endif
 
   end subroutine
@@ -127,6 +139,30 @@ module Move_ThermoLambda
     write(nout,"(1x,A,F15.8)") "Thermo Lambda Acceptance Rate: ", accptRate
 
   end subroutine
+!=========================================================================
+  subroutine ThermoLambda_Maintenance(self)
+    implicit none
+    class(ThermoLambda), intent(inout) :: self
+    real(dp), parameter :: limit = 0.1E0_dp
+      
+    if(self%atmps .lt. 0.5E0_dp) then
+      return
+    endif
+
+    if(self%GetAcceptRate() > 50E0_dp) then
+      if(self%maxLam*1.01E0_dp < limit) then
+        self%maxLam = self%maxLam * 1.01E0_dp
+      else 
+        self%maxLam = limit       
+      endif
+    else
+      self%maxLam = self%maxLam * 0.99E0_dp
+    endif
+
+ 
+
+  end subroutine
+
 !=========================================================================
 end module
 !=========================================================================

@@ -18,6 +18,7 @@ module Traj_XYZ
 !       procedure, pass :: SetFreq
 !       procedure, pass :: OpenFile
 !       procedure, pass :: CloseFile
+       procedure, pass :: Prologue => TrajXYZ_Prologue
        procedure, pass :: Epilogue => TrajXYZ_Epilogue
 
   end type
@@ -59,6 +60,13 @@ module Traj_XYZ
     enddo
 
 
+  end subroutine
+!====================================================================
+  subroutine TrajXYZ_Prologue(self) 
+    implicit none
+    class(trajXYZ), intent(inout) :: self
+
+    call self % WriteFrame
   end subroutine
 !====================================================================
   subroutine TrajXYZ_Epilogue(self) 

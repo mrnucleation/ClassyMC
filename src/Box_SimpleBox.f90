@@ -488,7 +488,7 @@ module SimpleSimBox
     class(SimpleBox), intent(inout) :: self
 
     call self % NeighList(1) % BuildList
-    call self % ComputeEnergy
+!    call self % ComputeEnergy
 
 
   end subroutine

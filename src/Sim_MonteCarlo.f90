@@ -34,8 +34,6 @@ contains
     iMove = 0
 
     call Prologue(iCycle, iMove)
-    write(nout, *) "Prologue Over"
-    call Trajectory(iCycle, iMove)
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
     write(nout, *) "============================================"
@@ -64,7 +62,9 @@ contains
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
 
         end select
-        call Update(iCycle, iMove, accept)
+        if(accept) then
+          call Update(iCycle, iMove, accept)
+        endif
         call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
