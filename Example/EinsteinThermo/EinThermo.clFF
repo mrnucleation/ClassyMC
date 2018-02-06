@@ -1,0 +1,33 @@
+
+moleculetypes 1
+
+atomdef
+  "Na"  1.0
+end_atomdef
+
+molecule 1
+  atoms
+    1
+  end_atoms
+end_molecule
+
+forcefieldtype
+  ThermoIntegration
+  Einstein
+  Einstein
+end_forcefieldtype
+
+#Tell the thermointegration to use Forcefield 2 and Forcefield 3
+forcefield 1
+  functions 2 3
+end_forcefield
+
+#Set LJ forcefield parameters
+forcefield 2
+  kSpring 1.0
+end_forcefield 
+
+#Set the einstein crystal parameters
+forcefield 3
+  kSpring 2.0
+end_forcefield

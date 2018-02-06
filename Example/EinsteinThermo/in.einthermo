@@ -1,0 +1,39 @@
+#======================================
+  set rng_seed -1
+  set NeighSkin 5.5
+  set moves 1000
+  set cycles 7000
+  SamplingType UmbrellaWHAM
+
+  forcefield "EinThermo.clFF"
+
+  Create boxes
+    Preset FCC 1.58740105197 2
+  End_Create
+
+  modify Sampling biasvariables 1
+  modify Sampling analysis 1
+  modify Sampling bounds 1 0.02 0.0 1.0 
+  modify Sampling reference 0.025
+  modify Sampling whamfreq 100000
+
+  neighlist 1 rsqlist 1
+ 
+  modify box 1 buildfreq 10000
+
+  Create moves
+    ThermoLambda 0.1
+    atomtranslation 0.9
+  End_Create
+
+  Create analysis
+    thermointegration 
+  End_Create
+
+#  Create trajectory
+#    xyz 1 1000 "Traj.xyz"
+#  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 0.5
+#=====================================
