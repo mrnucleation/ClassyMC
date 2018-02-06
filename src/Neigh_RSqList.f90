@@ -72,6 +72,11 @@ use Template_NeighList, only: NeighListDef
     allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
     allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
 
+    if(.not. allocated(self%allowed) ) then
+      allocate(self%allowed(1:nAtomTypes) )
+      self%allowed = .true.
+    endif
+
     self%list = 0
     self%nNeigh = 0 
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"

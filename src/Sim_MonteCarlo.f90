@@ -183,7 +183,6 @@ contains
 
     do i = 1, size(BoxArray)
       if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
-        write(*,*) "BLAH!"
         call BoxArray(i) % box % Maintenance
       endif
     enddo
