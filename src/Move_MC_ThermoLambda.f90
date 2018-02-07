@@ -51,6 +51,14 @@ module Move_ThermoLambda
       stop
     endif
 
+    if(.not. allocated(AnalysisArray) ) then
+      if(self%AnalyFunc <= 0) then
+        write(*,*) "ERROR! To perform thermodynamical integration the cooresponding"
+        write(*,*) "analysis function must be defined."
+        stop
+      endif
+    endif
+
     do i = 1, size(AnalysisArray)
       select type(analy => AnalysisArray(i)%func)
         class is(ThermoIntegration)

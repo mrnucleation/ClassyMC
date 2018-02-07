@@ -46,6 +46,11 @@ use VarPrecision
       end select
     enddo
 
+    if(self%ECalc < 1) then
+      write(*,*) "ERROR! The ThermoIntegration Analysis function must be used"
+      write(*,*) "with the corresponding energy function!"
+      stop
+    endif
 
   end subroutine
 !=========================================================================

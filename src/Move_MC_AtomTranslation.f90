@@ -62,7 +62,7 @@ use VarPrecision
     integer :: CalcIndex
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE
-
+    real(dp), parameter :: Prob = 1E0_dp
 
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
@@ -107,15 +107,15 @@ use VarPrecision
     !Energy Calculation
 !    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    write(2,*) E_Diff
     if(.not. accept) then
       return
     endif
 
 
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, 1E0_dp, self%disp(1:1))
+    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%disp(1:1))
     if(accept) then
-
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)

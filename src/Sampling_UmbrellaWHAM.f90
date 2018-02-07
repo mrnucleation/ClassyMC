@@ -14,6 +14,7 @@ module UmbrellaWHAMRule
     integer, allocatable :: binMin(:), binMax(:)
     integer, allocatable :: binIndx(:)
     integer, allocatable :: UArray(:)
+    real(dp), allocatable :: valMin(:), valMax(:)
     real(dp), allocatable :: UBias(:)
     real(dp), allocatable :: UHist(:)
     real(dp), allocatable :: UBinSize(:)
