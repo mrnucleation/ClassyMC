@@ -54,7 +54,7 @@ module SimpleSimBox
 !      procedure, public, pass :: GetThermo
 !      procedure, public, pass :: ThermoLookUp
 
-      procedure, pass :: Maintenence => SimpleBox_Maintenence
+      procedure, pass :: Maintenance => SimpleBox_Maintenance
       procedure, pass :: Prologue => SimpleBox_Prologue
       procedure, pass :: Epilogue => SimpleBox_Epilogue
 
@@ -394,8 +394,7 @@ module SimpleSimBox
           arrayIndx = self%MolStartIndx(subIndx)
           arrayIndx = arrayIndx + iAtom - 1
 
-          write(50,*) iType, iMol, iAtom, self%atoms(1,arrayIndx), &
-                       self%atoms(2,arrayIndx), self%atoms(3,arrayIndx)
+          write(50,*) iType, iMol, iAtom, self%atoms(1,arrayIndx), self%atoms(2,arrayIndx), self%atoms(3,arrayIndx)
         enddo
       enddo
     enddo
@@ -475,21 +474,28 @@ module SimpleSimBox
       endif
     enddo
 
-    if(disp(iDisp)%newlist) then
-      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
-    endif
+!    if(disp(iDisp)%newlist) then
+!      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
+!    endif
 
   end subroutine
 
 !==========================================================================================
-  subroutine SimpleBox_Maintenence(self)
+  subroutine SimpleBox_Maintenance(self)
     use CoordinateTypes
     implicit none
     class(SimpleBox), intent(inout) :: self
+    logical :: accept
+    real(dp) :: tempE
 
     call self % NeighList(1) % BuildList
 !    call self % ComputeEnergy
 
+!    call self % EFunc % Method % DetailedECalc( self, tempE, accept )
+
+!    if(abs(self%ETotal-tempE)/abs(tempE) > 1e-4) then
+!   write(2,*) self%ETotal, tempE, self%ETotal-tempE
+!    endif
 
   end subroutine
 !==========================================================================================

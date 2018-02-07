@@ -102,6 +102,7 @@ module FF_Einstein
       rsq = rx*rx + ry*ry + rz*rz
       E_Diff = E_Diff + self%kSpring*rsq
 
+      iAtom = disp(iDisp)%oldAtmIndx
       rx = curBox % atoms(1, iAtom)  -  self % initPos(1, iAtom)
       ry = curBox % atoms(2, iAtom)  -  self % initPos(2, iAtom)
       rz = curBox % atoms(3, iAtom)  -  self % initPos(3, iAtom)

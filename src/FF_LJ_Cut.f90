@@ -85,17 +85,16 @@ module FF_Pair_LJ_Cut
         if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then
           cycle
         endif
-        atmType2 = curbox % AtomType(jAtom)
-        ep = self % epsTable(atmType1,atmType2)
-        sig_sq = self % sigTable(atmType1,atmType2)          
-        rmin_ij = self % rMinTable(atmType1,atmType2)          
-
         rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
         ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx**2 + ry**2 + rz**2
         if(rsq < self%rCutSq) then
+          atmType2 = curbox % AtomType(jAtom)
+          ep = self % epsTable(atmType1, atmType2)
+          sig_sq = self % sigTable(atmType1, atmType2)          
+          rmin_ij = self % rMinTable(atmType1, atmType2)          
           if(rsq < rmin_ij) then
             write(*,*) sqrt(rsq)
             write(*,*) iAtom, jAtom
@@ -112,7 +111,7 @@ module FF_Pair_LJ_Cut
       enddo
     enddo
   
-    write(nout,*) "Lennard-Jones Energy:", E_LJ
+!    write(nout,*) "Lennard-Jones Energy:", E_LJ
       
     E_T = E_LJ    
   end subroutine
@@ -387,21 +386,21 @@ module FF_Pair_LJ_Cut
   !=====================================================================
   subroutine Prologue_LJ_Cut(self)
     use Common_MolInfo, only: nAtomTypes
-!    use
+    use ParallelVar, only: nout
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     integer :: i, j
 
     do i = 1, nAtomTypes
-      write(*,*) (self%epsTable(i,j), j=1,nAtomTypes)
+      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
     enddo
 
     do i = 1, nAtomTypes
-      write(*,*) (self%sigTable(i,j), j=1,nAtomTypes)
+      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
     enddo
 
     do i = 1, nAtomTypes
-      write(*,*) (self%rMinTable(i,j), j=1,nAtomTypes)
+      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
     enddo
 
 

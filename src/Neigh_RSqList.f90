@@ -34,11 +34,12 @@ use Template_NeighList, only: NeighListDef
     use BoxData, only: BoxArray
     use Common_NeighData, only: neighSkin
     use Common_MolInfo, only: nAtomTypes
+    use ParallelVar, only: nout
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 0.55E0_dp  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 0.35E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box
@@ -65,6 +66,8 @@ use Template_NeighList, only: NeighListDef
       endif
     endif
  
+    write(nout,*) "Neighbor List CutOff:", self%rCut
+    write(nout,*) "Neighbor List Maximum Neighbors:", self%maxNei
     if(self%maxNei > self%parent%nMaxAtoms-1) then
       self%maxNei = self%parent%nMaxAtoms-1
     endif
@@ -73,7 +76,7 @@ use Template_NeighList, only: NeighListDef
     allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
 
     if(.not. allocated(self%allowed) ) then
-      allocate(self%allowed(1:nAtomTypes) )
+      allocate(self%allowed(1:nAtomTypes), stat=AllocateStatus )
       self%allowed = .true.
     endif
 
@@ -269,67 +272,46 @@ use Template_NeighList, only: NeighListDef
       trialBox%NeighList(iList)%list = 0
     enddo
 
-    molStart = 1
-    do iType = 1, nMolTypes
-
-      iLow = trialBox%MolStartIndx(molStart)
-      iUp = trialBox%MolEndIndx(molStart + trialBox%NMol(iType) - 1) 
-      do iAtom = iLow, iUp
-        jMolStart = molStart
-        do jType = iType, nMolTypes
-          jMolEnd = 1
-          do j = 1, jType-1
-            jMolEnd = jMolEnd + trialBox%NMolMax(j)
-          enddo 
-          if(iType == jType) then
-            if( trialBox%MolIndx(iAtom)+1 <= jMolEnd + trialBox%NMol(iType) -1  ) then
-              jLow = trialBox%MolStartIndx( trialBox%MolIndx(iAtom)+1 )
-            else
+    do iAtom = 1, trialBox%nMaxAtoms-1
+      if( trialBox%MolSubIndx(iAtom) > trialBox%NMol(trialBox%MolType(iAtom)) ) then
+        cycle
+      endif
+      do jAtom = iAtom+1, trialBox%nMaxAtoms
+        if( trialBox%MolSubIndx(jAtom) > trialBox%NMol(trialBox%MolType(jAtom)) ) then
+          cycle
+        endif
+        rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
+        ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
+        rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
+        call trialBox%Boundary(rx, ry, rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        do iList = 1, size(trialBox%NeighList)
+          if( trialBox % NeighList(iList) % restrictType ) then
+            atmType = trialBox % atomType(iAtom)
+            if( trialBox%NeighList(iList)%allowed(atmType)  ) then
               cycle
             endif
-          else
-            jLow = trialBox%TypeFirst(jType)
+
+            atmType = trialBox % atomType(jAtom)
+            if( trialBox%NeighList(iList)%allowed(atmType)  ) then
+              cycle
+            endif
           endif
-          jUp = trialBox%MolEndIndx( jMolEnd + trialBox%NMol(jType) - 1 )
- 
-          do jAtom = jLow, jUp
-            rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
-            ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
-            rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
-            call trialBox%Boundary(rx, ry, rz)
-            rsq = rx*rx + ry*ry + rz*rz
-            do iList = 1, size(trialBox%NeighList)
-              if( trialBox % NeighList(iList) % restrictType ) then
-                atmType = trialBox % atomType(iAtom)
-                if( trialBox%NeighList(iList)%allowed(atmType)  ) then
-                  cycle
-                endif
+          if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
+            trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
+            if(trialBox%NeighList(iList)%nNeigh(iAtom) > trialBox%NeighList(iList)%maxNei) then
+              write(nout, *) "Neighborlist overflow!"
+            endif
+            trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
 
-                atmType = trialBox % atomType(jAtom)
-                if( trialBox%NeighList(iList)%allowed(atmType)  ) then
-                  cycle
-                endif
-              endif
-              if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
-                trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
-                if(trialBox%NeighList(iList)%nNeigh(iAtom) > trialBox%NeighList(iList)%maxNei) then
-                  write(nout, *) "Neighborlist overflow!"
-                endif
-                trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
-
-                trialBox%NeighList(iList)%nNeigh(jAtom) = trialBox%NeighList(iList)%nNeigh(jAtom) + 1
-                if(trialBox%NeighList(iList)%nNeigh(jAtom) > trialBox%NeighList(iList)%maxNei) then
-                  write(nout, *) "Neighborlist overflow!"
-                endif
- 
-                trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
-              endif
-            enddo        
-          enddo
+            trialBox%NeighList(iList)%nNeigh(jAtom) = trialBox%NeighList(iList)%nNeigh(jAtom) + 1
+            if(trialBox%NeighList(iList)%nNeigh(jAtom) > trialBox%NeighList(iList)%maxNei) then
+              write(nout, *) "Neighborlist overflow!"
+            endif
+            trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
+          endif
         enddo
       enddo  
-
-      molStart = molStart + trialBox%NMolMax(iType) 
     enddo
 
 

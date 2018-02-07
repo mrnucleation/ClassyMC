@@ -182,9 +182,9 @@ contains
     endif
 
     do i = 1, size(BoxArray)
-      if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
+!      if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
         call BoxArray(i) % box % Maintenance
-      endif
+!      endif
     enddo
 
 
