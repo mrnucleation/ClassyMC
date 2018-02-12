@@ -8,7 +8,7 @@ use VarPrecision
   type, public, extends(MCMove) :: AtomTranslate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    real(dp) :: max_dist = 3.5E0_dp
+    real(dp) :: max_dist = 0.05E0_dp
     type(Displacement) :: disp(1:1)
 
 !    integer, allocatable :: tempNnei(:)

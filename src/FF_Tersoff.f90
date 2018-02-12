@@ -94,6 +94,7 @@ module FF_Pair_Tersoff
     allocate(self%tersoffPair(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%tersoffAngle(1:nAtomTypes,1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
+    self%rMinTable = 0.5E0_dp
     self%rCut = 3E0_dp
     self%rCutSq = 3E0_dp**2
 
@@ -220,7 +221,7 @@ module FF_Pair_Tersoff
     integer :: iDisp, iAtom, iNei, jNei, jAtom, kNei, kAtom, dispLen
 !    integer :: maxIndx, minIndx
     integer :: atmType1, atmType2, atmType3
-    real(dp) :: rMaxSq
+    real(dp) :: rMaxSq, rMinSq
     real(dp) :: rxij, ryij, rzij, rij
     real(dp) :: rxjk, ryjk, rzjk, rjk
     real(dp) :: rxik, ryik, rzik, rik
@@ -234,7 +235,7 @@ module FF_Pair_Tersoff
     real(dp) :: angijk, angjik
     real(dp) :: E_Tersoff
     integer :: nRecalc
-    integer :: recalcList(1:60)
+    integer :: recalcList(1:200)
 
      ! The recalcList is a list of particles whose intermolecular interactions have
      ! changed, but the particles themselves did not move.
@@ -260,6 +261,11 @@ module FF_Pair_Tersoff
         rMaxSq = self%tersoffPair(atmType1, atmType2) % rMaxSq
 
         if(rij < rMaxSq) then
+          rMinSq = self % rMinTable(atmType1, atmType2)          
+          if(rij < rMinSq) then
+            accept = .false.
+            return
+          endif
           if(all(recalcList /= jAtom) ) then
             nRecalc = nRecalc + 1
             recalcList(nRecalc) = jAtom
@@ -703,9 +709,7 @@ module FF_Pair_Tersoff
       rCut = -1E0_dp
       do type1 = 1, nAtomTypes
         do type2 = 1, nAtomTypes
-          Req = self%tersoffPair(type1, type2) % REq
-          D = self%tersoffPair(type1, type2) % D
-          rMax = Req + D
+          rMax = self%tersoffPair(type1, type2) % RMax
           if(rCut < rMax) then
             rCut = rMax
           endif
