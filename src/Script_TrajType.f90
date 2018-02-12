@@ -8,8 +8,9 @@ use VarPrecision
 contains
 !================================================================================
   subroutine Script_TrajType(line, TrajNum, lineStat)
-    use Traj_XYZ, only: trajXYZ
     use ParallelVar, only: nout
+    use Traj_Lammps, only: LAMMPSDump
+    use Traj_XYZ, only: trajXYZ
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: TrajNum
@@ -21,8 +22,10 @@ contains
     lineStat  = 0
     call GetXCommand(line, command, 1, lineStat)
 
-    !Safety check to ensure that the index number is within proper bounds
     select case(trim(adjustl(command)))
+      case("dump")
+        allocate(LAMMPSDump::TrajArray(TrajNum) % traj)
+
       case("xyz")
         allocate(trajXYZ::TrajArray(TrajNum) % traj)
 

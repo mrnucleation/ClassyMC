@@ -246,7 +246,7 @@ $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Force
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
 $(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o
-$(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XYZFormat.o 
+$(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o
 $(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Common_BoxData.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o
