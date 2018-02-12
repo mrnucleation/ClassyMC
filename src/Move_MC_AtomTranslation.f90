@@ -8,7 +8,7 @@ use VarPrecision
   type, public, extends(MCMove) :: AtomTranslate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    real(dp) :: max_dist = 0.005E0_dp
+    real(dp) :: max_dist = 3.5E0_dp
     type(Displacement) :: disp(1:1)
 
 !    integer, allocatable :: tempNnei(:)
@@ -107,7 +107,6 @@ use VarPrecision
     !Energy Calculation
 !    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
-    write(2,*) E_Diff
     if(.not. accept) then
       return
     endif

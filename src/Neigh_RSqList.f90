@@ -67,10 +67,10 @@ use Template_NeighList, only: NeighListDef
     endif
  
     write(nout,*) "Neighbor List CutOff:", self%rCut
-    write(nout,*) "Neighbor List Maximum Neighbors:", self%maxNei
     if(self%maxNei > self%parent%nMaxAtoms-1) then
       self%maxNei = self%parent%nMaxAtoms-1
     endif
+    write(nout,*) "Neighbor List Maximum Neighbors:", self%maxNei
 
     allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
     allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )

@@ -7,11 +7,11 @@ contains
     use ParallelVar, only: myid
 !      use SimParameters, only: echoInput
     implicit none
-    character(len=maxLineLen),allocatable,intent(out) :: lineArray(:)
+    character(len=maxLineLen), allocatable, intent(out) :: lineArray(:)
     character(len=50), intent(in) :: fileName
     integer, allocatable, intent(out) :: lineNumber(:)
 
-    character(len=maxLineLen),allocatable :: rawLines(:)
+    character(len=maxLineLen), allocatable :: rawLines(:)
     character(len=50) :: modfileName
     character(len=30) :: command
     integer, intent(out) :: nLines
@@ -46,12 +46,17 @@ contains
     enddo
     rewind(54)
 
+    if(nRawLines == 0) then
+      write(*,*) "ERROR! Inputfile is empty!"
+      stop
+    endif
+
 
 !      Read in the file line by line
     allocate(rawLines(1:nRawLines), stat = AllocateStat)
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
-!      write(*,*) nRawLines
+    write(*,*) nRawLines
 
     do iLine = 1, nRawLines
       read(54,"(A)") rawLines(iLine)
