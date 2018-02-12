@@ -1,0 +1,27 @@
+
+moleculetypes 1
+
+atomdef
+  "Na"  1.0
+end_atomdef
+
+molecule 1
+  atoms
+    1
+  end_atoms
+end_molecule
+
+forcefieldtype
+  Tersoff
+end_forcefieldtype
+
+units energy ev
+units length a
+
+#  Pair =  type1 type2 A  B  lam1 lam2 Req D beta n
+#  Angle =  type1 type2 type3 cos(eq) lam3 c d gam
+forcefield 1
+  symetric .true.
+  pair 1 1  1684.301476 473.621419 2.750522  2.19964 3.282761 0.270511 1e-06  0.770018
+  angle 1 1 1 -0.471029 0.0 77638.534354 16.148387 1.0
+end_forcefield
