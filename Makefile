@@ -12,7 +12,7 @@ OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
 #OPTIMIZE_FLAGS += -no-prec-div
-OPTIMIZE_FLAGS += -no-wrap-margin
+#OPTIMIZE_FLAGS += -no-wrap-margin
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 #DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
@@ -100,6 +100,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Script_SimBoxes.f90\
 	        	$(SRC)/Output_DumpCoords.f90\
 	        	$(SRC)/Traj_XYZFormat.f90\
+	        	$(SRC)/Traj_LAMMPSDump.f90\
 						$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\

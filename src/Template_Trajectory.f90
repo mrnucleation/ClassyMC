@@ -66,7 +66,7 @@ module TrajectoryTemplate
 !====================================================================
   subroutine WriteFrame(self) 
     implicit none
-    class(trajectory), intent(in) :: self
+    class(trajectory), intent(inout) :: self
 
 
   end subroutine

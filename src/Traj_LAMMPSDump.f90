@@ -1,85 +1,91 @@
 !====================================================================
-module Traj_XYZ
+module Traj_Lammps
   use VarPrecision
   use TrajectoryTemplate, only: trajectory
 
-  type, public, extends(trajectory) :: trajXYZ
-    logical :: padding = .false.
+  type, public, extends(trajectory) :: LAMMPSDump
     logical :: recenter = .false.
 !    integer :: fileUnit = -1
 !    integer :: boxNum = -1
 !    integer :: outFreq = 5000
 !    character(len=50) :: fileName
+    integer :: xLen
+    real(dp), allocatable :: boxDim(:,:)
+    character(len=50) :: boxStr
     contains
-       procedure, pass :: WriteFrame => TrajXYZ_WriteFrame
+       procedure, pass :: WriteFrame => LAMMPSDump_WriteFrame
 !       procedure, pass :: SetUnit
 !       procedure, pass :: SetBox
 !       procedure, pass :: SetFileName
 !       procedure, pass :: SetFreq
 !       procedure, pass :: OpenFile
 !       procedure, pass :: CloseFile
-       procedure, pass :: Prologue => TrajXYZ_Prologue
-       procedure, pass :: Epilogue => TrajXYZ_Epilogue
+       procedure, pass :: Prologue => LAMMPSDump_Prologue
+       procedure, pass :: Epilogue => LAMMPSDump_Epilogue
 
   end type
 !====================================================================
   contains
 !====================================================================
-  subroutine TrajXYZ_WriteFrame(self) 
+  subroutine LAMMPSDump_WriteFrame(self) 
     use BoxData, only: BoxArray
     use Common_MolInfo, only: AtomData
     implicit none
-    class(trajXYZ), intent(inout) :: self
-    integer :: iAtom, jDim, boxNum
+    class(LAMMPSDump), intent(inout) :: self
+    integer :: iAtom, jDim, boxNum, i
     integer :: nDim, atomType, molType
-    real(dp) :: xcm, ycm, zcm
 
 
     boxNum = self%boxNum
     nDim = BoxArray(boxNum)%box%nDimension
-    if(self%padding) then
-      write(self%fileUnit, *) BoxArray(boxNum)%box%nMaxAtoms
-    else
-      write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
-    endif
-    write(self%fileUnit, *) 
+
+    write(self%fileUnit, *) "ITEM: TIMESTEP"
+    write(self%fileUnit, *) "0"
+
+    write(self%fileUnit, *) "ITEM: NUMBER OF ATOMS "
+    write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
+
+    write(self%fileUnit, *) self%boxstr
+    call BoxArray(boxNum)%box%GetDimensions(self%boxdim)
+    do jDim = 1, nDim
+      write(self%fileUnit, *) (self%boxdim(i, jDim), i=1,self%xLen)
+    enddo
+
+    write(self%fileUnit, *) "ITEM: ATOMS id type x y z  "
 
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
       molType = BoxArray(boxNum)%box%MolType(iAtom)
       atomType = BoxArray(boxNum)%box%AtomType(iAtom)
       if(BoxArray(boxNum)%box%NMol(molType) < BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
-        if(.not. self%padding) then
-          cycle
-        else
-          write(self%fileUnit, *) AtomData(atomType)%symb, (1E15_dp, jDim=1,nDim)
-        endif
-      else
-        write(self%fileUnit, *) AtomData(atomType)%symb, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
+        write(self%fileUnit, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
       endif
-      atomType = BoxArray(boxNum)%box%AtomType(iAtom)
     enddo
 
 
   end subroutine
 !====================================================================
-  subroutine TrajXYZ_Prologue(self) 
+  subroutine LAMMPSDump_Prologue(self) 
+    use BoxData, only: BoxArray
     implicit none
-    class(trajXYZ), intent(inout) :: self
+    class(LAMMPSDump), intent(inout) :: self
+
+    select type(box => BoxArray(self%boxnum)%box)
+      class default
+        self%xLen = 2
+        self%boxstr = "ITEM: BOX BOUNDS xx yy zz"
+        allocate( self%boxDim(1:2, 1:box%nDimension) )
+
+    end select
 
     call self % WriteFrame
   end subroutine
 !====================================================================
-  subroutine TrajXYZ_Epilogue(self) 
+  subroutine LAMMPSDump_Epilogue(self) 
     implicit none
-    class(trajXYZ), intent(inout) :: self
+    class(LAMMPSDump), intent(inout) :: self
 
     call self % WriteFrame
   end subroutine
 !====================================================================
 end module
-!====================================================================
-!Notes: If the padding flag is true, the function will write dummy coordinates as a placeholder
-!       for atoms which are not currently in the system, but have the potential of being added
-!       by a swap move.  This is done because some visualization software prefer to have a fixed
-!       number of atoms for each simulation frame. 
 !====================================================================

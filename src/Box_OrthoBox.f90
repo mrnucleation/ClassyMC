@@ -16,6 +16,7 @@ module OrthoBoxDef
 !      procedure, pass :: Constructor => Ortho_Constructor
       procedure, pass :: LoadDimension => Ortho_LoadDimension
 !      procedure, pass :: UpdateEnergy => Ortho_UpdateEnergy
+!      procedure, pass :: GetDimensions => Ortho_GetDimensions
       procedure, pass :: Boundary => Ortho_Boundary
 !      procedure, pass :: UpdatePosition => Ortho_UpdatePosition
       procedure, pass :: IOProcess => Ortho_IOProcess

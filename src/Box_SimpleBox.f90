@@ -12,6 +12,7 @@ module SimpleSimBox
 !    integer :: boxID
     integer :: nTotal
 !    integer :: nMaxAtoms
+!    integer :: nDimension = 3
 
 !    real(dp), allocatable :: atoms(:,:)
 !    real(dp), allocatable :: ETable(:), dETable(:)
@@ -45,6 +46,7 @@ module SimpleSimBox
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: DumpData => SimpleBox_DumpData
 
+      procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: AddMol => SimpleBox_AddMol
       procedure, pass :: DeleteMol => SimpleBox_DeleteMol
       procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
@@ -179,6 +181,17 @@ module SimpleSimBox
     integer, intent(out) :: lineStat
 
     lineStat = 0
+
+  end subroutine
+!==========================================================================================
+  subroutine Simplebox_GetDimensions(self, list)
+    use Input_Format, only: GetXCommand
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    real(dp), intent(out) :: list(:, :)
+
+    list = 0E0_dp
+
 
   end subroutine
 !==========================================================================================

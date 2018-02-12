@@ -15,6 +15,7 @@ module CubicBoxDef
     contains
 !      procedure, pass :: Constructor => Cube_Constructor
       procedure, pass :: LoadDimension => Cube_LoadDimension
+      procedure, pass :: GetDimensions => Cube_GetDimensions
       procedure, pass :: Boundary => Cube_Boundary
       procedure, pass :: IOProcess => Cube_IOProcess
       procedure, pass :: DumpData => Cube_DumpData
@@ -94,6 +95,22 @@ module CubicBoxDef
     read(line, *) dummy, boxL
     self%boxL = boxL
     self%boxL2 = boxL/2.0E0_dp
+
+  end subroutine
+!==========================================================================================
+  subroutine Cube_GetDimensions(self, list)
+    use Input_Format, only: GetXCommand
+    implicit none
+    class(CubeBox), intent(inout) :: self
+    real(dp), intent(out) :: list(:, :)
+
+    integer :: iDimen
+
+    do iDimen = 1, self%nDimension
+      list(1, iDimen) = -self%boxL2
+      list(2, iDimen) = self%boxL2
+    enddo
+
 
   end subroutine
 !==========================================================================================
@@ -245,7 +262,6 @@ module CubicBoxDef
     close(50)
 
   end subroutine
-
 !==========================================================================================
   subroutine Cube_Prologue(self)
     use ParallelVar, only: nout
