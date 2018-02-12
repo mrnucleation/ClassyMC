@@ -55,12 +55,13 @@ module Traj_Lammps
 
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
       molType = BoxArray(boxNum)%box%MolType(iAtom)
-      atomType = BoxArray(boxNum)%box%AtomType(iAtom)
-      if(BoxArray(boxNum)%box%NMol(molType) < BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
+      if(BoxArray(boxNum)%box%NMol(molType) > BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
+        atomType = BoxArray(boxNum)%box%AtomType(iAtom)
         write(self%fileUnit, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
       endif
     enddo
 
+    flush(self%fileUnit)
 
   end subroutine
 !====================================================================
@@ -72,7 +73,8 @@ module Traj_Lammps
     select type(box => BoxArray(self%boxnum)%box)
       class default
         self%xLen = 2
-        self%boxstr = "ITEM: BOX BOUNDS xx yy zz"
+!        self%boxstr = "ITEM: BOX BOUNDS xx yy zz"
+        self%boxstr = "ITEM: BOX BOUNDS pp pp pp"
         allocate( self%boxDim(1:2, 1:box%nDimension) )
 
     end select
