@@ -39,19 +39,19 @@ module Traj_Lammps
     boxNum = self%boxNum
     nDim = BoxArray(boxNum)%box%nDimension
 
-    write(self%fileUnit, *) "ITEM: TIMESTEP"
+    write(self%fileUnit, "(A)") "ITEM: TIMESTEP"
     write(self%fileUnit, *) "0"
 
-    write(self%fileUnit, *) "ITEM: NUMBER OF ATOMS "
+    write(self%fileUnit, "(A)") "ITEM: NUMBER OF ATOMS "
     write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
 
-    write(self%fileUnit, *) self%boxstr
+    write(self%fileUnit, "(A)") self%boxstr
     call BoxArray(boxNum)%box%GetDimensions(self%boxdim)
     do jDim = 1, nDim
       write(self%fileUnit, *) (self%boxdim(i, jDim), i=1,self%xLen)
     enddo
 
-    write(self%fileUnit, *) "ITEM: ATOMS id type x y z  "
+    write(self%fileUnit, "(A)") "ITEM: ATOMS id type x y z  "
 
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
       molType = BoxArray(boxNum)%box%MolType(iAtom)
