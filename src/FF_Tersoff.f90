@@ -611,7 +611,7 @@ module FF_Pair_Tersoff
 !===================================================================== 
   subroutine New_Tersoff(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(), intent(inout) :: self
+    class(Pair_Tersoff), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(displacement), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
