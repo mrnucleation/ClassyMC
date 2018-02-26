@@ -41,7 +41,6 @@ module CoordinateTypes
     integer(kind=atomIntType) :: molType, atmIndx, molIndx
   end type
 
-
   type, extends(Perturbation) :: Addition
     integer(kind=atomIntType) :: molType, atmIndx, molIndx
     real(dp) :: x_new, y_new, z_new
