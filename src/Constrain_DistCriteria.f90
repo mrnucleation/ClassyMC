@@ -5,7 +5,7 @@
 module Constrain_DistanceCriteria
   use VarPrecision
   use ConstraintTemplate, only: constraint
-  use CoordinateTypes, only: Displacement
+  use CoordinateTypes, only: Displacement, Perturbation
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
 
@@ -136,33 +136,37 @@ module Constrain_DistanceCriteria
     implicit none
     class(DistCriteria), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
-    type(Displacement), intent(in) :: disp(:)
+!    type(Displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
     accept = .true.
 
-    !Called when a particle is either moved or replaced with another particle
-    if(disp(1)%newAtom .and. disp(1)%oldAtom) then
-      if(disp(1)%molType == disp(1)%oldMolType) then
-        call self % ShiftCheck(trialBox, disp, accept)
-      elseif(self%molType == disp(1)%molType) then
-        call self % NewCheck(trialBox, disp, accept)
-      elseif(self%molType == disp(1)%oldMolType) then
-        call self % OldCheck(trialBox, disp, accept)
-      endif
-      return
-    endif
+    select type(disp)
+      class is(Displacement)
+        !Called when a particle is either moved or replaced with another particle
+        if(disp(1)%newAtom .and. disp(1)%oldAtom) then
+          if(disp(1)%molType == disp(1)%oldMolType) then
+            call self % ShiftCheck(trialBox, disp, accept)
+          elseif(self%molType == disp(1)%molType) then
+            call self % NewCheck(trialBox, disp, accept)
+          elseif(self%molType == disp(1)%oldMolType) then
+            call self % OldCheck(trialBox, disp, accept)
+          endif
+          return
+        endif
 
-    !Called when a particle is added to a system
-    if(disp(1)%newAtom) then
-      call self % NewCheck(trialBox, disp, accept)
-      return
-    endif
+        !Called when a particle is added to a system
+        if(disp(1)%newAtom) then
+          call self % NewCheck(trialBox, disp, accept)
+          return
+        endif
 
-    !Called when a particle is removed from a system.
-    if(disp(1)%oldAtom) then
-      call self % OldCheck(trialBox, disp, accept)
-      return
-    endif
+        !Called when a particle is removed from a system.
+        if(disp(1)%oldAtom) then
+          call self % OldCheck(trialBox, disp, accept)
+          return
+        endif
+    end select
 
 
   end subroutine

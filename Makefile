@@ -17,7 +17,7 @@ OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 #DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
 DETAILEDDEBUG:= -check all -check bounds -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
-DEBUGFLAGS:= -fbacktrace -fcheck=all -g
+#DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0
 #DEBUGFLAGS += -pg 
 #DEBUGFLAGS += -ffpe-trap=invalid
