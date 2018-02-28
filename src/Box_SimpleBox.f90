@@ -73,6 +73,7 @@ module SimpleSimBox
 !==========================================================================================
   subroutine SimpleBox_Constructor(self)
     use Common_MolInfo
+    use ParallelVar, only: nout
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer :: AllocateStatus

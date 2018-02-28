@@ -166,6 +166,7 @@ module FF_Einstein
   subroutine ProcessIO_Pair_Einstein(self, line)
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: GetAllCommands, GetXCommand, maxLineLen
+    use Units, only: outEngUnit, outLenUnit
     implicit none
     class(Pair_Einstein), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
@@ -182,7 +183,7 @@ module FF_Einstein
       case("kspring")
         call GetXCommand(line, command, 2, lineStat)
         read(command, *) k
-        self % kSpring = 0.5E0_dp * k
+        self % kSpring = 0.5E0_dp * k /outEngUnit
 
       case default
         lineStat = -1

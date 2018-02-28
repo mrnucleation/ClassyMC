@@ -14,6 +14,7 @@ module OrthoBoxDef
     real(dp) :: boxLz, boxLz2
     contains
 !      procedure, pass :: Constructor => Ortho_Constructor
+      procedure, pass :: Prologue => Ortho_Prologue
       procedure, pass :: LoadDimension => Ortho_LoadDimension
 !      procedure, pass :: UpdateEnergy => Ortho_UpdateEnergy
 !      procedure, pass :: GetDimensions => Ortho_GetDimensions
@@ -25,6 +26,39 @@ module OrthoBoxDef
 
 !==========================================================================================
   contains
+!==========================================================================================
+  subroutine Ortho_Prologue(self)
+    use Common_MolInfo, only: nMolTypes, MolData
+    use ParallelVar, only: nout
+    use Units, only: outEngUnit
+    implicit none
+    class(OrthoBox), intent(inout) :: self
+    integer :: iType, iMol, iAtom, jType, subIndx, arrayIndx
+
+    call self % ComputeEnergy
+    call self % NeighList(1) % BuildList
+
+    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit
+    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
+
+
+    do iType = 1, nMolTypes
+      do iMol = 1, self%NMol(iType)
+        do iAtom = 1, MolData(iType)%nAtoms
+          subIndx = 0
+          do jType = 1, iType-1
+            subIndx = self%NMolMax(jType)
+          enddo
+          subIndx = subIndx + iMol
+          arrayIndx = self%MolStartIndx(subIndx)
+          arrayIndx = arrayIndx + iAtom - 1
+
+          call self%boundary(self%atoms(1,arrayIndx), self%atoms(2,arrayIndx), self%atoms(3,arrayIndx))
+        enddo
+      enddo
+    enddo
+
+  end subroutine
 !==========================================================================================
   subroutine Ortho_LoadDimension(self, line, lineStat)
     use Input_Format, only: GetXCommand
@@ -149,7 +183,7 @@ module OrthoBoxDef
 
     open(unit=50, file=trim(adjustl(filename)))
 
-    write(50,*) "boxtype cube"
+    write(50,*) "boxtype ortho"
     write(50,*) "dimension", self%boxLx,  self%boxLy,  self%boxLz 
     write(50,*) "molmin", (self%NMolMin(iType), iType=1,nMolTypes)
     write(50,*) "molmax", (self%NMolMax(iType), iType=1,nMolTypes)

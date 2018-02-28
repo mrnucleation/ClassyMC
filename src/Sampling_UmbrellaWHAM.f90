@@ -310,9 +310,9 @@ module UmbrellaWHAMRule
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: AllocateStatus
-    integer :: j, iInput, iBias, inStat, biasIndx
+    integer :: j, iInput, iBias, inStat, biasIndx, iUmbrella
     real(dp), allocatable :: varValue(:)
-    real(dp) :: curBias
+    real(dp) :: curBias, refVal
 
     open(unit=36, file=trim(adjustl(self%filename)) )
 
@@ -336,6 +336,12 @@ module UmbrellaWHAMRule
 
       self%UBias(biasIndx) = curBias
     enddo
+
+    refVal = self%UBias(self%refBin)
+    do iUmbrella = 1, self%umbrellaLimit
+      self%UBias(biasIndx) = self%UBias(biasIndx) - refVal
+    enddo
+
 
     deallocate(varValue)
 
