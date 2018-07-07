@@ -1,0 +1,39 @@
+#======================================
+  set rng_seed 6
+#  set rng_seed 21448
+  set NeighSkin 2.5
+  set moves 1000
+  set cycles 2000
+#  SamplingType UmbrellaWHAM
+  SamplingType Metropolis
+#  SamplingType Min
+
+  forcefield "LJ.clFF"
+
+  Create boxes
+    FromFile "PairConfig.clssy"
+  End_Create
+
+  neighlist 1 rsqlist 1
+ 
+  modify box 1 buildfreq 100
+
+  Create constraint 1
+    distancecriteria 1 1.5 1
+  End_Create
+
+  Create moves
+    atomtranslation 0.9
+  End_Create
+
+#  Create analysis
+#    thermointegration 
+#  End_Create
+
+#  Create trajectory
+#    xyz 1 1000 "Traj.xyz"
+#  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 0.5
+#=====================================

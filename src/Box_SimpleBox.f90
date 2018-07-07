@@ -121,7 +121,7 @@ module SimpleSimBox
     allocate(self%MolGlobalIndx(1:nMolTypes, 1:maxMol), stat=AllocateStatus)
 
     allocate(self%chempot(1:nMolTypes), stat=AllocateStatus)
-    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+    IF (AllocateStatus /= 0) STOP "Allocation Error in Simulation Box Def"
 
     self%AtomType = 0
     self%MolType = 0
@@ -308,7 +308,7 @@ module SimpleSimBox
       if(.not. accept) then
         return
       endif
-    endif     
+    endif
 
   end function
 !==========================================================================================
@@ -518,9 +518,24 @@ module SimpleSimBox
     use Units, only: outEngUnit
     implicit none
     class(SimpleBox), intent(inout) :: self
+    logical :: accept
+    integer :: iConstrain
 
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
+
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % Prologue
+        call self%Constrain(iConstrain) % method % CheckInitialConstraint(self, accept)
+      enddo
+      if(.not. accept) then
+        write(nout,*) "Initial Constraints are not statisfied!"
+        stop
+      endif
+    endif
+
+
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
@@ -533,6 +548,7 @@ module SimpleSimBox
     use Units, only: outEngUnit
     implicit none
     class(SimpleBox), intent(inout) :: self
+    integer :: iConstrain
     real(dp) :: E_Culm
 
     E_Culm = self%ETotal
@@ -560,7 +576,11 @@ module SimpleSimBox
       endif
     endif
 
-
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % Epilogue
+      enddo
+    endif
   end subroutine
 !==========================================================================================
   pure subroutine SimpleBox_CopyBox(box1, box2) 

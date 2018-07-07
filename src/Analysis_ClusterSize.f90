@@ -14,11 +14,12 @@ use VarPrecision
     integer :: nMol 
     contains
 !      procedure, pass :: Initialize
+!      procedure, pass :: Prologue => ClusterSize_Prologue
       procedure, pass :: Compute => ClusterSize_Compute
+      procedure, pass :: CalcNewState => ClusterSize_CalcNewState
 !      procedure, pass :: Maintenance 
       procedure, pass :: ProcessIO => ClusterSize_ProcessIO
       procedure, pass :: GetResult => ClusterSize_GetResult
-!      procedure, pass :: Finalize => ClusterSize_Finalize
   end type
 
  contains
@@ -60,7 +61,6 @@ use VarPrecision
       if(disp(1)%oldMolType == self%molType) then
         Diff = Diff - 1
       endif
-
     endif
 
     analyCommon(self%analyID) = real(self%nMol + Diff, dp)
@@ -80,11 +80,9 @@ use VarPrecision
     read(command, *) intVal
     self%boxNum = intVal
 
-
-
     call GetXCommand(line, command, 3, lineStat)
     read(command, *) intVal
-    self%nMol = intVal
+    self%molType = intVal
 
   end subroutine
 !=========================================================================

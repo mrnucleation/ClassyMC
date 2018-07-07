@@ -6,17 +6,23 @@ module Constrain_DistanceCriteria
   use VarPrecision
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Displacement, Perturbation
+  use CoordinateTypes, only: DisplacementNew
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
 
   type, public, extends(constraint) :: DistCriteria
     integer :: neighList = 1
     integer :: molType = 1
+    integer :: atomNum = 1
     real(dp) :: rCut, rCutSq
     integer :: boxID = 1
 
     logical, allocatable :: flipped(:)
     logical, allocatable :: clustMemb(:)
+    logical, allocatable :: topoList(:, :)
+    logical, allocatable :: newTopoList(:, :)
+    integer, allocatable :: newList(:)
+    integer, allocatable :: newList2(:)
     class(SimBox), pointer :: parent => null()
     contains
       procedure, pass :: Constructor => DistCrit_Constructor
@@ -26,6 +32,7 @@ module Constrain_DistanceCriteria
       procedure, pass :: NewCheck => DistCrit_NewCheck
       procedure, pass :: OldCheck => DistCrit_OldCheck
       procedure, pass :: ProcessIO => DistCrit_ProcessIO
+      procedure, pass :: Maintenance => DistCrit_Maintenance
   end type
 !=====================================================================
   contains
@@ -45,8 +52,11 @@ module Constrain_DistanceCriteria
 
     allocate(self%flipped(1:nMolMax), stat = AllocateStat)
     allocate(self%clustMemb(1:nMolMax), stat = AllocateStat)
+    allocate(self%topoList(1:nMolMax, 1:nMolMax), stat = AllocateStat)
+    allocate(self%newlist(1:nMolMax), stat = AllocateStat)
+    allocate(self%newlist2(1:nMolMax), stat = AllocateStat)
 
-    IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+    IF (AllocateStat /= 0) STOP "Allocation Error in Distance Constraint"
   end subroutine
 !=====================================================================
   subroutine DistCrit_CheckInitialConstraint(self, trialBox, accept)
@@ -57,77 +67,97 @@ module Constrain_DistanceCriteria
 
     integer :: totalMol, nNew, nClust, neiIndx
     integer :: iMol,jMol, iAtom, jAtom, iLimit
-    integer :: molIndx, molType
+    integer :: molIndx, molType, nNext, nNext2, iNext
     real(dp) :: rx, ry, rz, rsq
 
     accept = .true.
     self%flipped = .false.
     self%clustMemb = .false.
+    self%topoList = .false.
 
     totalMol = trialBox%NMol(self%molType)
     if(totalMol < 2) then
       return
     endif
 
+     !Build the topology list that will be used through out the simulation
+    do iMol = 1, totalMol-1
+      molIndx = trialBox % MolGlobalIndx(self%molType, iMol)
+      iAtom = trialBox % MolStartIndx(molIndx) + self%atomNum - 1
+      write(*,*) iMol, molIndx
+
+      do jMol = iMol+1, totalMol
+        molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
+        jAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
+        rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
+        ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
+        rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%rCutSq ) then
+          self%topoList(iMol, jMol) = .true.
+          self%topoList(jMol, iMol) = .true.
+        endif
+      enddo
+    enddo
+ 
+    do iMol = 1, totalMol
+      write(*,*) (self%topoList(iMol, jMol), jMol=1,totalMol)
+    enddo
+
+    if(all(self%topoList .eqv. .false.) ) then
+      accept = .false.
+      write(nout,*) "Detailed Cluster Criteria Check Failed!"
+      return
+    endif
 
      !Seed the initial cluter check by adding the first particle in the array
      !to the cluster
-    iMol = trialBox % MolGlobalIndx(self%molType, 1)
-    molIndx = trialBox % MolGlobalIndx(self%molType, iMol)
-    self%clustMemb(molIndx) = .true.
-
+!    molIndx = trialBox % MolGlobalIndx(self%molType, 1)
+    self%clustMemb(1) = .true.
+    self%newlist(1) = 1
+    nNew = 1
     nClust = 1
+    
     do iLimit = 1, totalMol
+      nNext = nNew
       nNew = 0
-      do iMol = 1, totalMol
-        if(.not. self%clustMemb(iMol)) then
-          cycle
-        endif
-        molIndx = trialBox % MolGlobalIndx(self%molType, iMol)
-        iAtom = trialBox % MolStartIndx(molIndx)
-
-         !If the member flag is true, but the flipped flag is false
-         !the neighbors of this molecule have not been checked.
-        if( self%clustMemb(iMol) .neqv. self%flipped(iMol)) then
-          do jMol = 1, totalMol
+      do iNext = 1, nNext
+        iMol = self%newlist(iNext)
+        do jMol = 1, totalMol
+          if(self%topoList(jMol, iMol) )then
             if(.not. self%clustMemb(jMol) )then
-              molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
-              jAtom = trialBox % MolStartIndx(molIndx)
-              rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
-              ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
-              rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
-              rsq = rx*rx + ry*ry + rz*rz
-              if(rsq < self%rCutSq) then
-                self%clustMemb(jMol) = .true.
-                nNew = nNew + 1
-                nClust = nClust + 1
-              endif
+              self%clustMemb(jMol) = .true.
+              nNew = nNew + 1
+              nClust = nClust + 1
+              self%newlist2(nNew) = jMol
             endif
-          enddo
-          self % flipped(iMol) = .true.
-        endif
+          endif
+        enddo
       enddo
-
-       ! If no new molecules were added, the algorithm has hit a dead end
-       ! and the cluster is broken.  
-       if(nNew <= 0) then
-        exit
-      endif
 
        !If every molecule has been added then no further calculations are
        !needed.
       if(nClust >= totalMol) then
         exit
+      endif 
+       ! If no new molecules were added, the algorithm has hit a dead end
+       ! and the cluster is broken.  
+      if(nNew <= 0) then
+        exit
       endif
+
+      self%newlist(1:nNew) = self%newlist2(1:nNew)
     enddo
 
      ! If no new particles were added or the limit has been hit without finding all the molecules
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
     if( (nNew <= 0) .or. (nClust < totalMol) ) then
       accept = .false.
+      write(nout,*) "Detailed Cluster Criteria Check Failed!"
       return
     endif
 
+    write(nout,*) "Detailed Cluster Criteria Check Succeeded!"
     accept = .true.
 
   end subroutine
@@ -140,7 +170,7 @@ module Constrain_DistanceCriteria
     class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
     accept = .true.
-
+    stop "Diff Done"
     select type(disp)
       class is(Displacement)
         !Called when a particle is either moved or replaced with another particle
@@ -166,6 +196,7 @@ module Constrain_DistanceCriteria
           call self % OldCheck(trialBox, disp, accept)
           return
         endif
+      class is(DisplacementNew)
     end select
 
 
@@ -543,6 +574,12 @@ module Constrain_DistanceCriteria
     call GetXCommand(line, command, 4, lineStat)
     read(command, *) intVal
     self%neighList = intVal
+
+  end subroutine
+!====================================================================
+  subroutine DistCrit_Maintenance(self)
+    implicit none
+    class(DistCriteria), intent(inout) :: self
 
   end subroutine
 !=====================================================================

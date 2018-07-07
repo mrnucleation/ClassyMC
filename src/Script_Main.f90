@@ -306,7 +306,10 @@
           lineStat = -1
       end select
 
-      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+      IF (AllocateStat /= 0) then
+        write(*,*) AllocateStat
+        STOP "Allocation Error in Create Command"
+      endif
      
       end subroutine   
 !========================================================            
@@ -345,7 +348,7 @@
            lineStat = -1
       end select
 
-      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+      IF (AllocateStat /= 0) STOP "Allocation Error in the Modify Command"
      
       end subroutine
 !========================================================            
