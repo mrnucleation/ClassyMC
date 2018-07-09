@@ -1,6 +1,6 @@
 !========================================================
 module MCMove_AtomTranslation
-use CoordinateTypes, only: Displacement
+use CoordinateTypes, only: DisplacementNew
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
@@ -8,15 +8,16 @@ use VarPrecision
   type, public, extends(MCMove) :: AtomTranslate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    real(dp) :: max_dist = 0.05E0_dp
-    type(Displacement) :: disp(1:1)
+    real(dp) :: max_dist = 0.1E0_dp
+!    type(Displacement) :: disp(1:1)
+    type(DisplacementNew) :: disp(1:1)
 
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
 
     contains
       procedure, pass :: Constructor => AtomTrans_Constructor
-      procedure, pass :: GeneratePosition => AtomTrans_GeneratePosition
+!      procedure, pass :: GeneratePosition => AtomTrans_GeneratePosition
       procedure, pass :: FullMove => AtomTrans_FullMove
       procedure, pass :: Maintenance => AtomTrans_Maintenance
 !      procedure, pass :: Prologue => AtomTrans_Prologue
@@ -41,7 +42,7 @@ use VarPrecision
     use RandomGen, only: grnd
     implicit none
     class(AtomTranslate), intent(in) :: self
-    type(Displacement), intent(inout) :: disp
+    type(DisplacementNew), intent(inout) :: disp
     real(dp) :: dx, dy, dz
       dx = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
       dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
@@ -75,15 +76,15 @@ use VarPrecision
     dy = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
     dz = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
  
-    self%disp(1)%newatom = .true.
+!    self%disp(1)%newatom = .true.
     self%disp(1)%molType = trialBox%MolType(nMove)
     self%disp(1)%molIndx = trialBox%MolIndx(nMove)
     self%disp(1)%atmIndx = nMove
 
-    self%disp(1)%oldatom = .true.
-    self%disp(1)%oldMolType = trialBox%MolType(nMove)
-    self%disp(1)%oldMolIndx = trialBox%MolIndx(nMove)
-    self%disp(1)%oldAtmIndx = nMove
+!    self%disp(1)%oldatom = .true.
+!    self%disp(1)%oldMolType = trialBox%MolType(nMove)
+!    self%disp(1)%oldMolIndx = trialBox%MolIndx(nMove)
+!    self%disp(1)%oldAtmIndx = nMove
 
     self%disp(1)%x_new = trialBox%atoms(1, nMove) + dx
     self%disp(1)%y_new = trialBox%atoms(2, nMove) + dy

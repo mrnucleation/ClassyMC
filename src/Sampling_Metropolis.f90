@@ -1,7 +1,7 @@
 !====================================================================
 module MetropolisRule
   use VarPrecision
-  use CoordinateTypes, only: Displacement
+  use CoordinateTypes, only: Displacement, Perturbation
   use AcceptRuleTemplate, only: acceptrule
  
   type, public, extends(acceptrule) :: metropolis
@@ -19,7 +19,8 @@ module MetropolisRule
     implicit none
     class(metropolis), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
-    type(Displacement), intent(in) :: disp(:)
+!    type(Displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(in) :: inProb
     real(dp), intent(in) :: E_Diff
     logical :: accept

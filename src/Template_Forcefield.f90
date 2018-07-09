@@ -55,12 +55,15 @@ module Template_ForceField
     E_Diff = 0E0_dp
 
     select type(disp)
+      class is(DisplacementNew)
+         call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+
       class is(Displacement)
 
         if(disp(1)%newAtom .and. disp(1)%oldAtom) then
           if(disp(1)%oldAtmIndx == disp(1)%atmIndx) then
     !      if(.false.) then
-            call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+!            call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
             if(.not. accept) then
               return
             endif
@@ -99,7 +102,8 @@ module Template_ForceField
     implicit none
     class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
+!          type(displacement), intent(in) :: disp(:)
+    type(displacementNew), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 

@@ -1,8 +1,8 @@
 !====================================================================
 module UmbrellaWHAMRule
   use VarPrecision
-  use CoordinateTypes, only: Displacement
   use AcceptRuleTemplate, only: AcceptRule
+  use CoordinateTypes, only: Displacement, Perturbation
  
   type, public, extends(AcceptRule) :: UmbrellaWHAM
 
@@ -180,7 +180,8 @@ module UmbrellaWHAMRule
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
-    type(Displacement), intent(in) :: disp(:)
+!    type(Displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(in) :: inProb
     real(dp), intent(in) :: E_Diff
 

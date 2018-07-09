@@ -149,7 +149,7 @@ module FF_Pair_LJ_Ele_Cut
     implicit none
     class(Pair_LJ_Ele_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
+    type(displacementNew), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 

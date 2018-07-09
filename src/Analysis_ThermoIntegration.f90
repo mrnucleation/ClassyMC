@@ -73,7 +73,6 @@ use VarPrecision
 !=========================================================================
   subroutine ThermoInt_PushLambda(self, newVal)
     use AnalysisData, only: analyCommon
-    use CoordinateTypes, only: Displacement
     implicit none
     class(ThermoIntegration), intent(inout) :: self
     real(dp), intent(in) :: newVal
@@ -85,10 +84,11 @@ use VarPrecision
 !=========================================================================
   subroutine ThermoInt_CalcNewState(self, disp, newVal)
     use AnalysisData, only: analyCommon
-    use CoordinateTypes, only: Displacement
+    use CoordinateTypes, only: Displacement, Perturbation
     implicit none
     class(ThermoIntegration), intent(inout) :: self
-    type(Displacement), intent(in), optional :: disp(:)
+!    type(Displacement), intent(in), optional :: disp(:)
+    class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
 
     if( self%pushedValue ) then

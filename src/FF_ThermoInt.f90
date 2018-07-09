@@ -73,7 +73,8 @@ module FF_ThermoIntegration
     implicit none
     class(pair_thermointegration), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
+!    type(displacement), intent(in) :: disp(:)
+    type(displacementNew), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 

@@ -43,25 +43,34 @@ use VarPrecision
 !=========================================================================
   subroutine ClusterSize_CalcNewState(self, disp, newVal)
     use AnalysisData, only: analyCommon
-    use CoordinateTypes, only: Displacement
+    use CoordinateTypes, only: Displacement, Perturbation, Deletion
     implicit none
     class(ClusterSize), intent(inout) :: self
-    type(Displacement), intent(in), optional :: disp(:)
+    class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
     integer :: Diff
 
     Diff = 0
-    if(disp(1)%newAtom) then
-      if(disp(1)%molType == self%molType) then
-        Diff = Diff + 1
-      endif
-    endif
-    
-    if(disp(1)%oldAtom) then
-      if(disp(1)%oldMolType == self%molType) then
-        Diff = Diff - 1
-      endif
-    endif
+    select type(disp)
+      class is(Displacement)
+        if(disp(1)%newAtom) then
+          if(disp(1)%molType == self%molType) then
+            Diff = Diff + 1
+          endif
+        endif
+        
+        if(disp(1)%oldAtom) then
+          if(disp(1)%oldMolType == self%molType) then
+            Diff = Diff - 1
+          endif
+        endif
+      class is(Deletion)
+          if(disp(1)%MolType == self%molType) then
+            Diff = Diff - 1
+          endif
+!      class default
+        
+    end select
 
     analyCommon(self%analyID) = real(self%nMol + Diff, dp)
   end subroutine

@@ -6,7 +6,7 @@ module Constrain_DistanceCriteria
   use VarPrecision
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Displacement, Perturbation
-  use CoordinateTypes, only: DisplacementNew
+  use CoordinateTypes, only: DisplacementNew, Deletion
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
 
@@ -31,8 +31,11 @@ module Constrain_DistanceCriteria
       procedure, pass :: ShiftCheck => DistCrit_ShiftCheck
       procedure, pass :: NewCheck => DistCrit_NewCheck
       procedure, pass :: OldCheck => DistCrit_OldCheck
+!      procedure, pass :: CheckCluster => DistCrit_CheckCluster
       procedure, pass :: ProcessIO => DistCrit_ProcessIO
       procedure, pass :: Maintenance => DistCrit_Maintenance
+      procedure, pass :: Update => DistCrit_Update
+      procedure, pass :: Epilogue => DistCrit_Epilogue
   end type
 !=====================================================================
   contains
@@ -53,6 +56,7 @@ module Constrain_DistanceCriteria
     allocate(self%flipped(1:nMolMax), stat = AllocateStat)
     allocate(self%clustMemb(1:nMolMax), stat = AllocateStat)
     allocate(self%topoList(1:nMolMax, 1:nMolMax), stat = AllocateStat)
+    allocate(self%newTopoList(1:nMolMax, 1:nMolMax), stat = AllocateStat)
     allocate(self%newlist(1:nMolMax), stat = AllocateStat)
     allocate(self%newlist2(1:nMolMax), stat = AllocateStat)
 
@@ -84,7 +88,7 @@ module Constrain_DistanceCriteria
     do iMol = 1, totalMol-1
       molIndx = trialBox % MolGlobalIndx(self%molType, iMol)
       iAtom = trialBox % MolStartIndx(molIndx) + self%atomNum - 1
-      write(*,*) iMol, molIndx
+!      write(*,*) iMol, molIndx
 
       do jMol = iMol+1, totalMol
         molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
@@ -92,6 +96,7 @@ module Constrain_DistanceCriteria
         rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
         ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
         rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
+        call trialBox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq ) then
           self%topoList(iMol, jMol) = .true.
@@ -169,10 +174,20 @@ module Constrain_DistanceCriteria
 !    type(Displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
+    integer :: iDisp
+    integer :: totalMol, nNew, nClust, neiIndx, startMol
+    integer :: iMol,jMol, iAtom, jAtom, iLimit
+    integer :: molIndx, molType, nNext, nNext2, iNext
+    real(dp) :: rx, ry, rz, rsq
+
     accept = .true.
-    stop "Diff Done"
+    totalMol = trialBox%NMol(self%molType)
+
+    !This section creates the topology list of the new state using information
+    !based on the what kind of perturbation was performed.
     select type(disp)
       class is(Displacement)
+        stop "Diff Done"
         !Called when a particle is either moved or replaced with another particle
         if(disp(1)%newAtom .and. disp(1)%oldAtom) then
           if(disp(1)%molType == disp(1)%oldMolType) then
@@ -196,12 +211,147 @@ module Constrain_DistanceCriteria
           call self % OldCheck(trialBox, disp, accept)
           return
         endif
-      class is(DisplacementNew)
-    end select
 
+      class is(DisplacementNew)
+        self%newTopoList = self%topoList 
+        accept = .true.
+        do iDisp = 1, size(disp)
+          if( disp(iDisp)%molType == self%molType ) then
+            molIndx = disp(iDisp)%molIndx
+            iAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
+            if( disp(iDisp)%atmIndx == iAtom) then
+              accept = .false.
+              iMol = disp(iDisp)%molIndx
+              do jMol = 1, totalMol
+                if(iMol /= jMol) then
+                  molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
+                  jAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
+                  rx = disp(iDisp)%x_new - trialBox%atoms(1, jAtom)
+                  ry = disp(iDisp)%y_new - trialBox%atoms(2, jAtom)
+                  rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
+                  call trialBox%Boundary(rx, ry, rz)
+                  rsq = rx*rx + ry*ry + rz*rz
+                  if(rsq < self%rCutSq ) then
+                    self%newTopoList(jMol, iMol) = .true.
+                    self%newTopoList(iMol, jMol) = .true.
+                  else
+                    self%newTopoList(jMol, iMol) = .false.
+                    self%newTopoList(iMol, jMol) = .false.
+                  endif
+                endif
+              enddo
+            endif
+          endif
+        enddo
+
+        if(accept) then
+          return
+        endif
+
+        self%clustMemb = .false.
+        self%clustMemb(1) = .true.
+        self%newlist(1) = 1
+        nNew = 1
+        nClust = 1
+
+!      class is(Addition)
+
+      class is(Deletion)
+        !molType, atmIndx, molIndx
+        self%newTopoList = self%topoList 
+        accept = .true.
+        do iDisp = 1, size(disp)
+          if( disp(iDisp)%molType == self%molType ) then
+            if( disp(iDisp)%atmIndx == self%atomNum ) then
+              accept = .false.
+              iMol = disp(iDisp)%molIndx
+              do jMol = 1, totalMol
+                if(self%newTopoList(jMol, iMol)) then
+                  self%newTopoList(jMol, iMol) = .false.
+                  self%newTopoList(iMol, jMol) = .false.
+                endif
+              enddo
+            endif
+          endif
+        enddo
+
+
+        if(accept) then
+          return
+        endif
+
+        startMol = 1
+        do iMol = 1, totalMol
+          do jMol = iMol+1, totalMol
+            if(self%newTopoList(jMol, iMol)) then
+              startMol = iMol
+              exit
+            endif
+
+          enddo
+          if(self%newTopoList(jMol, iMol)) then
+            exit
+          endif
+        enddo
+        self%clustMemb = .false.
+        self%clustMemb(startMol) = .true.
+        self%newlist(1) = startMol
+        nNew = 1
+        nClust = 1
+
+      class default
+        stop "Distance criteria is not compatiable with this perturbation type."
+    end select
+    
+    write(*,*)
+    do iMol = 1, totalMol
+      write(*,*) (self%newTopoList(jMol, iMol), jMol=1,totalMol)
+    enddo
+
+    !Using the newly constructed topology list, check to see if the new cluster satisfies
+    !the cluster criteria. 
+    do iLimit = 1, totalMol
+      nNext = nNew
+      nNew = 0
+      do iNext = 1, nNext
+        iMol = self%newlist(iNext)
+        do jMol = 1, totalMol
+          if(self%newTopoList(jMol, iMol) )then
+            if(.not. self%clustMemb(jMol) )then
+              self%clustMemb(jMol) = .true.
+              nNew = nNew + 1
+              nClust = nClust + 1
+              self%newlist2(nNew) = jMol
+            endif
+          endif
+        enddo
+      enddo
+
+       !If every molecule has been added then no further calculations are
+       !needed.
+      if(nClust >= totalMol) then
+        exit
+      endif 
+       ! If no new molecules were added, the algorithm has hit a dead end
+       ! and the cluster is broken.  
+      if(nNew <= 0) then
+        exit
+      endif
+
+      self%newlist(1:nNew) = self%newlist2(1:nNew)
+    enddo
+
+     ! If no new particles were added or the limit has been hit without finding all the molecules
+     ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
+    if( (nNew <= 0) .or. (nClust < totalMol) ) then
+      accept = .false.
+      write(*,*) .false.
+      return
+    endif
+    accept = .true.
+      write(*,*) .true.
 
   end subroutine
-
 !=====================================================================
   subroutine DistCrit_ShiftCheck(self, trialBox, disp, accept)
     implicit none
@@ -580,6 +730,23 @@ module Constrain_DistanceCriteria
   subroutine DistCrit_Maintenance(self)
     implicit none
     class(DistCriteria), intent(inout) :: self
+
+  end subroutine
+!====================================================================
+  subroutine DistCrit_Epilogue(self)
+    implicit none
+    class(DistCriteria), intent(inout) :: self
+    logical :: accept
+
+    call self % CheckInitialConstraint(self%parent, accept)
+
+  end subroutine
+!=============================================================
+  subroutine DistCrit_Update(self)
+    implicit none
+    class(DistCriteria), intent(inout) :: self
+
+    self%topoList = self%newTopoList
 
   end subroutine
 !=====================================================================

@@ -70,31 +70,54 @@ use SimpleSimBox, only: SimpleBox
   end subroutine
 !=========================================================================
   subroutine DistPair_CalcNewState(self, disp, newVal)
-    use CoordinateTypes, only: Displacement
+    use CoordinateTypes, only: Displacement, DisplacementNew, Perturbation
     implicit none
     class(DistPair), intent(inout) :: self
-    type(Displacement), intent(in), optional :: disp(:)
+!    type(Displacement), intent(in), optional :: disp(:)
+    class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
     real(dp) :: rx, ry, rz, rsq, r
 
-    if(disp(1)%atmIndx == self%atom1 ) then
-      rx = disp(1)%x_new - self%box % atoms(1, self%atom2)
-      ry = disp(1)%y_new - self%box % atoms(2, self%atom2)
-      rz = disp(1)%z_new - self%box % atoms(3, self%atom2)
-      call self%box% Boundary(rx, ry, rz)
-      rsq = rx*rx + ry*ry + rz*rz
-      r = sqrt(rsq)
-       
-    elseif(disp(1)%atmIndx == self%atom2 ) then
-      rx = disp(1)%x_new - self%box % atoms(1, self%atom1)
-      ry = disp(1)%y_new - self%box % atoms(2, self%atom1)
-      rz = disp(1)%z_new - self%box % atoms(3, self%atom1)
-      call self%box% Boundary(rx, ry, rz)
-      rsq = rx*rx + ry*ry + rz*rz
-      r = sqrt(rsq)
-    else
-      r = self%dist
-    endif
+    select type(disp)
+      class is(Displacement)
+        if(disp(1)%atmIndx == self%atom1 ) then
+          rx = disp(1)%x_new - self%box % atoms(1, self%atom2)
+          ry = disp(1)%y_new - self%box % atoms(2, self%atom2)
+          rz = disp(1)%z_new - self%box % atoms(3, self%atom2)
+          call self%box% Boundary(rx, ry, rz)
+          rsq = rx*rx + ry*ry + rz*rz
+          r = sqrt(rsq)
+           
+        elseif(disp(1)%atmIndx == self%atom2 ) then
+          rx = disp(1)%x_new - self%box % atoms(1, self%atom1)
+          ry = disp(1)%y_new - self%box % atoms(2, self%atom1)
+          rz = disp(1)%z_new - self%box % atoms(3, self%atom1)
+          call self%box% Boundary(rx, ry, rz)
+          rsq = rx*rx + ry*ry + rz*rz
+          r = sqrt(rsq)
+        else
+          r = self%dist
+        endif
+      class is(DisplacementNew)
+        if(disp(1)%atmIndx == self%atom1 ) then
+          rx = disp(1)%x_new - self%box % atoms(1, self%atom2)
+          ry = disp(1)%y_new - self%box % atoms(2, self%atom2)
+          rz = disp(1)%z_new - self%box % atoms(3, self%atom2)
+          call self%box% Boundary(rx, ry, rz)
+          rsq = rx*rx + ry*ry + rz*rz
+          r = sqrt(rsq)
+           
+        elseif(disp(1)%atmIndx == self%atom2 ) then
+          rx = disp(1)%x_new - self%box % atoms(1, self%atom1)
+          ry = disp(1)%y_new - self%box % atoms(2, self%atom1)
+          rz = disp(1)%z_new - self%box % atoms(3, self%atom1)
+          call self%box% Boundary(rx, ry, rz)
+          rsq = rx*rx + ry*ry + rz*rz
+          r = sqrt(rsq)
+        else
+          r = self%dist
+        endif
+    end select
 
 !    write(*,*) r
     analyCommon(self%analyID) = r

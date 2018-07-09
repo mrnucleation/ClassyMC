@@ -22,10 +22,10 @@ module CoordinateTypes
 
   !Move type where a single particle's position is changed.
   type, extends(Perturbation) :: DisplacementNew
-    integer(kind=atomIntType) :: molType, atmIndx, molIndx
+    integer(kind=atomIntType) :: molType, atmIndx, molIndx, atmSubIndx
     real(dp) :: x_new, y_new, z_new
 
-    integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
+!    integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
 
     logical :: newList = .false.
     integer :: listIndex = -1

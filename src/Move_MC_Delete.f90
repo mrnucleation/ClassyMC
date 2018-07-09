@@ -2,7 +2,7 @@
 !Guarnteed delete move.  Only used for debuging. 
 !
 module MCMove_Delete
-use CoordinateTypes, only: Displacement
+use CoordinateTypes, only: Displacement, Deletion
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
@@ -10,7 +10,8 @@ use VarPrecision
   type, public, extends(MCMove) :: MoveDelete
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    type(Displacement) :: disp(1:1)
+!    type(Displacement) :: disp(1:1)
+    type(Deletion) :: disp(1:1)
     contains
       procedure, pass :: Constructor => MoveDelete_Constructor
       procedure, pass :: GeneratePosition => MoveDelete_GeneratePosition
@@ -55,18 +56,18 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
 
-    self%disp(1)%newAtom = .false.
+!    self%disp(1)%newAtom = .false.
     self%disp(1)%MolType = 1
     self%disp(1)%MolIndx = delVal
     self%disp(1)%atmIndx = delVal
 
-    self%disp(1)%oldAtom = .true.
-    self%disp(1)%oldMolType = 1
-    self%disp(1)%oldMolIndx = delVal
-    self%disp(1)%oldAtmIndx = delVal
+!    self%disp(1)%oldAtom = .true.
+!    self%disp(1)%oldMolType = 1
+!    self%disp(1)%oldMolIndx = delVal
+!    self%disp(1)%oldAtmIndx = delVal
 
-    self%disp(1)%newlist = .false.
-    self%disp(1)%listIndex = delVal
+!    self%disp(1)%newlist = .false.
+!    self%disp(1)%listIndex = delVal
 
     accept = trialBox % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then

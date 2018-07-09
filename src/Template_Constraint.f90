@@ -15,6 +15,7 @@ module ConstraintTemplate
       procedure, pass :: OldCheck
       procedure, pass :: VolCheck
       procedure, pass :: ProcessIO
+!      procedure, pass :: Update
   end type
 
   type, public :: constrainArray
@@ -122,6 +123,14 @@ module ConstraintTemplate
 
     lineStat = 0
   end subroutine
+!=============================================================
+!  subroutine Update(self, trialBox, disp)
+!    implicit none
+!    class(constraint), intent(inout) :: self
+!    class(SimBox), intent(in) :: trialBox
+!    class(Perturbation), intent(in) :: disp(:)
+!
+!  end subroutine
 !=============================================================
 end module
 !=============================================================

@@ -120,7 +120,8 @@ module FF_Pair_LJ_Cut
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
+!    type(displacement), intent(in) :: disp(:)
+    type(DisplacementNew), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 

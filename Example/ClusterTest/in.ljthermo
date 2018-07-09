@@ -1,9 +1,9 @@
 #======================================
-  set rng_seed 6
+  set rng_seed -6
 #  set rng_seed 21448
   set NeighSkin 2.5
-  set moves 1000
-  set cycles 2000
+  set moves 10
+  set cycles 1000
 #  SamplingType UmbrellaWHAM
   SamplingType Metropolis
 #  SamplingType Min
@@ -30,10 +30,10 @@
 #    thermointegration 
 #  End_Create
 
-#  Create trajectory
-#    xyz 1 1000 "Traj.xyz"
-#  End_Create
+  Create trajectory
+    xyz 1 1 "Traj.xyz"
+  End_Create
 
   modify box 1 energycalc 1
-  modify box 1 temperature 0.5
+  modify box 1 temperature 0.7
 #=====================================

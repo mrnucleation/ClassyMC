@@ -193,7 +193,6 @@ module SimpleSimBox
 
     list = 0E0_dp
 
-
   end subroutine
 !==========================================================================================
   subroutine Simplebox_LoadAtomCoord(self, line, lineStat)
@@ -209,7 +208,7 @@ module SimpleSimBox
     real(dp) :: x,y,z
 
     if( .not. allocated(self%atoms) ) then
-      call self%Constructor
+      call self % Constructor
     endif
 
     read(line, *) molType, molIndx, atmIndx, x, y ,z
@@ -291,7 +290,8 @@ module SimpleSimBox
     use CoordinateTypes
     implicit none
     class(SimpleBox), intent(inout) :: self
-    type(Displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
+!    type(Displacement), intent(in) :: disp(:)
     logical :: accept
     integer :: nDisp, iConstrain
 
@@ -472,22 +472,41 @@ module SimpleSimBox
     use CoordinateTypes
     implicit none
     class(SimpleBox), intent(inout) :: self
-    type(Displacement), intent(inout) :: disp(:)
+!    type(Displacement), intent(inout) :: disp(:)
+    class(Perturbation), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     integer :: iDisp, dispLen, dispIndx
 
-    dispLen = size(disp)
+    select type(disp)
+      class is(DisplacementNew)
+        dispLen = size(disp)
+        do iDisp = 1, dispLen
+          dispIndx = disp(iDisp) % atmIndx
+          call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
+          self % atoms(1, dispIndx) = disp(iDisp)%x_new
+          self % atoms(2, dispIndx) = disp(iDisp)%y_new
+          self % atoms(3, dispIndx) = disp(iDisp)%z_new
+        enddo
 
-    do iDisp = 1, dispLen
-      if( disp(iDisp)%newAtom ) then 
-        dispIndx = disp(iDisp) % atmIndx
-        call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
-        self % atoms(1, dispIndx) = disp(iDisp)%x_new
-        self % atoms(2, dispIndx) = disp(iDisp)%y_new
-        self % atoms(3, dispIndx) = disp(iDisp)%z_new
-      endif
-    enddo
+      class is(Displacement)
+        dispLen = size(disp)
+        do iDisp = 1, dispLen
+          if( disp(iDisp)%newAtom ) then 
+            dispIndx = disp(iDisp) % atmIndx
+            call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
+            self % atoms(1, dispIndx) = disp(iDisp)%x_new
+            self % atoms(2, dispIndx) = disp(iDisp)%y_new
+            self % atoms(3, dispIndx) = disp(iDisp)%z_new
+          endif
+        enddo
 
+      class default
+        stop "The code does not know how to update coordinates for this perturbation type."
+    end select
+
+
+
+    
 !    if(disp(iDisp)%newlist) then
 !      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
 !    endif
@@ -581,6 +600,20 @@ module SimpleSimBox
         call self%Constrain(iConstrain) % method % Epilogue
       enddo
     endif
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_Update(self)
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer :: iConstrain
+
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % Update
+      enddo
+    endif
+
+
   end subroutine
 !==========================================================================================
   pure subroutine SimpleBox_CopyBox(box1, box2) 

@@ -2,7 +2,7 @@
 module AcceptRuleTemplate
   use MasterTemplate, only: classyClass
   use VarPrecision
-  use CoordinateTypes, only: Displacement
+  use CoordinateTypes, only: Displacement, Perturbation
 
   type, public, extends(classyClass) :: acceptrule
     contains
@@ -18,7 +18,8 @@ module AcceptRuleTemplate
     implicit none
     class(acceptrule), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
-    type(Displacement), intent(in) :: disp(:)
+!    type(Displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(in) :: E_Diff, inProb
     logical :: accept
 
