@@ -33,7 +33,9 @@ module OrthoBoxDef
     use Units, only: outEngUnit
     implicit none
     class(OrthoBox), intent(inout) :: self
+    logical :: accept
     integer :: iType, iMol, iAtom, jType, subIndx, arrayIndx
+    integer :: iConstrain
 
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
@@ -57,6 +59,18 @@ module OrthoBoxDef
         enddo
       enddo
     enddo
+
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % Prologue
+        call self%Constrain(iConstrain) % method % CheckInitialConstraint(self, accept)
+      enddo
+      if(.not. accept) then
+        write(nout,*) "Initial Constraints are not statisfied!"
+        stop
+      endif
+    endif
+
 
   end subroutine
 !==========================================================================================

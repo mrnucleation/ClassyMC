@@ -354,7 +354,7 @@ module Constrain_DistanceCriteria
       return
     endif
     accept = .true.
-!      write(*,*) .true.
+!    write(*,*) .true.
 
   end subroutine
 !=====================================================================

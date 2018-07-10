@@ -267,7 +267,8 @@ module CubicBoxDef
     use ParallelVar, only: nout
     implicit none
     class(CubeBox), intent(inout) :: self
-    integer :: iAtom, iDims
+    logical :: accept
+    integer :: iAtom, iDims, iConstrain
 
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
@@ -287,6 +288,18 @@ module CubicBoxDef
       enddo
     enddo
     
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % Prologue
+        call self%Constrain(iConstrain) % method % CheckInitialConstraint(self, accept)
+      enddo
+      if(.not. accept) then
+        write(nout,*) "Initial Constraints are not statisfied!"
+        stop
+      endif
+    endif
+
+
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
