@@ -1,9 +1,9 @@
 #======================================
-  set rng_seed -6
-#  set rng_seed 21448
+#  set rng_seed -6
+  set rng_seed 3609
   set NeighSkin 2.5
-  set moves 10
-  set cycles 1000
+  set moves 100
+  set cycles 10000
 #  SamplingType UmbrellaWHAM
   SamplingType Metropolis
 #  SamplingType Min
@@ -31,7 +31,7 @@
 #  End_Create
 
   Create trajectory
-    xyz 1 1 "Traj.xyz"
+    xyz 1 100 "Traj.xyz"
   End_Create
 
   modify box 1 energycalc 1

@@ -98,6 +98,7 @@ module Constrain_DistanceCriteria
         rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
         call trialBox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
+!        write(*,*) iMol, jMol, rx, ry, rz, rsq
         if(rsq < self%rCutSq ) then
           self%topoList(iMol, jMol) = .true.
           self%topoList(jMol, iMol) = .true.
@@ -105,9 +106,9 @@ module Constrain_DistanceCriteria
       enddo
     enddo
  
-    do iMol = 1, totalMol
-      write(*,*) (self%topoList(iMol, jMol), jMol=1,totalMol)
-    enddo
+!    do iMol = 1, totalMol
+!      write(*,*) (self%topoList(iMol, jMol), jMol=1,totalMol)
+!    enddo
 
     if(all(self%topoList .eqv. .false.) ) then
       accept = .false.
@@ -224,6 +225,12 @@ module Constrain_DistanceCriteria
               iMol = disp(iDisp)%molIndx
               do jMol = 1, totalMol
                 if(iMol /= jMol) then
+                  self%newTopoList(jMol, iMol) = .false.
+                  self%newTopoList(iMol, jMol) = .false.
+                endif
+              enddo
+              do jMol = 1, totalMol
+                if(iMol /= jMol) then
                   molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
                   jAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
                   rx = disp(iDisp)%x_new - trialBox%atoms(1, jAtom)
@@ -231,12 +238,10 @@ module Constrain_DistanceCriteria
                   rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
                   call trialBox%Boundary(rx, ry, rz)
                   rsq = rx*rx + ry*ry + rz*rz
+!                  write(*,*) jMol, rx, ry, rz, rsq
                   if(rsq < self%rCutSq ) then
                     self%newTopoList(jMol, iMol) = .true.
                     self%newTopoList(iMol, jMol) = .true.
-                  else
-                    self%newTopoList(jMol, iMol) = .false.
-                    self%newTopoList(iMol, jMol) = .false.
                   endif
                 endif
               enddo
@@ -303,10 +308,10 @@ module Constrain_DistanceCriteria
         stop "Distance criteria is not compatiable with this perturbation type."
     end select
     
-    write(*,*)
-    do iMol = 1, totalMol
-      write(*,*) (self%newTopoList(jMol, iMol), jMol=1,totalMol)
-    enddo
+!    write(*,*)
+!    do iMol = 1, totalMol
+!      write(*,*) (self%newTopoList(jMol, iMol), jMol=1,totalMol)
+!    enddo
 
     !Using the newly constructed topology list, check to see if the new cluster satisfies
     !the cluster criteria. 
@@ -345,11 +350,11 @@ module Constrain_DistanceCriteria
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
     if( (nNew <= 0) .or. (nClust < totalMol) ) then
       accept = .false.
-      write(*,*) .false.
+!      write(*,*) .false.
       return
     endif
     accept = .true.
-      write(*,*) .true.
+!      write(*,*) .true.
 
   end subroutine
 !=====================================================================
@@ -652,7 +657,7 @@ module Constrain_DistanceCriteria
               rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
               call trialBox%Boundary(rx, ry, rz)
               rsq = rx*rx + ry*ry + rz*rz
-              write(*,*) rx, ry, rz, rsq
+!              write(*,*) rx, ry, rz, rsq
               if(rsq < self%rCutSq) then
                 self%clustMemb(jMol) = .true.
                 nNew = nNew + 1
@@ -667,7 +672,7 @@ module Constrain_DistanceCriteria
         endif
       enddo
 
-      write(*,*) iLimit, nClust, nNew, nNewNei
+!      write(*,*) iLimit, nClust, nNew, nNewNei
        ! If no new molecules were added, the algorithm has hit a dead end
        ! and the cluster is broken.  
       if(nNew <= 0) then
@@ -685,7 +690,7 @@ module Constrain_DistanceCriteria
       endif
     enddo
 
-    write(*,*) "Blah3"
+!    write(*,*) "Blah3"
      ! If no new particles were added or the limit has been hit without finding all the molecules
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
     if( (nNew <= 0) .or. (nClust < totalMol-1) ) then
@@ -746,6 +751,7 @@ module Constrain_DistanceCriteria
     implicit none
     class(DistCriteria), intent(inout) :: self
 
+!    write(*,*) "Update"
     self%topoList = self%newTopoList
 
   end subroutine

@@ -49,6 +49,7 @@ module SimpleSimBox
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: AddMol => SimpleBox_AddMol
       procedure, pass :: DeleteMol => SimpleBox_DeleteMol
+      procedure, pass :: Update => SimpleBox_Update
       procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
       procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
       procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
