@@ -1,5 +1,5 @@
 !=======================================================
-      module RandomGen
+  module RandomGen
       use VarPrecision
       integer :: initseed = -1
 !=======================================================
@@ -46,7 +46,7 @@
       use VarPrecision
       implicit none
       real(dp), intent(out) :: x,y,z
-      real(dp) :: u_12_sq, u1, u2, grnd
+      real(dp) :: u_12_sq, u1, u2
       
       u_12_sq = 2E0
       do while(u_12_sq .ge. 1)

@@ -26,8 +26,8 @@ use VarPrecision
     implicit none
     class(MoveDelete), intent(inout) :: self
 
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(10, 1) )
+!    allocate( self%tempNNei(1) )
+!    allocate( self%tempList(10, 1) )
 
   end subroutine
 !========================================================

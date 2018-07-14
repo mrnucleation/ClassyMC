@@ -21,6 +21,7 @@ module Template_NeighList
       procedure, pass :: Constructor
       procedure, pass :: BuildList
       procedure, pass :: GetNewList
+      procedure, pass :: GetNeighCount
       procedure, pass :: AddMol
       procedure, pass :: TransferList
       procedure, pass :: DeleteMol
@@ -44,14 +45,27 @@ module Template_NeighList
 
   end subroutine
 !===================================================================================
-  subroutine GetNewList(self, iDisp, tempList, tempNNei, disp)
+  subroutine GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
     implicit none
     class(NeighListDef), intent(inout) :: self
     integer, intent(in) :: iDisp
     type(Displacement), intent(inout) :: disp
     integer, intent(inout) :: tempList(:,:), tempNNei(:)
+    integer, optional :: nCount
+    real(dp), optional :: rCount
+
+
  
   end subroutine
+!===================================================================================
+  function GetNeighCount(self, nAtom, rCount) result(nCount)
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+    integer, intent(in) :: nAtom
+    real(dp), intent(in) ,optional :: rCount
+    integer :: nCount
+ 
+  end function 
 !===================================================================================
   subroutine AddMol(self, disp, tempList, tempNNei)
     implicit none

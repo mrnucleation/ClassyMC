@@ -23,7 +23,6 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: BuildList => RSqList_BuildList 
       procedure, pass :: GetNewList => RSqList_GetNewList
       procedure, pass :: AddMol => RSqList_AddMol
-      procedure, pass :: GetNeighCount => RSqList_GetNeighCount
 !      procedure, pass :: TransferList
       procedure, pass :: DeleteMol => RSqList_DeleteMol
   end type
@@ -95,39 +94,6 @@ use Template_NeighList, only: NeighListDef
 
     call Builder_RSq(self%parent)
   end subroutine
-!===================================================================================
-  function RSqList_GetNeighCount(self, nAtom, rCount) result(nCount)
-    implicit none
-    class(RSqList), intent(inout) :: self
-    integer, intent(in) :: nAtom
-    real(dp), intent(in) ,optional :: rCount
-    integer :: iNei
-    real(dp) :: rCut, rCutSq
-    real(dp) :: rx, ry, rz, rsq
-    integer :: nCount, jAtom
-
-    if(present(rCount)) then
-      rCut = rCount
-      rCutSq = rCount*rCount
-    else
-      rCut = self%rCut
-      rCutSq = self%rCutSq
-    endif
-
-    nCount = 0
-    do iNei = 1, self % nNeigh(nAtom)
-      jAtom = self%list(iNei, nAtom) 
-      rx = self%parent%atoms(1, nAtom) - self%parent%atoms(1, jAtom)
-      ry = self%parent%atoms(2, nAtom) - self%parent%atoms(2, jAtom)
-      rz = self%parent%atoms(3, nAtom) - self%parent%atoms(3, jAtom)
-      call self%parent%Boundary(rx,ry,rz)
-      rsq = rx*rx + ry*ry + rz*rz
-      if(rsq < rCutSq) then
-        nCount = nCount + 1
-      endif
-    enddo
-
-  end function
 !===================================================================================
   subroutine RSqList_AddMol(self, disp, tempList, tempNNei)
     implicit none
