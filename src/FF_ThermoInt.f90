@@ -21,11 +21,11 @@ module FF_ThermoIntegration
       procedure, pass :: Constructor => ThermoInt_Constructor
       procedure, pass :: DetailedECalc => ThermoInt_DetailedECalc
 !      procedure, pass :: DiffECalc
-      procedure, pass :: ShiftECalc_Single => ThermoInt_ShiftECalc_Single
+!      procedure, pass :: ShiftECalc_Single => ThermoInt_ShiftECalc_Single
 !      procedure, pass :: ShiftECalc_Multi
-      procedure, pass :: NewECalc => ThermoInt_NewECalc
-      procedure, pass :: OldECalc => ThermoInt_OldECalc
-      procedure, pass :: VolECalc => ThermoInt_VolECalc
+!      procedure, pass :: NewECalc => ThermoInt_NewECalc
+!      procedure, pass :: OldECalc => ThermoInt_OldECalc
+!      procedure, pass :: VolECalc => ThermoInt_VolECalc
       procedure, pass :: LambdaShift => ThermoInt_LambdaShift
       procedure, pass :: GetLambda => ThermoInt_GetLambda
       procedure, pass :: ProcessIO => ThermoInt_ProcessIO
@@ -68,116 +68,153 @@ module FF_ThermoIntegration
     write(nout, *) "Thermo Integration Energy:", E_T
     write(nout, *) "Thermo Integration Lambda:", self%lambda
   end subroutine
-!=============================================================================+
-  subroutine ThermoInt_ShiftECalc_Single(self, curbox, disp, E_Diff, accept)
+
+!============================================================================
+  subroutine ThermoInt_DiffECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
     class(pair_thermointegration), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-!    type(displacement), intent(in) :: disp(:)
-    type(displacementNew), intent(in) :: disp(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
-
-    real(dp) :: ESub
-
-    accept = .true.
-    E_Diff = 0E0_dp
-    self%EDiff1 = 0E0_dp
-    self%EDiff2 = 0E0_dp
-
-    call EnergyCalculator(self%ECalc1) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
-    if(.not. accept) then
-      self%EDiff1 = 0E0_dp
-      self%EDiff2 = 0E0_dp
-      return
-    endif
-    self%EDiff1 = ESub
-    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
-
-    call EnergyCalculator(self%ECalc2) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
-    if(.not. accept) then
-      self%EDiff1 = 0E0_dp
-      self%EDiff2 = 0E0_dp
-      return
-    endif
-    self%EDiff2 = ESub
-    E_Diff = E_Diff + self%lambda * ESub
-
-  end subroutine
-!=============================================================================+
-  subroutine ThermoInt_NewECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
-    implicit none
-    class(pair_thermointegration), intent(inout) :: self
-    class(simBox), intent(inout) :: curbox
+!    class(displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
-    type(displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
-
+    real(dp) :: E_Half
     real(dp) :: ESub
 
     accept = .true.
     E_Diff = 0E0_dp
-
-    call EnergyCalculator(self%ECalc1) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
-    if(.not. accept) then
-      return
-    endif
-    self%EDiff1 = ESub
-    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
-
-    call EnergyCalculator(self%ECalc2) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
-    if(.not. accept) then
-      return
-    endif
-    self%EDiff2 = ESub
-    E_Diff = E_Diff + self%lambda * ESub
-
-  end subroutine
-!=============================================================================+
-  subroutine ThermoInt_OldECalc(self, curbox, disp, E_Diff)
-    implicit none
-    class(pair_thermointegration), intent(inout) :: self
-    class(simBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
-    real(dp), intent(inOut) :: E_Diff
-
-    real(dp) :: ESub
-
-    E_Diff = 0E0_dp
-    call EnergyCalculator(self%ECalc1) % Method %OldECalc(curbox, disp, ESub)
-    self%EDiff1 = ESub
-    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
-
-    call EnergyCalculator(self%ECalc2) % Method %OldECalc(curbox, disp, ESub)
-    self%EDiff2 = ESub
-    E_Diff = E_Diff + self%lambda * ESub
-
-  end subroutine
-!=============================================================================+
-  subroutine ThermoInt_VolECalc(self, curbox, scalars, E_Diff)
-    implicit none
-    class(pair_thermointegration), intent(inout) :: self
-    class(simBox), intent(inout) :: curbox
-    real(dp), intent(in) :: scalars(:)
-    real(dp), intent(inOut) :: E_Diff
-
-    real(dp) :: ESub
-
-    E_Diff = 0E0_dp
     self%EDiff1 = 0E0_dp
     self%EDiff2 = 0E0_dp
 
-    call EnergyCalculator(self%ECalc1) % Method %VolECalc(curbox, scalars, ESub)
+    call EnergyCalculator(self%ECalc1) % Method %DiffECalc(curbox, disp, tempList, tempNNei, ESub, accept)
+    if(.not. accept) then
+      self%EDiff1 = 0E0_dp
+      self%EDiff2 = 0E0_dp
+      return
+    endif
     self%EDiff1 = ESub
     E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
 
-    call EnergyCalculator(self%ECalc2) % Method %VolECalc(curbox, scalars, ESub)
+    call EnergyCalculator(self%ECalc2) % Method % DiffECalc(curbox, disp, tempList, tempNNei, ESub, accept)
+    if(.not. accept) then
+      self%EDiff1 = 0E0_dp
+      self%EDiff2 = 0E0_dp
+      return
+    endif
     self%EDiff2 = ESub
     E_Diff = E_Diff + self%lambda * ESub
 
-
   end subroutine
+
+!=============================================================================+
+!  subroutine ThermoInt_ShiftECalc_Single(self, curbox, disp, E_Diff, accept)
+!    implicit none
+!    class(pair_thermointegration), intent(inout) :: self
+!    class(simBox), intent(inout) :: curbox
+!    type(displacementNew), intent(in) :: disp(:)
+!    real(dp), intent(inOut) :: E_Diff
+!    logical, intent(out) :: accept
+!    real(dp) :: ESub
+!
+!    accept = .true.
+!    E_Diff = 0E0_dp
+!    self%EDiff1 = 0E0_dp
+!    self%EDiff2 = 0E0_dp
+!
+!    call EnergyCalculator(self%ECalc1) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
+!    if(.not. accept) then
+!      self%EDiff1 = 0E0_dp
+!      self%EDiff2 = 0E0_dp
+!      return
+!    endif
+!    self%EDiff1 = ESub
+!    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
+!
+!    call EnergyCalculator(self%ECalc2) % Method %ShiftECalc_Single(curbox, disp, ESub, accept)
+!    if(.not. accept) then
+!      self%EDiff1 = 0E0_dp
+!      self%EDiff2 = 0E0_dp
+!      return
+!    endif
+!    self%EDiff2 = ESub
+!    E_Diff = E_Diff + self%lambda * ESub
+!
+!  end subroutine
+!=============================================================================+
+!  subroutine ThermoInt_NewECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+!    implicit none
+!    class(pair_thermointegration), intent(inout) :: self
+!    class(simBox), intent(inout) :: curbox
+!    integer, intent(in) :: tempList(:,:), tempNNei(:)
+!    type(displacement), intent(in) :: disp(:)
+!    real(dp), intent(inOut) :: E_Diff
+!    logical, intent(out) :: accept
+!
+!    real(dp) :: ESub
+!
+!    accept = .true.
+!    E_Diff = 0E0_dp
+!
+!    call EnergyCalculator(self%ECalc1) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
+!    if(.not. accept) then
+!      return
+!    endif
+!    self%EDiff1 = ESub
+!    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
+!
+!    call EnergyCalculator(self%ECalc2) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
+!    if(.not. accept) then
+!      return
+!    endif
+!    self%EDiff2 = ESub
+!    E_Diff = E_Diff + self%lambda * ESub
+!
+!  end subroutine
+!=============================================================================+
+!  subroutine ThermoInt_OldECalc(self, curbox, disp, E_Diff)
+!    implicit none
+!    class(pair_thermointegration), intent(inout) :: self
+!    class(simBox), intent(inout) :: curbox
+!    type(displacement), intent(in) :: disp(:)
+!    real(dp), intent(inOut) :: E_Diff
+!
+!    real(dp) :: ESub
+!
+!    E_Diff = 0E0_dp
+!    call EnergyCalculator(self%ECalc1) % Method %OldECalc(curbox, disp, ESub)
+!    self%EDiff1 = ESub
+!    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
+!
+!    call EnergyCalculator(self%ECalc2) % Method %OldECalc(curbox, disp, ESub)
+!    self%EDiff2 = ESub
+!    E_Diff = E_Diff + self%lambda * ESub
+!
+!  end subroutine
+!=============================================================================+
+!  subroutine ThermoInt_VolECalc(self, curbox, scalars, E_Diff)
+!    implicit none
+!    class(pair_thermointegration), intent(inout) :: self
+!    class(simBox), intent(inout) :: curbox
+!    real(dp), intent(in) :: scalars(:)
+!    real(dp), intent(inOut) :: E_Diff
+!
+!    real(dp) :: ESub
+!
+!    E_Diff = 0E0_dp
+!    self%EDiff1 = 0E0_dp
+!    self%EDiff2 = 0E0_dp
+!
+!    call EnergyCalculator(self%ECalc1) % Method %VolECalc(curbox, scalars, ESub)
+!    self%EDiff1 = ESub
+!    E_Diff = E_Diff + (1E0_dp - self%lambda) * ESub
+!
+!    call EnergyCalculator(self%ECalc2) % Method %VolECalc(curbox, scalars, ESub)
+!    self%EDiff2 = ESub
+!    E_Diff = E_Diff + self%lambda * ESub
+!
+!
+!  end subroutine
 !=============================================================================+
   subroutine ThermoInt_LambdaShift(self, curbox, lambdaNew, E_Diff)
     implicit none

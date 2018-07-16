@@ -17,6 +17,7 @@ module FF_Pair_LJ_Cut
     contains
       procedure, pass :: Constructor => Constructor_LJ_Cut
       procedure, pass :: DetailedECalc => Detailed_LJ_Cut
+      procedure, pass :: DiffECalc => DiffECalc_LJ_Cut
       procedure, pass :: ShiftECalc_Single => Shift_LJ_Cut_Single
       procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
       procedure, pass :: NewECalc => New_LJ_Cut
@@ -53,6 +54,40 @@ module FF_Pair_LJ_Cut
     self%rCutSq = 5E0_dp**2
 
     IF (AllocateStat /= 0) STOP "Allocation in the LJ/Cut Pair Style"
+
+  end subroutine
+!============================================================================
+  subroutine DiffECalc_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+    implicit none
+    class(Pair_LJ_Cut), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+!    class(displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+    real(dp) :: E_Half
+
+    accept = .true.
+    curbox % dETable = 0E0_dp
+    E_Diff = 0E0_dp
+
+    select type(disp)
+      class is(DisplacementNew)
+         call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+
+      class is(Addition)
+         call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
+
+      class is(Deletion)
+         call self % OldECalc(curbox, disp, E_Diff)
+
+!      class is(Displacement)
+!        stop
+      class default
+        write(*,*) "Unknown Perturbation Type."
+    end select
+
 
   end subroutine
   !===================================================================================
@@ -199,7 +234,8 @@ module FF_Pair_LJ_Cut
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
+!    type(displacement), intent(in) :: disp(:)
+    type(Addition), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
@@ -216,27 +252,27 @@ module FF_Pair_LJ_Cut
     accept = .true.
 
     do iDisp = 1, dispLen
-      if(.not. disp(iDisp)%newAtom) then
-        cycle
-      endif
+!      if(.not. disp(iDisp)%newAtom) then
+!        cycle
+!      endif
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
       listIndx = disp(iDisp)%listIndex
-      if(disp(iDisp)%newlist) then
+!      if(disp(iDisp)%newlist) then
         maxNei = tempNNei(listIndx)
-      else
-        maxNei = curbox%NeighList(1)%nNeigh(listIndx)
-      endif
+!      else
+!        maxNei = curbox%NeighList(1)%nNeigh(listIndx)
+!      endif
 
       do jNei = 1, maxNei
-        if(disp(iDisp)%newlist) then
+!        if(disp(iDisp)%newlist) then
           jAtom = tempList(jNei, listIndx)
-        else
-          jAtom = curbox%NeighList(1)%list(jNei, listIndx)
-        endif
-        if( any(jAtom == disp(:)%atmIndx) ) then
-          cycle
-        endif
+!        else
+!          jAtom = curbox%NeighList(1)%list(jNei, listIndx)
+!        endif
+!        if( any(jAtom == disp(:)%atmIndx) ) then
+!          cycle
+!        endif
 
         rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
@@ -269,7 +305,8 @@ module FF_Pair_LJ_Cut
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
+!    type(displacement), intent(in) :: disp(:)
+    type(Deletion), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     integer :: iDisp, iAtom, jAtom, remLen, jNei
     integer :: atmType1, atmType2
@@ -280,11 +317,12 @@ module FF_Pair_LJ_Cut
 
     E_Diff = 0E0_dp
     do iDisp = 1, size(disp)
-      if(.not. disp(iDisp)%oldAtom) then
-        cycle
-      endif
-      iAtom = disp(iDisp)%oldAtmIndx
-
+!      if(.not. disp(iDisp)%oldAtom) then
+!        cycle
+!      endif
+!      iAtom = disp(iDisp)%oldAtmIndx
+      iAtom = disp(iDisp)%atmIndx
+      
       atmType1 = curbox % AtomType(iAtom) 
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
@@ -385,7 +423,6 @@ module FF_Pair_LJ_Cut
 
     rCut = self%rCut
   end function
-
   !=====================================================================
   subroutine Prologue_LJ_Cut(self)
     use Common_MolInfo, only: nAtomTypes
