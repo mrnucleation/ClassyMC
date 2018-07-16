@@ -210,17 +210,32 @@ use Template_NeighList, only: NeighListDef
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: iDisp
-    type(Displacement), intent(inout) :: disp
+!    type(Displacement), intent(inout) :: disp
+    class(Perturbation), intent(inout) :: disp
     integer, intent(inout) :: tempList(:,:), tempNNei(:)
     integer, optional :: nCount
     real(dp), optional :: rCount
     integer :: jType, jAtom, j
     integer :: jUp, jLow, molStart, molIndx
+    real(dp) :: xn, yn, zn
     real(dp) :: rx, ry, rz, rsq
 
-    disp % newlist = .true.
-    disp % listIndex = iDisp
-    molIndx = self%parent%MolIndx(disp%atmIndx)
+    select typE(disp)
+      class is (Addition)
+!        disp % newlist = .true.
+        disp % listIndex = iDisp
+        molIndx = self%parent%MolIndx(disp%atmIndx)
+        xn = disp%x_new
+        yn = disp%y_new
+        zn = disp%z_new
+      class is (DisplacementNew)
+        disp % newlist = .true.
+        disp % listIndex = iDisp
+        molIndx = self%parent%MolIndx(disp%atmIndx)
+        xn = disp%x_new
+        yn = disp%y_new
+        zn = disp%z_new
+    end select
 
     templist(:, iDisp) = 0
     tempNNei(iDisp) = 0
@@ -233,9 +248,9 @@ use Template_NeighList, only: NeighListDef
         if(self%parent%MolIndx(jAtom) == molIndx) then
           cycle
         endif
-        rx = disp%x_new - self%parent%atoms(1, jAtom)
-        ry = disp%y_new - self%parent%atoms(2, jAtom)
-        rz = disp%z_new - self%parent%atoms(3, jAtom)
+        rx = xn - self%parent%atoms(1, jAtom)
+        ry = yn - self%parent%atoms(2, jAtom)
+        rz = zn - self%parent%atoms(3, jAtom)
         call self%parent%Boundary(rx,ry,rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then

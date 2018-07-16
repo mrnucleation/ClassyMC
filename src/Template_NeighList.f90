@@ -2,7 +2,7 @@
 module Template_NeighList
   use MasterTemplate, only: classyClass
   use VarPrecision
-  use CoordinateTypes, only: Displacement
+  use CoordinateTypes, only: Perturbation, Displacement
 !use Template_SimBox, only: SimBox
 
   type, public, extends(classyClass) :: NeighListDef
@@ -49,7 +49,8 @@ module Template_NeighList
     implicit none
     class(NeighListDef), intent(inout) :: self
     integer, intent(in) :: iDisp
-    type(Displacement), intent(inout) :: disp
+!    type(Displacement), intent(inout) :: disp
+    class(Perturbation), intent(inout) :: disp
     integer, intent(inout) :: tempList(:,:), tempNNei(:)
     integer, optional :: nCount
     real(dp), optional :: rCount

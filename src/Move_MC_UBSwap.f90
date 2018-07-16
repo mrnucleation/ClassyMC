@@ -1,11 +1,11 @@
 !========================================================
-module MCMove_AVBMC_Simple
-use CoordinateTypes, only: DisplacementNew, Addition
+module MCMove_UB_Simple
+use CoordinateTypes, only: DisplacementNew, Addition, Deletion
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
 
-  type, public, extends(MCMove) :: AVBMC_Simple
+  type, public, extends(MCMove) :: UB_Simple
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
     real(dp) :: avbmcRad = 1.5E0_dp
@@ -17,22 +17,22 @@ use VarPrecision
 !    integer, allocatable :: tempList(:, :)
 
     contains
-      procedure, pass :: Constructor => AVBMC_Simp_Constructor
-!      procedure, pass :: GeneratePosition => AVBMC_Simp_GeneratePosition
-      procedure, pass :: FullMove => AVBMC_Simp_FullMove
-      procedure, pass :: SwapIn => AVBMC_SwapIn
-      procedure, pass :: SwapOut => AVBMC_SwapOut
-!      procedure, pass :: Maintenance => AVBMC_Simp_Maintenance
-      procedure, pass :: Prologue => AVBMC_Simp_Prologue
-      procedure, pass :: Epilogue => AVBMC_Simp_Epilogue
+      procedure, pass :: Constructor => UB_Simp_Constructor
+!      procedure, pass :: GeneratePosition => UB_Simp_GeneratePosition
+      procedure, pass :: FullMove => UB_Simp_FullMove
+      procedure, pass :: SwapIn => UB_Simp_SwapIn
+      procedure, pass :: SwapOut => UB_Simp_SwapOut
+!      procedure, pass :: Maintenance => UB_Simp_Maintenance
+      procedure, pass :: Prologue => UB_Simp_Prologue
+      procedure, pass :: Epilogue => UB_Simp_Epilogue
   end type
 !========================================================
  contains
 !========================================================
-  subroutine AVBMC_Simp_Constructor(self)
+  subroutine UB_Simp_Constructor(self)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
-    class(AVBMC_Simple), intent(inout) :: self
+    class(UB_Simple), intent(inout) :: self
 !    integer :: iType, maxAtoms
 
 
@@ -41,10 +41,10 @@ use VarPrecision
     allocate( self%tempList(200, 1) )
   end subroutine
 !========================================================
-!  subroutine AVBMC_Simp_GeneratePosition(self, disp)
+!  subroutine UB_Simp_GeneratePosition(self, disp)
 !    use RandomGen, only: grnd
 !    implicit none
-!    class(AVBMC_Simple), intent(in) :: self
+!    class(UB_Simple), intent(in) :: self
 !    type(DisplacementNew), intent(inout) :: disp
 !    real(dp) :: dx, dy, dz
 !      dx = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
@@ -52,9 +52,10 @@ use VarPrecision
 !      dz = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
 !  end subroutine
 !===============================================
-  subroutine AVBMC_Simp_FullMove(self, trialBox, accept) 
+  subroutine UB_Simp_FullMove(self, trialBox, accept) 
+    use RandomGen, only: grnd
     implicit none
-    class(AVBMC_Simple), intent(inout) :: self
+    class(UB_Simple), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
 
@@ -66,18 +67,18 @@ use VarPrecision
 
   end subroutine
 !===============================================
-  subroutine AVBMC_Simp_SwapIn(self, trialBox, accept) 
+  subroutine UB_Simp_SwapIn(self, trialBox, accept) 
     use Box_Utility, only: FindAtom
     use CommonSampling, only: sampling
     use Common_NeighData, only: neighSkin
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd, Generate_UnitSphere
     implicit none
-    class(AVBMC_Simple), intent(inout) :: self
+    class(UB_Simple), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
     integer :: nTarget, nType, rawIndx, iConstrain
-    integer :: CalcIndex, nMove
+    integer :: CalcIndex, nMove, nCount
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, radius
     real(dp) :: Prob = 1E0_dp
@@ -115,8 +116,9 @@ use VarPrecision
     self%newPart(1)%z_new = trialBox%atoms(3, nTarget) + dz
 
     !If the particle moved a large distance get a temporary neighborlist
-    call trialBox % NeighList(1) % GetNewList(1, self%tempList, self%tempNNei, self%newPart(1) &
+    call trialBox % NeighList(1) % GetNewList(1, self%tempList, self%tempNNei, self%newPart(1), &
                                               nCount, self%avbmcRad)
+
     self%newPart(1)%listIndex = 1
 
     !Check Constraint
@@ -133,7 +135,7 @@ use VarPrecision
     endif
 
     Prob = real(trialBox%nAtoms, dp) * self%avbmcVol
-    Prob = Prob/(real(trialBox%nCount, dp) * real(trialBox%nAtoms+1, dp))
+    Prob = Prob/(real(nCount, dp) * real(trialBox%nAtoms+1, dp))
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%newPart(1:1))
@@ -145,14 +147,14 @@ use VarPrecision
 
   end subroutine
 !===============================================
-  subroutine AVBMC_Simp_SwapOut(self, trialBox, accept) 
+  subroutine UB_Simp_SwapOut(self, trialBox, accept) 
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
     use Common_NeighData, only: neighSkin
     use Box_Utility, only: FindAtom
     implicit none
-    class(AVBMC_Simple), intent(inout) :: self
+    class(UB_Simple), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
     integer :: nMove, rawIndx, iConstrain
@@ -193,42 +195,41 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-      call trialBox % DeleteMol(self%oldPart(1:1)%molIndx)
+      call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 
 
-    endif
 
   end subroutine
 
 !=========================================================================
-  subroutine AVBMC_Simp_Maintenance(self)
+  subroutine UB_Simp_Maintenance(self)
     implicit none
-    class(AVBMC_Simple), intent(inout) :: self
+    class(UB_Simple), intent(inout) :: self
  
 
   end subroutine
 !=========================================================================
-  subroutine AVBMC_Simp_Prologue(self)
+  subroutine UB_Simp_Prologue(self)
     use ParallelVar, only: nout
     use Constants, only: pi
     implicit none
-    class(AVBMC_Simple), intent(inout) :: self
+    class(UB_Simple), intent(inout) :: self
 
     self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
 
   end subroutine
 !=========================================================================
-  subroutine AVBMC_Simp_Epilogue(self)
+  subroutine UB_Simp_Epilogue(self)
     use ParallelVar, only: nout
     implicit none
-    class(AVBMC_Simple), intent(inout) :: self
+    class(UB_Simple), intent(inout) :: self
     real(dp) :: accptRate
       
-    write(nout,"(1x,A,I15)") "AVBMC Moves Accepted: ", nint(self%accpt)
-    write(nout,"(1x,A,I15)") "AVBMC Moves Attempted: ", nint(self%atmps)
+    write(nout,"(1x,A,I15)") "UB Moves Accepted: ", nint(self%accpt)
+    write(nout,"(1x,A,I15)") "UB Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()
-    write(nout,"(1x,A,F15.8)") "AVBMC Acceptance Rate: ", accptRate
+    write(nout,"(1x,A,F15.8)") "UB Acceptance Rate: ", accptRate
 !    write(nout,"(1x,A,F15.8)") "Final Maximum Displacement: ", self%max_dist
  
 

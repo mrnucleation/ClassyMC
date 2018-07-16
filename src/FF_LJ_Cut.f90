@@ -85,7 +85,7 @@ module FF_Pair_LJ_Cut
 !      class is(Displacement)
 !        stop
       class default
-        write(*,*) "Unknown Perturbation Type."
+        write(*,*) "Unknown Perturbation Type Encountered by the LJ_Cut Pair Style."
     end select
 
 
