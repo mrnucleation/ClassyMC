@@ -501,6 +501,17 @@ module SimpleSimBox
           endif
         enddo
 
+      class is(Addition)
+        dispLen = size(disp)
+        do iDisp = 1, dispLen
+            dispIndx = disp(iDisp) % atmIndx
+            call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
+            self % atoms(1, dispIndx) = disp(iDisp)%x_new
+            self % atoms(2, dispIndx) = disp(iDisp)%y_new
+            self % atoms(3, dispIndx) = disp(iDisp)%z_new
+        enddo
+
+
       class default
         stop "The code does not know how to update coordinates for this perturbation type."
     end select

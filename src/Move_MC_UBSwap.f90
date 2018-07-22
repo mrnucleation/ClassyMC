@@ -8,6 +8,10 @@ use VarPrecision
   type, public, extends(MCMove) :: UB_Simple
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
+    real(dp) :: inatmps = 1E-30_dp
+    real(dp) :: inaccpt = 0E0_dp
+    real(dp) :: outatmps = 1E-30_dp
+    real(dp) :: outaccpt = 0E0_dp
     real(dp) :: avbmcRad = 1.5E0_dp
     real(dp) :: avbmcVol = 0E0_dp
     type(Addition) :: newPart(1:1)
@@ -84,6 +88,7 @@ use VarPrecision
     real(dp) :: Prob = 1E0_dp
 
     self % atmps = self % atmps + 1E0_dp
+    self % inatmps = self % inatmps + 1E0_dp
     accept = .true.
 
 !    integer(kind=atomIntType) :: molType, atmIndx, molIndx
@@ -115,7 +120,6 @@ use VarPrecision
     self%newPart(1)%y_new = trialBox%atoms(2, nTarget) + dy
     self%newPart(1)%z_new = trialBox%atoms(3, nTarget) + dz
 
-    !If the particle moved a large distance get a temporary neighborlist
     call trialBox % NeighList(1) % GetNewList(1, self%tempList, self%tempNNei, self%newPart(1), &
                                               nCount, self%avbmcRad)
 
@@ -141,6 +145,7 @@ use VarPrecision
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%newPart(1:1))
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
+      self % inaccpt = self % inaccpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%newPart(1:1), self%tempList, self%tempNNei)
     endif
@@ -164,6 +169,7 @@ use VarPrecision
     real(dp), parameter :: Prob = 1E0_dp
 
     self % atmps = self % atmps + 1E0_dp
+    self % outatmps = self % outatmps + 1E0_dp
     accept = .true.
 
     !Propose move
@@ -181,7 +187,6 @@ use VarPrecision
     endif
 
     !Energy Calculation
-!    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
     if(.not. accept) then
       return
@@ -189,19 +194,20 @@ use VarPrecision
 
     nNei = trialBox % NeighList(1) % GetNeighCount (nMove, self%avbmcRad)
 
+    Prob = real(nCount, dp) * real(trialBox%nAtoms, dp)
+    Prob = Prob/(real(trialBox%nAtoms-1, dp) * self%avbmcVol)
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%oldPart(1:1))
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
+      self % outaccpt = self % outaccpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 
 
-
   end subroutine
-
 !=========================================================================
   subroutine UB_Simp_Maintenance(self)
     implicit none
@@ -230,7 +236,16 @@ use VarPrecision
     write(nout,"(1x,A,I15)") "UB Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()
     write(nout,"(1x,A,F15.8)") "UB Acceptance Rate: ", accptRate
-!    write(nout,"(1x,A,F15.8)") "Final Maximum Displacement: ", self%max_dist
+
+    write(nout,"(1x,A,I15)") "UB Out Moves Accepted: ", nint(self%outaccpt)
+    write(nout,"(1x,A,I15)") "UB Out Moves Attempted: ", nint(self%outatmps)
+    accptRate = 1E2_dp * self%outaccpt/self%outatmps
+    write(nout,"(1x,A,F15.8)") "UB Out Acceptance Rate: ", accptRate
+
+    write(nout,"(1x,A,I15)") "UB In Moves Accepted: ", nint(self%inaccpt)
+    write(nout,"(1x,A,I15)") "UB In Moves Attempted: ", nint(self%inatmps)
+    accptRate = 1E2_dp * self%outaccpt/self%outatmps
+    write(nout,"(1x,A,F15.8)") "UB In Acceptance Rate: ", accptRate
  
 
   end subroutine
