@@ -163,10 +163,10 @@ use VarPrecision
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
     integer :: nMove, rawIndx, iConstrain
-    integer :: CalcIndex, nNei
+    integer :: CalcIndex, nNei, nCount
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE
-    real(dp), parameter :: Prob = 1E0_dp
+    real(dp) :: Prob = 1E0_dp
 
     self % atmps = self % atmps + 1E0_dp
     self % outatmps = self % outatmps + 1E0_dp
@@ -199,7 +199,7 @@ use VarPrecision
       return
     endif
 
-    nNei = trialBox % NeighList(1) % GetNeighCount (nMove, self%avbmcRad)
+    nNei = trialBox % NeighList(1) % GetNeighCount (nCount, self%avbmcRad)
 
     Prob = real(nCount, dp) * real(trialBox%nAtoms, dp)
     Prob = Prob/(real(trialBox%nAtoms-1, dp) * self%avbmcVol)
