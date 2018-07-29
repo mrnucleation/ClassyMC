@@ -132,10 +132,14 @@ use Template_NeighList, only: NeighListDef
   subroutine RSqList_AddMol(self, disp, tempList, tempNNei)
     implicit none
     class(RSqList), intent(inout) :: self
-    type(Displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
 
-    call UpdateList_RSq(self%parent, disp, tempList, tempNNei)
+    select type(disp)
+
+      class is(Addition)
+        call UpdateList_AddMol_RSq(self%parent, disp, tempList, tempNNei)
+    end select
 
   end subroutine
 !===================================================================================
@@ -241,10 +245,13 @@ use Template_NeighList, only: NeighListDef
     tempNNei(iDisp) = 0
 
     molStart = 1
+    write(*,*) nMolTypes
     do jType = 1, nMolTypes
       jLow = self%parent%TypeFirst(jType)
-      jUp = self%parent%MolEndIndx( molStart + self%parent%NMol(jType) - 1 )
+      jUp = self%parent%TypeLast(jType)
+      write(*,*) jLow, jUp
       do jAtom = jLow, jUp
+        writE(*,*) jatom
         if(self%parent%MolIndx(jAtom) == molIndx) then
           cycle
         endif
@@ -371,15 +378,31 @@ use Template_NeighList, only: NeighListDef
     enddo
   end subroutine
 !===================================================================================
-  subroutine UpdateList_RSq(trialBox, disp, tempList, tempNNei)
+  subroutine UpdateList_AddMol_RSq(trialBox, disp, tempList, tempNNei)
     use Common_MolInfo, only: nMolTypes, MolData
     implicit none
     class(SimpleBox), intent(inout) :: trialBox
-    type(Displacement), intent(in) :: disp(:)
+    class(Addition), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
-    integer :: iList
+    integer :: iList, iDisp, iAtom, iNei, nNei, neiIndx
     real(dp) :: rx, ry, rz, rsq
 
+
+    do iList = 1, size(trialBox%NeighList)
+      if(iList == 1) then
+        do iDisp = 1, size(disp)
+          iAtom = disp(iDisp)%atmIndx
+          trialBox % NeighList(iList) % nNeigh(iAtom) = tempNNei(iDisp)
+          do iNei = 1, tempNNei(iDisp)
+            neiIndx = tempList(iDisp, iNei)
+            trialBox % NeighList(iList) % list(iAtom, iNei) =  neiIndx
+            trialBox % NeighList(iList) % list( trialBox%NeighList(iList)%nNeigh(neiIndx)+1, neiIndx ) = iAtom
+            trialBox%NeighList(iList)%nNeigh(neiIndx)= trialBox%NeighList(iList)%nNeigh(neiIndx) + 1
+          enddo
+        enddo
+      endif
+      
+    enddo
   end subroutine
 !===================================================================================
 end module

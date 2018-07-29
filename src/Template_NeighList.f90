@@ -71,7 +71,7 @@ module Template_NeighList
   subroutine AddMol(self, disp, tempList, tempNNei)
     implicit none
     class(NeighListDef), intent(inout) :: self
-    type(Displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
 
 

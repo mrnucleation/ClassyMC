@@ -1,0 +1,29 @@
+#======================================
+  set rng_seed 6
+  set NeighSkin 20.0
+  set moves 1000
+  set cycles 10000
+  SamplingType Metropolis
+
+  ForceField "LJForcefield.clFF"
+
+  Create Boxes
+    fromfile "SingleAtom.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 0.2
+  modify box 1 buildfreq 100
+
+  NeighList 1 rsqlist 1
+
+  Create Moves
+    AtomTranslation 1.0
+    UBSwap 1.0
+  End_Create
+
+  Create trajectory
+    xyz 1 100 "Traj.xyz"
+  End_Create
+
+#=====================================
