@@ -3,8 +3,8 @@ CUR_DIR := $(shell pwd)
 # ====================================
 #        Compiler Options
 # ====================================
-FC := mpif90
-#FC := /opt/openmpi/bin/mpif90
+#FC := mpif90
+FC := /opt/openmpi/bin/mpif90
 #FC := mpifort
 #FC := gfortran
 CC := mpicc

@@ -245,10 +245,13 @@ use Template_NeighList, only: NeighListDef
     tempNNei(iDisp) = 0
 
     molStart = 1
+    write(*,*) nMolTypes
     do jType = 1, nMolTypes
       jLow = self%parent%TypeFirst(jType)
-      jUp = self%parent%MolEndIndx( molStart + self%parent%NMol(jType) - 1 )
+      jUp = self%parent%TypeLast(jType)
+      write(*,*) jLow, jUp
       do jAtom = jLow, jUp
+        writE(*,*) jatom
         if(self%parent%MolIndx(jAtom) == molIndx) then
           cycle
         endif

@@ -7,6 +7,7 @@ module Input_Moves
   use Move_AtomExchange, only: AtomExchange
   use MCMove_AtomTranslation, only: AtomTranslate
   use MCMove_Delete, only: MoveDelete
+  use MCMove_UB_Simple, only: UB_Simple
   use Move_ThermoLambda, only: ThermoLambda
 
   contains
@@ -42,6 +43,8 @@ module Input_Moves
       case("thermolambda")
         allocate(ThermoLambda::Moves(moveNum)%move)
 
+      case("ubswap")
+        allocate(UB_Simple::Moves(moveNum)%move)
 
       case default
         lineStat = -1

@@ -451,6 +451,7 @@ module SimpleSimBox
 !      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
 !      return
 !    endif
+    write(*,*) lastMol, nStart, nType, molIndx
     jStart = self%MolStartIndx(lastMol)
 
 !     Take the top molecule from the atom array and move it's position in the deleted
@@ -511,6 +512,7 @@ module SimpleSimBox
           self % atoms(3, dispIndx) = disp(iDisp)%z_new
         enddo
         call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
+        call self % AddMol(disp(1)%molType)
 
 
       class default

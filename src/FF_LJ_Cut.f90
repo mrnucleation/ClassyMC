@@ -77,6 +77,7 @@ module FF_Pair_LJ_Cut
          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
 
       class is(Addition)
+         write(*,*) size(tempList)
          call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
 
       class is(Deletion)
@@ -251,29 +252,18 @@ module FF_Pair_LJ_Cut
     E_Diff = 0E0_dp
     accept = .true.
 
+    write(*,*) "Length:", size(tempNNei)
+    write(*,*) "Length:", size(tempList)
+    write(*,*)
     do iDisp = 1, dispLen
-!      if(.not. disp(iDisp)%newAtom) then
-!        cycle
-!      endif
       iAtom = disp(iDisp)%atmIndx
+      write(*,*) iAtom
       atmType1 = curbox % AtomType(iAtom)
+
       listIndx = disp(iDisp)%listIndex
-!      if(disp(iDisp)%newlist) then
-        maxNei = tempNNei(listIndx)
-!      else
-!        maxNei = curbox%NeighList(1)%nNeigh(listIndx)
-!      endif
-
+      maxNei = tempNNei(listIndx)
       do jNei = 1, maxNei
-!        if(disp(iDisp)%newlist) then
-          jAtom = tempList(jNei, listIndx)
-!        else
-!          jAtom = curbox%NeighList(1)%list(jNei, listIndx)
-!        endif
-!        if( any(jAtom == disp(:)%atmIndx) ) then
-!          cycle
-!        endif
-
+        jAtom = tempList(jNei, listIndx)
         rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
         rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)

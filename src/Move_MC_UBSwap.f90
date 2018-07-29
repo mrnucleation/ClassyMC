@@ -37,8 +37,8 @@ use VarPrecision
 
 
 
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(200, 1) )
+!    allocate( self%tempNNei(1) )
+!    allocate( self%tempList(200, 1) )
   end subroutine
 !========================================================
 !  subroutine UB_Simp_GeneratePosition(self, disp)
@@ -169,6 +169,13 @@ use VarPrecision
     !Propose move
     rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
     call FindAtom(trialbox, rawIndx, nMove)
+    write(*,*) rawIndx, nMove
+    if(trialBox%NMol(1) - 1 > trialBox%NMolMax(1)) then
+      accept = .false.
+      return
+    endif
+
+
 
     self%oldPart(1)%molType = trialBox%MolType(nMove)
     self%oldPart(1)%molIndx = trialBox%MolIndx(nMove)
@@ -195,6 +202,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
+      write(*,*) self%oldPart(1)%molIndx
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 
@@ -218,6 +226,8 @@ use VarPrecision
 
     self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
 
+    allocate( self%tempNNei(1) )
+    allocate( self%tempList(200, 1) )
   end subroutine
 !=========================================================================
   subroutine UB_Simp_Epilogue(self)
