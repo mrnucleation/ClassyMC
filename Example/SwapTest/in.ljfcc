@@ -1,8 +1,8 @@
 #======================================
   set rng_seed 6
-  set NeighSkin 20.0
-  set moves 1000
-  set cycles 10000
+  set NeighSkin 2.0
+  set moves 100
+  set cycles 100
   SamplingType Metropolis
 
   ForceField "LJForcefield.clFF"
@@ -21,6 +21,11 @@
     AtomTranslation 1.0
     UBSwap 1.0
   End_Create
+
+  Create constraint 1
+    distancecriteria 1 1.5 1
+  End_Create
+
 
   Create trajectory
     xyz 1 100 "Traj.xyz"

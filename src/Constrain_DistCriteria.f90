@@ -6,7 +6,7 @@ module Constrain_DistanceCriteria
   use VarPrecision
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Displacement, Perturbation
-  use CoordinateTypes, only: DisplacementNew, Deletion
+  use CoordinateTypes, only: DisplacementNew, Deletion, Addition
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
 
@@ -259,7 +259,46 @@ module Constrain_DistanceCriteria
         nNew = 1
         nClust = 1
 
-!      class is(Addition)
+      class is(Addition)
+        self%newTopoList = self%topoList 
+        accept = .true.
+        do iDisp = 1, size(disp)
+          if( disp(iDisp)%molType == self%molType ) then
+            molIndx = disp(iDisp)%molIndx
+            iAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
+            if( disp(iDisp)%atmIndx == iAtom) then
+              accept = .false.
+              iMol = disp(iDisp)%molIndx
+              do jMol = 1, totalMol
+                if(iMol /= jMol) then
+                  self%newTopoList(jMol, iMol) = .false.
+                  self%newTopoList(iMol, jMol) = .false.
+                endif
+              enddo
+              do jMol = 1, totalMol
+                if(iMol /= jMol) then
+                  molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
+                  jAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
+                  rx = disp(iDisp)%x_new - trialBox%atoms(1, jAtom)
+                  ry = disp(iDisp)%y_new - trialBox%atoms(2, jAtom)
+                  rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
+                  call trialBox%Boundary(rx, ry, rz)
+                  rsq = rx*rx + ry*ry + rz*rz
+!                  write(*,*) jMol, rx, ry, rz, rsq
+                  if(rsq < self%rCutSq ) then
+                    self%newTopoList(jMol, iMol) = .true.
+                    self%newTopoList(iMol, jMol) = .true.
+                  endif
+                endif
+              enddo
+            endif
+          endif
+        enddo
+
+        if(accept) then
+          return
+        endif
+
 
       class is(Deletion)
         !molType, atmIndx, molIndx

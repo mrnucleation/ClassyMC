@@ -203,6 +203,7 @@
       
 
       lineStat  = 0
+      AllocateStat = 0
 
       read(linestore(iLine),*) dummy, command
       call FindCommandBlock(iLine, lineStore, "end_create", lineBuffer)

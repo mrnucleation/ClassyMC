@@ -63,11 +63,11 @@ use VarPrecision
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
 
-    if(grnd() > 0.5E0_dp) then
+    !    if(grnd() > 0.5E0_dp) then
       call self % SwapIn(trialBox, accept)
-    else
-      call self % SwapOut(trialBox, accept)
-    endif
+    !else
+    !  call self % SwapOut(trialBox, accept)
+    !endif
 
   end subroutine
 !===============================================
