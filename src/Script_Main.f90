@@ -332,7 +332,7 @@
       
 
       lineStat  = 0
-
+      AllocateStat = 0
 !      read(line,*) dummy, command
       call GetXCommand(line, command, 2, lineStat)
       call LowerCaseLine(command)

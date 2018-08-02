@@ -15,7 +15,7 @@ module Input_LoadCoords
     integer, intent(in) :: boxNum
     integer, intent(out) :: lineStat
 
-    integer :: i, j, nLines, AllocateStat, iLine, lineBuffer
+    integer :: i, j, nLines,AllocateStat, iLine, lineBuffer
     integer, allocatable :: lineNumber(:)
     character(len=maxLineLen), allocatable :: lineStore(:)
 
@@ -24,6 +24,7 @@ module Input_LoadCoords
     integer :: nAtoms
 
     lineStat  = 0
+    AllocateStat = 0
     write(nout,*) "Loading file ", trim(adjustl(fileName))
     call LoadFile(lineStore, nLines, lineNumber, fileName)
     lineBuffer = 0

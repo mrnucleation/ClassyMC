@@ -27,6 +27,9 @@ module MetropolisRule
     real(dp) :: biasE
 
     accept = .false.
+    if(inProb < 0E0_dp) then
+      stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is negative!"
+    endif
     biasE = -trialBox%beta * E_Diff + log(inProb)
     if(biasE > 0.0E0_dp) then
       accept = .true.

@@ -146,6 +146,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
+      write(*,*) "In Accept"
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%newPart(1:1), self%tempList, self%tempNNei)
     endif
@@ -175,7 +176,6 @@ use VarPrecision
     !Propose move
     rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
     call FindAtom(trialbox, rawIndx, nMove)
-    write(*,*) rawIndx, nMove
     if(trialBox%NMol(1) - 1 > trialBox%NMolMax(1)) then
       accept = .false.
       return
@@ -210,7 +210,6 @@ use VarPrecision
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-      write(*,*) self%oldPart(1)%molIndx
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 

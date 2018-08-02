@@ -1,31 +1,27 @@
 #======================================
-  set rng_seed -6
-  set NeighSkin 2.0
-  set moves 1000
+  set rng_seed 3010
+  set NeighSkin 5.0
+  set moves 100
+#  set cycles 5000000
   set cycles 10000
   SamplingType Metropolis
 
   ForceField "LJForcefield.clFF"
 
   Create Boxes
-    fromfile "SingleAtom.clssy"
+#    Preset FCC 1.58740105197 3
+    FromFile "crystal.clssy"
   End_Create
 
   modify box 1 energycalc 1
   modify box 1 temperature 0.2
-  modify box 1 buildfreq 100
+  modify box 1 buildfreq 11
 
   NeighList 1 rsqlist 1
 
   Create Moves
     AtomTranslation 1.0
-    UBSwap 1.0
   End_Create
-
-  Create constraint 1
-    distancecriteria 1 1.5 1
-  End_Create
-
 
   Create trajectory
     xyz 1 100 "Traj.xyz"

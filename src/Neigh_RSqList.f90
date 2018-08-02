@@ -68,8 +68,8 @@ use Template_NeighList, only: NeighListDef
     endif
  
     write(nout,*) "Neighbor List CutOff:", self%rCut
-    if(self%maxNei > self%parent%nMaxAtoms-1) then
-      self%maxNei = self%parent%nMaxAtoms-1
+    if(self%maxNei > self%parent%nMaxAtoms) then
+      self%maxNei = self%parent%nMaxAtoms
     endif
     write(nout,*) "Neighbor List Maximum Neighbors:", self%maxNei
 
@@ -138,6 +138,7 @@ use Template_NeighList, only: NeighListDef
     select type(disp)
 
       class is(Addition)
+!      write(*,*) "Update"
         call UpdateList_AddMol_RSq(self%parent, disp, tempList, tempNNei)
     end select
 
@@ -224,6 +225,9 @@ use Template_NeighList, only: NeighListDef
     real(dp) :: xn, yn, zn
     real(dp) :: rx, ry, rz, rsq
 
+    if(present(nCount)) then
+      nCount = 0
+    endif
     select typE(disp)
       class is (Addition)
 !        disp % newlist = .true.
@@ -245,13 +249,10 @@ use Template_NeighList, only: NeighListDef
     tempNNei(iDisp) = 0
 
     molStart = 1
-    write(*,*) nMolTypes
     do jType = 1, nMolTypes
       jLow = self%parent%TypeFirst(jType)
       jUp = self%parent%TypeLast(jType)
-      write(*,*) jLow, jUp
       do jAtom = jLow, jUp
-        writE(*,*) jatom
         if(self%parent%MolIndx(jAtom) == molIndx) then
           cycle
         endif
@@ -264,10 +265,17 @@ use Template_NeighList, only: NeighListDef
           tempNNei(iDisp) = tempNNei(iDisp) + 1
           templist(tempNNei(iDisp), iDisp) = jAtom
         endif
+        if(present(rCount)) then
+          if(rsq < rCount*rCount) then
+            nCount = nCount + 1
+          endif
+        endif
       enddo
       molStart = molStart + self%parent%NMolMax(jType)
     enddo
-
+!    if(present(nCount)) then
+!        write(*,*) nCount
+!    endif
   end subroutine
 !====================================================================
   subroutine RSqList_ProcessIO(self, line, lineStat)
@@ -387,6 +395,8 @@ use Template_NeighList, only: NeighListDef
     integer :: iList, iDisp, iAtom, iNei, nNei, neiIndx
     real(dp) :: rx, ry, rz, rsq
 
+!    write(*,*) tempNNei(:)
+!    write(*,*) tempList(:,1)
 
     do iList = 1, size(trialBox%NeighList)
       if(iList == 1) then
@@ -395,13 +405,14 @@ use Template_NeighList, only: NeighListDef
           trialBox % NeighList(iList) % nNeigh(iAtom) = tempNNei(iDisp)
           do iNei = 1, tempNNei(iDisp)
             neiIndx = tempList(iDisp, iNei)
-            trialBox % NeighList(iList) % list(iAtom, iNei) =  neiIndx
+!            write(*,*) iAtom, neiIndx
+            trialBox % NeighList(iList) % list(iNei, iAtom) =  neiIndx
             trialBox % NeighList(iList) % list( trialBox%NeighList(iList)%nNeigh(neiIndx)+1, neiIndx ) = iAtom
             trialBox%NeighList(iList)%nNeigh(neiIndx)= trialBox%NeighList(iList)%nNeigh(neiIndx) + 1
           enddo
         enddo
       endif
-      
+!      write(*,*) "N", trialBox%NeighList(iList)%nNeigh(:)     
     enddo
   end subroutine
 !===================================================================================

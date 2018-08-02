@@ -348,6 +348,7 @@ contains
         endif
         i = i + 1
       enddo
+      i = i-1
 
       cleanedLine = inputline(1:i)
      

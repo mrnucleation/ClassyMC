@@ -88,7 +88,6 @@ module Constrain_DistanceCriteria
     do iMol = 1, totalMol-1
       molIndx = trialBox % MolGlobalIndx(self%molType, iMol)
       iAtom = trialBox % MolStartIndx(molIndx) + self%atomNum - 1
-!      write(*,*) iMol, molIndx
 
       do jMol = iMol+1, totalMol
         molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
@@ -98,7 +97,6 @@ module Constrain_DistanceCriteria
         rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
         call trialBox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-!        write(*,*) iMol, jMol, rx, ry, rz, rsq
         if(rsq < self%rCutSq ) then
           self%topoList(iMol, jMol) = .true.
           self%topoList(jMol, iMol) = .true.
@@ -106,9 +104,6 @@ module Constrain_DistanceCriteria
       enddo
     enddo
  
-!    do iMol = 1, totalMol
-!      write(*,*) (self%topoList(iMol, jMol), jMol=1,totalMol)
-!    enddo
 
     if(all(self%topoList .eqv. .false.) ) then
       accept = .false.
@@ -213,6 +208,7 @@ module Constrain_DistanceCriteria
           return
         endif
 
+       !----------------------------------------------------------------------------
       class is(DisplacementNew)
         self%newTopoList = self%topoList 
         accept = .true.
@@ -238,7 +234,6 @@ module Constrain_DistanceCriteria
                   rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
                   call trialBox%Boundary(rx, ry, rz)
                   rsq = rx*rx + ry*ry + rz*rz
-!                  write(*,*) jMol, rx, ry, rz, rsq
                   if(rsq < self%rCutSq ) then
                     self%newTopoList(jMol, iMol) = .true.
                     self%newTopoList(iMol, jMol) = .true.
@@ -259,6 +254,7 @@ module Constrain_DistanceCriteria
         nNew = 1
         nClust = 1
 
+       !----------------------------------------------------------------------------
       class is(Addition)
         self%newTopoList = self%topoList 
         accept = .true.
@@ -284,7 +280,6 @@ module Constrain_DistanceCriteria
                   rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
                   call trialBox%Boundary(rx, ry, rz)
                   rsq = rx*rx + ry*ry + rz*rz
-!                  write(*,*) jMol, rx, ry, rz, rsq
                   if(rsq < self%rCutSq ) then
                     self%newTopoList(jMol, iMol) = .true.
                     self%newTopoList(iMol, jMol) = .true.
@@ -298,8 +293,13 @@ module Constrain_DistanceCriteria
         if(accept) then
           return
         endif
-
-
+        self%clustMemb = .false.
+        self%clustMemb(1) = .true.
+        self%newlist(1) = 1
+        nNew = 1
+        nClust = 1
+        totalMol = totalMol + 1
+       !----------------------------------------------------------------------------
       class is(Deletion)
         !molType, atmIndx, molIndx
         self%newTopoList = self%topoList 
@@ -343,8 +343,10 @@ module Constrain_DistanceCriteria
         nNew = 1
         nClust = 1
 
+       !----------------------------------------------------------------------------
       class default
         stop "Distance criteria is not compatiable with this perturbation type."
+       !----------------------------------------------------------------------------
     end select
     
 !    write(*,*)
@@ -389,11 +391,9 @@ module Constrain_DistanceCriteria
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
     if( (nNew <= 0) .or. (nClust < totalMol) ) then
       accept = .false.
-!      write(*,*) .false.
       return
     endif
     accept = .true.
-!    write(*,*) .true.
 
   end subroutine
 !=====================================================================
@@ -552,7 +552,6 @@ module Constrain_DistanceCriteria
      ! If no new particles were added or the limit has been hit without finding all the molecules
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
     if( (nNew <= 0) .or. (nClust < totalMol) ) then
-!      write(*,*) "Fail 2", nNew, nClust
       accept = .false.
       return
     endif
@@ -696,7 +695,6 @@ module Constrain_DistanceCriteria
               rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
               call trialBox%Boundary(rx, ry, rz)
               rsq = rx*rx + ry*ry + rz*rz
-!              write(*,*) rx, ry, rz, rsq
               if(rsq < self%rCutSq) then
                 self%clustMemb(jMol) = .true.
                 nNew = nNew + 1
@@ -711,7 +709,6 @@ module Constrain_DistanceCriteria
         endif
       enddo
 
-!      write(*,*) iLimit, nClust, nNew, nNewNei
        ! If no new molecules were added, the algorithm has hit a dead end
        ! and the cluster is broken.  
       if(nNew <= 0) then
@@ -729,11 +726,9 @@ module Constrain_DistanceCriteria
       endif
     enddo
 
-!    write(*,*) "Blah3"
      ! If no new particles were added or the limit has been hit without finding all the molecules
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
     if( (nNew <= 0) .or. (nClust < totalMol-1) ) then
-!      write(*,*) "Fail 2", nNew, nClust
       accept = .false.
       return
     endif
@@ -790,7 +785,6 @@ module Constrain_DistanceCriteria
     implicit none
     class(DistCriteria), intent(inout) :: self
 
-!    write(*,*) "Update"
     self%topoList = self%newTopoList
 
   end subroutine

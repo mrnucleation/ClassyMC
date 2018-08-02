@@ -480,6 +480,7 @@ module SimpleSimBox
     integer :: iDisp, dispLen, dispIndx
 
     select type(disp)
+       !-------------------------------------------------
       class is(DisplacementNew)
         dispLen = size(disp)
         do iDisp = 1, dispLen
@@ -490,6 +491,7 @@ module SimpleSimBox
           self % atoms(3, dispIndx) = disp(iDisp)%z_new
         enddo
 
+       !-------------------------------------------------
       class is(Displacement)
         dispLen = size(disp)
         do iDisp = 1, dispLen
@@ -501,7 +503,7 @@ module SimpleSimBox
             self % atoms(3, dispIndx) = disp(iDisp)%z_new
           endif
         enddo
-
+       !-------------------------------------------------
       class is(Addition)
         dispLen = size(disp)
         do iDisp = 1, dispLen
@@ -514,6 +516,7 @@ module SimpleSimBox
         call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
         call self % AddMol(disp(1)%molType)
 
+       !-------------------------------------------------
 
       class default
         stop "The code does not know how to update coordinates for this perturbation type."

@@ -16,7 +16,8 @@ OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 #DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-DETAILEDDEBUG:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
+DETAILEDDEBUG:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
+#DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0
 #DEBUGFLAGS += -pg 
@@ -156,11 +157,12 @@ $(OBJ)/%.o: $(TEMPLATE)/%.f90
 #        Compile Commands
 # ====================================
 default: startUP classyMC finale
+debug: COMPFLAGS += $(DETAILEDDEBUG)
 debug: startUP_debug classyMC_debug finale
 neat: startUP classyMC removeObject finale
 clean: removeObjects removeExec finale    
        
-classyMC: $(OBJ_COMPLETE) 
+classyMC:$(OBJ_COMPLETE) 
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
@@ -168,6 +170,7 @@ classyMC: $(OBJ_COMPLETE)
 	
 
 classyMC_debug: $(OBJ_COMPLETE) 
+	    
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	

@@ -77,7 +77,7 @@ module FF_Pair_LJ_Cut
          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
 
       class is(Addition)
-         write(*,*) size(tempList)
+!         write(*,*) size(tempList)
          call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
 
       class is(Deletion)
@@ -175,6 +175,9 @@ module FF_Pair_LJ_Cut
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
+
+!      write(*,*) iAtom, curbox%NeighList(1)%nNeigh(iAtom)
+!      write(*,*) iAtom, curbox%NeighList(1)%list(:, iAtom)
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
 
@@ -252,12 +255,12 @@ module FF_Pair_LJ_Cut
     E_Diff = 0E0_dp
     accept = .true.
 
-    write(*,*) "Length:", size(tempNNei)
-    write(*,*) "Length:", size(tempList)
-    write(*,*)
+!    write(*,*) "Length:", size(tempNNei)
+!    write(*,*) "Length:", size(tempList)
+!    write(*,*)
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
-      write(*,*) iAtom
+!      write(*,*) iAtom
       atmType1 = curbox % AtomType(iAtom)
 
       listIndx = disp(iDisp)%listIndex
