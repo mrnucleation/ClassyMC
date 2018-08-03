@@ -12,9 +12,10 @@
   End_Create
 
   modify box 1 energycalc 1
-  modify box 1 temperature 0.2
+  modify box 1 temperature 0.8
   modify box 1 buildfreq 100
 
+  modify box 1 chempotential 1 -2.0
   NeighList 1 rsqlist 1
 
   Create Moves
@@ -28,7 +29,7 @@
 
 
   Create trajectory
-    xyz 1 100 "Traj.xyz"
+    xyz 1 1 "Traj.xyz"
   End_Create
 
 #=====================================

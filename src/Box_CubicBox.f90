@@ -185,7 +185,7 @@ module CubicBoxDef
 
 
 
-      case("chempot")
+      case("chempotential")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         call GetXCommand(line, command, 6, lineStat)

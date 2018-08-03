@@ -170,6 +170,7 @@ module Constrain_DistanceCriteria
 !    type(Displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
+    logical :: leave
     integer :: iDisp
     integer :: totalMol, nNew, nClust, neiIndx, startMol
     integer :: iMol,jMol, iAtom, jAtom, iLimit
@@ -325,15 +326,17 @@ module Constrain_DistanceCriteria
         endif
 
         startMol = 1
+        leave = .false.
         do iMol = 1, totalMol
           do jMol = iMol+1, totalMol
             if(self%newTopoList(jMol, iMol)) then
               startMol = iMol
+              leave = .true.
               exit
             endif
 
           enddo
-          if(self%newTopoList(jMol, iMol)) then
+          if(leave) then
             exit
           endif
         enddo
@@ -389,10 +392,18 @@ module Constrain_DistanceCriteria
 
      ! If no new particles were added or the limit has been hit without finding all the molecules
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
-    if( (nNew <= 0) .or. (nClust < totalMol) ) then
-      accept = .false.
-      return
-    endif
+    select type(disp)
+      class is(Deletion)
+          if( (nNew <= 0) .or. (nClust < totalMol-1) ) then
+            accept = .false.
+            return
+          endif
+      class default
+          if( (nNew <= 0) .or. (nClust < totalMol) ) then
+              accept = .false.
+              return
+          endif
+    end select
     accept = .true.
 
   end subroutine

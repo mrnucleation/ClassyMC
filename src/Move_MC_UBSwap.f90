@@ -63,11 +63,11 @@ use VarPrecision
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
 
-    !    if(grnd() > 0.5E0_dp) then
+    if(grnd() > 0.5E0_dp) then
       call self % SwapIn(trialBox, accept)
-    !else
-    !  call self % SwapOut(trialBox, accept)
-    !endif
+    else
+      call self % SwapOut(trialBox, accept)
+    endif
 
   end subroutine
 !===============================================
@@ -146,7 +146,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
-      write(*,*) "In Accept"
+!      write(*,*) "In Accept"
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%newPart(1:1), self%tempList, self%tempNNei)
     endif
@@ -199,9 +199,9 @@ use VarPrecision
       return
     endif
 
-    nNei = trialBox % NeighList(1) % GetNeighCount (nCount, self%avbmcRad)
+    nNei = trialBox % NeighList(1) % GetNeighCount (nMove, self%avbmcRad)
 
-    Prob = real(nCount, dp) * real(trialBox%nAtoms, dp)
+    Prob = real(nNei, dp) * real(trialBox%nAtoms, dp)
     Prob = Prob/(real(trialBox%nAtoms-1, dp) * self%avbmcVol)
 
     !Accept/Reject

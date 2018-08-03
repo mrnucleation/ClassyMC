@@ -85,7 +85,7 @@ module SimpleSimBox
       write(*,*) "prior to box initialization!"
       stop 
     endif
-
+    AllocateStatus = 0
     self%boxStr = "NoBox"
     !First begin by computing the maximium number of atoms that the box can potentially contain
     self%nMaxAtoms = 0
@@ -122,6 +122,7 @@ module SimpleSimBox
     allocate(self%MolGlobalIndx(1:nMolTypes, 1:maxMol), stat=AllocateStatus)
 
     allocate(self%chempot(1:nMolTypes), stat=AllocateStatus)
+    self%chempot = 0E0_dp
     IF (AllocateStatus /= 0) STOP "Allocation Error in Simulation Box Def"
 
     self%AtomType = 0
@@ -336,7 +337,7 @@ module SimpleSimBox
         read(command, *) intVal
         self % maintFreq = intVal
 
-      case("chempot")
+      case("chempotential")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         call GetXCommand(line, command, 6, lineStat)
@@ -451,7 +452,7 @@ module SimpleSimBox
 !      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
 !      return
 !    endif
-    write(*,*) lastMol, nStart, nType, molIndx
+!    write(*,*) lastMol, nStart, nType, molIndx
     jStart = self%MolStartIndx(lastMol)
 
 !     Take the top molecule from the atom array and move it's position in the deleted
