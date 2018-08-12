@@ -15,8 +15,8 @@ OPTIMIZE_FLAGS := -O3
 #OPTIMIZE_FLAGS += -no-wrap-margin
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
-#DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-DETAILEDDEBUG:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
+DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
+#DETAILEDDEBUG:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0
@@ -24,7 +24,7 @@ DETAILEDDEBUG:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -f
 #DEBUGFLAGS += -ffpe-trap=invalid
 #DEBUGFLAGS += -Wunused-parameter 
 #DEBUGFLAGS := -fimplicit-none  -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fwhole-file -fcheck=all -fbacktrace
-COMPFLAGS := $(DEBUGFLAGS) $(OPTIMIZE_FLAGS)
+#COMPFLAGS := $(DEBUGFLAGS) $(OPTIMIZE_FLAGS)
 
 
 # ====================================
@@ -156,6 +156,7 @@ $(OBJ)/%.o: $(TEMPLATE)/%.f90
 # ====================================
 #        Compile Commands
 # ====================================
+default: COMPFLAGS += $(OPTIMIZE_FLAGS)
 default: startUP classyMC finale
 debug: COMPFLAGS += $(DETAILEDDEBUG)
 debug: startUP_debug classyMC_debug finale

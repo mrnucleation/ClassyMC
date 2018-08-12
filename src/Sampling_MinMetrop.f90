@@ -1,7 +1,7 @@
 !====================================================================
 module MinMetroRule
   use VarPrecision
-  use CoordinateTypes, only: Displacement, Perturbation
+  use CoordinateTypes, only: Displacement, Perturbation, Addition, Deletion, VolChange
   use AcceptRuleTemplate, only: acceptrule
  
   type, public, extends(acceptrule) :: MinMetro
@@ -24,9 +24,21 @@ module MinMetroRule
     real(dp), intent(in) :: inProb
     real(dp), intent(in) :: E_Diff
     logical :: accept
+    real(dp) :: biasE, extraTerms
+
+    extraTerms = 0E0_dp
+    select type(disp)
+      class is(Addition)
+          extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
+      class is(Deletion)
+          extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
+      class is(VolChange)
+          extraTerms = extraTerms + (disp(1)%volNew -disp(1)%volOld)*trialBox%pressure*trialBox%beta
+    end select
 
 
-    if(E_Diff <= 0.0E0_dp) then
+    biasE = -trialBox%beta * E_Diff + log(inProb) + extraTerms
+    if(biasE <= 0.0E0_dp) then
       accept = .true.
     else
       accept = .false.

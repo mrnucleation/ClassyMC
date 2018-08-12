@@ -2,7 +2,7 @@
 module UmbrellaRule
   use VarPrecision
   use AcceptRuleTemplate, only: AcceptRule
-  use CoordinateTypes, only: Displacement, Perturbation
+  use CoordinateTypes, only: Displacement, Perturbation, Addition, Deletion, VolChange
  
   type, public, extends(AcceptRule) :: Umbrella
 
@@ -143,6 +143,7 @@ module UmbrellaRule
     logical :: accept
     integer :: iBias, oldIndx, newIndx, indx
     real(dp) :: biasE, biasOld, biasNew
+    real(dp) :: extraTerms, chemPot
 
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
@@ -151,6 +152,18 @@ module UmbrellaRule
 
     oldIndx = self%GetBiasIndex()
     call self%GetNewBiasIndex(newIndx, accept)
+
+    extraTerms = 0E0_dp
+    select type(disp)
+      class is(Addition)
+          extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
+      class is(Deletion)
+          extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
+      class is(VolChange)
+          extraTerms = extraTerms + (disp(1)%volNew -disp(1)%volOld)*trialBox%pressure*trialBox%beta
+    end select
+
+
 
 !    write(*,*) oldIndx, self%UBias(oldIndx)
 !    write(*,*) newIndx
