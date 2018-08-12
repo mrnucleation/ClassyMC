@@ -8,7 +8,7 @@
   modify Sampling biasvariables 1
   modify Sampling analysis 1
   modify Sampling bounds 1 1.0 1.0 3.0 
-  modify Sampling reference 1.0
+  modify Sampling reference 1.001
   modify Sampling whamfreq 100000
 
 

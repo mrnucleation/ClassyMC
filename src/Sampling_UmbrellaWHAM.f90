@@ -76,7 +76,7 @@ module UmbrellaWHAMRule
     allocate( self%UBinSize(1:self%nBiasVar), STAT =AllocationStat )
     allocate( self%UArray(1:self%nBiasVar), STAT =AllocationStat )
     allocate( self%varValues(1:self%nBiasVar), STAT =AllocationStat )
-
+    self%refVals = 0E0_dp
   end subroutine
 !====================================================================
   subroutine UmbrellaWHAM_Prologue(self)
@@ -85,7 +85,7 @@ module UmbrellaWHAMRule
     use ParallelVar, only: nout, myid
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
-    integer :: i,j, indx, AllocateStatus
+    integer :: i,j, indx, stat, AllocateStatus
 
     do i = 1, self%nBiasVar
       indx = self%AnalysisIndex(i)
@@ -141,6 +141,12 @@ module UmbrellaWHAMRule
     self%UBias = 0E0_dp
     self%UHist = 0E0_dp
 
+    call self%GetUIndexArray(self%refVals, i, stat)
+    if(stat /= 0) then
+      stop
+    endif
+    self%refBin = i
+
     call self%ReadInitialBias
     self%nWhamItter = ceiling(dble(nCycles)/dble(self%maintFreq))
     ! Allocation of the WHAM variables
@@ -168,9 +174,7 @@ module UmbrellaWHAMRule
     self%NewBias = 0E0
     self%TempHist = 0E0
 
-
-    call self%GetUIndexArray(self%refVals, i, j) 
-    self%refBin = i
+    write(*,*) self%refVals, i 
   end subroutine
 !====================================================================
   function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
@@ -339,8 +343,6 @@ module UmbrellaWHAMRule
       endif
 
       call self%GetUIndexArray(varValue, biasIndx, inStat) 
-!      write(*, *) (varValue(j), j=1,self%nBiasVar), curBias
-!      write(*,*) varValue, biasIndx
       if(inStat .eq. 1) then
         cycle
       endif
@@ -492,10 +494,12 @@ module UmbrellaWHAMRule
 
       case("reference")
         do i = 1, self%nBiasVar
-          call GetXCommand(line, command, 4, lineStat)
+          call GetXCommand(line, command, 4+i-1, lineStat)
           read(command, *) realVal
+          write(*, *) realVal
           self%refVals(i) = realVal
         enddo
+        write(*, *) self%refVals 
 
       case("whamfreq")
           call GetXCommand(line, command, 4, lineStat)
