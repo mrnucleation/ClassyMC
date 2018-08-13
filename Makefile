@@ -9,14 +9,14 @@ FC := mpif90
 #FC := gfortran
 CC := mpicc
 OPTIMIZE_FLAGS := -O3
-#OPTIMIZE_FLAGS += -xHost
+OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
-#OPTIMIZE_FLAGS += -no-prec-div
+OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -no-wrap-margin
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
-DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-#DETAILEDDEBUG:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
+#DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
+DETAILEDDEBUG:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0

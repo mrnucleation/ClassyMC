@@ -22,7 +22,7 @@ module UmbrellaWHAMRule
     character(len=50) :: fileName = "umbrella.dat"
 
     real(dp), allocatable :: refVals(:)
-    integer :: refBin
+    integer :: refBin = 1
     integer :: maxSelfConsist = 3000
     real(dp) :: tolLimit = 1E-5_dp
 !    integer :: equilInterval
@@ -146,6 +146,7 @@ module UmbrellaWHAMRule
       stop
     endif
     self%refBin = i
+!    write(*,*) self%refBin
 
     call self%ReadInitialBias
     self%nWhamItter = ceiling(dble(nCycles)/dble(self%maintFreq))
@@ -261,7 +262,7 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = AnalysisArray(analyIndx)%func%GetResult()
-      self%binIndx(iBias) = ceiling(biasVal/self%UBinSize(iBias))
+      self%binIndx(iBias) = floor(biasVal/self%UBinSize(iBias))
 !      write(*,*) biasVal, self%binIndx(iBias), self%UBinSize(iBias)
     enddo
 
@@ -294,7 +295,7 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = analyCommon(analyIndx)
-      self%binIndx(iBias) = ceiling(biasVal/self%UBinSize(iBias))
+      self%binIndx(iBias) = floor(biasVal/self%UBinSize(iBias))
 
 !      write(*,*) biasVal, self%binIndx(iBias)
       if(self%binIndx(iBias) > self%binMax(iBias) ) then
@@ -335,20 +336,27 @@ module UmbrellaWHAMRule
     IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
 
     self%UBias = 0E0_dp
+    biasIndx = 0
     do 
       read(36, *, IOSTAT=inStat) (varValue(j), j=1,self%nBiasVar), curBias
 
-      if(inStat .lt. 0) then
+      if(inStat < 0) then
         exit
       endif
 
       call self%GetUIndexArray(varValue, biasIndx, inStat) 
-      if(inStat .eq. 1) then
+      if(inStat == 1) then
         cycle
       endif
 
       self%UBias(biasIndx) = curBias
     enddo
+
+    if(inStat < 0) then
+      return
+    endif
+
+    
 
     refVal = self%UBias(self%refBin)
     do iUmbrella = 1, self%umbrellaLimit
@@ -371,9 +379,10 @@ module UmbrellaWHAMRule
       
 
     stat = 0
+    biasIndx = 1
     do iBias = 1, self%nBiasVar
 !       binIndx(iBias) = floor( varArray(iBias) / UBinSize(iBias) + 1E-8 )
-      self%binIndx(iBias) = ceiling( varArray(iBias) / self%UBinSize(iBias) )
+      self%binIndx(iBias) = floor( varArray(iBias) / self%UBinSize(iBias) )
       if(self%binIndx(iBias) > self%binMax(iBias)) then
         stat = 1
         return
@@ -388,6 +397,7 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
     enddo
+
 
    end subroutine
 !==========================================================================================
@@ -484,12 +494,12 @@ module UmbrellaWHAMRule
 
           call GetXCommand(line, command, 6, lineStat)
           read(command, *) realVal
-          self%binMin(intVal) = ceiling(realVal/self%UBinSize(intVal))
+          self%binMin(intVal) = floor(realVal/self%UBinSize(intVal))
 
 
           call GetXCommand(line, command, 7, lineStat)
           read(command, *) realVal
-          self%binMax(intVal) = ceiling(realVal/self%UBinSize(intVal))
+          self%binMax(intVal) = floor(realVal/self%UBinSize(intVal))
         endif
 
       case("reference")
@@ -504,7 +514,7 @@ module UmbrellaWHAMRule
       case("whamfreq")
           call GetXCommand(line, command, 4, lineStat)
           read(command, *) realVal
-          self%maintFreq = ceiling(realVal)
+          self%maintFreq = floor(realVal)
 
       case default
         lineStat = -1
@@ -581,7 +591,7 @@ module UmbrellaWHAMRule
   end subroutine
 !=========================================================================
 !     This subroutine periodically adjusts the Umbrella Sampling Bias
-!     by collecting histogram data from across 
+!     by collecting histogram data from across each thread. 
   subroutine UmbrellaWHAM_AdjustHist(self)
     use ParallelVar, only: myid, nout, ierror
     use MPI
