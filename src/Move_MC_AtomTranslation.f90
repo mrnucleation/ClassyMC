@@ -80,6 +80,9 @@ use VarPrecision
     self%disp(1)%molType = trialBox%MolType(nMove)
     self%disp(1)%molIndx = trialBox%MolIndx(nMove)
     self%disp(1)%atmIndx = nMove
+!    write(*,*) trialBox%MolType(nMove), trialBox%MolIndx(nMove), nMove
+
+
 
 !    self%disp(1)%oldatom = .true.
 !    self%disp(1)%oldMolType = trialBox%MolType(nMove)
@@ -89,6 +92,7 @@ use VarPrecision
     self%disp(1)%x_new = trialBox%atoms(1, nMove) + dx
     self%disp(1)%y_new = trialBox%atoms(2, nMove) + dy
     self%disp(1)%z_new = trialBox%atoms(3, nMove) + dz
+!    write(*,*) dx, dy, dz
 
     !If the particle moved a large distance get a temporary neighborlist
 !    if(any([dx,dy,dz] > neighSkin)) then
@@ -127,6 +131,7 @@ use VarPrecision
     implicit none
     class(AtomTranslate), intent(inout) :: self
     real(dp), parameter :: limit = 3.0E0_dp
+    return
       
     if(self%atmps .lt. 0.5E0_dp) then
       return

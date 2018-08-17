@@ -12,7 +12,7 @@ module UmbrellaWHAMRule
     integer :: umbrellaLimit = 0
     integer, allocatable :: indexCoeff(:)
     integer, allocatable :: binMin(:), binMax(:)
-    integer, allocatable :: binIndx(:)
+    integer, allocatable :: binIndx(:), nBins(:)
     integer, allocatable :: UArray(:)
     real(dp), allocatable :: valMin(:), valMax(:)
     real(dp), allocatable :: UBias(:)
@@ -71,12 +71,18 @@ module UmbrellaWHAMRule
     allocate( self%indexCoeff(1:self%nBiasVar), stat=AllocationStat ) 
     allocate( self%binMax(1:self%nBiasVar), stat=AllocationStat) 
     allocate( self%binMin(1:self%nBiasVar), stat=AllocationStat) 
+    allocate( self%nBins(1:self%nBiasVar), stat=AllocationStat) 
     allocate( self%binIndx(1:self%nBiasVar), stat=AllocationStat) 
 
     allocate( self%UBinSize(1:self%nBiasVar), STAT =AllocationStat )
     allocate( self%UArray(1:self%nBiasVar), STAT =AllocationStat )
     allocate( self%varValues(1:self%nBiasVar), STAT =AllocationStat )
+    allocate( self%valMin(1:self%nBiasVar), STAT =AllocationStat )
+    allocate( self%valMax(1:self%nBiasVar), STAT =AllocationStat )
     self%refVals = 0E0_dp
+    self%valMin = 0E0_dp
+    self%valMax = 0E0_dp
+    self%varValues = 0E0_dp
   end subroutine
 !====================================================================
   subroutine UmbrellaWHAM_Prologue(self)
@@ -99,11 +105,11 @@ module UmbrellaWHAMRule
     enddo
 
     do i = 1, self%nBiasVar
-      if(self%binMin(i) > self%binMax(i) ) then
+      if(self%valMin(i) > self%valMax(i) ) then
         write(nout,*) "ERROR! The given bounds for one of the umbrella variables does not make sense!"
         write(nout,*) "Smallest bin is larger than the largest bin" 
-        write(nout,*) "Minimum Bin:", self%binMin(i)
-        write(nout,*) "Maximum Bin:", self%binMax(i)
+        write(nout,*) "Minimum Value:", self%valMin(i)
+        write(nout,*) "Maximum Value:", self%valMax(i)
         stop
       endif
     enddo
@@ -123,12 +129,14 @@ module UmbrellaWHAMRule
     do i = 2, self%nBiasVar 
       self%indexCoeff(i) = 1
       do j = 1, i-1
-        self%indexCoeff(i) = self%indexCoeff(i) + self%indexCoeff(j) * (self%binMax(j) - self%binMin(j))
+!        self%indexCoeff(i) = self%indexCoeff(i) + self%indexCoeff(j) * (self%binMax(j) - self%binMin(j))
+        self%indexCoeff(i) = self%indexCoeff(i) + self%indexCoeff(j) * self%nBins(j) 
       enddo
     enddo      
     self%umbrellaLimit = 1
     do i = 1, self%nBiasVar 
-      self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * (self%binMax(i) - self%binMin(i))
+!      self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * (self%binMax(i) - self%binMin(i))
+      self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * self%nBins(i)
     enddo
 
     write(nout,*) "Sampling Style: Histogram based Umbrella Sampling \w Auto WHAM method"
@@ -146,7 +154,6 @@ module UmbrellaWHAMRule
       stop
     endif
     self%refBin = i
-!    write(*,*) self%refBin
 
     call self%ReadInitialBias
     self%nWhamItter = ceiling(dble(nCycles)/dble(self%maintFreq))
@@ -175,7 +182,8 @@ module UmbrellaWHAMRule
     self%NewBias = 0E0
     self%TempHist = 0E0
 
-    write(*,*) self%refVals, i 
+    write(nout,*) self%refVals, i 
+    write(nout,*) "Bin Size:", self%UBinSize
   end subroutine
 !====================================================================
   function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
@@ -193,7 +201,8 @@ module UmbrellaWHAMRule
     logical :: accept
     integer :: iBias, oldIndx, newIndx, indx
     real(dp) :: biasE, biasOld, biasNew
-    real(dp) :: extraTerms
+    real(dp) :: extraTerms, ranNum
+
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
       call AnalysisArray(indx)%func%CalcNewState(disp)
@@ -202,21 +211,14 @@ module UmbrellaWHAMRule
     oldIndx = self%GetBiasIndex()
     call self%GetNewBiasIndex(newIndx, accept)
 
-!    write(*,*) oldIndx, self%UBias(oldIndx)
-!    write(*,*) newIndx
     if(.not. accept) then
       self%UHist(oldIndx) = self%UHist(oldIndx) + 1E0_dp
       return
     endif
 
-!    write(*,*) oldIndx, self%UBias(oldIndx)
-!    write(*,*) newIndx, self%UBias(newIndx)
-!    write(*,*) E_Diff, trialBox%beta, log(inProb)
-!    write(*,*) 
     biasOld = self%UBias(oldIndx)
     biasNew = self%UBias(newIndx)
  
-!    write(*,*)
     extraTerms = 0E0_dp
     select type(disp)
       class is(Addition)
@@ -231,13 +233,13 @@ module UmbrellaWHAMRule
 
     accept = .false.
     biasE = -trialBox%beta * E_Diff + log(inProb) + (biasNew-biasOld) + extraTerms
-!    write(2,*) E_Diff, log(inProb),  (biasNew-biasOld)
-!    write(2,*) biasE
+    ranNum = log(grnd())
     if(biasE > 0.0E0_dp) then
       accept = .true.
-    elseif(biasE > log(grnd())) then
+    elseif(biasE > ranNum) then
       accept = .true.
     endif
+!    write(*,*) biasE, -trialBox%beta, E_Diff,  log(inProb), (biasNew-biasOld), extraTerms, accept, ranNum
 
     if(accept) then
       self%UHist(newIndx) = self%UHist(newIndx) + 1E0_dp
@@ -262,7 +264,8 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = AnalysisArray(analyIndx)%func%GetResult()
-      self%binIndx(iBias) = floor(biasVal/self%UBinSize(iBias))
+!      self%binIndx(iBias) = nint(biasVal/self%UBinSize(iBias))
+      self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
 !      write(*,*) biasVal, self%binIndx(iBias), self%UBinSize(iBias)
     enddo
 
@@ -270,11 +273,11 @@ module UmbrellaWHAMRule
    ! Using the bin values from each biasing variable, determine which
     biasIndx = 1
     do iBias = 1, self%nBiasVar
-      biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
+!      biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
+      biasIndx = biasIndx + self%indexCoeff(iBias) * self%binIndx(iBias)
 !      write(*,*) biasIndx, self%indexCoeff(iBias), self%binIndx(iBias), self%binMin(iBias) 
     enddo
 
-!    write(*,*) 
 
   end function
 !==========================================================================
@@ -295,18 +298,18 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = analyCommon(analyIndx)
-      self%binIndx(iBias) = floor(biasVal/self%UBinSize(iBias))
+      if(biasVal > self%valMax(iBias) ) then
+        accept = .false.
+        return
+      endif
+      if(biasVal < self%valMin(iBias) ) then
+        accept = .false.
+        return
+      endif
+
+      self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
 
 !      write(*,*) biasVal, self%binIndx(iBias)
-      if(self%binIndx(iBias) > self%binMax(iBias) ) then
-        accept = .false.
-        return
-      endif
-
-      if(self%binIndx(iBias) < self%binMin(iBias) ) then
-        accept = .false.
-        return
-      endif
     enddo
 
 
@@ -314,7 +317,8 @@ module UmbrellaWHAMRule
     biasIndx = 1
     do iBias = 1, self%nBiasVar
 !       write(*,*) biasIndx, self%indexCoeff(iBias), self%binIndx(iBias), self%binMin(iBias) 
-      biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
+!      biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
+      biasIndx = biasIndx + self%indexCoeff(iBias) * self%binIndx(iBias)
     enddo
 
 !    write(*,*) biasIndx
@@ -370,6 +374,10 @@ module UmbrellaWHAMRule
 
     end subroutine
 !====================================================================
+! This function is designed to take a set of input values for each biasing
+! variable (varArray) and uses that information to generate a 1D-bias index U.
+! Math: Given values (x1,x2,..xm) find the sub bins values (n1, n2,..nm) and find a U such that
+! U - U0 = a1*n1 + a1*n2 + ... am*nm
   subroutine UmbrellaWHAM_GetUIndexArray(self, varArray, biasIndx, stat) 
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
@@ -381,21 +389,24 @@ module UmbrellaWHAMRule
     stat = 0
     biasIndx = 1
     do iBias = 1, self%nBiasVar
-!       binIndx(iBias) = floor( varArray(iBias) / UBinSize(iBias) + 1E-8 )
-      self%binIndx(iBias) = floor( varArray(iBias) / self%UBinSize(iBias) )
-      if(self%binIndx(iBias) > self%binMax(iBias)) then
+      if(varArray(iBias) > self%valMax(iBias)) then
+!      if(self%binIndx(iBias) > self%binMax(iBias)) then
         stat = 1
         return
       endif
-      if(self%binIndx(iBias) < self%binMin(iBias)) then
+      if(varArray(iBias) < self%valMin(iBias)) then
+!      if(self%binIndx(iBias) < self%binMin(iBias)) then
         stat = -1
         return
       endif
+!      binIndx(iBias) = floor( (varArray(iBias)-self%valMin(iBias)) / UBinSize(iBias) + 1E-8 )
+      self%binIndx(iBias) = floor( (varArray(iBias) - self%valMin(iBias) ) / self%UBinSize(iBias) )
     enddo
 
     biasIndx = 1
     do iBias = 1, self%nBiasVar
-      biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
+!      biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
+      biasIndx = biasIndx + self%indexCoeff(iBias) * self%binIndx(iBias) 
     enddo
 
 
@@ -407,12 +418,11 @@ module UmbrellaWHAMRule
      integer :: iUmbrella, iBias, iBin
      character(len = 100) :: outputString
 
-!     write(*,*) "Output"
-     write(outputString, *) "(", ("F12.5, 2x", iBias =1,self%nBiasVar), "2x, F18.1)"
+     write(outputString, *) "(", ("F12.8, 2x", iBias =1,self%nBiasVar), "2x, F18.1)"
      open(unit=60, file="UmbrellaHist.txt")
       
      do iUmbrella = 1, self%umbrellaLimit
-       call self%findVarValues(iUmbrella, self%UArray)  
+       call self%FindVarValues(iUmbrella, self%UArray)  
        do iBias = 1, self%nBiasVar        
          self%varValues(iBias) = real(self% UArray(iBias), dp) * self%UBinSize(iBias)          
        enddo
@@ -428,6 +438,13 @@ module UmbrellaWHAMRule
       
   end subroutine
 !====================================================================
+! This function is designed to take an input bin value for the biasing array
+! (UIndx) and back converts it to give the bin indicies of the N-dimensional biasing
+! array. 
+! Math Problem: Given a value U find the values for (n1,n2,..nm) such that.
+! U - U0 = a1*n1 + a1*n2 + ... am*nm
+! Method: The code peels off
+!
   subroutine UmbrellaWHAM_FindVarValues(self, UIndx, UArray) 
     implicit none 
     class(UmbrellaWHAM), intent(inout) :: self
@@ -440,7 +457,8 @@ module UmbrellaWHAMRule
     do i = 1, self%nBiasVar 
       iBias = self%nBiasVar - i + 1 
       curVal = int( real(remainder, dp)/real(self%indexCoeff(iBias),dp) ) 
-      self%UArray(iBias) = curVal + self%binMin(iBias) 
+!      self%UArray(iBias) = curVal + self%binMin(iBias) 
+      self%UArray(iBias) = curVal 
       remainder = remainder - curVal * self%indexCoeff(iBias) 
     enddo 
                                                                              
@@ -459,7 +477,6 @@ module UmbrellaWHAMRule
 
     lineStat  = 0
     call GetXCommand(line, command, 3, lineStat)
-!    write(*,*) " Umbrella", command
     if(lineStat < 0) then
       return
     endif
@@ -489,27 +506,27 @@ module UmbrellaWHAMRule
           read(command, *) intVal
 
           call GetXCommand(line, command, 5, lineStat)
-          read(command, *) realVal
-          self%UBinSize(intVal) = realVal
+          read(command, *) intVal2
+          self%nBins(intVal) = intVal2
 
           call GetXCommand(line, command, 6, lineStat)
           read(command, *) realVal
-          self%binMin(intVal) = floor(realVal/self%UBinSize(intVal))
-
+          self%valMin(intVal) = realVal
 
           call GetXCommand(line, command, 7, lineStat)
           read(command, *) realVal
-          self%binMax(intVal) = floor(realVal/self%UBinSize(intVal))
+          self%valMax(intVal) = realVal
+          self%UBinSize(intVal) = (self%valMax(intVal)-self%valMin(intVal))/real(self%nBins(intVal), dp) 
+!          self%binMin(intVal) = nint(realVal/self%UBinSize(intVal))
+!          self%binMax(intVal) = nint(realVal/self%UBinSize(intVal))
         endif
 
       case("reference")
         do i = 1, self%nBiasVar
           call GetXCommand(line, command, 4+i-1, lineStat)
           read(command, *) realVal
-          write(*, *) realVal
           self%refVals(i) = realVal
         enddo
-        write(*, *) self%refVals 
 
       case("whamfreq")
           call GetXCommand(line, command, 4, lineStat)
@@ -530,7 +547,6 @@ module UmbrellaWHAMRule
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
 
-
     call self%Adjusthist
   end subroutine
 !====================================================================
@@ -550,6 +566,7 @@ module UmbrellaWHAMRule
 
     integer :: i,j
     integer :: UArray(1:self%nBiasVar)
+    real(dp) :: varVal
     character(len = 100) :: outputString
 
     write(outputString, *) "(", ("2x, F10.8,", j =1,self%nBiasVar), "2x, F22.1)"
@@ -557,20 +574,20 @@ module UmbrellaWHAMRule
 !        This block exports the histogram 
     rewind(96)
     do i = 1, self%umbrellaLimit
-      if(self%HistStorage(i) .ne. 0E0 ) then
-        call self%findVarValues(i, self%UArray)
-        write(96, outputString) (self%UArray(j)*self%UBinSize(j),j=1,self%nBiasVar), self%HistStorage(i)
+      if(self%HistStorage(i) /= 0E0 ) then
+        call self%FindVarValues(i, self%UArray)
+        write(96, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j), j=1,self%nBiasVar), self%HistStorage(i)
       endif
     enddo
     flush(96)
 
     write(outputString, *) "(", ("2x, F10.8,", j =1,self%nBiasVar), "2x, F18.8)"
 
-!        This block exports the current umbrella bias
+!      This block exports the current umbrella bias
     rewind(97)
     do i = 1, self%umbrellaLimit
-      call self%findVarValues(i, self%UArray)
-      write(97, outputString) (self%UArray(j)*self%UBinSize(j),j=1,self%nBiasVar), self%UBias(i)
+      call self%FindVarValues(i, self%UArray)
+      write(97, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j),j=1,self%nBiasVar), self%UBias(i)
     enddo
     flush(97)
 
@@ -578,9 +595,9 @@ module UmbrellaWHAMRule
 !        This block exports the calculated free energy to a file
     rewind(98)
     do i = 1, self%umbrellaLimit
-      if(self%ProbArray(i) .ne. 0E0 ) then
-        call self%findVarValues(i, self%UArray)
-        write(98, outputString) (self%UArray(j)*self%UBinSize(j),j=1,self%nBiasVar), self%FreeEnergyEst(i)
+      if(self%ProbArray(i) /= 0E0 ) then
+        call self%FindVarValues(i, self%UArray)
+        write(98, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j) ,j=1,self%nBiasVar), self%FreeEnergyEst(i)
       endif
     enddo
     flush(98)

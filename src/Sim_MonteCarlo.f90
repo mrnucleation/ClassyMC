@@ -68,7 +68,7 @@ contains
         call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
-      if(mod(iCycle, 1000) == 0) then
+      if(mod(iCycle, 100) == 0) then
         write(nout, *) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
         flush(nout)
       endif

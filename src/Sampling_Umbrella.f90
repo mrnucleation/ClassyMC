@@ -213,7 +213,7 @@ module UmbrellaRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = AnalysisArray(analyIndx)%func%GetResult()
-      self%binIndx(iBias) = nint(biasVal/self%UBinSize(iBias))
+      self%binIndx(iBias) = floor(biasVal/self%UBinSize(iBias))
 !      write(*,*) biasVal, self%binIndx(iBias), self%UBinSize(iBias)
     enddo
 
@@ -246,7 +246,7 @@ module UmbrellaRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = analyCommon(analyIndx)
-      self%binIndx(iBias) = nint(biasVal/self%UBinSize(iBias))
+      self%binIndx(iBias) = floor(biasVal/self%UBinSize(iBias))
 
 !      write(*,*) biasVal, self%binIndx(iBias)
       if(self%binIndx(iBias) > self%binMax(iBias) ) then
@@ -321,7 +321,7 @@ module UmbrellaRule
     stat = 0
     do iBias = 1, self%nBiasVar
 !       binIndx(iBias) = floor( varArray(iBias) / UBinSize(iBias) + 1E-8 )
-      self%binIndx(iBias) = nint( varArray(iBias) / self%UBinSize(iBias) )
+      self%binIndx(iBias) = floor( varArray(iBias) / self%UBinSize(iBias) )
       if(self%binIndx(iBias) > self%binMax(iBias)) then
         stat = 1
         return
@@ -432,12 +432,12 @@ module UmbrellaRule
 
           call GetXCommand(line, command, 6, lineStat)
           read(command, *) realVal
-          self%binMin(intVal) = nint(realVal/self%UBinSize(intVal))
+          self%binMin(intVal) = floor(realVal/self%UBinSize(intVal))
 
 
           call GetXCommand(line, command, 7, lineStat)
           read(command, *) realVal
-          self%binMax(intVal) = nint(realVal/self%UBinSize(intVal))
+          self%binMax(intVal) = floor(realVal/self%UBinSize(intVal))
 
         endif
 

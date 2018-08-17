@@ -140,6 +140,7 @@ use VarPrecision
 
     Prob = real(trialBox%nAtoms, dp) * self%avbmcVol
     Prob = Prob/(real(nCount, dp) * real(trialBox%nAtoms+1, dp))
+!    write(*,*) trialBox%nAtoms, self%avbmcVol, nCount, trialBox%nAtoms+1
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%newPart(1:1))
@@ -203,6 +204,7 @@ use VarPrecision
 
     Prob = real(nNei, dp) * real(trialBox%nAtoms, dp)
     Prob = Prob/(real(trialBox%nAtoms-1, dp) * self%avbmcVol)
+!    write(*,*) trialBox%nAtoms, self%avbmcVol, nNei, trialBox%nAtoms-1
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%oldPart(1:1))
@@ -230,6 +232,7 @@ use VarPrecision
     class(UB_Simple), intent(inout) :: self
 
     self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
+!    write(*,*) self%avbmcVol
 
     allocate( self%tempNNei(1) )
     allocate( self%tempList(200, 1) )

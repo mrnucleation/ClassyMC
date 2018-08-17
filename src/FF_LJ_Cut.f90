@@ -186,6 +186,7 @@ module FF_Pair_LJ_Cut
         rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
+!        write(*,*) sqrt(rsq)
         atmType2 = curbox % AtomType(jAtom)
         if(rsq < self%rCutSq) then
           rmin_ij = self % rMinTable(atmType2, atmType1)          
@@ -209,6 +210,7 @@ module FF_Pair_LJ_Cut
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
+!        write(*,*) sqrt(rsq)
         if(rsq < self%rCutSq) then
           ep = self % epsTable(atmType2, atmType1)
           sig_sq = self % sigTable(atmType2, atmType1)  
