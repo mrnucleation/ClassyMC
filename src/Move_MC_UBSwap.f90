@@ -135,12 +135,13 @@ use VarPrecision
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%newPart(1:1), self%tempList, &
                                               self%tempNNei, E_Diff, accept)
     if(.not. accept) then
+!      write(*,*) "Blah"
       return
     endif
 
     Prob = real(trialBox%nAtoms, dp) * self%avbmcVol
     Prob = Prob/(real(nCount, dp) * real(trialBox%nAtoms+1, dp))
-!    write(*,*) trialBox%nAtoms, self%avbmcVol, nCount, trialBox%nAtoms+1
+    write(*,*) "Prob In", Prob, E_Diff, trialBox%nAtoms, self%avbmcVol, nCount, trialBox%nAtoms+1
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%newPart(1:1))
@@ -197,6 +198,7 @@ use VarPrecision
     !Energy Calculation
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
     if(.not. accept) then
+!      write(*,*) "Blah"
       return
     endif
 
@@ -204,7 +206,7 @@ use VarPrecision
 
     Prob = real(nNei, dp) * real(trialBox%nAtoms, dp)
     Prob = Prob/(real(trialBox%nAtoms-1, dp) * self%avbmcVol)
-!    write(*,*) trialBox%nAtoms, self%avbmcVol, nNei, trialBox%nAtoms-1
+    write(*,*) "Prob Out:", Prob, trialBox%nAtoms, self%avbmcVol, nNei, trialBox%nAtoms-1
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%oldPart(1:1))

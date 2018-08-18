@@ -246,6 +246,7 @@ module Constrain_DistanceCriteria
         enddo
 
         if(accept) then
+          write(*,*) "No move"
           return
         endif
 
@@ -398,10 +399,11 @@ module Constrain_DistanceCriteria
             accept = .false.
             return
           endif
+
       class default
           if( (nNew <= 0) .or. (nClust < totalMol) ) then
-              accept = .false.
-              return
+            accept = .false.
+            return
           endif
     end select
     accept = .true.

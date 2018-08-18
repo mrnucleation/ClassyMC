@@ -131,7 +131,6 @@ use VarPrecision
     implicit none
     class(AtomTranslate), intent(inout) :: self
     real(dp), parameter :: limit = 3.0E0_dp
-    return
       
     if(self%atmps .lt. 0.5E0_dp) then
       return

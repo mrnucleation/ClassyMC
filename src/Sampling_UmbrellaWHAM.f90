@@ -6,6 +6,7 @@ module UmbrellaWHAMRule
  
   type, public, extends(AcceptRule) :: UmbrellaWHAM
 
+    logical :: lastaccept = .false.
     integer :: nBiasVar = 0
     integer, allocatable :: AnalysisIndex(:)
 
@@ -14,6 +15,7 @@ module UmbrellaWHAMRule
     integer, allocatable :: binMin(:), binMax(:)
     integer, allocatable :: binIndx(:), nBins(:)
     integer, allocatable :: UArray(:)
+    integer :: oldIndx, newIndx
     real(dp), allocatable :: valMin(:), valMax(:)
     real(dp), allocatable :: UBias(:)
     real(dp), allocatable :: UHist(:)
@@ -43,6 +45,7 @@ module UmbrellaWHAMRule
     contains
        procedure, pass :: Constructor => UmbrellaWHAM_Constructor
        procedure, pass :: MakeDecision => UmbrellaWHAM_MakeDecision
+       procedure, pass :: UpdateStatistics => UmbrellaWHAM_UpdateStatistics
        procedure, pass :: GetBiasIndex => UmbrellaWHAM_GetBiasIndex
        procedure, pass :: GetNewBiasIndex => UmbrellaWHAM_GetNewBiasIndex
        procedure, pass :: ReadInitialBias => UmbrellaWHAM_ReadInitialBias
@@ -56,6 +59,7 @@ module UmbrellaWHAMRule
        procedure, pass :: ProcessIO => UmbrellaWHAM_ProcessIO
        procedure, pass :: Epilogue => UmbrellaWHAM_Epilogue
        procedure, pass :: Prologue => UmbrellaWHAM_Prologue
+!       procedure, pass :: Update => UmbrellaWHAM_Update
 
   end type
 !====================================================================
@@ -199,32 +203,34 @@ module UmbrellaWHAMRule
     real(dp), intent(in) :: E_Diff
 
     logical :: accept
-    integer :: iBias, oldIndx, newIndx, indx
+    integer :: iBias, indx
     real(dp) :: biasE, biasOld, biasNew
     real(dp) :: extraTerms, ranNum
 
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
-      call AnalysisArray(indx)%func%CalcNewState(disp)
+      call AnalysisArray(indx) % func % CalcNewState(disp)
     enddo
 
-    oldIndx = self%GetBiasIndex()
-    call self%GetNewBiasIndex(newIndx, accept)
+    self%oldIndx = self % GetBiasIndex()
+    call self%GetNewBiasIndex(self%newIndx, accept)
 
     if(.not. accept) then
-      self%UHist(oldIndx) = self%UHist(oldIndx) + 1E0_dp
+!      self%UHist(self%oldIndx) = self%UHist(oldIndx) + 1E0_dp
       return
     endif
 
-    biasOld = self%UBias(oldIndx)
-    biasNew = self%UBias(newIndx)
+    biasOld = self%UBias(self%oldIndx)
+    biasNew = self%UBias(self%newIndx)
  
     extraTerms = 0E0_dp
     select type(disp)
       class is(Addition)
           extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
+!          write(*,*) "Add",biasOld, biasNew, self%oldIndx, self%newIndx
       class is(Deletion)
           extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
+!          write(*,*) "Subtract",biasOld, biasNew, self%oldIndx, self%newIndx
       class is(VolChange)
           extraTerms = extraTerms + (disp(1)%volNew -disp(1)%volOld)*trialBox%pressure*trialBox%beta
     end select
@@ -239,13 +245,13 @@ module UmbrellaWHAMRule
     elseif(biasE > ranNum) then
       accept = .true.
     endif
-!    write(*,*) biasE, -trialBox%beta, E_Diff,  log(inProb), (biasNew-biasOld), extraTerms, accept, ranNum
 
-    if(accept) then
-      self%UHist(newIndx) = self%UHist(newIndx) + 1E0_dp
-    else
-      self%UHist(oldIndx) = self%UHist(oldIndx) + 1E0_dp
-    endif
+!    select type(disp)
+!      class is(Addition)
+!        write(*,*) biasE, -trialBox%beta, E_Diff,  log(inProb), (biasNew-biasOld), extraTerms, accept, ranNum
+!      class is(Deletion)
+!        write(*,*) biasE, -trialBox%beta, E_Diff,  log(inProb), (biasNew-biasOld), extraTerms, accept, ranNum
+!    end select
 
   end function
 !==========================================================================
@@ -557,6 +563,22 @@ module UmbrellaWHAMRule
     class(UmbrellaWHAM), intent(inout) :: self
 
     write(nout,*) "Writing Umbrella Sampling Histogram..."
+  end subroutine
+!====================================================================
+  subroutine UmbrellaWHAM_UpdateStatistics(self, accept)
+    use Template_SimBox, only: SimBox
+    implicit none
+    class(UmbrellaWHAM), intent(inout) :: self
+    logical, intent(in) :: accept
+
+    if(accept) then
+      self%UHist(self%newIndx) = self%UHist(self%newIndx) + 1E0_dp
+      self%oldIndx = self%newIndx
+    else
+      self%UHist(self%oldIndx) = self%UHist(self%oldIndx) + 1E0_dp
+    endif
+
+
   end subroutine
 !==================================================================================
   subroutine UmbrellaWHAM_WHAMSimOutput(self)

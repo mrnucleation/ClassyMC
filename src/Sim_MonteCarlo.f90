@@ -10,6 +10,7 @@ contains
 
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
+    use CommonSampling, only: Sampling
     use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use Debug, only: Debug_DumpNeiList
     use ForcefieldData, only: EnergyCalculator
@@ -62,13 +63,14 @@ contains
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
 
         end select
+        call Sampling%UpdateStatistics(accept)
         if(accept) then
           call Update(iCycle, iMove, accept)
         endif
         call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
-      if(mod(iCycle, 100) == 0) then
+      if(mod(iCycle, 1000) == 0) then
         write(nout, *) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
         flush(nout)
       endif

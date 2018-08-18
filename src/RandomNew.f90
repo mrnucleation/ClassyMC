@@ -38,7 +38,7 @@
 
       x1 = grnd()
       x2 = grnd()
-      y1 = sqrt( -2.0d0 * log(x1) ) * cos(two_pi*x2)
+      y1 = sqrt( -2.0E0_dp * log(x1) ) * cos(two_pi*x2)
       num = y1
       end function
 !========================================================            
@@ -48,16 +48,16 @@
       real(dp), intent(out) :: x,y,z
       real(dp) :: u_12_sq, u1, u2
       
-      u_12_sq = 2E0
-      do while(u_12_sq .ge. 1)
-       u1 = 2E0 * grnd() - 1E0
-       u2 = 2E0 * grnd() - 1E0
+      u_12_sq = 2E0_dp
+      do while(u_12_sq .ge. 1E0_dp)
+       u1 = 2E0_dp * grnd() - 1E0_dp
+       u2 = 2E0_dp * grnd() - 1E0_dp
        u_12_sq = u1 * u1 + u2 * u2
       enddo
  
-      x = 2E0 * u1 * sqrt(1E0 - u_12_sq)
-      y = 2E0 * u2 * sqrt(1E0 - u_12_sq)
-      z = (1E0 - 2E0 * u_12_sq)
+      x = 2E0_dp * u1 * sqrt(1E0_dp - u_12_sq)
+      y = 2E0_dp * u2 * sqrt(1E0_dp - u_12_sq)
+      z = (1E0_dp - 2E0_dp * u_12_sq)
       
       end subroutine
 !=======================================================

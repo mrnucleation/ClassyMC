@@ -7,6 +7,7 @@ module AcceptRuleTemplate
   type, public, extends(classyClass) :: acceptrule
     contains
        procedure, pass :: MakeDecision
+       procedure, pass :: UpdateStatistics 
 !       procedure, pass :: Maintenance
        procedure, pass :: ProcessIO
   end type
@@ -25,6 +26,14 @@ module AcceptRuleTemplate
 
     accept = .true.
   end function
+!====================================================================
+  subroutine UpdateStatistics(self, accept)
+    use Template_SimBox, only: SimBox
+    implicit none
+    class(acceptrule), intent(inout) :: self
+    logical, intent(in) :: accept
+
+  end subroutine
 !====================================================================
 !  subroutine Maintenance(self)
 !    implicit none
