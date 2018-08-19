@@ -404,7 +404,7 @@ use Template_NeighList, only: NeighListDef
           iAtom = disp(iDisp)%atmIndx
           trialBox % NeighList(iList) % nNeigh(iAtom) = tempNNei(iDisp)
           do iNei = 1, tempNNei(iDisp)
-            neiIndx = tempList(iDisp, iNei)
+            neiIndx = tempList(iNei, iDisp)
 !            write(*,*) iAtom, neiIndx
             trialBox % NeighList(iList) % list(iNei, iAtom) =  neiIndx
             trialBox % NeighList(iList) % list( trialBox%NeighList(iList)%nNeigh(neiIndx)+1, neiIndx ) = iAtom

@@ -308,7 +308,6 @@ contains
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
 
-    call Sampling % Prologue
 
     if( allocated(AnalysisArray) ) then
       do i = 1, size(AnalysisArray)
@@ -316,6 +315,7 @@ contains
       enddo
     endif
 
+    call Sampling % Prologue
 !    write(nout, *) "Traj"
     if( allocated(TrajArray) ) then
       do i = 1, size(TrajArray)

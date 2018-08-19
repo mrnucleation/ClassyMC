@@ -188,6 +188,7 @@ module UmbrellaWHAMRule
 
     write(nout,*) self%refVals, i 
     write(nout,*) "Bin Size:", self%UBinSize
+    self%oldIndx = self % GetBiasIndex()
   end subroutine
 !====================================================================
   function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
@@ -575,6 +576,7 @@ module UmbrellaWHAMRule
       self%UHist(self%newIndx) = self%UHist(self%newIndx) + 1E0_dp
       self%oldIndx = self%newIndx
     else
+      self%oldIndx = self % GetBiasIndex()
       self%UHist(self%oldIndx) = self%UHist(self%oldIndx) + 1E0_dp
     endif
 
