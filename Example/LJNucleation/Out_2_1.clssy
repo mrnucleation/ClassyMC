@@ -1,7 +1,0 @@
- boxtype nobox
-
- molmin           1
- molmax           2
- mol           1
- # MolType,  MolNumber, AtomNumber, x1, x2.......
-           1           1           1  -82.911623625042552        183.04168914230254        18.135997044414694     

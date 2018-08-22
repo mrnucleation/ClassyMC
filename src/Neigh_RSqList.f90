@@ -26,6 +26,8 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: GetNeighCount => RSqList_GetNeighCount
 !      procedure, pass :: TransferList
       procedure, pass :: DeleteMol => RSqList_DeleteMol
+      procedure, pass :: Prologue => RSqList_Prologue
+      procedure, pass :: Update => RSqList_Update
   end type
 
 !===================================================================================
@@ -88,6 +90,22 @@ use Template_NeighList, only: NeighListDef
     self%restrictType = .false.
   end subroutine
 !===================================================================================
+  subroutine RSqList_Prologue(self)
+    implicit none
+    class(RSqList), intent(inout) :: self
+
+
+    call self%DumpList(2)
+  end subroutine
+!===================================================================================
+  subroutine RSqList_Update(self)
+    implicit none
+    class(RSqList), intent(inout) :: self
+
+
+    call self%DumpList(2)
+  end subroutine
+!===================================================================================
   subroutine RSqList_BuildList(self)
     implicit none
     class(RSqList), intent(inout) :: self
@@ -138,7 +156,7 @@ use Template_NeighList, only: NeighListDef
     select type(disp)
 
       class is(Addition)
-!      write(*,*) "Update"
+!        write(*,*) "Add"
         call UpdateList_AddMol_RSq(self%parent, disp, tempList, tempNNei)
     end select
 
@@ -159,6 +177,7 @@ use Template_NeighList, only: NeighListDef
     topStart = self % parent % MolStartIndx(topIndx)
     nType = self % parent % MolType(nStart)
 
+!    write(*,*) "Delete"
     do iAtom = 1, MolData(nType)%nAtoms
       atmIndx = nStart + iAtom - 1
       topAtom = topStart + iAtom - 1
@@ -166,6 +185,13 @@ use Template_NeighList, only: NeighListDef
       do iNei = 1, self % nNeigh(atmIndx)
         curNei = self % list(iNei, atmIndx)
         nNei = self%nNeigh(curNei)
+
+        if(nNei <= 1) then
+          self%nNeigh(curNei) = 0
+          self%list(:, curNei) = 0
+          cycle
+        endif
+
         if(self%sorted) then
           curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
         else
@@ -194,6 +220,9 @@ use Template_NeighList, only: NeighListDef
       do iNei = 1, self % nNeigh(topAtom)
         curNei = self % list(iNei, topAtom)
         nNei = self%nNeigh(curNei)
+        if(nNei == 0 ) then
+          cycle
+        endif
         if(self%sorted) then
           curIndx = BinarySearch( topAtom, self%list(1:nNei, curNei) )
         else
@@ -220,26 +249,28 @@ use Template_NeighList, only: NeighListDef
     integer, intent(inout) :: tempList(:,:), tempNNei(:)
     integer, optional :: nCount
     real(dp), optional :: rCount
-    integer :: jType, jAtom, j
-    integer :: jUp, jLow, molStart, molIndx
+    integer :: jType, jAtom, j, iAtom
+    integer :: jUp, jLow, molStart, molIndx, jMol
     real(dp) :: xn, yn, zn
     real(dp) :: rx, ry, rz, rsq
 
     if(present(nCount)) then
       nCount = 0
     endif
-    select typE(disp)
+    select type(disp)
       class is (Addition)
 !        disp % newlist = .true.
         disp % listIndex = iDisp
-        molIndx = self%parent%MolIndx(disp%atmIndx)
+        iAtom = disp%atmIndx
+        molIndx = self%parent%MolIndx(iAtom)
         xn = disp%x_new
         yn = disp%y_new
         zn = disp%z_new
       class is (DisplacementNew)
         disp % newlist = .true.
         disp % listIndex = iDisp
-        molIndx = self%parent%MolIndx(disp%atmIndx)
+        iAtom = disp%atmIndx
+        molIndx = self%parent%MolIndx(iAtom)
         xn = disp%x_new
         yn = disp%y_new
         zn = disp%z_new
@@ -250,10 +281,11 @@ use Template_NeighList, only: NeighListDef
 
     molStart = 1
     do jType = 1, nMolTypes
-      jLow = self%parent%TypeFirst(jType)
-      jUp = self%parent%TypeLast(jType)
-      do jAtom = jLow, jUp
-        if(self%parent%MolIndx(jAtom) == molIndx) then
+      do jAtom = 1, self%parent%nMaxAtoms
+        if( self%parent%MolSubIndx(jAtom) == molIndx ) then
+          cycle
+        endif
+        if( self%parent%MolSubIndx(jAtom) > self%parent%NMol(self%parent%MolType(jAtom)) ) then
           cycle
         endif
         rx = xn - self%parent%atoms(1, jAtom)
@@ -273,6 +305,7 @@ use Template_NeighList, only: NeighListDef
       enddo
       molStart = molStart + self%parent%NMolMax(jType)
     enddo
+    write(*,*) "NewList:", templist(1:tempNNei(iDisp), iDisp)
 !    if(present(nCount)) then
 !        write(*,*) nCount
 !    endif

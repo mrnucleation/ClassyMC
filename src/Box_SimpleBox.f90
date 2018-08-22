@@ -624,11 +624,17 @@ module SimpleSimBox
   subroutine SimpleBox_Update(self)
     implicit none
     class(SimpleBox), intent(inout) :: self
-    integer :: iConstrain
+    integer :: iConstrain, iList
 
     if( size(self%Constrain) > 0 ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % Update
+      enddo
+    endif
+
+    if( size(self%NeighList) > 0 ) then
+      do iList = 1, size(self%NeighList)
+        call self%NeighList(iList) % Update
       enddo
     endif
 

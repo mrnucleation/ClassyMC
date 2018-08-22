@@ -267,14 +267,15 @@ module Constrain_DistanceCriteria
             if( disp(iDisp)%atmIndx == iAtom) then
               accept = .false.
               iMol = disp(iDisp)%molIndx
+!              do jMol = 1, totalMol
+!                if(iMol /= jMol) then
+!                  self%newTopoList(jMol, iMol) = .false.
+!                  self%newTopoList(iMol, jMol) = .false.
+!                endif
+!              enddo
               do jMol = 1, totalMol
                 if(iMol /= jMol) then
-                  self%newTopoList(jMol, iMol) = .false.
-                  self%newTopoList(iMol, jMol) = .false.
-                endif
-              enddo
-              do jMol = 1, totalMol
-                if(iMol /= jMol) then
+                  write(*,*) iMol, jMol
                   molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
                   jAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
                   rx = disp(iDisp)%x_new - trialBox%atoms(1, jAtom)
@@ -353,10 +354,10 @@ module Constrain_DistanceCriteria
        !----------------------------------------------------------------------------
     end select
     
-!    write(*,*)
-!    do iMol = 1, totalMol
-!      write(*,*) (self%newTopoList(jMol, iMol), jMol=1,totalMol)
-!    enddo
+    write(*,*)
+    do iMol = 1, totalMol
+      write(*,*) (self%newTopoList(jMol, iMol), jMol=1,totalMol)
+    enddo
 
     !Using the newly constructed topology list, check to see if the new cluster satisfies
     !the cluster criteria. 

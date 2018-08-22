@@ -1,8 +1,9 @@
 #======================================
-  set rng_seed -6
+#  set rng_seed -6
+  set rng_seed 4272
   set NeighSkin 3.0
-  set moves 1
-  set cycles 5000000
+  set moves 100
+  set cycles 2000
 #  SamplingType Metropolis
   SamplingType UmbrellaWHAM
 #  SamplingType Umbrella

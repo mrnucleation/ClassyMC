@@ -20,12 +20,19 @@ contains
     integer, intent(in) :: val
     integer, intent(in) :: list(:)
     integer :: outIndx
-    integer :: upper, lower, curIndx
+    integer :: upper, lower, curIndx, listSize
 
     lower = LBound(list, dim=1)
     upper = UBound(list, dim=1)
 
     curIndx = lower
+
+    listSize = size(list)
+    if(listSize < 1) then
+      stop "Critical Error! A list size of 0 has beeen passed to the sort function!"
+    endif
+
+
     do while( list(curIndx) /= val )
       curIndx = curIndx + 1
       if(curIndx >= upper) then
@@ -44,12 +51,20 @@ contains
     integer, intent(in) :: list(:)
     integer :: outIndx
     integer :: upper, lower, curIndx
+    integer :: listSize
+
 
     lower = LBound(list, dim=1)
     upper = UBound(list, dim=1)
 
     curIndx = 1
-!    write(*,*) curIndx, list(curIndx), lower, upper
+
+    listSize = size(list)
+    if(listSize < 1) then
+      stop "Critical Error! A list size of 0 has beeen passed to the sort function!"
+    endif
+
+
     do while( list(curIndx) /= val )
       curIndx = nint(0.5E0_dp*(lower + upper))
       if(list(curIndx) < val) then

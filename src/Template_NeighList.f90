@@ -23,6 +23,7 @@ module Template_NeighList
       procedure, pass :: GetNewList
       procedure, pass :: GetNeighCount
       procedure, pass :: AddMol
+      procedure, pass :: DumpList
       procedure, pass :: TransferList
       procedure, pass :: DeleteMol
       procedure, pass :: ProcessIO
@@ -103,6 +104,28 @@ module Template_NeighList
     implicit none
     class(NeighListDef), intent(inout) :: self
     integer, intent(in) :: molIndx, topIndx
+
+
+  end subroutine
+!===================================================================================
+  subroutine DumpList(self, filenum)
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+    integer, intent(in) :: filenum
+    integer :: uB1, uB2, lB1, lB2
+    integer :: iNei, iAtom
+
+    lB1 = lbound(self%list, 1)
+    lB2 = lbound(self%list, 2)
+
+    uB1 = ubound(self%list, 1)
+    uB2 = ubound(self%list, 2)
+
+    write(filenum,*) lB1, lB2, uB1, uB2
+    do iAtom = lB2, uB2
+      write(filenum, *) iAtom, "|", (self%list(iNei, iAtom), iNei = lB1, uB1)
+    enddo
+    write(filenum, *) 
 
 
   end subroutine
