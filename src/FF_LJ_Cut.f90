@@ -289,6 +289,7 @@ module FF_Pair_LJ_Cut
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
           E_Diff = E_Diff + LJ
+          write(*,*) iAtom, jAtom, rsq, LJ
           curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
           curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
         endif
@@ -336,6 +337,7 @@ module FF_Pair_LJ_Cut
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
+          write(*,*) iAtom, jAtom, rsq, LJ
           E_Diff = E_Diff - LJ
           curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
           curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ

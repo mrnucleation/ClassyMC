@@ -239,8 +239,14 @@ module UmbrellaWHAMRule
 
 
     accept = .false.
-    biasE = -trialBox%beta * E_Diff + log(inProb) + (biasNew-biasOld) + extraTerms
     ranNum = log(grnd())
+    biasE = 0E0
+    write(*,*) biasE, -trialBox%beta, E_Diff,  inProb, (biasNew-biasOld), extraTerms, accept, ranNum
+    if(inProb == 0E0_dp) then
+      accept = .false.
+      return
+    endif
+    biasE = -trialBox%beta * E_Diff + log(inProb) + (biasNew-biasOld) + extraTerms
     if(biasE > 0.0E0_dp) then
       accept = .true.
     elseif(biasE > ranNum) then
@@ -249,7 +255,6 @@ module UmbrellaWHAMRule
 
 !    select type(disp)
 !      class is(Addition)
-!        write(*,*) biasE, -trialBox%beta, E_Diff,  log(inProb), (biasNew-biasOld), extraTerms, accept, ranNum
 !      class is(Deletion)
 !        write(*,*) biasE, -trialBox%beta, E_Diff,  log(inProb), (biasNew-biasOld), extraTerms, accept, ranNum
 !    end select

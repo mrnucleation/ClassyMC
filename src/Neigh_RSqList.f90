@@ -168,7 +168,7 @@ use Template_NeighList, only: NeighListDef
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: molIndx, topIndx
-    integer :: iAtom, iNei, jNei, nType
+    integer :: iAtom, iNei, jNei, nType, j
     integer :: nStart, topStart
     integer :: atmIndx, topAtom
     integer :: curNei, curIndx, nNei
@@ -177,7 +177,14 @@ use Template_NeighList, only: NeighListDef
     topStart = self % parent % MolStartIndx(topIndx)
     nType = self % parent % MolType(nStart)
 
-!    write(*,*) "Delete"
+    write(*,*) "----------------------------"
+    write(*,*) "Delete"
+    write(*,*) "Removed Mol:", molIndx
+    do iAtom = 1, self%parent%nMaxatoms
+      write(*,*) iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
+    enddo
+    write(*,*)
+
     do iAtom = 1, MolData(nType)%nAtoms
       atmIndx = nStart + iAtom - 1
       topAtom = topStart + iAtom - 1
@@ -189,13 +196,14 @@ use Template_NeighList, only: NeighListDef
         if(nNei <= 1) then
           self%nNeigh(curNei) = 0
           self%list(:, curNei) = 0
-          cycle
-        endif
-
-        if(self%sorted) then
-          curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
+          curIndx = 0
+!          cycle
         else
-          curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
+          if(self%sorted) then
+            curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
+          else
+            curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
+          endif
         endif
         if(curIndx /= 0) then
           if(nNei > 2) then
@@ -228,12 +236,20 @@ use Template_NeighList, only: NeighListDef
         else
           curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
         endif
+        write(*,*) "curIndx", atmIndx
+        write(*,*) "curIndx", curIndx
         if(curIndx /= 0) then
           self % list(curIndx, curNei) = atmIndx
         endif
       enddo
       self%nNeigh(topAtom) = 0
     enddo
+
+    do iAtom = 1, self%parent%nMaxatoms
+      write(*,*) iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
+    enddo
+    write(*,*)
+
 
     self % sorted = .false.
 
@@ -305,7 +321,7 @@ use Template_NeighList, only: NeighListDef
       enddo
       molStart = molStart + self%parent%NMolMax(jType)
     enddo
-    write(*,*) "NewList:", templist(1:tempNNei(iDisp), iDisp)
+!    write(*,*) "NewList:", templist(1:tempNNei(iDisp), iDisp)
 !    if(present(nCount)) then
 !        write(*,*) nCount
 !    endif
@@ -425,14 +441,22 @@ use Template_NeighList, only: NeighListDef
     class(SimpleBox), intent(inout) :: trialBox
     class(Addition), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
-    integer :: iList, iDisp, iAtom, iNei, nNei, neiIndx
+    integer :: iList, iDisp, iAtom, iNei, nNei, neiIndx, j
     real(dp) :: rx, ry, rz, rsq
 
 !    write(*,*) tempNNei(:)
 !    write(*,*) tempList(:,1)
 
+
+
     do iList = 1, size(trialBox%NeighList)
       if(iList == 1) then
+        write(*,*) "----------------------------"
+        write(*,*) "Add"
+        do iAtom = 1, trialBox%nMaxatoms
+          write(*,*) iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
+        enddo
+        write(*,*)
         do iDisp = 1, size(disp)
           iAtom = disp(iDisp)%atmIndx
           trialBox % NeighList(iList) % nNeigh(iAtom) = tempNNei(iDisp)
@@ -444,9 +468,16 @@ use Template_NeighList, only: NeighListDef
             trialBox%NeighList(iList)%nNeigh(neiIndx)= trialBox%NeighList(iList)%nNeigh(neiIndx) + 1
           enddo
         enddo
+        do iAtom = 1, trialBox%nMaxatoms
+          write(*,*) iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
+        enddo
+        write(*,*)
       endif
 !      write(*,*) "N", trialBox%NeighList(iList)%nNeigh(:)     
     enddo
+
+
+
   end subroutine
 !===================================================================================
 end module
