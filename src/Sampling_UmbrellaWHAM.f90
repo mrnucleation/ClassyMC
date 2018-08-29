@@ -240,9 +240,9 @@ module UmbrellaWHAMRule
 
     accept = .false.
     ranNum = log(grnd())
-    biasE = 0E0
-    write(*,*) biasE, -trialBox%beta, E_Diff,  inProb, (biasNew-biasOld), extraTerms, accept, ranNum
-    if(inProb == 0E0_dp) then
+!    biasE = 0E0
+!    write(*,*) biasE, -trialBox%beta, E_Diff,  inProb, (biasNew-biasOld), extraTerms, accept, ranNum
+    if(inProb <= 0E0_dp) then
       accept = .false.
       return
     endif

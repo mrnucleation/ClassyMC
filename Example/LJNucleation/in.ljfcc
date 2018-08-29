@@ -1,7 +1,7 @@
 #======================================
 #  set rng_seed -6
   set rng_seed 4272
-  set NeighSkin 3.0
+  set NeighSkin 2.0
   set moves 100
   set cycles 2000
 #  SamplingType Metropolis
@@ -24,7 +24,7 @@
   modify box 1 temperature 0.8
   modify box 1 buildfreq 100
 
-  modify box 1 chempotential 1 -9.210340372
+  modify box 1 chempotential 1 1.210340372
   NeighList 1 rsqlist 1
 
   Create Moves

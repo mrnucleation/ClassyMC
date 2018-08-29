@@ -32,10 +32,14 @@ contains
       stop "Critical Error! A list size of 0 has beeen passed to the sort function!"
     endif
 
+!    write(*,*) curIndx, list(curIndx)
+    do 
+      if( list(curIndx) == val ) then
+        exit
+      endif
 
-    do while( list(curIndx) /= val )
-      curIndx = curIndx + 1
-      if(curIndx >= upper) then
+      curIndx = curIndx + 1   
+      if(curIndx > upper) then
         curIndx = 0
         exit
       endif
@@ -80,7 +84,12 @@ contains
         exit
       endif
     enddo
- 
+
+    if(curIndx /= 0) then
+      if(list(curIndx) /= val) then
+        curIndx = 0
+      endif
+    endif
     outIndx = curIndx
 
   end function
