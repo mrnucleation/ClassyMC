@@ -598,7 +598,7 @@ module UmbrellaWHAMRule
     real(dp) :: varVal
     character(len = 100) :: outputString
 
-    write(outputString, *) "(", ("2x, F10.8,", j =1,self%nBiasVar), "2x, F22.1)"
+    write(outputString, *) "(", ("2x, F10.4,", j =1,self%nBiasVar), "2x, F22.1)"
 
 !        This block exports the histogram 
     rewind(96)
@@ -610,7 +610,7 @@ module UmbrellaWHAMRule
     enddo
     flush(96)
 
-    write(outputString, *) "(", ("2x, F10.8,", j =1,self%nBiasVar), "2x, F18.8)"
+    write(outputString, *) "(", ("2x, F10.4,", j =1,self%nBiasVar), "2x, F18.8)"
 
 !      This block exports the current umbrella bias
     rewind(97)
@@ -733,19 +733,19 @@ module UmbrellaWHAMRule
 
 !        Using the new estimates for the unbiased probability, calculate the free energy of nucleation
 !        and modify the umbrella sampling bias to
-      self%NewBias = 0E0
+      self%NewBias = 0E0_dp
       maxbin = maxloc(self%HistStorage,1)
       maxbin2 = maxloc(self%TempHist,1)
       do i = 1, self%umbrellaLimit
-        if(self%ProbArray(i) > 0E0) then
+        if(self%ProbArray(i) > 0E0_dp) then
           self%FreeEnergyEst(i) = -log(self%ProbArray(i)/self%ProbArray(maxbin))
         endif
-        if(self%TempHist(i) >= 1E0) then
+        if(self%TempHist(i) >= 1E0_dp) then
           self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) - log(self%TempHist(i)/self%TempHist(maxbin2))
         endif
       enddo
       do i = 1, self%umbrellaLimit
-        if(self%TempHist(i) .lt. 1E0) then
+        if(self%TempHist(i) < 1E0_dp) then
           self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) + log(self%TempHist(maxbin2))
         endif
       enddo

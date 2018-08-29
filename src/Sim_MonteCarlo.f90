@@ -63,6 +63,12 @@ contains
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
 
         end select
+!        write(*,*) moveNum
+!        do i = 1, size(BoxArray)
+!          call BoxArray(i) % box % Prologue
+!        enddo
+
+
         call Sampling%UpdateStatistics(accept)
         if(accept) then
           call Update(iCycle, iMove, accept)

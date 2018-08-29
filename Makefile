@@ -9,9 +9,9 @@ FC := mpif90
 #FC := gfortran
 CC := mpicc
 OPTIMIZE_FLAGS := -O3
-#OPTIMIZE_FLAGS += -xHost
+OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
-#OPTIMIZE_FLAGS += -no-prec-div
+OPTIMIZE_FLAGS += -no-prec-div
 #OPTIMIZE_FLAGS += -no-wrap-margin
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
@@ -134,6 +134,17 @@ OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN)
 # ====================================
 #        Compile Commands
 # ====================================
+default: COMPFLAGS += $(OPTIMIZE_FLAGS)
+default: COMPFLAGS += $(DEBUGFLAGS)
+default: startUP classyMC finale
+debug: COMPFLAGS += $(DETAILEDDEBUG)
+debug: startUP_debug classyMC_debug finale
+neat: startUP classyMC removeObject finale
+clean: removeObjects removeExec finale    
+
+# ====================================
+#        Compile Commands
+# ====================================
 
 
 .f90.o :     
@@ -153,15 +164,6 @@ $(OBJ)/%.o: $(TEMPLATE)/%.f90
 		@echo Creating $<
 		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
-# ====================================
-#        Compile Commands
-# ====================================
-default: COMPFLAGS += $(OPTIMIZE_FLAGS)
-default: startUP classyMC finale
-debug: COMPFLAGS += $(DETAILEDDEBUG)
-debug: startUP_debug classyMC_debug finale
-neat: startUP classyMC removeObject finale
-clean: removeObjects removeExec finale    
        
 classyMC:$(OBJ_COMPLETE) 
 		@echo =============================================

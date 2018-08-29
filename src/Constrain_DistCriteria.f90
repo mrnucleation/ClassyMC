@@ -309,7 +309,10 @@ module Constrain_DistanceCriteria
         accept = .true.
         do iDisp = 1, size(disp)
           if( disp(iDisp)%molType == self%molType ) then
-            if( disp(iDisp)%atmIndx == self%atomNum ) then
+            molIndx = disp(iDisp)%molIndx
+            iAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
+            if( disp(iDisp)%atmIndx == iAtom) then
+!            if( disp(iDisp)%atmIndx == self%atomNum ) then
               accept = .false.
               iMol = disp(iDisp)%molIndx
               do jMol = 1, totalMol

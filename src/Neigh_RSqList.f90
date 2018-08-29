@@ -95,7 +95,7 @@ use Template_NeighList, only: NeighListDef
     class(RSqList), intent(inout) :: self
 
 
-    call self%DumpList(2)
+!    call self%DumpList(2)
   end subroutine
 !===================================================================================
   subroutine RSqList_Update(self)
@@ -103,7 +103,7 @@ use Template_NeighList, only: NeighListDef
     class(RSqList), intent(inout) :: self
 
 
-    call self%DumpList(2)
+!    call self%DumpList(2)
   end subroutine
 !===================================================================================
   subroutine RSqList_BuildList(self)
