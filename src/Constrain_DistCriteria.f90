@@ -103,7 +103,13 @@ module Constrain_DistanceCriteria
         endif
       enddo
     enddo
- 
+
+
+    write(*,*) "REAL!"
+    do iMol = 1, totalMol
+      write(*,*) (self%topoList(jMol, iMol), jMol=1,totalMol)
+    enddo
+    write(*,*)
 
     if(all(self%topoList .eqv. .false.) ) then
       accept = .false.
@@ -172,7 +178,7 @@ module Constrain_DistanceCriteria
     logical, intent(out) :: accept
     logical :: leave
     integer :: iDisp
-    integer :: totalMol, nNew, nClust, neiIndx, startMol
+    integer :: totalMol, nNew, nClust, neiIndx, startMol, topMol
     integer :: iMol,jMol, iAtom, jAtom, iLimit
     integer :: molIndx, molType, nNext, nNext2, iNext
     real(dp) :: rx, ry, rz, rsq
@@ -213,6 +219,7 @@ module Constrain_DistanceCriteria
       class is(DisplacementNew)
         self%newTopoList = self%topoList 
         accept = .true.
+!        write(*,*) "Disp"
         do iDisp = 1, size(disp)
           if( disp(iDisp)%molType == self%molType ) then
             molIndx = disp(iDisp)%molIndx
@@ -260,6 +267,7 @@ module Constrain_DistanceCriteria
       class is(Addition)
         self%newTopoList = self%topoList 
         accept = .true.
+!        write(*,*) "Add"
         do iDisp = 1, size(disp)
           if( disp(iDisp)%molType == self%molType ) then
             molIndx = disp(iDisp)%molIndx
@@ -305,6 +313,8 @@ module Constrain_DistanceCriteria
        !----------------------------------------------------------------------------
       class is(Deletion)
         !molType, atmIndx, molIndx
+!        write(*,*) "---------------------------------------"
+!        write(*,*) "Del"
         self%newTopoList = self%topoList 
         accept = .true.
         do iDisp = 1, size(disp)
@@ -315,6 +325,7 @@ module Constrain_DistanceCriteria
 !            if( disp(iDisp)%atmIndx == self%atomNum ) then
               accept = .false.
               iMol = disp(iDisp)%molIndx
+!              write(*,*) "Del", iMol
               do jMol = 1, totalMol
                 if(self%newTopoList(jMol, iMol)) then
                   self%newTopoList(jMol, iMol) = .false.
@@ -356,11 +367,12 @@ module Constrain_DistanceCriteria
         stop "Distance criteria is not compatiable with this perturbation type."
        !----------------------------------------------------------------------------
     end select
-    
-!    write(*,*)
+
+!    write(*,*) "=============================="
 !    do iMol = 1, totalMol
 !      write(*,*) (self%newTopoList(jMol, iMol), jMol=1,totalMol)
 !    enddo
+!    write(*,*)
 
     !Using the newly constructed topology list, check to see if the new cluster satisfies
     !the cluster criteria. 
@@ -397,15 +409,61 @@ module Constrain_DistanceCriteria
 
      ! If no new particles were added or the limit has been hit without finding all the molecules
      ! then a disconnect in the cluster network was created and the criteria has not been satisfied. 
+!    write(*,*) "Result:", nClust, totalMol, nNew
     select type(disp)
       class is(Deletion)
-          if( (nNew <= 0) .or. (nClust < totalMol-1) ) then
+!          if( (nNew <= 0) .or. (nClust < totalMol-1) ) then
+          if( nClust < totalMol-1 ) then
             accept = .false.
             return
           endif
+!      write(*,*) "=============================="
+!      do iMol = 1, totalMol
+!        write(*,*) (self%topoList(jMol, iMol), jMol=1,totalMol)
+!      enddo
+!      write(*,*)
+!      do iMol = 1, totalMol
+!        write(*,*) (self%newTopoList(jMol, iMol), jMol=1,totalMol)
+!      enddo
+!      write(*,*)
+
+      topMol = trialBox % NMol(self%molType)
+      iMol = disp(1) % molIndx
+     ! write(*,*) topMol, iMol
+
+      if(iMol == topMol) then
+        self%newTopoList(topMol,:) = .false.
+        self%newTopoList(:,topMol) = .false.       
+      else
+     
+      do jMol = 1, totalMol
+        if(self%newTopoList(jMol,topMol)) then
+          if(jMol /= iMol) then
+            self%newTopoList(jMol,iMol) = .true.
+            self%newTopoList(iMol,jMol) = .true.            
+          endif
+        else
+          self%newTopoList(jMol,iMol) = .false.
+          self%newTopoList(iMol,jMol) = .false.
+        endif        
+      enddo
+      
+      self%newTopoList(iMol,iMol) = .false.
+
+      self%newTopoList(topMol,:) = .false.
+      self%newTopoList(:,topMol) = .false.      
+
+      endif
+!      do iMol = 1, totalMol
+!        write(*,*) (self%newTopoList(jMol, iMol), jMol=1,totalMol)
+!      enddo
+!      write(*,*)
+
+
 
       class default
-          if( (nNew <= 0) .or. (nClust < totalMol) ) then
+!          if( (nNew <= 0) .or. (nClust < totalMol) ) then
+          if( nClust < totalMol ) then
             accept = .false.
             return
           endif

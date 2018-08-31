@@ -63,21 +63,30 @@ contains
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
 
         end select
-!        write(*,*) moveNum
-!        do i = 1, size(BoxArray)
-!          call BoxArray(i) % box % Prologue
-!        enddo
+!        write(*,*) moveNum, accept
+        if(accept) then
+          do i = 1, size(BoxArray)
+            call BoxArray(i) % box % Prologue
+          enddo
+        endif
 
 
         call Sampling%UpdateStatistics(accept)
         if(accept) then
           call Update(iCycle, iMove, accept)
         endif
+!        if(accept) then
+          do i = 1, size(BoxArray)
+           call BoxArray(i) % box % Prologue
+          enddo
+!        endif
+
+
         call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
-      if(mod(iCycle, 1000) == 0) then
-        write(nout, *) iCycle, BoxArray(1)%box%ETotal, (Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
+      if(mod(iCycle, 100) == 0) then
+        write(nout, *) iCycle, BoxArray(1)%box%ETotal,  BoxArray(1)%box%NMol,(Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
         flush(nout)
       endif
 

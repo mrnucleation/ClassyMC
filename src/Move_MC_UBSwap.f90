@@ -177,6 +177,7 @@ use VarPrecision
     rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
     call FindAtom(trialbox, rawIndx, nMove)
     if(trialBox%NMol(1) - 1 < trialBox%NMolMin(1)) then
+!      write(*,*) "Bounds Rejection"
       accept = .false.
       return
     endif
@@ -190,12 +191,15 @@ use VarPrecision
     !Check Constraint
     accept = trialBox % CheckConstraint( self%oldPart(1:1) )
     if(.not. accept) then
+!      write(*,*) "Constraint Rejection"
+!      write(*,*) "============================================"
       return
     endif
 
     !Energy Calculation
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
     if(.not. accept) then
+!      write(*,*) "Energy Rejection"
       return
     endif
 
