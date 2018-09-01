@@ -2,7 +2,7 @@
 module UmbrellaWHAMRule
   use VarPrecision
   use AcceptRuleTemplate, only: AcceptRule
-  use CoordinateTypes, only: Displacement, Perturbation, Addition, Deletion, VolChange
+  use CoordinateTypes, only: DisplacementNew, Perturbation, Addition, Deletion, VolChange
  
   type, public, extends(AcceptRule) :: UmbrellaWHAM
 
@@ -11,6 +11,7 @@ module UmbrellaWHAMRule
     integer, allocatable :: AnalysisIndex(:)
 
     integer :: umbrellaLimit = 0
+    integer, allocatable :: varType(:)
     integer, allocatable :: indexCoeff(:)
     integer, allocatable :: binMin(:), binMax(:)
     integer, allocatable :: binIndx(:), nBins(:)
@@ -72,6 +73,7 @@ module UmbrellaWHAMRule
 
     allocate( self%refVals(1:self%nBiasVar), stat=AllocationStat ) 
     allocate( self%AnalysisIndex(1:self%nBiasVar), stat=AllocationStat ) 
+    allocate( self%varType(1:self%nBiasVar), stat=AllocationStat ) 
     allocate( self%indexCoeff(1:self%nBiasVar), stat=AllocationStat ) 
     allocate( self%binMax(1:self%nBiasVar), stat=AllocationStat) 
     allocate( self%binMin(1:self%nBiasVar), stat=AllocationStat) 
@@ -83,6 +85,7 @@ module UmbrellaWHAMRule
     allocate( self%varValues(1:self%nBiasVar), STAT =AllocationStat )
     allocate( self%valMin(1:self%nBiasVar), STAT =AllocationStat )
     allocate( self%valMax(1:self%nBiasVar), STAT =AllocationStat )
+    self%varType = 1
     self%refVals = 0E0_dp
     self%valMin = 0E0_dp
     self%valMax = 0E0_dp
@@ -121,6 +124,7 @@ module UmbrellaWHAMRule
     do i = 1, self%nBiasVar
       indx = self%AnalysisIndex(i)
       AnalysisArray(indx)%func%usedInMove = .true.
+      AnalysisArray(indx)%func%permove = .true.
     enddo
 
      ! Since the number of biasing variables is only known at run time, the bias matrix
@@ -188,7 +192,8 @@ module UmbrellaWHAMRule
 
     write(nout,*) self%refVals, i 
     write(nout,*) "Bin Size:", self%UBinSize
-    self%oldIndx = self % GetBiasIndex()
+!    self%oldIndx = self % GetBiasIndex()
+    self%oldIndx = 1
   end subroutine
 !====================================================================
   function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
@@ -208,6 +213,11 @@ module UmbrellaWHAMRule
     real(dp) :: biasE, biasOld, biasNew
     real(dp) :: extraTerms, ranNum
 
+    if(inProb <= 0E0_dp) then
+      accept = .false.
+      return
+    endif
+
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
       call AnalysisArray(indx) % func % CalcNewState(disp)
@@ -216,6 +226,7 @@ module UmbrellaWHAMRule
     self%oldIndx = self % GetBiasIndex()
     call self%GetNewBiasIndex(self%newIndx, accept)
 
+
     if(.not. accept) then
 !      self%UHist(self%oldIndx) = self%UHist(oldIndx) + 1E0_dp
       return
@@ -223,35 +234,32 @@ module UmbrellaWHAMRule
 
     biasOld = self%UBias(self%oldIndx)
     biasNew = self%UBias(self%newIndx)
+
  
     extraTerms = 0E0_dp
     select type(disp)
+!      class is(DisplacementNew)
+!          write(*,*) "DISPLACEMENT!"
       class is(Addition)
           extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
-!          write(*,*) "Add",biasOld, biasNew, self%oldIndx, self%newIndx
       class is(Deletion)
           extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
-!          write(*,*) "Subtract",biasOld, biasNew, self%oldIndx, self%newIndx
       class is(VolChange)
           extraTerms = extraTerms + (disp(1)%volNew -disp(1)%volOld)*trialBox%pressure*trialBox%beta
     end select
 
 
+!    write(*,*) "Bias", self%oldindx, biasOld, self%newIndx, biasNew
 
     accept = .false.
-    ranNum = log(grnd())
-!    biasE = 0E0
-!    write(*,*) biasE, -trialBox%beta, E_Diff,  inProb, (biasNew-biasOld), extraTerms, accept, ranNum
-    if(inProb <= 0E0_dp) then
-      accept = .false.
-      return
-    endif
     biasE = -trialBox%beta * E_Diff + log(inProb) + (biasNew-biasOld) + extraTerms
+!    write(*,*) "Prob:", biasE, log(inProb), extraTerms
     if(biasE > 0.0E0_dp) then
       accept = .true.
-    elseif(biasE > ranNum) then
+    elseif(biasE > log(grnd()) ) then
       accept = .true.
     endif
+!    write(*,*) "Accept?", accept
 
 !    select type(disp)
 !      class is(Addition)
@@ -263,12 +271,13 @@ module UmbrellaWHAMRule
 !==========================================================================
   function UmbrellaWHAM_GetBiasIndex(self)  result(biasIndx)
     use AnalysisData, only: AnalysisArray
+    use AnalysisData, only: analyCommon
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: biasIndx
 
     integer :: analyIndx
-    integer :: iBias, bin
+    integer :: iBias, bin, intVal
     real(dp) :: biasVal
     
    ! Get the variables that are used for the biasing and figure out which histogram bin they
@@ -276,9 +285,21 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = AnalysisArray(analyIndx)%func%GetResult()
+!      write(2,*) biasVal
 !      self%binIndx(iBias) = nint(biasVal/self%UBinSize(iBias))
-      self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
-!      write(*,*) biasVal, self%binIndx(iBias), self%UBinSize(iBias)
+      select type( biasVar => analyCommon(analyIndx)%val )
+        type is(integer)
+            intVal = nint(biasVal)
+            self%binIndx(iBias) = intVal - nint(self%valMin(iBias))
+!            write(2,*) intVal, self%binIndx(iBias), nint(self%valMin(iBias))
+
+        type is(real)
+!            biasVal = biasVar
+            self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
+       end select
+
+
+!      self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
     enddo
 
 
@@ -287,8 +308,9 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
 !      biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
       biasIndx = biasIndx + self%indexCoeff(iBias) * self%binIndx(iBias)
-!      write(*,*) biasIndx, self%indexCoeff(iBias), self%binIndx(iBias), self%binMin(iBias) 
     enddo
+!    write(2,*) biasIndx
+!    write(2,*) 
 
 
   end function
@@ -309,19 +331,39 @@ module UmbrellaWHAMRule
     accept = .true.
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
-      biasVal = analyCommon(analyIndx)
+      select type( biasVar => analyCommon(analyIndx)%val )
+        type is(integer)
+!             write(*,*) "new vals", biasVar, self%valMax(iBias),  self%valMin(iBias)
+            biasVal = real(biasVar, dp)
+        type is(real)
+!            write(*,*) biasVar
+            biasVal = biasVar
+      end select
+
+
       if(biasVal > self%valMax(iBias) ) then
+!        write(*,*) "Reject Max"
         accept = .false.
         return
       endif
       if(biasVal < self%valMin(iBias) ) then
+!        write(*,*) "Reject Min"
         accept = .false.
         return
       endif
 
-      self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
 
-!      write(*,*) biasVal, self%binIndx(iBias)
+      select type( biasVar => analyCommon(analyIndx)%val )
+        type is(integer)
+            self%binIndx(iBias) = biasVar-nint(self%valMin(iBias))
+!            write(*,*) biasVar, self%binIndx(iBias), self%valMin(iBias),self%UBinSize(iBias)
+        type is(real)
+            self%binIndx(iBias) = floor((biasVar-self%valMin(iBias))/self%UBinSize(iBias))
+      end select
+
+
+!      self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
+
     enddo
 
 
@@ -333,7 +375,11 @@ module UmbrellaWHAMRule
       biasIndx = biasIndx + self%indexCoeff(iBias) * self%binIndx(iBias)
     enddo
 
-!    write(*,*) biasIndx
+    if(biasIndx > self%umbrellaLimit) then
+      accept = .false.
+      return
+    endif
+!    write(*,*) "New Index", biasIndx
 
   end subroutine
 
@@ -581,7 +627,7 @@ module UmbrellaWHAMRule
       self%UHist(self%newIndx) = self%UHist(self%newIndx) + 1E0_dp
       self%oldIndx = self%newIndx
     else
-      self%oldIndx = self % GetBiasIndex()
+!      self%oldIndx = self % GetBiasIndex()
       self%UHist(self%oldIndx) = self%UHist(self%oldIndx) + 1E0_dp
     endif
 

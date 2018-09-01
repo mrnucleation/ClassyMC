@@ -9,7 +9,13 @@ module AnalysisData
 
   type(AnalysisArr), allocatable, target  :: AnalysisArray(:)
 
-  real(dp), allocatable :: analyCommon(:)
+  type AnalysisVals
+    class(*), allocatable:: val
+  end type
+
+
+!  real(dp), allocatable :: analyCommon(:)
+  type(AnalysisVals), allocatable :: analyCommon(:)
 
 end module
 !==============================================================

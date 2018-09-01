@@ -16,6 +16,7 @@ module AnaylsisClassDef
       procedure, pass :: Compute
 !      procedure, pass :: Maintenance 
       procedure, pass :: ProcessIO
+      procedure, pass :: CastCommonType
       procedure, pass :: WriteInfo
       procedure, pass :: GetResult
       procedure, pass :: Finalize
@@ -53,6 +54,20 @@ module AnaylsisClassDef
     implicit none
     class(Analysis), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
+  end subroutine
+!=========================================================================
+  subroutine CastCommonType(self, anaVar)
+    implicit none
+    class(Analysis), intent(inout) :: self
+    class(*), allocatable, intent(inout) :: anaVar
+    real(dp) :: def
+
+
+    if(.not. allocated(anaVar) ) then
+      allocate(anaVar, source=def)
+      write(*,*) "Allocated as Real"
+    endif
+
   end subroutine
 !=========================================================================
   subroutine WriteInfo(self)

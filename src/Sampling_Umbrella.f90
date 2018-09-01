@@ -245,7 +245,14 @@ module UmbrellaRule
     accept = .true.
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
-      biasVal = analyCommon(analyIndx)
+
+      select type( biasVar => analyCommon(analyIndx)%val )
+        type is(integer)
+            biasVal = biasVar
+        type is(real)
+            biasVal = biasVar
+      end select
+
       self%binIndx(iBias) = floor(biasVal/self%UBinSize(iBias))
 
 !      write(*,*) biasVal, self%binIndx(iBias)

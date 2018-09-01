@@ -14,15 +14,27 @@ use VarPrecision
     integer :: nMol 
     contains
 !      procedure, pass :: Initialize
-!      procedure, pass :: Prologue => ClusterSize_Prologue
+      procedure, pass :: Prologue => ClusterSize_Prologue
       procedure, pass :: Compute => ClusterSize_Compute
       procedure, pass :: CalcNewState => ClusterSize_CalcNewState
+      procedure, pass :: CastCommonType => ClusterSize_CastCommonType
+
 !      procedure, pass :: Maintenance 
       procedure, pass :: ProcessIO => ClusterSize_ProcessIO
       procedure, pass :: GetResult => ClusterSize_GetResult
   end type
 
  contains
+!=========================================================================
+  subroutine ClusterSize_Prologue(self)
+    use BoxData, only: BoxArray
+    implicit none
+    class(ClusterSize), intent(inout) :: self
+
+    self%UpdateFreq = 1
+
+
+  end subroutine
 !=========================================================================
   subroutine ClusterSize_Compute(self, accept)
     use BoxData, only: BoxArray
@@ -31,6 +43,7 @@ use VarPrecision
     logical, intent(in) :: accept
 
     self%nMol = BoxArray(self%boxNum) % box % NMol(self%molType)
+
   end subroutine
 !=========================================================================
   function ClusterSize_GetResult(self) result(var)
@@ -43,7 +56,7 @@ use VarPrecision
 !=========================================================================
   subroutine ClusterSize_CalcNewState(self, disp, newVal)
     use AnalysisData, only: analyCommon
-    use CoordinateTypes, only: Displacement, Perturbation, Deletion, Addition
+    use CoordinateTypes, only: Displacement, DisplacementNew, Perturbation, Deletion, Addition
     implicit none
     class(ClusterSize), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
@@ -64,10 +77,12 @@ use VarPrecision
             Diff = Diff - 1
           endif
         endif
+
       class is(Deletion)
           if(disp(1)%MolType == self%molType) then
             Diff = Diff - 1
           endif
+
       class is(Addition)
           if(disp(1)%MolType == self%molType) then
             Diff = Diff + 1
@@ -76,8 +91,13 @@ use VarPrecision
 !      class default
         
     end select
+!    write(*,*) "Newcalc", Diff, self%nMol
 
-    analyCommon(self%analyID) = real(self%nMol + Diff, dp)
+    select type(anaVar => analyCommon(self%analyID)%val)
+      type is(integer)
+!        analyCommon(self%analyID)%val = real(self%nMol + Diff, dp) + 1e-10
+        anaVar = self%nMol + Diff
+    end select
   end subroutine
 !=========================================================================
   subroutine ClusterSize_ProcessIO(self, line)
@@ -99,6 +119,21 @@ use VarPrecision
     self%molType = intVal
 
   end subroutine
+!=========================================================================
+  subroutine ClusterSize_CastCommonType(self, anaVar)
+    implicit none
+    class(ClusterSize), intent(inout) :: self
+    class(*), allocatable, intent(inout) :: anaVar
+    integer :: def
+
+
+    if(.not. allocated(anaVar) ) then
+      allocate(anaVar, source=def)
+      write(*,*) "Allocated as Integer"
+    endif
+
+  end subroutine
+
 !=========================================================================
 end module
 !=========================================================================

@@ -92,10 +92,18 @@ use VarPrecision
     real(dp), intent(in), optional :: newVal
 
     if( self%pushedValue ) then
-      analyCommon(self%analyID) = self%newLambda
+      select type( anaVar => analyCommon(self%analyID)%val )
+        type is(real)
+          anaVar = self%newLambda
+      end select
+
       self%pushedValue = .false.
     else
-      analyCommon(self%analyID) = self%lambda
+      select type( anaVar => analyCommon(self%analyID)%val )
+        type is(real)
+           anaVar = self%lambda
+      end select
+!      analyCommon(self%analyID)%val  = self%lambda
     endif
   end subroutine
 !=========================================================================

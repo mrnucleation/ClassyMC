@@ -63,29 +63,16 @@ contains
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
 
         end select
-!        write(*,*) moveNum, accept
-        if(accept) then
-          do i = 1, size(BoxArray)
-            call BoxArray(i) % box % Prologue
-          enddo
-        endif
-
-
         call Sampling%UpdateStatistics(accept)
+
         if(accept) then
           call Update(iCycle, iMove, accept)
         endif
-!        if(accept) then
-          do i = 1, size(BoxArray)
-           call BoxArray(i) % box % Prologue
-          enddo
-!        endif
-
 
         call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
-      if(mod(iCycle, 100) == 0) then
+      if(mod(iCycle, 1000) == 0) then
         write(nout, *) iCycle, BoxArray(1)%box%ETotal,  BoxArray(1)%box%NMol,(Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
         flush(nout)
       endif
@@ -129,7 +116,8 @@ contains
     if( allocated(AnalysisArray) ) then
       do iAn = 1, size(AnalysisArray)
         if( AnalysisArray(iAn)%func%perMove .eqv. moveloop) then
-          if(mod(iCycle, AnalysisArray(iAn)%func%UpdateFreq) == 0) then
+          if((mod(iCycle, AnalysisArray(iAn)%func%UpdateFreq) == 0) .or.  AnalysisArray(iAn)%func%perMove) then
+!            write(*,*) iCycle, iMove, AnalysisArray(iAn)%func%perMove, moveloop
             call AnalysisArray(iAn) % func % Compute(accept)
           endif
         endif

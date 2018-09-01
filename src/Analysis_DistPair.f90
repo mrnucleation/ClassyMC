@@ -120,7 +120,10 @@ use SimpleSimBox, only: SimpleBox
     end select
 
 !    write(*,*) r
-    analyCommon(self%analyID) = r
+    select type(anaVar =>  analyCommon(self%analyID)%val)
+      type is(real)
+        anaVar = r 
+    end select
 
   end subroutine
 !=========================================================================

@@ -219,6 +219,10 @@
                curLine = iLine + i
                call Script_AnalysisType(linestore(curLine), i, lineStat)
              enddo   
+             do i = 1, nItems
+               call AnalysisArray(i) % func % CastCommonType(analyCommon(i)%val)
+             enddo   
+
            else
              write(*,*) "ERROR! The create analysis command has already been used and can not be called twice"
              stop
