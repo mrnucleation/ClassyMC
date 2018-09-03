@@ -111,7 +111,7 @@
       use Common_NeighData
       use ParallelVar
       use RandomGen, only: initSeed
-      use SimControl, only: nMoves, nCycles
+      use SimControl, only: nMoves, nCycles, screenFreq
       use Units, only: outEngUnit, outLenUnit, outAngUnit,  &
                        FindEngUnit, FindLengthUnit, FindAngularUnit
       use VarPrecision
@@ -148,21 +148,28 @@
           read(command2,*) intValue
           initSeed = intValue
 
+        case("angleunits")
+          call GetXCommand(line, command2, 3, lineStat)
+          outAngUnit = FindAngularUnit(command2)
+
         case("distunits")
           call GetXCommand(line, command2, 3, lineStat)
           outLenUnit = FindLengthUnit(command2)
 
+
         case("energyunits")
           call GetXCommand(line, command2, 3, lineStat)
           outEngUnit = FindEngUnit(command2)
-        case("angleunits")
-          call GetXCommand(line, command2, 3, lineStat)
-          outAngUnit = FindAngularUnit(command2)
 
         case("neighskin")
           call GetXCommand(line, command2, 3, lineStat)
           read(command2, *) realValue
           neighSkin = realValue
+
+        case("screenfrequency")
+          call GetXCommand(line, command2, 3, lineStat)
+          read(command2, *) realValue
+          screenFreq = nint(realValue)
 
         case default
           lineStat = -1
@@ -228,13 +235,13 @@
              stop
            endif
 
+         !-------------------------------------------------------------------------------------
         case("boxes")
            if( .not. allocated(BoxArray) ) then
              allocate(BoxArray(1:nItems), stat = AllocateStat)
              do i = 1, nItems
                curLine = iLine + i
                call GetXCommand(lineStore(curLine), command2, 1, lineStat)
-               write(*,*) i, command2
                if( trim(adjustl(command2)) == "fromfile") then
                    call GetXCommand(lineStore(curLine), command2, 2, lineStat)
                    fileName = ""
@@ -247,15 +254,14 @@
                else
                    call Script_BoxType(linestore(curLine), i, lineStat)
                endif
-               writE(*,*) "Preset"
                BoxArray(i)%box%boxID = i 
-               writE(*,*) "Preset"
              enddo             
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
              stop
            endif
 
+         !-------------------------------------------------------------------------------------
         case("constraint")
            if( .not. allocated(BoxArray) ) then
              stop "Box array not allocated!"
@@ -279,6 +285,7 @@
 !             stop
 !           endif
 !
+         !-------------------------------------------------------------------------------------
         case("moves") 
            if( .not. allocated(Moves) ) then
              nForceFields = nItems
@@ -293,7 +300,7 @@
              stop
            endif
 
-
+         !-------------------------------------------------------------------------------------
         case("trajectory") 
            if( .not. allocated(TrajArray) ) then
              allocate(TrajArray(1:nItems), stat = AllocateStat)

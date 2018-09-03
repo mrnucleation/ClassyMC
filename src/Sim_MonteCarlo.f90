@@ -19,7 +19,7 @@ contains
     use MultiBoxMoveDef, only: MCMultiBoxMove
     use Output_DumpCoords, only: Output_DumpData
     use RandomGen, only: sgrnd, grnd, ListRNG
-    use SimControl, only: nMoves, nCycles
+    use SimControl, only: nMoves, nCycles, screenfreq
     use Units, only: outEngUnit
 
     implicit none
@@ -72,7 +72,7 @@ contains
         call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
-      if(mod(iCycle, 1000) == 0) then
+      if(mod(iCycle, screenfreq) == 0) then
         write(nout, *) iCycle, BoxArray(1)%box%ETotal,  BoxArray(1)%box%NMol,(Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
         flush(nout)
       endif

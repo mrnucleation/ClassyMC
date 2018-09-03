@@ -7,7 +7,7 @@ module MasterTemplate
     contains
        procedure, pass :: Epilogue
        procedure, pass :: SafetyCheck
-       procedure, pass :: ScreenWrite
+       procedure, pass :: GetScreenData
        procedure, pass :: Maintenance
        procedure, pass :: ModifyIO
        procedure, pass :: Update
@@ -39,9 +39,10 @@ module MasterTemplate
 
   end subroutine
 !====================================================================
-  subroutine ScreenWrite(self)
+  subroutine GetScreenData(self, val)
     implicit none
     class(classyClass), intent(inout) :: self
+    class(*), intent(out) :: val
 
   end subroutine
 !====================================================================
