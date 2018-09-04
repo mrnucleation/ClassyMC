@@ -45,13 +45,20 @@ contains
     integer :: iType, nSum, nType
 
     nSum = 0
+    nType = -1
     do iType = 1, nMolTypes
       nSum = nSum + box%NMol(iType)
+!      write(*,*) iType, nSum
+!      write(*,*) globIndx, molIndx
       if(globIndx <= nSum) then
         nType = iType
         exit
       endif
     enddo
+
+    if(nType < 1) then
+      stop "Catestrophic Error! Global Index passed to FindMolecule is invaild"
+    endif
 
     molIndx = globIndx
     do iType = 1, nType-1

@@ -45,7 +45,8 @@ module Traj_Lammps
     write(self%fileUnit, "(A)") "ITEM: NUMBER OF ATOMS "
     write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
 
-    write(self%fileUnit, "(A)") self%boxstr
+!        write(self%fileUnit, "(A)") self%boxstr
+    write(self%fileUnit, "(A)") " ITEM: BOX BOUNDS pp pp pp"
     call BoxArray(boxNum)%box%GetDimensions(self%boxdim)
     do jDim = 1, nDim
       write(self%fileUnit, *) (self%boxdim(i, jDim), i=1,self%xLen)
@@ -55,8 +56,10 @@ module Traj_Lammps
 
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
       molType = BoxArray(boxNum)%box%MolType(iAtom)
-      if(BoxArray(boxNum)%box%NMol(molType) > BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
-        atomType = BoxArray(boxNum)%box%AtomType(iAtom)
+      atomType = BoxArray(boxNum)%box%AtomType(iAtom)
+
+!    write(*, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
+      if(BoxArray(boxNum)%box%NMol(molType) >= BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
         write(self%fileUnit, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
       endif
     enddo

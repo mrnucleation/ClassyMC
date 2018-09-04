@@ -1,0 +1,34 @@
+moleculetypes 1
+
+atomdef
+#  Element - Atomic Mass
+  "He"  1.0
+end_atomdef
+
+bonddef
+#  Element - Atomic Mass
+   0.0
+end_bonddef
+
+
+
+molecule 1
+  atoms
+    1
+    1
+  end_atoms
+  bonds
+    1   1 2
+  end_bonds
+end_molecule
+
+forcefieldtype
+  LJ_Cut
+end_forcefieldtype
+
+# type epsilon sigma rmin
+forcefield 1
+  rCut 7.5
+  1  1.0  1.0 0.5
+end_forcefield
+

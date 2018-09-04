@@ -47,6 +47,7 @@ module SimpleSimBox
       procedure, pass :: DumpData => SimpleBox_DumpData
 
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
+      procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: AddMol => SimpleBox_AddMol
       procedure, pass :: DeleteMol => SimpleBox_DeleteMol
       procedure, pass :: Update => SimpleBox_Update
@@ -417,6 +418,30 @@ module SimpleSimBox
 
 
     close(50)
+
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_GetMolData(self, globalIndx, molStart, molEnd, molType, subIndx)
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(in) :: globalIndx
+    integer, intent(inout), optional :: molStart, molEnd, molType, subIndx
+
+    if( present(molStart) ) then
+      molStart = self % MolStartIndx(globalIndx)
+    endif
+
+    if( present(molEnd) ) then
+      molEnd = self % MolEndIndx(globalIndx)
+    endif
+
+    if( present(molType) ) then
+      molType = self % MolType(globalIndx)
+    endif
+
+    if( present(subIndx) ) then
+      subIndx = self %SubIndx(globalIndx)
+    endif
 
   end subroutine
 !==========================================================================================

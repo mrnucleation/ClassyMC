@@ -42,7 +42,7 @@ module MasterTemplate
   subroutine GetScreenData(self, val)
     implicit none
     class(classyClass), intent(inout) :: self
-    class(*), intent(out) :: val
+    class(*), intent(inout) :: val
 
   end subroutine
 !====================================================================

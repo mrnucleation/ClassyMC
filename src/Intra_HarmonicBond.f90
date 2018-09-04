@@ -7,24 +7,11 @@ module FF_Pair_LJ_Cut
 
   type, extends(forcefield) :: Pair_LJ_Cut
     real(dp), allocatable :: eps(:)
-    real(dp), allocatable :: sig(:)
-    real(dp), allocatable :: rMin(:)
 
-    real(dp), allocatable :: epsTable(:,:)
-    real(dp), allocatable :: sigTable(:,:)
-    real(dp), allocatable :: rMinTable(:,:)
-!    real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Constructor => Constructor_LJ_Cut
       procedure, pass :: DetailedECalc => Detailed_LJ_Cut
       procedure, pass :: DiffECalc => DiffECalc_LJ_Cut
-      procedure, pass :: ShiftECalc_Single => Shift_LJ_Cut_Single
-      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
-      procedure, pass :: NewECalc => New_LJ_Cut
-      procedure, pass :: OldECalc => Old_LJ_Cut
-      procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
-      procedure, pass :: Prologue => Prologue_LJ_Cut
-      procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
   end type
 
   contains
@@ -34,24 +21,6 @@ module FF_Pair_LJ_Cut
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     integer :: AllocateStat
-
-    allocate(self%eps(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%sig(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
-
-    allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
-    allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
-    allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
-
-    self%eps = 4E0_dp
-    self%sig = 1E0_dp
-    self%rMin = 0.5E0_dp
-
-    self%epsTable = 4E0_dp
-    self%sigTable = 1E0_dp
-    self%rMinTable = 0.5E0_dp
-    self%rCut = 5E0_dp
-    self%rCutSq = 5E0_dp**2
 
     IF (AllocateStat /= 0) STOP "Allocation in the LJ/Cut Pair Style"
 
@@ -77,11 +46,8 @@ module FF_Pair_LJ_Cut
          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
 
       class is(Addition)
-!         write(*,*) size(tempList)
-         call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
 
       class is(Deletion)
-         call self % OldECalc(curbox, disp, E_Diff)
 
 !      class is(Displacement)
 !        stop
@@ -121,10 +87,6 @@ module FF_Pair_LJ_Cut
         if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then
           cycle
         endif
-        if( curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)  ) then
-          cycle
-        endif
-
         rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
         ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)

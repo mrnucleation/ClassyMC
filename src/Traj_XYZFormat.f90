@@ -56,7 +56,6 @@ module Traj_XYZ
       else
         write(self%fileUnit, *) AtomData(atomType)%symb, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
       endif
-      atomType = BoxArray(boxNum)%box%AtomType(iAtom)
     enddo
 
 

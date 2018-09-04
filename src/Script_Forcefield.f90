@@ -97,7 +97,7 @@ module Input_Forcefield
         case("bonddef")
           call FindCommandBlock(iLine, lineStore, "end_bonddef", lineBuffer)
           nItems = lineBuffer - 1
-          if( .not. allocated(AtomData) ) then
+          if( .not. allocated(BondData) ) then
             nBondTypes = nItems
             allocate(BondData(1:nItems), stat = AllocateStat)
             do i = 1, nItems
@@ -215,7 +215,7 @@ module Input_Forcefield
                MolData(molType)%bond(i)%mem2 = intValue(3)
              enddo   
            else
-             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             write(*,*) "ERROR! The bonds for this molecule has already been defined."
              stop
            endif 
 

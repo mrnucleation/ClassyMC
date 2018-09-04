@@ -404,6 +404,11 @@ use Template_NeighList, only: NeighListDef
         if( trialBox%MolSubIndx(jAtom) > trialBox%NMol(trialBox%MolType(jAtom)) ) then
           cycle
         endif
+
+        if( trialBox%MolIndx(iAtom) == trialBox%MolIndx(jAtom)) then
+          cycle
+        endif
+
         rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
         ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
         rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)

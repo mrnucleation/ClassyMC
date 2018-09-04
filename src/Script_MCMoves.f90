@@ -6,6 +6,7 @@ module Input_Moves
 
   use Move_AtomExchange, only: AtomExchange
   use MCMove_AtomTranslation, only: AtomTranslate
+  use MCMove_MolTranslation, only: MolTranslate
   use MCMove_Delete, only: MoveDelete
   use MCMove_UB_Simple, only: UB_Simple
   use Move_ThermoLambda, only: ThermoLambda
@@ -40,6 +41,9 @@ module Input_Moves
 
       case("debugdelete")
         allocate(MoveDelete::Moves(moveNum)%move)
+
+      case("moltranslation")
+        allocate(MolTranslate::Moves(moveNum)%move)
 
       case("thermolambda")
         allocate(ThermoLambda::Moves(moveNum)%move)
