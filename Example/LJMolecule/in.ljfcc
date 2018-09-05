@@ -28,6 +28,7 @@
 
   Create Moves
     MolTranslation 1.0
+#    PlaneRotate 1.0
   End_Create
 
 #  Create constraint 1
@@ -41,8 +42,8 @@
 
 
   Create trajectory
-#    xyz 1 100 "Traj.xyz"
-    dump 1 100 "Traj.dump"
+    xyz 1 100 "Traj.xyz"
+#    dump 1 100 "Traj.dump"
   End_Create
 
 #=====================================

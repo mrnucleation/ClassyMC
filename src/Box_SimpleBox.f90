@@ -577,12 +577,14 @@ module SimpleSimBox
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_Prologue(self)
+    use Common_MolInfo, only: nMolTypes
     use ParallelVar, only: nout
     use Units, only: outEngUnit
     implicit none
     class(SimpleBox), intent(inout) :: self
     logical :: accept
     integer :: iConstrain
+    integer :: iType
 
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
@@ -598,10 +600,14 @@ module SimpleSimBox
       endif
     endif
 
-
+    self%nMolTotal = 0
+    do iType = 1, nMolTypes    
+      self%nMolTotal = self%nMolTotal + self % NMol(iType)
+    enddo
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
+    write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
 
 
   end subroutine

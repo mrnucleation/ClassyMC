@@ -12,7 +12,7 @@ OPTIMIZE_FLAGS := -O3
 OPTIMIZE_FLAGS += -xHost
 #OPTIMIZE_FLAGS += -ipo
 OPTIMIZE_FLAGS += -no-prec-div
-#OPTIMIZE_FLAGS += -no-wrap-margin
+OPTIMIZE_FLAGS += -no-wrap-margin
 #OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
 #DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
@@ -69,6 +69,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_MolTranslation.f90\
         		$(SRC)/Move_MC_ThermoLambda.f90\
         		$(SRC)/Move_MC_Delete.f90\
+        		$(SRC)/Move_MC_PlaneRotate.f90\
         		$(SRC)/Move_MC_UBSwap.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/Analysis_ClusterSize.f90\

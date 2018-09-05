@@ -264,11 +264,12 @@ module CubicBoxDef
   end subroutine
 !==========================================================================================
   subroutine Cube_Prologue(self)
+    use Common_MolInfo, only: nMolTypes
     use ParallelVar, only: nout
     implicit none
     class(CubeBox), intent(inout) :: self
     logical :: accept
-    integer :: iAtom, iDims, iConstrain
+    integer :: iAtom, iDims, iConstrain, iType
 
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
@@ -298,6 +299,11 @@ module CubicBoxDef
         stop
       endif
     endif
+
+    self%nMolTotal = 0
+    do iType = 1, nMolTypes    
+      self%nMolTotal = self%nMolTotal + self % NMol(iType)
+    enddo
 
 
 
