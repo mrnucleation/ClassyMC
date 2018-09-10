@@ -10,6 +10,7 @@ use VarPrecision
 !    real(dp) :: accpt = 0E0_dp
     real(dp) :: max_rot = 0.2E0_dp
     type(DisplacementNew), allocatable :: disp(:)
+!    real(dp), allocatable :: tempcoords(:,:)
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
 
@@ -38,6 +39,7 @@ use VarPrecision
     enddo
 
 
+!    allocate( self%tempcoords(3, maxAtoms) )
     allocate( self%tempNNei(maxAtoms) )
     allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
@@ -74,6 +76,7 @@ use VarPrecision
     real(dp) :: s_term, c_term, cnt, angle
     real(dp) :: x_scale, y_scale, z_scale
     real(dp) :: xcm, ycm, zcm
+    real(dp) :: rx, ry, rz
     real(dp), parameter :: Prob = 1E0_dp
 
     self % atmps = self % atmps + 1E0_dp
@@ -94,19 +97,23 @@ use VarPrecision
     s_term = sin(angle)
 
 !     Determine the geometric center which will act as the pivot point for the rotational motion. 
-    xcm = 0E0_dp
-    ycm = 0E0_dp
-    zcm = 0E0_dp
-    do iAtom = 1, nAtoms
-      atomIndx = molStart + iAtom - 1
-      xcm = xcm + trialBox%atoms(1, atomIndx) 
-      ycm = ycm + trialBox%atoms(2, atomIndx)  
-      zcm = zcm + trialBox%atoms(3, atomIndx)  
-    enddo
-    xcm = xcm/real(nAtoms, dp)
-    ycm = ycm/real(nAtoms, dp)
-    zcm = zcm/real(nAtoms, dp)
+!    xcm = 0E0_dp
+!    ycm = 0E0_dp
+!    zcm = 0E0_dp
+!    do iAtom = 1, nAtoms
+!      atomIndx = molStart + iAtom - 1
+!      xcm = xcm + trialBox%atoms(1, atomIndx) 
+!      ycm = ycm + trialBox%atoms(2, atomIndx)  
+!      zcm = zcm + trialBox%atoms(3, atomIndx)  
+!    enddo
+!    xcm = xcm/real(nAtoms, dp)
+!    ycm = ycm/real(nAtoms, dp)
+!    zcm = zcm/real(nAtoms, dp)
 
+    atomIndx = molStart
+    xcm = trialBox%atoms(1, atomIndx) 
+    ycm = trialBox%atoms(2, atomIndx)  
+    zcm = trialBox%atoms(3, atomIndx)  
 
 
     select case(nPlane)
@@ -124,9 +131,18 @@ use VarPrecision
 
           x_scale = trialBox%atoms(1, atomIndx) - xcm
           y_scale = trialBox%atoms(2, atomIndx) - ycm
-          self%disp(iAtom)%x_new = c_term*x_scale - s_term*y_scale + xcm
-          self%disp(iAtom)%y_new = s_term*x_scale + c_term*y_scale + ycm
+          z_scale = 0E0_dp
+          call trialBox % Boundary(x_scale, y_scale, z_scale)
+
+          dx = (c_term-1E0_dp)*x_scale - s_term*y_scale 
+          dy = s_term*x_scale + (c_term-1E0_dp)*y_scale 
+          self%disp(iAtom)%x_new = trialBox%atoms(1, atomIndx) + dx 
+          self%disp(iAtom)%y_new = trialBox%atoms(2, atomIndx) + dy
           self%disp(iAtom)%z_new = trialBox%atoms(3, atomIndx) 
+!          self%disp(iAtom)%x_new = c_term*x_scale - s_term*y_scale + xcm
+!          self%disp(iAtom)%y_new = s_term*x_scale + c_term*y_scale + ycm
+!          self%disp(iAtom)%z_new = trialBox%atoms(3, atomIndx) 
+
         enddo
 
 
@@ -143,10 +159,17 @@ use VarPrecision
           self%disp(iAtom)%listIndex = iAtom
 
           x_scale = trialBox%atoms(1, atomIndx) - xcm
+          y_scale = 0E0_dp
           z_scale = trialBox%atoms(3, atomIndx) - zcm
-          self%disp(iAtom)%x_new = c_term*x_scale - s_term*z_scale + xcm
+          call trialBox % Boundary(x_scale, y_scale, z_scale)
+          dx = (c_term-1E0_dp)*x_scale - s_term*z_scale 
+          dz = s_term*x_scale + (c_term-1E0_dp)*z_scale 
+          self%disp(iAtom)%x_new = trialBox%atoms(1, atomIndx) + dx 
           self%disp(iAtom)%y_new = trialBox%atoms(2, atomIndx) 
-          self%disp(iAtom)%z_new = s_term*x_scale + c_term*z_scale + zcm
+          self%disp(iAtom)%z_new = trialBox%atoms(3, atomIndx) + dz
+!          self%disp(iAtom)%x_new = c_term*x_scale - s_term*z_scale + xcm
+!          self%disp(iAtom)%y_new = trialBox%atoms(2, atomIndx) 
+!          self%disp(iAtom)%z_new = s_term*x_scale + c_term*z_scale + zcm
         enddo
 
 
@@ -162,11 +185,18 @@ use VarPrecision
           self%disp(iAtom)%newlist = .false.
           self%disp(iAtom)%listIndex = iAtom
 
+          x_scale = 0E0_dp
           y_scale = trialBox%atoms(2, atomIndx) - ycm
           z_scale = trialBox%atoms(3, atomIndx) - zcm
-          self%disp(iAtom)%x_new = trialBox%atoms(1, atomIndx) 
-          self%disp(iAtom)%y_new = c_term*y_scale - s_term*z_scale + ycm
-          self%disp(iAtom)%z_new = s_term*y_scale + c_term*z_scale + zcm
+          call trialBox % Boundary(x_scale, y_scale, z_scale)
+          dy = (c_term-1E0_dp)*y_scale -          s_term*z_scale 
+          dz =          s_term*y_scale + (c_term-1E0_dp)*z_scale 
+          self%disp(iAtom)%x_new = trialBox%atoms(1, atomIndx)  
+          self%disp(iAtom)%y_new = trialBox%atoms(2, atomIndx) + dy
+          self%disp(iAtom)%z_new = trialBox%atoms(3, atomIndx) + dz
+!          self%disp(iAtom)%x_new = trialBox%atoms(1, atomIndx) 
+!          self%disp(iAtom)%y_new = c_term*y_scale - s_term*z_scale + ycm
+!          self%disp(iAtom)%z_new = s_term*y_scale + c_term*z_scale + zcm
         enddo
 
 

@@ -1,9 +1,10 @@
+# boxtype nobox
  boxtype cube
  dimension 77.6992084157
  molmin           1           
- molmax        1
- mol         1
+ molmax        2
+ mol         2
 1 1 1 0.0 0.0 0.0
 1 1 2 1.0 0.0 0.0
-#1 2 1 2.0 0.0 0.0
-#1 2 2 3.0 0.0 0.0
+1 2 1 2.0 0.0 0.0
+1 2 2 3.0 0.0 0.0

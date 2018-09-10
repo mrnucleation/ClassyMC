@@ -3,7 +3,7 @@
 #  set rng_seed 4272
   set NeighSkin 2.0
   set moves 100
-  set cycles 6000
+  set cycles 60000
   SamplingType Metropolis
 #  SamplingType UmbrellaWHAM
 #  SamplingType Umbrella
@@ -20,7 +20,7 @@
   End_Create
 
   modify box 1 energycalc 1
-  modify box 1 temperature 0.8
+  modify box 1 temperature 0.1
   modify box 1 buildfreq 100
 
   modify box 1 chempotential 1 -9.210340372
@@ -28,7 +28,7 @@
 
   Create Moves
     MolTranslation 1.0
-#    PlaneRotate 1.0
+    PlaneRotate 1.0
   End_Create
 
 #  Create constraint 1
@@ -42,8 +42,8 @@
 
 
   Create trajectory
-    xyz 1 100 "Traj.xyz"
-#    dump 1 100 "Traj.dump"
+#    xyz 1 100 "Traj.xyz"
+    dump 1 100 "Traj.dump"
   End_Create
 
 #=====================================

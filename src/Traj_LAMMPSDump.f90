@@ -46,7 +46,7 @@ module Traj_Lammps
     write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
 
 !        write(self%fileUnit, "(A)") self%boxstr
-    write(self%fileUnit, "(A)") " ITEM: BOX BOUNDS pp pp pp"
+    write(self%fileUnit, "(A)") "ITEM: BOX BOUNDS pp pp pp"
     call BoxArray(boxNum)%box%GetDimensions(self%boxdim)
     do jDim = 1, nDim
       write(self%fileUnit, *) (self%boxdim(i, jDim), i=1,self%xLen)

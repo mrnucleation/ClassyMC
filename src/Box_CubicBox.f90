@@ -118,7 +118,7 @@ module CubicBoxDef
   implicit none
   class(CubeBox), intent(in) :: self
   real(dp), intent(inout) :: rx, ry, rz 
-  real(dp) :: rx_new, ry_new, rz_new
+!  real(dp) :: rx_new, ry_new, rz_new
 
   if(abs(rx) > self%boxL2) then
     rx = rx - sign(self%boxL, rx)
