@@ -8,15 +8,16 @@ FC := mpif90
 #FC := mpifort
 #FC := gfortran
 CC := mpicc
-OPTIMIZE_FLAGS := -O3
-OPTIMIZE_FLAGS += -xHost
+OPTIMIZE_FLAGS_IFORT := -O3
+OPTIMIZE_FLAGS_IFORT += -xHost
 #OPTIMIZE_FLAGS += -ipo
-OPTIMIZE_FLAGS += -no-prec-div
-OPTIMIZE_FLAGS += -no-wrap-margin
-#OPTIMIZE_FLAGS += -prof-gen -prof-dir=$(CUR_DIR)/profiling
-#OPTIMIZE_FLAGS += -prof-use -prof-dir=$(CUR_DIR)/profiling
-#DETAILEDDEBUG:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-DETAILEDDEBUG:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
+OPTIMIZE_FLAGS_IFORT+= -no-prec-div
+OPTIMIZE_FLAGS_IFORT += -no-wrap-margin
+OPTIMIZE_FLAGS_GFORT := -O3
+#OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
+#OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
+DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
+DETAILEDDEBUG_IORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0
@@ -135,12 +136,22 @@ OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN)
 # ====================================
 #        Compile Commands
 # ====================================
-default: COMPFLAGS += $(OPTIMIZE_FLAGS)
+default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
 default: COMPFLAGS += $(DEBUGFLAGS)
 default: startUP classyMC finale
-debug: COMPFLAGS += $(DETAILEDDEBUG)
+
+gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
+gfortran: COMPFLAGS += $(DEBUGFLAGS)
+gfortran: startUP classyMC finale
+
+debug: COMPFLAGS := $(DETAILEDDEBUG)
 debug: startUP_debug classyMC_debug finale
-neat: startUP classyMC removeObject finale
+
+debug_gfortran: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
+debug_gfortran: startUP_debug classyMC_debug finale
+
+#neat: startUP classyMC removeObject finale
+
 clean: removeObjects removeExec finale    
 
 # ====================================

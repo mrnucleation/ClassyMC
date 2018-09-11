@@ -9,26 +9,37 @@ module SimpleSimBox
 
   !Sim Box Definition
   type, public, extends(SimBox) :: SimpleBox
+!    ----------------------------
+!   Inherited Variables from SimBox
+!    character(len=15) :: boxStr = "Empty"
 !    integer :: boxID
-    integer :: nTotal
-!    integer :: nMaxAtoms
+!    integer :: nAtoms, nMaxAtoms
+!    integer :: nMolTotal
 !    integer :: nDimension = 3
-
-!    real(dp), allocatable :: atoms(:,:)
-!    real(dp), allocatable :: ETable(:), dETable(:)
-
+!
+!    !Thermodynamic Variables
+!    real(dp) :: ETotal, HTotal
 !    real(dp) :: pressure = 0E0_dp
 !    real(dp) :: beta, temperature, volume
 !    real(dp), allocatable :: chempot(:)
-
-!    real(dp) :: ETotal
+!
+!    real(dp), allocatable :: ETable(:), dETable(:)
+!    real(dp), allocatable :: atoms(:,:)
+!
 !    integer, allocatable :: NMolMin(:), NMolMax(:)
 !    integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
-
-!    integer, allocatable :: AtomType(:)
-!    integer, allocatable :: MolIndx(:), SubIndx(:)
-
-
+!
+!    integer, allocatable :: AtomType(:), MolType(:)
+!    integer, allocatable :: MolIndx(:), MolSubIndx(:), SubIndx(:)
+!
+!    integer, allocatable :: MolGlobalIndx(:, :)
+!    integer, allocatable :: TypeFirst(:), TypeLast(:)
+!
+!    integer :: nLists
+!    class(NeighListDef), allocatable :: NeighList(:)
+!    ----------------------------
+!    
+    integer :: nTotal
     type(constrainArray), allocatable :: Constrain(:)
     class(ECalcArray), pointer :: EFunc
 !    class(NeighList), allocatable :: NeighList(:)
