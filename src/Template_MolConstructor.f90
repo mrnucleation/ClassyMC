@@ -5,6 +5,7 @@
 module Template_MolConstructor
   use CoordinateTypes, only: Displacement, Perturbation
   use MasterTemplate, only: classyClass
+  use SimpleSimBox, only: SimpleBox
   use VarPrecision
 
 
@@ -26,7 +27,9 @@ module Template_MolConstructor
     class(MolConstructor), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
     class(SimpleBox), intent(inout) :: trialBox
-    real(dp), intent(out) :: probconstruct = 1E0_dp
+    real(dp), intent(out) :: probconstruct 
+
+    probconstruct = 1E0_dp
   end subroutine
 !==========================================================================================
 end module

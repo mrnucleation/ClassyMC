@@ -17,7 +17,7 @@ OPTIMIZE_FLAGS_GFORT := -O3
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
 DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-DETAILEDDEBUG_IORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
+DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0
@@ -122,7 +122,8 @@ SRC_TEMPLATE := $(SRC)/Template_Master.f90\
 								$(SRC)/Template_Analysis.f90\
 								$(SRC)/Template_Trajectory.f90\
                 $(SRC)/Template_MultiBoxMove.f90\
-								$(SRC)/Template_MoveClass.f90
+								$(SRC)/Template_MoveClass.f90\
+								$(SRC)/Template_MolConstructor.f90
 
 SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
 
@@ -144,7 +145,7 @@ gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 gfortran: COMPFLAGS += $(DEBUGFLAGS)
 gfortran: startUP classyMC finale
 
-debug: COMPFLAGS := $(DETAILEDDEBUG)
+debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT)
 debug: startUP_debug classyMC_debug finale
 
 debug_gfortran: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
@@ -246,6 +247,7 @@ $(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o
 $(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/Box_SimpleBox.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o
 $(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o
+$(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o $(OBJ)/Box_SimpleBox.o
 
 $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
