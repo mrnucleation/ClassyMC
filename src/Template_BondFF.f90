@@ -1,12 +1,13 @@
 !=============================================================================+
-module IntraBond_Harmonic
-  use Template_IntraBond, only: Bond_FF
+module Template_IntraBond
+  use MasterTemplate, only: classyClass
   use VarPrecision
   use Template_SimBox, only: SimBox
+  use Template_Intra_FF, only: Intra_FF
   use CoordinateTypes
 
-  type, public, extends(Bond_FF) :: IntraBond_Harmonic
-    real(dp) :: r0, k0
+  type, public, extends(Intra_FF) :: Bond_FF
+    real(dp) :: r0
     contains
       procedure, pass :: Constructor 
       procedure, pass :: DetailedECalc 
@@ -18,7 +19,7 @@ module IntraBond_Harmonic
   contains
 !=============================================================================+
   subroutine Constructor(self)
-    use Common_MolInfo, only: nMolTypes
+!    use Common_MolInfo, only: nMolTypes
     implicit none
     class(Bond_FF), intent(inout) :: self
 

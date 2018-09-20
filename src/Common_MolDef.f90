@@ -1,6 +1,7 @@
 !================================================================
 module StructureTypes
   use VarPrecision 
+  use Template_IntraBond, only: Bond_FF
 
 
   type AtomDef 
@@ -10,14 +11,13 @@ module StructureTypes
 
   type BondDef 
     real(dp) :: rEq
-    !    Insert Function Type
+    class(Bond_FF), allocatable :: bondFF
   end type
 
   type AngleDef 
     real(dp) :: angEq
     !    Insert Function Type
   end type
-
 
 
   type BondMem
@@ -30,7 +30,6 @@ module StructureTypes
     integer :: angType
     integer :: mem1, mem2, mem3
   end type
-
 
   type TorsMem
     integer :: torsType

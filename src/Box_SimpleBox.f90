@@ -5,6 +5,7 @@ module SimpleSimBox
   use ForcefieldData, only: ECalcArray
   use ConstraintTemplate, only: constrainArray
   use Template_SimBox, only: SimBox
+  use Template_Intra_FF, only: Intra_FF
 
 
   !Sim Box Definition
@@ -41,6 +42,7 @@ module SimpleSimBox
 !    
     integer :: nTotal
     type(constrainArray), allocatable :: Constrain(:)
+ 
     class(ECalcArray), pointer :: EFunc
 !    class(NeighList), allocatable :: NeighList(:)
 

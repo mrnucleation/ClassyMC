@@ -17,9 +17,10 @@ module Template_MolConstructor
 !==========================================================================================
   contains
 !==========================================================================================
-  subroutine Constructor(self)
+  subroutine Constructor(self, molType)
     implicit none
     class(MolConstructor), intent(inout) :: self
+    integer, intent(in) :: molType
   end subroutine
 !==========================================================================================
   subroutine GenerateConfig(self, trialBox, disp, probconstruct)

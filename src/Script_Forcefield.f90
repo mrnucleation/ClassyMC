@@ -45,6 +45,7 @@ module Input_Forcefield
       call LowerCaseLine(command)
 
       select case(trim(adjustl( command )))
+!        -----------------------------------------------------------------------------
         case("forcefield")
           call FindCommandBlock(iLine, lineStore, "end_forcefield", lineBuffer)
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
@@ -58,7 +59,7 @@ module Input_Forcefield
             curLine = iLine + i
             call EnergyCalculator(intValue)%Method%ProcessIO(lineStore(curLine))
           enddo   
-
+!        -----------------------------------------------------------------------------
         case("forcefieldtype")
           call FindCommandBlock(iLine, lineStore, "end_forcefieldtype", lineBuffer)
           nItems = lineBuffer - 1
@@ -79,6 +80,7 @@ module Input_Forcefield
             stop
           endif
 
+!        -----------------------------------------------------------------------------
         case("atomdef")
           call FindCommandBlock(iLine, lineStore, "end_atomdef", lineBuffer)
           nItems = lineBuffer - 1
@@ -94,6 +96,7 @@ module Input_Forcefield
             stop
           endif
 
+!        -----------------------------------------------------------------------------
         case("bonddef")
           call FindCommandBlock(iLine, lineStore, "end_bonddef", lineBuffer)
           nItems = lineBuffer - 1
@@ -109,6 +112,7 @@ module Input_Forcefield
             stop
           endif
 
+!        -----------------------------------------------------------------------------
         case("molecule")
           call FindCommandBlock(iLine, lineStore, "end_molecule", lineBuffer)
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
@@ -120,6 +124,7 @@ module Input_Forcefield
           endif
           call Script_ReadMolDef( lineStore(iLine+1:iLine+lineBuffer-1), intValue, lineStat )
 
+!        -----------------------------------------------------------------------------
         case("moleculetypes")
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
           read(val, *) intValue
@@ -130,9 +135,11 @@ module Input_Forcefield
           nMolTypes = intValue
           allocate(MolData(1:nMolTypes), stat = AllocateStat)
 
+!        -----------------------------------------------------------------------------
         case("units")
           call Script_SetUnits(lineStore(iLine), lineStat)
 
+!        -----------------------------------------------------------------------------
         case default
           write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
           write(*,*) trim(adjustl(lineStore(iLine)))
@@ -144,7 +151,7 @@ module Input_Forcefield
       ! Ensure that the called processes exited properly.
       if(lineStat .eq. -1) then
         write(*,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
-        write(*, "(A)") "could not be understood. Please check command for accuracy and try again."
+        write(*, "(A)") " could not be understood. Please check command for accuracy and try again."
         write(*,*) trim(adjustl(lineStore(iLine)))
         stop
       endif
@@ -185,6 +192,7 @@ module Input_Forcefield
       call LowerCaseLine(command)
 
       select case(trim(adjustl( command )))
+!        -----------------------------------------------------------------------------
         case("atoms")
            if( .not. allocated(MolData(molType)%atomType) ) then
              call FindCommandBlock(iLine, cmdBlock, "end_atoms", lineBuffer)
@@ -201,6 +209,7 @@ module Input_Forcefield
              stop
            endif
 
+!        -----------------------------------------------------------------------------
         case("bonds")
            if( .not. allocated(MolData(molType)%bond) ) then
              call FindCommandBlock(iLine, cmdBlock, "end_bonds", lineBuffer)
@@ -219,6 +228,7 @@ module Input_Forcefield
              stop
            endif 
 
+!        -----------------------------------------------------------------------------
         case("angles")
            if( .not. allocated(MolData(molType)%angle) ) then
              call FindCommandBlock(iLine, cmdBlock, "end_angles", lineBuffer)
@@ -237,6 +247,7 @@ module Input_Forcefield
              write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
              stop
            endif
+!        -----------------------------------------------------------------------------
         case("torsion")
            if( .not. allocated(MolData(molType)%torsion) ) then
              call FindCommandBlock(iLine, cmdBlock, "end_torsion", lineBuffer)
@@ -257,6 +268,7 @@ module Input_Forcefield
              stop
            endif
 
+!        -----------------------------------------------------------------------------
         case default
           write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line"
           write(*,*) trim(adjustl(cmdBlock(iLine)))
