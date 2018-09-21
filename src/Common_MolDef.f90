@@ -10,15 +10,16 @@ module StructureTypes
   end type
 
   type BondDef 
-    real(dp) :: rEq
     class(Bond_FF), allocatable :: bondFF
   end type
 
   type AngleDef 
-    real(dp) :: angEq
     !    Insert Function Type
   end type
 
+  type MiscDef 
+    class(*), allocatable :: miscFF
+  end type
 
   type BondMem
     integer :: bondType

@@ -73,6 +73,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_PlaneRotate.f90\
         		$(SRC)/Move_MC_UBSwap.f90\
         		$(SRC)/ExeptionHandling.f90\
+        		$(SRC)/MolSearch.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
         		$(SRC)/Analysis_DistPair.f90\
         		$(SRC)/Analysis_RDF.f90\

@@ -5,19 +5,19 @@ module IntraBond_Harmonic
   use Template_SimBox, only: SimBox
   use CoordinateTypes
 
-  type, public, extends(Bond_FF) :: IntraBond_Harmonic
+  type, public, extends(Bond_FF) :: HarmonicBond
     real(dp) :: r0, k0
     contains
-      procedure, pass :: Constructor 
-      procedure, pass :: DetailedECalc 
-      procedure, pass :: DiffECalc
-      procedure, pass :: GenerateDist
-      procedure, pass :: ProcessIO
+      procedure, pass :: Constructor => HarmonicBond_Constructor
+      procedure, pass :: DetailedECalc => HarmonicBond_DetailedECalc
+      procedure, pass :: DiffECalc => HarmonicBond_DiffECalc
+      procedure, pass :: GenerateDist => HarmonicBond_GenerateDist
+      procedure, pass :: ProcessIO => HarmonicBond_ProcessIO
   end type
 
   contains
 !=============================================================================+
-  subroutine Constructor(self)
+  subroutine HarmonicBond_Constructor(self)
     use Common_MolInfo, only: nMolTypes
     implicit none
     class(Bond_FF), intent(inout) :: self
@@ -25,7 +25,7 @@ module IntraBond_Harmonic
 
   end subroutine
 !=============================================================================+
-  subroutine DetailedECalc(self, curbox, E_T, accept)
+  subroutine HarmonicBond_DetailedECalc(self, curbox, E_T, accept)
     implicit none
     class(Bond_FF), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
@@ -35,7 +35,7 @@ module IntraBond_Harmonic
     accept = .true.
   end subroutine
 !============================================================================
-  subroutine DiffECalc(self, curbox, disp, E_Diff, accept)
+  subroutine HarmonicBond_DiffECalc(self, curbox, disp, E_Diff, accept)
     implicit none
     class(Bond_FF), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
@@ -44,12 +44,11 @@ module IntraBond_Harmonic
     logical, intent(out) :: accept
 
     accept = .true.
-    curbox % dETable = 0E0_dp
     E_Diff = 0E0_dp
 
   end subroutine
 !==========================================================================
-  subroutine GenerateDist(self, val, probgen)
+  subroutine HarmonicBond_GenerateDist(self, val, probgen)
     implicit none
     class(Bond_FF), intent(inout) :: self
     real(dp), intent(out) :: val
@@ -60,12 +59,18 @@ module IntraBond_Harmonic
 
   end subroutine
 !=============================================================================+
-  subroutine ProcessIO(self, line)
-    use Input_Format, only: maxLineLen
+  subroutine HarmonicBond_ProcessIO(self, line)
+    use Input_Format, only: maxLineLen, GetXCommand 
     implicit none
     class(Bond_FF), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
+    character(len=30) :: command
 
+    call GetXCommand(line, command, 2, lineStat)
+    read(command, *) self%r0
+
+    call GetXCommand(line, command, 3, lineStat)
+    read(command, *) self%k0
   end subroutine
 !=============================================================================+
 end module

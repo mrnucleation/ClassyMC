@@ -50,7 +50,7 @@ contains
       return
     endif
 
-     AnalysisArray(AnaNum) % func % analyID = AnaNum
+    AnalysisArray(AnaNum) % func % analyID = AnaNum
     call AnalysisArray(AnaNum) % func % ProcessIO(line)
 
   end subroutine

@@ -105,7 +105,8 @@ module Input_Forcefield
             allocate(BondData(1:nItems), stat = AllocateStat)
             do i = 1, nItems
               curLine = iLine + i
-              read(lineStore(curLine), *) BondData(i)%rEq
+!              read(lineStore(curLine), *) BondData(i)%rEq
+              call Script_BondType(line, i, lineStat)
             enddo   
           else
             write(*,*) "ERROR! The BondDef has already been used and can not be called twice"
