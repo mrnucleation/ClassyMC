@@ -6,20 +6,23 @@ atomdef
 end_atomdef
 
 bonddef
-#  Element - Atomic Mass
-   0.0
+  harmonic 1.0 1.0
 end_bonddef
 
 
 
 molecule 1
+  RegrowthType Simple
+
   atoms
     1
     1
   end_atoms
+
   bonds
     1   1 2
   end_bonds
+
 end_molecule
 
 forcefieldtype

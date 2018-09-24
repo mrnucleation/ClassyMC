@@ -1,6 +1,7 @@
 !================================================================
 module StructureTypes
   use VarPrecision 
+  use Template_MolConstructor, only: MolConstructor
   use Template_IntraBond, only: Bond_FF
 
 
@@ -40,6 +41,8 @@ module StructureTypes
   type MolDef 
     logical :: ridgid = .false.
     integer :: nAtoms = 1
+
+    class(MolConstructor), allocatable :: molConstruct
     integer, allocatable :: atomType(:)
 
     integer :: nBonds = 0

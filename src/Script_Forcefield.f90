@@ -1,9 +1,10 @@
 !================================================================================
 module Input_Forcefield
   use VarPrecision
-  use Input_Format
   use ForcefieldData
   use Input_FieldType
+  use Input_BondType
+  use Input_Format
 
   real(dp) :: engUnit = 1E0_dp 
   real(dp) :: lenUnit = 1E0_dp
@@ -33,10 +34,12 @@ module Input_Forcefield
     call LoadFile(lineStore, nLines, lineNumber, fileName)
     lineBuffer = 0
     do iLine = 1, nLines
+!      write(*,*) trim(adjustl( lineStore(iLine) ))
       if(lineBuffer .gt. 0) then
         lineBuffer = lineBuffer - 1
         cycle
       endif
+
       lineStat = 0
       call GetXCommand(lineStore(iLine), command, 1, lineStat)
       if(lineStat .eq. 1) then
@@ -106,7 +109,8 @@ module Input_Forcefield
             do i = 1, nItems
               curLine = iLine + i
 !              read(lineStore(curLine), *) BondData(i)%rEq
-              call Script_BondType(line, i, lineStat)
+              call Script_BondType(lineStore(curLine), i, lineStat)
+              write(*,*) lineStat
             enddo   
           else
             write(*,*) "ERROR! The BondDef has already been used and can not be called twice"
@@ -168,6 +172,7 @@ module Input_Forcefield
     use ForcefieldData, only: nForceFields
     use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile
+    use Input_RegrowType, only: Script_RegrowType
     use Common_MolInfo, only: MolData
     implicit none
     character(len=maxLineLen), intent(in) :: cmdBlock(:)
@@ -193,6 +198,9 @@ module Input_Forcefield
       call LowerCaseLine(command)
 
       select case(trim(adjustl( command )))
+!        -----------------------------------------------------------------------------
+        case("regrowthtype")
+             call Script_RegrowType(cmdBlock(iLine), MolType, lineStat)
 !        -----------------------------------------------------------------------------
         case("atoms")
            if( .not. allocated(MolData(molType)%atomType) ) then

@@ -1,45 +1,43 @@
 !================================================================================
-module Input_BondType
+module Input_RegrowType
 use Input_Format, only: LowerCaseLine, GetXCommand
 use VarPrecision
 !================================================================================
 contains
 !================================================================================
-  subroutine Script_BondType(line, BondNum, lineStat)
+  subroutine Script_RegrowType(line, molNum, lineStat)
+    use Common_MolInfo, only: MolData
     use ForcefieldData, only: nForceFields
+    use MolCon_SimpleRegrowth, only: SimpleRegrowth
     use ParallelVar, only: nout
-    use Common_MolInfo, only: BondData
-    use IntraBond_Ridgid, only: RidgidBond 
-    use IntraBond_Harmonic, only: HarmonicBond
     implicit none
     character(len=*), intent(in) :: line
-    integer, intent(in) :: BondNum
+    integer, intent(in) :: MolNum
     integer, intent(out) :: lineStat
 
-    character(len=30) :: dummy, command, Bond_Type
+    character(len=30) :: dummy, command, Regrow_Type
 !    character(len=30) :: fileName    
     logical :: logicValue
     integer :: j
     real(dp) :: realValue
 
     lineStat  = 0
-    call GetXCommand(line, command, 1, lineStat)
-    read(command, *) Bond_Type
+    call GetXCommand(line, command, 2, lineStat)
+    read(command, *) Regrow_Type
 
     !Safety check to ensure that the index number is within proper bounds
-    select case(trim(adjustl(Bond_Type)))
-      case("ridgid")
-        allocate(RidgidBond :: BondData(BondNum)%bondFF)
+    select case(trim(adjustl(Regrow_Type)))
+!      case("ridgid")
 
-      case("harmonic")
-        allocate(HarmonicBond :: BondData(BondNum)%bondFF)
-!        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
+      case("simple")
+        allocate(SimpleRegrowth :: MolData(molNum)%molConstruct )
+        write(nout,*) "Molecule uses simple regrowth"
+
       case default
-        write(*,*) Bond_Type
         lineStat = -1
         return
     end select
-    call BondData(BondNum)%bondFF%ProcessIO(line)
+!    call MolData(molNum)%molConstruct%ProcessIO(line)
 
   end subroutine
 !================================================================================

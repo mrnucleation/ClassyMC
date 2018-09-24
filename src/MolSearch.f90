@@ -4,7 +4,7 @@ module MolSearch
 contains
 !==========================================================================           
   subroutine FindBond(molType, mem1, mem2, bondType)
-    use Common_MolInfo, only: MolData
+    use Common_MolInfo, only: MolData, BondData
     implicit none
     integer, intent(in) :: molType, mem1, mem2
     integer, intent(out) :: bondType
@@ -15,7 +15,7 @@ contains
           (MolData(molType)%bond(iBond)%mem2 .eq. mem1) ) then
           if( (MolData(molType)%bond(iBond)%mem1 .eq. mem2) .or. &
               (MolData(molType)%bond(iBond)%mem2 .eq. mem2) ) then
-                 bondType = bondArray(nType,iBond)%bondType
+                 bondType = MolData(molType)%bond(iBond)%bondType
                  return
           endif
       endif

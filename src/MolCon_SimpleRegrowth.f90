@@ -3,6 +3,8 @@
 !==========================================================================================
 module MolCon_SimpleRegrowth
   use CoordinateTypes, only: Perturbation, Addition
+  use Template_SimBox, only: SimBox
+  use Template_MolConstructor, only: MolConstructor
   use VarPrecision
 
 
@@ -10,8 +12,8 @@ module MolCon_SimpleRegrowth
     integer :: molType
     real(dp), allocatable :: tempcoords(:, :)
     contains
-      procedure, public, pass :: Constructor => SimpleRegrwoth_Constructor
-      procedure, public, pass :: GenerateConfig => SimpleRegrwoth_GenerateConfig
+      procedure, public, pass :: Constructor => SimpleRegrowth_Constructor
+      procedure, public, pass :: GenerateConfig => SimpleRegrowth_GenerateConfig
   end type
 !==========================================================================================
   contains
@@ -19,57 +21,60 @@ module MolCon_SimpleRegrowth
   subroutine SimpleRegrowth_Constructor(self, molType)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
-    class(MolConstructor), intent(inout) :: self
+    class(SimpleRegrowth), intent(inout) :: self
     integer, intent(in) :: molType
     integer :: iType, maxAtoms
 
     self%molType = molType
 
-    allocate( tempcoords(1:3, 1:MolData(molType)%nAtoms) )
+    allocate( self%tempcoords(1:3, 1:MolData(molType)%nAtoms) )
   end subroutine
 !==========================================================================================
   subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct)
     use Common_MolInfo, only: MolData, BondData, nMolTypes
     use MolSearch, only: FindBond
+    use RandomGen, only: Generate_UnitSphere
     implicit none
-    class(MolConstructor), intent(inout) :: self
+    class(SimpleRegrowth), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
-    class(SimpleBox), intent(inout) :: trialBox
+!    class(SimpleBox), intent(inout) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
     integer :: bondType, molType
     integer :: atm1, atm2, iDisp
-    real(dp), intent(out) :: probconstruct = 1E0_dp
+    real(dp), intent(out) :: probconstruct
     real(dp), dimension(1:3) :: v1, v2
     real(dp) :: dx, dy, dz, r
     real(dp) :: prob
 
+    probconstruct = 1E0_dp
     select type(disp)
 !      class is(DisplacementNew)
 !        molType = disp(1)%molType
       class is(Addition)
         molType = disp(1)%molType
-      case default
+      class default
         stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
     end select
 
     select case( MolData(molType)%nAtoms )
       case(1)
         atm1 = 1
-        tempcoords(1, Atm1) = 0E0_dp
-        tempcoords(2, Atm1) = 0E0_dp
-        tempcoords(3, Atm1) = 0E0_dp
+        self%tempcoords(1, Atm1) = 0E0_dp
+        self%tempcoords(2, Atm1) = 0E0_dp
+        self%tempcoords(3, Atm1) = 0E0_dp
 
       case(2)
         atm1 = 1
         atm2 = 2
-        tempcoords(1, Atm1) = 0E0_dp
-        tempcoords(2, Atm1) = 0E0_dp
-        tempcoords(3, Atm1) = 0E0_dp
+        self%tempcoords(1, Atm1) = 0E0_dp
+        self%tempcoords(2, Atm1) = 0E0_dp
+        self%tempcoords(3, Atm1) = 0E0_dp
         call FindBond(molType, atm1, atm2, bondType)
         call BondData(bondType) % bondFF % GenerateDist(r, prob)
         call Generate_UnitSphere(dx, dy, dz)
-        tempcoords(1, Atm2) = r * dx
-        tempcoords(2, Atm2) = r * dy
-        tempcoords(3, Atm2) = r * dz
+        self%tempcoords(1, Atm2) = r * dx
+        self%tempcoords(2, Atm2) = r * dy
+        self%tempcoords(3, Atm2) = r * dz
 !    case(3)
 !      Atm1 = pathArray(nType)%path(1, 1)
 !      Atm2 = pathArray(nType)%path(1, 2)
@@ -104,9 +109,9 @@ module MolCon_SimpleRegrowth
 !        molType = disp(1)%molType
       class is(Addition)
         do iDisp = 1, MolData(molType)%nAtoms
-          disp(iDisp)%x_new = tempcoords(1, iDisp)
-          disp(iDisp)%y_new = tempcoords(2, iDisp)
-          disp(iDisp)%z_new = tempcoords(3, iDisp)
+          disp(iDisp)%x_new = self%tempcoords(1, iDisp)
+          disp(iDisp)%y_new = self%tempcoords(2, iDisp)
+          disp(iDisp)%z_new = self%tempcoords(3, iDisp)
         enddo
     end select
 
