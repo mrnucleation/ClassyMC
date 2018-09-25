@@ -14,6 +14,7 @@ module Template_MolConstructor
     contains
       procedure, public, pass :: Constructor
       procedure, public, pass :: GenerateConfig
+      procedure, public, pass :: ReverseConfig
   end type
 !==========================================================================================
   contains
@@ -31,6 +32,18 @@ module Template_MolConstructor
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(out) :: probconstruct 
 
+    probconstruct = 1E0_dp
+  end subroutine
+!==========================================================================================
+  subroutine ReverseConfig(self, trialBox, probconstruct, accept)
+    implicit none
+    class(MolConstructor), intent(inout) :: self
+!    class(Perturbation), intent(inout) :: disp(:)
+    class(SimBox), intent(inout) :: trialBox
+    real(dp), intent(out) :: probconstruct 
+    logical, intent(out) :: accept
+
+    accept = .true.
     probconstruct = 1E0_dp
   end subroutine
 !==========================================================================================

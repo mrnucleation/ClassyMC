@@ -57,6 +57,8 @@ module Template_SimBox
       procedure, public, pass :: UpdatePosition
       procedure, public, pass :: UpdateVol
       procedure, public, pass :: UpdateNeighLists
+      procedure, public, pass :: GetMolData
+
   end type
 !==========================================================================================
   contains
@@ -139,6 +141,15 @@ module Template_SimBox
     lineStat = 0
   end subroutine
 !==========================================================================================
+  subroutine GetMolData(self, globalIndx, molStart, molEnd, molType, subIndx)
+    implicit none
+    class(SimBox), intent(inout) :: self
+    integer, intent(in)  :: globalIndx
+    integer, intent(inout), optional :: molStart, molEnd, molType, subIndx
+
+
+  end subroutine
+!==========================================================================================
   subroutine DumpData(self, filename)
     use Input_Format, only: maxLineLen
     implicit none
@@ -168,6 +179,7 @@ module Template_SimBox
     end select
 
   end function
+
 !==========================================================================================
   function ThermoLookup(self, thermoStr) result(thermInt)
     use Input_Format, only: maxLineLen

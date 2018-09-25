@@ -321,18 +321,15 @@ module Constrain_DistanceCriteria
           if( disp(iDisp)%molType == self%molType ) then
             molIndx = disp(iDisp)%molIndx
             iAtom = trialBox % MolStartIndx(molIndx) + self%atomNum  - 1
-            if( disp(iDisp)%atmIndx == iAtom) then
-!            if( disp(iDisp)%atmIndx == self%atomNum ) then
-              accept = .false.
-              iMol = disp(iDisp)%molIndx
+            accept = .false.
+            iMol = disp(iDisp)%molIndx
 !              write(*,*) "Del", iMol
-              do jMol = 1, totalMol
-                if(self%newTopoList(jMol, iMol)) then
-                  self%newTopoList(jMol, iMol) = .false.
-                  self%newTopoList(iMol, jMol) = .false.
-                endif
-              enddo
-            endif
+            do jMol = 1, totalMol
+              if(self%newTopoList(jMol, iMol)) then
+                self%newTopoList(jMol, iMol) = .false.
+                self%newTopoList(iMol, jMol) = .false.
+              endif
+            enddo
           endif
         enddo
 

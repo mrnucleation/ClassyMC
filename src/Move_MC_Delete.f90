@@ -59,7 +59,7 @@ use VarPrecision
 !    self%disp(1)%newAtom = .false.
     self%disp(1)%MolType = 1
     self%disp(1)%MolIndx = delVal
-    self%disp(1)%atmIndx = delVal
+!    self%disp(1)%atmIndx = delVal
 
 !    self%disp(1)%oldAtom = .true.
 !    self%disp(1)%oldMolType = 1

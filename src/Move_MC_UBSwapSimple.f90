@@ -75,7 +75,6 @@ use VarPrecision
     use Box_Utility, only: FindAtom
     use CommonSampling, only: sampling
     use Common_NeighData, only: neighSkin
-    use Common_MolInfo, only: MolData, nMolTypes
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd, Generate_UnitSphere
     implicit none
@@ -95,24 +94,16 @@ use VarPrecision
 !    integer(kind=atomIntType) :: molType, atmIndx, molIndx
 !    real(dp) :: x_new, y_new, z_new
 !    integer :: listIndex = -1
-    nType = floor(nMolTypes * grnd() + 1E0_dp)
-    if(trialBox%NMol(nType) + 1 > trialBox%NMolMax(nType)) then
+    if(trialBox%NMol(1) + 1 > trialBox%NMolMax(1)) then
       accept = .false.
       return
     endif
 
-    nMove = trialBox%NMol(nType) + 1
-    nMove = trialbox%MolGlobalIndx(nType, nMove)
-
+    nMove = trialBox%NMol(1) + 1
+    nMove = trialbox%MolStartIndx(nMove)
     !Choose an atom to serve as the target for the new molecule.
-!    rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
-!    call FindAtom(trialbox, rawIndx, nTarget)
-    rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
-    call FindMolecule(trialbox, rawIndx, nMove)
-    call trialBox % GetMolData(nMove, molType=molType)
-
-
-    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
+    rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
+    call FindAtom(trialbox, rawIndx, nTarget)
 
     !Choose the position relative to the target atom 
     call Generate_UnitSphere(dx, dy, dz)
@@ -121,7 +112,6 @@ use VarPrecision
     dy = radius * dy
     dz = radius * dz
 
-    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
     self%newPart(1)%molType = trialBox%MolType(nMove)
     self%newPart(1)%molIndx = trialBox%MolIndx(nMove)
     self%newPart(1)%atmIndx = nMove
@@ -168,39 +158,35 @@ use VarPrecision
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
     use Common_NeighData, only: neighSkin
-    use Common_MolInfo, only: MolData
     use Box_Utility, only: FindAtom
     implicit none
     class(UB_Simple), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
-    integer :: molType, molStart, molEnd
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex, nNei, nCount
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE
     real(dp) :: Prob = 1E0_dp
-    real(dp) :: Probconstruct = 1E0_dp
 
     self % atmps = self % atmps + 1E0_dp
     self % outatmps = self % outatmps + 1E0_dp
     accept = .true.
 
     !Propose move
-    rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
-    call FindMolecule(trialbox, rawIndx, nMove)
-    call trialBox % GetMolData(nMove, molType=molType)
-
-
-    if(trialBox%NMol(molType) - 1 < trialBox%NMolMin(molType)) then
+    rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
+    call FindAtom(trialbox, rawIndx, nMove)
+    if(trialBox%NMol(1) - 1 < trialBox%NMolMin(1)) then
 !      write(*,*) "Bounds Rejection"
       accept = .false.
       return
     endif
 
 
-    self%oldPart(1)%molType = molType
-    self%oldPart(1)%molIndx = nMove
+
+    self%oldPart(1)%molType = trialBox%MolType(nMove)
+    self%oldPart(1)%molIndx = trialBox%MolIndx(nMove)
+!    self%oldPart(1)%atmIndx = nMove
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%oldPart(1:1) )
@@ -217,9 +203,8 @@ use VarPrecision
       return
     endif
 
-    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
-
     nNei = trialBox % NeighList(1) % GetNeighCount (nMove, self%avbmcRad)
+
     Prob = real(nNei, dp) * real(trialBox%nAtoms, dp)
     Prob = Prob/(real(trialBox%nAtoms-1, dp) * self%avbmcVol)
 !    write(*,*) "Prob Out:", Prob, trialBox%nAtoms, self%avbmcVol, nNei, trialBox%nAtoms-1

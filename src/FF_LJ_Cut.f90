@@ -309,20 +309,19 @@ module FF_Pair_LJ_Cut
     type(Deletion), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     integer :: iDisp, iAtom, jAtom, remLen, jNei
-    integer :: atmType1, atmType2
+    integer :: atmType1, atmType2, globIndx
+    integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: ep, sig_sq
     real(dp) :: LJ
     real(dp) :: rmin_ij      
 
     E_Diff = 0E0_dp
-    do iDisp = 1, size(disp)
-!      if(.not. disp(iDisp)%oldAtom) then
-!        cycle
-!      endif
-!      iAtom = disp(iDisp)%oldAtmIndx
-      iAtom = disp(iDisp)%atmIndx
-      
+
+    globIndx = curBox % MolGlobalIndx(disp(1)%molType, disp(1)%molIndx)
+    call curBox % GetMolData(globIndx, molEnd=molEnd, molStart=molStart)
+
+    do iAtom = molStart, molEnd
       atmType1 = curbox % AtomType(iAtom) 
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)

@@ -437,7 +437,7 @@ module SimpleSimBox
   subroutine SimpleBox_GetMolData(self, globalIndx, molStart, molEnd, molType, subIndx)
     implicit none
     class(SimpleBox), intent(inout) :: self
-    integer, intent(in) :: globalIndx
+    integer, intent(in)  :: globalIndx
     integer, intent(inout), optional :: molStart, molEnd, molType, subIndx
 
     if( present(molStart) ) then

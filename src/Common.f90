@@ -43,7 +43,7 @@ module CoordinateTypes
 
   !Move type where one particle is removed 
   type, extends(Perturbation) :: Deletion
-    integer(kind=atomIntType) :: molType, atmIndx, molIndx
+    integer(kind=atomIntType) :: molType, molIndx
   end type
   
   !Move type where one particle is created
