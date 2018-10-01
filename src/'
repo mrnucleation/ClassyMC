@@ -32,8 +32,10 @@ module Template_MolConstructor
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(in), optional :: insPoint(:)
     real(dp), intent(out) :: probconstruct 
+    logical, intent(out) :: relative
 
     probconstruct = 1E0_dp
+    relative = .true.
   end subroutine
 !==========================================================================================
   subroutine ReverseConfig(self, trialBox, probconstruct, accept)

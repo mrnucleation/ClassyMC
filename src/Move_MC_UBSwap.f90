@@ -14,7 +14,7 @@ use VarPrecision
     real(dp) :: outaccpt = 0E0_dp
     real(dp) :: avbmcRad = 1.5E0_dp
     real(dp) :: avbmcVol = 0E0_dp
-    type(Addition) :: newPart(1:1)
+    type(Addition), allocatable :: newPart(:)
     type(Deletion) :: oldPart(1:1)
 
 !    integer, allocatable :: tempNnei(:)
@@ -82,8 +82,11 @@ use VarPrecision
     class(UB_Simple), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
+    logical :: relative
     integer :: nTarget, nType, rawIndx, iConstrain
     integer :: CalcIndex, nMove, nCount
+    integer :: iAtom
+    real(dp) :: insPoint(1:3)
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, radius
     real(dp) :: Prob = 1E0_dp
@@ -109,7 +112,8 @@ use VarPrecision
 !    call FindAtom(trialbox, rawIndx, nTarget)
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
     call FindMolecule(trialbox, rawIndx, nMove)
-    call trialBox % GetMolData(nMove, molType=molType)
+    call trialBox % GetMolData(nMove, molType=molType, molStart=molStart, &
+                               molEnd=molEnd)
 
 
     call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
@@ -120,20 +124,30 @@ use VarPrecision
     dx = radius * dx
     dy = radius * dy
     dz = radius * dz
+    insPoint(1) = trialBox%atoms(1, nTarget) + dx
+    insPoint(2) = trialBox%atoms(2, nTarget) + dy
+    insPoint(3) = trialBox%atoms(3, nTarget) + dz
+    nAtoms = MolData(molType)%nAtoms
+    do iAtom = 1, nAtoms
+      atomIndx = molStart + iAtom - 1
+      self%newPart(iAtom)%molType = molType
+      self%newPart(iAtom)%molIndx = nMove
+      self%newPart(iAtom)%atmIndx = atomIndx
+    enddo
 
-    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
-    self%newPart(1)%molType = trialBox%MolType(nMove)
-    self%newPart(1)%molIndx = trialBox%MolIndx(nMove)
-    self%newPart(1)%atmIndx = nMove
 
-    self%newPart(1)%x_new = trialBox%atoms(1, nTarget) + dx
-    self%newPart(1)%y_new = trialBox%atoms(2, nTarget) + dy
-    self%newPart(1)%z_new = trialBox%atoms(3, nTarget) + dz
+    call MolData(molType) % molConstruct % GenerateConfig( trialBox, probconstruct, relative)
 
-    call trialBox % NeighList(1) % GetNewList(1, self%tempList, self%tempNNei, self%newPart(1), &
-                                              nCount, self%avbmcRad)
-
-    self%newPart(1)%listIndex = 1
+    do iAtom = 1, nAtoms
+      if(iAtom == 1) then
+          call trialBox % NeighList(iAtom) % GetNewList(iAtom, self%tempList, self%tempNNei, &
+                                              self%newPart(iAtom), nCount, self%avbmcRad)
+      else
+          call trialBox % NeighList(iAtom) % GetNewList(iAtom, self%tempList, self%tempNNei, &
+                                              self%newPart(iAtom))
+      endif
+      self%newPart(iAtom)%listIndex = iAtom
+    enddo 
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%newPart(1:1) )
@@ -246,14 +260,25 @@ use VarPrecision
   subroutine UB_Simp_Prologue(self)
     use ParallelVar, only: nout
     use Constants, only: pi
+    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(UB_Simple), intent(inout) :: self
+    integer :: iType, maxAtoms
+
+    maxAtoms = 0
+    do iType = 1, nMolTypes
+      if(MolData(iType)%nAtoms > maxAtoms) then
+        maxAtoms = MolData(iType)%nAtoms 
+      endif
+    enddo
+
 
     self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
 !    write(*,*) self%avbmcVol
 
     allocate( self%tempNNei(1) )
     allocate( self%tempList(200, 1) )
+    allocate( self%newPart(1:maxAtoms) )
   end subroutine
 !=========================================================================
   subroutine UB_Simp_Epilogue(self)

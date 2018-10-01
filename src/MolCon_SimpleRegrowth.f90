@@ -30,7 +30,7 @@ module MolCon_SimpleRegrowth
     allocate( self%tempcoords(1:3, 1:MolData(molType)%nAtoms) )
   end subroutine
 !==========================================================================================
-  subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct)
+  subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct,insPoint )
     use Common_MolInfo, only: MolData, BondData, nMolTypes
     use MolSearch, only: FindBond
     use RandomGen, only: Generate_UnitSphere
@@ -39,6 +39,8 @@ module MolCon_SimpleRegrowth
     class(Perturbation), intent(inout) :: disp(:)
 !    class(SimpleBox), intent(inout) :: trialBox
     class(SimBox), intent(inout) :: trialBox
+    real(dp), intent(in), optional :: insPoint(:)
+
     integer :: bondType, molType
     integer :: atm1, atm2, iDisp
     real(dp), intent(out) :: probconstruct
@@ -109,9 +111,16 @@ module MolCon_SimpleRegrowth
 !        molType = disp(1)%molType
       class is(Addition)
         do iDisp = 1, MolData(molType)%nAtoms
-          disp(iDisp)%x_new = self%tempcoords(1, iDisp)
-          disp(iDisp)%y_new = self%tempcoords(2, iDisp)
-          disp(iDisp)%z_new = self%tempcoords(3, iDisp)
+          if( present(insPoint) ) then
+            disp(iDisp)%x_new = self%tempcoords(1, iDisp) + insPoint(1)
+            disp(iDisp)%y_new = self%tempcoords(2, iDisp) + insPoint(2)
+            disp(iDisp)%z_new = self%tempcoords(3, iDisp) + insPoint(3)
+          else
+            disp(iDisp)%x_new = self%tempcoords(1, iDisp)
+            disp(iDisp)%y_new = self%tempcoords(2, iDisp)
+            disp(iDisp)%z_new = self%tempcoords(3, iDisp)
+          endif
+
         enddo
     end select
 
