@@ -13,11 +13,12 @@ OPTIMIZE_FLAGS_IFORT += -xHost
 #OPTIMIZE_FLAGS += -ipo
 OPTIMIZE_FLAGS_IFORT+= -no-prec-div
 OPTIMIZE_FLAGS_IFORT += -no-wrap-margin
+OPTIMIZE_FLAGS_IFORT += -fpp
 OPTIMIZE_FLAGS_GFORT := -O3
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
-DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og
-DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
+DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -fpp
+DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0
@@ -71,7 +72,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_ThermoLambda.f90\
         		$(SRC)/Move_MC_Delete.f90\
         		$(SRC)/Move_MC_PlaneRotate.f90\
-        		$(SRC)/Move_MC_UBSwapSimple.f90\
+        		$(SRC)/Move_MC_UBSwap.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/MolSearch.f90\
         		$(SRC)/Analysis_ClusterSize.f90\

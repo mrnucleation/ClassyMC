@@ -9,25 +9,24 @@ module MolCon_SimpleRegrowth
 
 
   type, public, extends(MolConstructor) :: SimpleRegrowth
-    integer :: molType
     real(dp), allocatable :: tempcoords(:, :)
     contains
-      procedure, public, pass :: Constructor => SimpleRegrowth_Constructor
+!      procedure, public, pass :: Constructor => SimpleRegrowth_Constructor
+      procedure, public, pass :: Prologue => SimpleRegrowth_Prologue
       procedure, public, pass :: GenerateConfig => SimpleRegrowth_GenerateConfig
   end type
 !==========================================================================================
   contains
 !==========================================================================================
-  subroutine SimpleRegrowth_Constructor(self, molType)
+  subroutine SimpleRegrowth_Prologue(self)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(SimpleRegrowth), intent(inout) :: self
-    integer, intent(in) :: molType
+!    integer, intent(in) :: molType
     integer :: iType, maxAtoms
 
-    self%molType = molType
 
-    allocate( self%tempcoords(1:3, 1:MolData(molType)%nAtoms) )
+    allocate( self%tempcoords(1:3, 1:MolData(self%molType)%nAtoms) )
   end subroutine
 !==========================================================================================
   subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct,insPoint )

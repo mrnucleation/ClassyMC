@@ -6,7 +6,8 @@ atomdef
 end_atomdef
 
 bonddef
-  harmonic 1.0 1.0
+#  harmonic 1.0 1.0
+  ridgid 1.0 
 end_bonddef
 
 

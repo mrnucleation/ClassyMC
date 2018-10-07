@@ -8,7 +8,8 @@ module Input_Moves
   use MCMove_AtomTranslation, only: AtomTranslate
   use MCMove_Delete, only: MoveDelete
   use MCMove_MolTranslation, only: MolTranslate
-  use MCMove_UB_Simple, only: UB_Simple
+!  use MCMove_UB_Simple, only: UB_Simple
+  use MCMove_UB_Swap, only: UB_Swap
   use MCMove_PlaneRotation, only: PlaneRotate
   use Move_ThermoLambda, only: ThermoLambda
 
@@ -53,7 +54,8 @@ module Input_Moves
 
 
       case("ubswap")
-        allocate(UB_Simple::Moves(moveNum)%move)
+!        allocate(UB_Simple::Moves(moveNum)%move)
+        allocate(UB_Swap::Moves(moveNum)%move)
 
       case default
         lineStat = -1

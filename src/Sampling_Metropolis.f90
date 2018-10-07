@@ -16,6 +16,7 @@ module MetropolisRule
   function Metropolis_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
+    use ParallelVar, only: nout
     implicit none
     class(metropolis), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
@@ -29,7 +30,9 @@ module MetropolisRule
 
     accept = .false.
     if(inProb <= 0E0_dp) then
-      stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is zero or negative!"
+      return
+!      write(nout,*) "Probability:", inProb
+!      stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is zero or negative!"
     endif
 
 

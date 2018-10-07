@@ -60,7 +60,9 @@ contains
       case("tersoff")
         allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
-
+#ifdef AENET
+      case("aenet")
+#endif
       case default
 !        write(*,*) "Here"
         lineStat = -1

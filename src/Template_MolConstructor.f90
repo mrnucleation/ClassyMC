@@ -11,18 +11,30 @@ module Template_MolConstructor
 
 
   type, public, extends(classyClass) :: MolConstructor
+    real(dp) :: molType = -1
     contains
       procedure, public, pass :: Constructor
+      procedure, public, pass :: SetMolType
       procedure, public, pass :: GenerateConfig
       procedure, public, pass :: ReverseConfig
+      procedure, public, pass :: GasConfig
   end type
 !==========================================================================================
   contains
 !==========================================================================================
-  subroutine Constructor(self, molType)
+  subroutine Constructor(self)
+    implicit none
+    class(MolConstructor), intent(inout) :: self
+!    integer, intent(in) :: molType
+  end subroutine
+
+!==========================================================================================
+  subroutine SetMolType(self, molType)
     implicit none
     class(MolConstructor), intent(inout) :: self
     integer, intent(in) :: molType
+
+    self % molType = molType
   end subroutine
 !==========================================================================================
   subroutine GenerateConfig(self, trialBox, disp, probconstruct, insPoint)
@@ -46,6 +58,15 @@ module Template_MolConstructor
 
     accept = .true.
     probconstruct = 1E0_dp
+  end subroutine
+!==========================================================================================
+  subroutine GasConfig(self, molType, probGas)
+    implicit none
+    class(MolConstructor), intent(inout) :: self
+    integer, intent(in) :: molType
+    real(dp), intent(out) :: probGas
+
+    probGas = 1E0_dp
   end subroutine
 !==========================================================================================
 end module

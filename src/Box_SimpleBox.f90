@@ -466,6 +466,7 @@ module SimpleSimBox
 
     self % NMol(molType) = self % NMol(molType) + 1
     self % nAtoms = self % nAtoms + MolData(molType)%nAtoms
+    self % nMolTotal = self % nMolTotal + 1
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_DeleteMol(self, molIndx)
@@ -505,6 +506,7 @@ module SimpleSimBox
       call self % NeighList(iList) % DeleteMol(molIndx, lastMol)
     enddo
     self % NMol(nType) = self % NMol(nType) - 1 
+    self % nMolTotal = self % nMolTotal - 1
     self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
 
   end subroutine

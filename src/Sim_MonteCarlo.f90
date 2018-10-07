@@ -267,6 +267,7 @@ contains
   subroutine Epilogue(iCycle, iMove)
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
+    use Common_MolInfo, only: MolData
     use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
     use CommonSampling, only: Sampling
@@ -277,6 +278,12 @@ contains
 
     call Sampling % Epilogue
     
+    do i = 1, size(MolData)
+      call MolData(i) % molConstruct % Epilogue
+    enddo
+
+
+
     if( allocated(AnalysisArray) ) then
       do i = 1, size(AnalysisArray)
         call AnalysisArray(i) % func % Epilogue
@@ -305,11 +312,16 @@ contains
     use BoxData, only: BoxArray
     use CommonSampling, only: Sampling
     use ForcefieldData, only: EnergyCalculator
+    use Common_MolInfo, only: MolData
     use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
     implicit none
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
+
+    do i = 1, size(MolData)
+      call MolData(i) % molConstruct % Prologue
+    enddo
 
 
     if( allocated(AnalysisArray) ) then

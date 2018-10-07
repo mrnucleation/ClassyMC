@@ -38,6 +38,8 @@ contains
         return
     end select
 !    call MolData(molNum)%molConstruct%ProcessIO(line)
+!    call MolData(molNum)%molConstruct%Constructor(molNum)
+    call MolData(molNum)%molConstruct%SetMolType(molNum)
 
   end subroutine
 !================================================================================

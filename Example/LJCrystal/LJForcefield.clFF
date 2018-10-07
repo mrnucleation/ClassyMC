@@ -12,7 +12,8 @@ molecule 1
 end_molecule
 
 forcefieldtype
-  LJ_Cut
+#  LJ_Cut
+  AENet
 end_forcefieldtype
 
 # type epsilon sigma rmin
