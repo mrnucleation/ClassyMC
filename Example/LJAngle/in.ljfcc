@@ -16,7 +16,7 @@
   ForceField "LJForcefield.clFF"
 
   Create Boxes
-    fromfile "N2.clssy"
+    fromfile "N3.clssy"
   End_Create
 
   modify box 1 energycalc 1

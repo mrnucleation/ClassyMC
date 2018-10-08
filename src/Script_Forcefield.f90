@@ -262,11 +262,11 @@ module Input_Forcefield
              call FindCommandBlock(iLine, cmdBlock, "end_angles", lineBuffer)
              nItems = lineBuffer - 1
              MolData(molType)%nAngles = nItems
-             allocate(MolData(molType)%bond(1:nItems), stat = AllocateStat)
+             allocate(MolData(molType)%angle(1:nItems), stat = AllocateStat)
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,4)
-               MolData(molType)%angle(i)%angType = intValue(1)
+               MolData(molType)%angle(i)%angleType = intValue(1)
                MolData(molType)%angle(i)%mem1 = intValue(2)
                MolData(molType)%angle(i)%mem2 = intValue(3)
                MolData(molType)%angle(i)%mem3 = intValue(4)

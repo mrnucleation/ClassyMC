@@ -58,7 +58,7 @@ module Traj_Lammps
       molType = BoxArray(boxNum)%box%MolType(iAtom)
       atomType = BoxArray(boxNum)%box%AtomType(iAtom)
 
-!    write(*, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
+!      write(*, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
       if(BoxArray(boxNum)%box%NMol(molType) >= BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
         write(self%fileUnit, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
       endif

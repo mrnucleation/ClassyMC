@@ -30,7 +30,7 @@ module StructureTypes
 
 
   type AngleMem 
-    integer :: angType
+    integer :: angleType
     integer :: mem1, mem2, mem3
   end type
 

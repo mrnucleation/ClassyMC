@@ -26,6 +26,35 @@ contains
     stop
   
   end subroutine
+!==========================================================================           
+  subroutine FindAngle(molType, mem1, mem2, mem3, angleType)
+    use Common_MolInfo, only: MolData, AngleData
+    implicit none
+    integer, intent(in) :: molType, mem1, mem2, mem3
+    integer, intent(out) :: angleType
+    integer :: iAngle
+  
+    do iAngle = 1, size(MolData(molType)%angle)
+      if( (MolData(molType)%angle(iAngle)%mem1 .eq. mem1) .or. &
+          (MolData(molType)%angle(iAngle)%mem2 .eq. mem1) .or. &
+          (MolData(molType)%angle(iAngle)%mem3 .eq. mem1) ) then
+          if( (MolData(molType)%angle(iAngle)%mem1 .eq. mem2) .or. &
+              (MolData(molType)%angle(iAngle)%mem2 .eq. mem2) .or. &
+              (MolData(molType)%angle(iAngle)%mem3 .eq. mem2) ) then
+              if( (MolData(molType)%angle(iAngle)%mem1 .eq. mem3) .or. &
+                  (MolData(molType)%angle(iAngle)%mem2 .eq. mem3) .or. &
+                  (MolData(molType)%angle(iAngle)%mem3 .eq. mem3) ) then
+                    angleType = MolData(molType)%angle(iAngle)%angleType
+                    return
+              endif
+          endif
+      endif
+    enddo
 
+    write(*,*) "Error! FindAngle function unable to find a angle"
+    write(*,*) "containing memebers:", mem1, mem2, mem3
+    stop
+  
+  end subroutine
 !==========================================================================           
 end module

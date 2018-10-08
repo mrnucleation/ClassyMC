@@ -10,10 +10,12 @@ bonddef
   ridgid 1.0 
 end_bonddef
 
-angledef
+units angle deg
+
+AngleDef
 #  harmonic 1.0 1.0
   ridgid 90.0 
-end_bonddef
+End_AngleDef
 
 
 
@@ -23,12 +25,17 @@ molecule 1
   atoms
     1
     1
+    1
   end_atoms
 
   bonds
     1   1 2
+    1   2 3
   end_bonds
 
+  angles
+    1   1 2 3
+  end_angles
 end_molecule
 
 forcefieldtype

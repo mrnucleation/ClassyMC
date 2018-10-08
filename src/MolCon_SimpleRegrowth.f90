@@ -1,5 +1,5 @@
 !==========================================================================================
-! The Simple Regrowth Object
+! Simple Regrowth Object
 !==========================================================================================
 module MolCon_SimpleRegrowth
   use CoordinateTypes, only: Perturbation, Addition
@@ -11,6 +11,7 @@ module MolCon_SimpleRegrowth
   type, public, extends(MolConstructor) :: SimpleRegrowth
     real(dp), allocatable :: tempcoords(:, :)
     integer :: centralAtom = 1
+    integer, allocatable :: sideAtoms(:)
     contains
 !      procedure, public, pass :: Constructor => SimpleRegrowth_Constructor
       procedure, public, pass :: Prologue => SimpleRegrowth_Prologue
@@ -20,20 +21,59 @@ module MolCon_SimpleRegrowth
   contains
 !==========================================================================================
   subroutine SimpleRegrowth_Prologue(self)
-    use Common_MolInfo, only: MolData, nMolTypes
+    use Common_MolInfo, only: MolData, BondData, nMolTypes
+    use MolSearch, only: FindBond
+    use ParallelVar, only: nout
     implicit none
     class(SimpleRegrowth), intent(inout) :: self
 !    integer, intent(in) :: molType
-    integer :: iType, maxAtoms
+    integer :: iType, iBond, iAtom, atm, curMax, nAtoms
+    integer, allocatable :: freq(:)
 
+    nAtoms = MolData(self%molType)%nAtoms
+    allocate( self%tempcoords(1:3, 1:nAtoms) )
 
-    allocate( self%tempcoords(1:3, 1:MolData(self%molType)%nAtoms) )
+    !Locate the central atom by determining the atom that appears the most frequently
+    !in the bond topology.
+    if(MolData(self%molType)%nAtoms > 1) then
+      allocate( freq(1:nAtoms) )  
+      freq = 0
+      do iBond = 1, size(MolData(self%molType)%bond)
+        atm = MolData(self%molType)%bond(iBond)%mem1
+        freq(atm) = freq(atm) + 1
+        atm = MolData(self%molType)%bond(iBond)%mem2
+        freq(atm) = freq(atm) + 1
+      enddo
+
+      atm = 1
+      curMax = 0
+      do iAtom = 1, nAtoms
+        write(*,*) freq(iAtom)
+        if(curMax < freq(iAtom)) then
+          curMax = freq(iAtom)
+          atm = iAtom
+        endif
+      enddo
+      self%centralAtom = atm
+      allocate( self%sideAtoms(1:nAtoms) )
+
+      atm = 0
+      do iAtom = 1, nAtoms
+        if(iAtom /= self%centralAtom) then
+          atm = atm + 1
+          self%sideAtoms(atm) = iAtom
+        endif
+      enddo 
+      deallocate(freq)
+    endif
+    write(nout, *) "Central Atom Identified:", self%centralAtom
+
   end subroutine
 !==========================================================================================
   subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct,insPoint )
-    use Common_MolInfo, only: MolData, BondData, nMolTypes
-    use MolSearch, only: FindBond
-    use RandomGen, only: Generate_UnitSphere
+    use Common_MolInfo, only: MolData, BondData, AngleData, nMolTypes
+    use MolSearch, only: FindBond, FindAngle
+    use RandomGen, only: Generate_UnitSphere, Generate_UnitCone
     implicit none
     class(SimpleRegrowth), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
@@ -41,11 +81,12 @@ module MolCon_SimpleRegrowth
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(in), optional :: insPoint(:)
 
-    integer :: bondType, molType
-    integer :: atm1, atm2, iDisp
+    integer :: bondType, angleType, molType
+    integer :: atm1, atm2,atm3, iDisp, iAtom
     real(dp), intent(out) :: probconstruct
     real(dp), dimension(1:3) :: v1, v2
-    real(dp) :: dx, dy, dz, r
+    real(dp) :: dx, dy, dz, r, theta
+    real(dp) :: x,y,z
     real(dp) :: prob
 
     probconstruct = 1E0_dp
@@ -77,33 +118,40 @@ module MolCon_SimpleRegrowth
         self%tempcoords(1, Atm2) = r * dx
         self%tempcoords(2, Atm2) = r * dy
         self%tempcoords(3, Atm2) = r * dz
-!    case(3)
-!      Atm1 = pathArray(nType)%path(1, 1)
-!      Atm2 = pathArray(nType)%path(1, 2)
-!      Atm3 = pathArray(nType)%path(1, 3)
-!      call FindBond(nType, Atm1, Atm2, bondType)
-!      k_bond = bondData(bondType)%k_eq
-!      r_eq = bondData(bondType)%r_eq
-!      call GenerateBondLength(r, k_bond, r_eq, Prob)
-!      call Generate_UnitSphere(dx, dy, dz)
-!      v1(1) = -r*dx
-!      v1(2) = -r*dy
-!      v1(3) = -r*dz
-!      tempcoords(1,atm2) = r * dx
-!      tempcoords(2,atm2) = r * dy
-!      tempcoords(3,atm2) = r * dz
-!      call FindBond(nType, Atm2, Atm3, bondType)
-!      k_bond = bondData(bondType)%k_eq
-!      r_eq = bondData(bondType)%r_eq
-!      call GenerateBondLength(r, k_bond, r_eq, Prob)
-!      bendType = bendArray(nType,1)%bendType
-!      call GenerateBendAngle(ang, bendType, Prob)
-!      call Generate_UnitCone(v1, r, ang, v2)
-!      tempcoords(1, atm3) = tempcoords(1,atm2) + v2(1) 
-!      tempcoords(2, atm3) = tempcoords(2,atm2) + v2(2)
-!      tempcoords(3, atm3) = tempcoords(3,atm2) + v2(3)
+      case(3)
+        Atm1 = self%sideAtoms(1)
+        Atm2 = self%centralAtom
+        Atm3 = self%sideAtoms(2)
+        self%tempcoords(1, atm2) = 0E0_dp
+        self%tempcoords(2, atm2) = 0E0_dp
+        self%tempcoords(3, atm2) = 0E0_dp
+        call FindBond(molType, atm1, atm2, bondType)
+        call BondData(bondType) % bondFF % GenerateDist(r, prob)
+        call Generate_UnitSphere(dx, dy, dz)
+        v1(1) = -r*dx
+        v1(2) = -r*dy
+        v1(3) = -r*dz
+        self%tempcoords(1, atm1) = r * dx
+        self%tempcoords(2, atm1) = r * dy
+        self%tempcoords(3, atm1) = r * dz
+        call FindBond(molType, atm2, atm3, bondType)
+        call BondData(bondType) % bondFF % GenerateDist(r, prob)
+        call FindAngle(molType, atm1, atm2, atm3, angleType)
+        call AngleData(angleType) % angleFF % GenerateDist(theta, prob)
+        call Generate_UnitCone(v1, r, theta, v2)
+        self%tempcoords(1, atm3) = self%tempcoords(1,atm2) + v2(1) 
+        self%tempcoords(2, atm3) = self%tempcoords(2,atm2) + v2(2)
+        self%tempcoords(3, atm3) = self%tempcoords(3,atm2) + v2(3)
+!        x = self%tempcoords(1, Atm2)
+!        y = self%tempcoords(2, Atm2)
+!        z = self%tempcoords(3, Atm2)
+!        do iAtom = 1, 3
+!          self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom) - x
+!          self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom) - y
+!          self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom) - z
+!        enddo
       case default
-
+        stop "Simple regrowth is not valid for this many atoms"
     end select
 
     select type(disp)
