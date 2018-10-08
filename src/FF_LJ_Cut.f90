@@ -218,6 +218,9 @@ module FF_Pair_LJ_Cut
         if(rsq < self%rCutSq) then
           ep = self % epsTable(atmType2, atmType1)
           sig_sq = self % sigTable(atmType2, atmType1)  
+          if(iAtom == jAtom) then
+            write(*,*) "NeighborList Error!", iAtom, jAtom
+          endif
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)              

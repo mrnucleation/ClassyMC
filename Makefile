@@ -14,6 +14,8 @@ OPTIMIZE_FLAGS_IFORT += -xHost
 OPTIMIZE_FLAGS_IFORT+= -no-prec-div
 OPTIMIZE_FLAGS_IFORT += -no-wrap-margin
 OPTIMIZE_FLAGS_IFORT += -fpp
+OPTIMIZE_FLAGS_IFORT += -fpe0
+OPTIMIZE_FLAGS_IFORT += -traceback
 OPTIMIZE_FLAGS_GFORT := -O3
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling

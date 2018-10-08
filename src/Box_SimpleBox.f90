@@ -285,6 +285,12 @@ module SimpleSimBox
     implicit none
     class(SimpleBox), intent(inout) :: self
     real(dp), intent(in) :: E_Diff
+!    real(dp), parameter :: infCheck = huge(dp)
+
+!    if(E_aDiff > infCheck) then
+!    endif
+
+    
 
     self % ETotal = self % ETotal + E_Diff
     self % ETable = self % ETable + self % dETable

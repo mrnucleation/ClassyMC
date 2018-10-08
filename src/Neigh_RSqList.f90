@@ -170,24 +170,31 @@ use Template_NeighList, only: NeighListDef
     integer, intent(in) :: molIndx, topIndx
     integer :: iAtom, iNei, jNei, nType, j
     integer :: nStart, topStart
+    integer :: nEnd, topEnd
     integer :: atmIndx, topAtom
     integer :: curNei, curIndx, nNei
 
     nStart = self % parent % MolStartIndx(molIndx)
     topStart = self % parent % MolStartIndx(topIndx)
+
+    nEnd = self % parent % MolEndIndx(molIndx)
+    topEnd = self % parent % MolEndIndx(topIndx)
     nType = self % parent % MolType(nStart)
 
-!    write(*,*) "----------------------------"
-!    write(*,*) "Delete"
-!    write(*,*) "Removed Mol:", molIndx
+!    write(2,*) "----------------------------"
+!    write(2,*) "Delete"
+!    write(2,*) "Removed Mol:", molIndx
 !    do iAtom = 1, self%parent%nMaxatoms
-!      write(*,*) iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
+!      write(2,*) iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
 !    enddo
-!    write(*,*) "Sorted?:", self%sorted
+!    write(2,*) "Sorted?:", self%sorted
 
     do iAtom = 1, MolData(nType)%nAtoms
-      atmIndx = nStart + iAtom - 1
-      topAtom = topStart + iAtom - 1
+!      atmIndx = nStart + iAtom - 1
+!      topAtom = topStart + iAtom - 1
+
+      atmIndx = nEnd - iAtom + 1
+      topAtom = topEnd - iAtom + 1
       !Remove the deleted from the list of it's neighbors
       do iNei = 1, self % nNeigh(atmIndx)
         curNei = self % list(iNei, atmIndx)
@@ -255,9 +262,9 @@ use Template_NeighList, only: NeighListDef
     enddo
 
 !    do iAtom = 1, self%parent%nMaxatoms
-!      write(*,*) iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
+!      write(2,*) iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
 !    enddo
-!    write(*,*)
+!    write(2,*) "---------------------------------"
 
 
     self % sorted = .false.
@@ -465,29 +472,28 @@ use Template_NeighList, only: NeighListDef
 
     do iList = 1, size(trialBox%NeighList)
       if(iList == 1) then
-!        write(*,*) "----------------------------"
-!        write(*,*) "Add"
+!        write(2,*) "----------------------------"
+!        write(2,*) "Add"
 !        do iAtom = 1, trialBox%nMaxatoms
-!          write(*,*) iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
+!          write(2,*) iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
 !        enddo
-!        write(*,*)
+!        write(2,*)
         do iDisp = 1, size(disp)
           iAtom = disp(iDisp)%atmIndx
           trialBox % NeighList(iList) % nNeigh(iAtom) = tempNNei(iDisp)
           do iNei = 1, tempNNei(iDisp)
             neiIndx = tempList(iNei, iDisp)
-!            write(*,*) iAtom, neiIndx
             trialBox % NeighList(iList) % list(iNei, iAtom) =  neiIndx
             trialBox % NeighList(iList) % list( trialBox%NeighList(iList)%nNeigh(neiIndx)+1, neiIndx ) = iAtom
             trialBox%NeighList(iList)%nNeigh(neiIndx)= trialBox%NeighList(iList)%nNeigh(neiIndx) + 1
           enddo
         enddo
 !        do iAtom = 1, trialBox%nMaxatoms
-!          write(*,*) iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
+!          write(2,*) iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
 !        enddo
-!        write(*,*)
+!        write(2,*)
       endif
-!      write(*,*) "N", trialBox%NeighList(iList)%nNeigh(:)     
+!      write(2,*) "N", trialBox%NeighList(iList)%nNeigh(:)     
     enddo
 
 

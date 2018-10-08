@@ -13,6 +13,7 @@ use VarPrecision
     real(dp) :: outatmps = 1E-30_dp
     real(dp) :: outaccpt = 0E0_dp
     real(dp) :: avbmcRad = 3.0E0_dp
+    real(dp) :: avbmcRadSq = 3.0E0_dp**2
     real(dp) :: avbmcVol = 0E0_dp
     type(Addition), allocatable :: newPart(:)
     type(Deletion) :: oldPart(1:1)
@@ -26,6 +27,7 @@ use VarPrecision
       procedure, pass :: FullMove => UB_Swap_FullMove
       procedure, pass :: SwapIn => UB_Swap_SwapIn
       procedure, pass :: SwapOut => UB_Swap_SwapOut
+      procedure, pass :: CountSites => UB_Swap_CountSites
 !      procedure, pass :: Maintenance => UB_Swap_Maintenance
       procedure, pass :: Prologue => UB_Swap_Prologue
       procedure, pass :: Epilogue => UB_Swap_Epilogue
@@ -144,12 +146,12 @@ use VarPrecision
     call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%newPart(1:nAtoms), ProbSub , insPoint)
 
     do iAtom = 1, nAtoms
+      call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
+                                                self%newPart(iAtom))
       if(iAtom == 1) then
-          call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
-                                              self%newPart(iAtom), nCount, self%avbmcRad)
-      else
-          call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
-                                              self%newPart(iAtom))
+        call self % CountSites(trialBox, self%newPart(1)%x_new, self%newPart(1)%y_new, &
+                               self%newPart(1)%z_new, self%tempNNei(1), self%tempList(:,1), &
+                               nCount )
       endif
       self%newPart(iAtom)%listIndex = iAtom
     enddo 
@@ -169,7 +171,7 @@ use VarPrecision
 
     Prob = real(trialBox%nMolTotal, dp) * self%avbmcVol
     Prob = Prob/(real(nCount, dp) * real(trialBox%nMolTotal+1, dp))
-    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1
+!    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%newPart(1:nAtoms))
@@ -209,7 +211,7 @@ use VarPrecision
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
     call FindMolecule(trialbox, rawIndx, nMove)
-    call trialBox % GetMolData(nMove, molType=molType)
+    call trialBox % GetMolData(nMove, molType=molType, molStart=molStart)
 
 
     if(trialBox%NMol(molType) - 1 < trialBox%NMolMin(molType)) then
@@ -238,8 +240,14 @@ use VarPrecision
     endif
 
     call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
+    call self % CountSites(trialBox, &
+                           trialBox%atoms(1,molStart), &
+                           trialBox%atoms(2,molStart), &
+                           trialBox%atoms(3,molStart), &
+                           trialBox%NeighList(1)%nNeigh(molStart), &
+                           trialBox%NeighList(1)%list(:,molStart), &
+                           nNei  )
 
-    nNei = trialBox % NeighList(1) % GetNeighCount (nMove, self%avbmcRad)
     Prob = real(nNei, dp) * real(trialBox%nMolTotal, dp)
     Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%avbmcVol)
 !    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%avbmcVol, nNei, trialBox%nMolTotal-1
@@ -253,6 +261,36 @@ use VarPrecision
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 
+
+  end subroutine
+!========================================================
+  subroutine UB_Swap_CountSites(self, trialBox, x,y,z, nNei, tempList, nCount)
+    use Common_MolInfo, only: MolData, nMolTypes
+    implicit none
+    class(UB_Swap), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: trialBox
+    integer, intent(in) :: NNei
+    integer, intent(in) :: tempList(:)
+    real(dp), intent(in) :: x,y,z
+    integer, intent(out) :: NCount
+    integer :: iNei, iAtom, molIndx
+    real(dp) :: rx, ry,rz, rsq
+
+
+    nCount = 0
+    do iNei = 1, NNei
+      iAtom = tempList(iNei)
+      molIndx = trialBox%MolIndx(iAtom)
+      if(iAtom == trialBox%MolStartIndx(molIndx)) then
+        rx = x - trialBox % atoms(1, iAtom)
+        ry = y - trialBox % atoms(2, iAtom)
+        rz = z - trialBox % atoms(3, iAtom)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%avbmcRadSq) then
+          nCount = nCount + 1
+        endif
+      endif
+    enddo
 
   end subroutine
 !=========================================================================
@@ -280,6 +318,7 @@ use VarPrecision
 
 
     self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
+    self%avbmcRadSq = self%avbmcRad * self%avbmcRad
 !    write(*,*) self%avbmcVol
 
     allocate( self%tempNNei(maxAtoms) )

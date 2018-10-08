@@ -55,7 +55,7 @@ contains
     integer, intent(in) :: list(:)
     integer :: outIndx
     integer :: upper, lower, curIndx
-    integer :: listSize
+    integer :: listSize, loop
 
 
     lower = LBound(list, dim=1)
@@ -69,22 +69,47 @@ contains
     endif
 
 
+    loop = 0    
     do while( list(curIndx) /= val )
-      curIndx = nint(0.5E0_dp*(lower + upper))
-      if(list(curIndx) < val) then
-        lower = curIndx
-      elseif(list(curIndx) > val) then
-        upper = curIndx
+!      write(*,*) "-------------"
+!      write(*,*) list
+!      write(*,*)
+!      write(*,*) val, curIndx, list(curIndx), lower, upper
+      if(loop > listSize) then
+        curIndx = 0
+        exit
       endif
 
-!      write(*,*) "target=", val
+
+      if(upper-lower > 1) then
+          curIndx = nint(0.5E0_dp*(lower + upper))
+          if(list(curIndx) < val) then
+            lower = curIndx
+          elseif(list(curIndx) > val) then
+            upper = curIndx
+          endif
+      else
+          if(list(lower) == val) then
+            curIndx = lower
+          elseif(list(upper) == val) then
+            curIndx = upper
+          else
+            curIndx = 0
+          endif
+          exit
+      endif
 !      write(*,*) curIndx, list(curIndx), lower, upper
+
+
+!      write(*,*) "target=", val
       if( lower >= upper ) then
         curIndx = 0
         exit
       endif
+      loop = loop + 1
     enddo
 
+!    write(*,*) "Finish"
     if(curIndx /= 0) then
       if(list(curIndx) /= val) then
         curIndx = 0
