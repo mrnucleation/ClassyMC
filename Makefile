@@ -94,10 +94,12 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_LJ_Ele_Cut.f90\
         		$(SRC)/FF_Tersoff.f90\
         		$(SRC)/FF_ThermoInt.f90\
-        		$(SRC)/Intra_RidgidBond.f90\
-        		$(SRC)/Intra_HarmonicBond.f90\
+        		$(SRC)/Intra_BondRidgid.f90\
+        		$(SRC)/Intra_BondHarmonic.f90\
+        		$(SRC)/Intra_AngleRidgid.f90\
         		$(SRC)/MolCon_SimpleRegrowth.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
+ 	        	$(SRC)/Script_AngleType.f90\
  	        	$(SRC)/Script_BondType.f90\
  	        	$(SRC)/Script_Constraint.f90\
  	        	$(SRC)/Script_Forcefield.f90\
@@ -126,6 +128,7 @@ SRC_TEMPLATE := $(SRC)/Template_Master.f90\
 				$(SRC)/Template_AcceptRule.f90\
 				$(SRC)/Template_Analysis.f90\
 				$(SRC)/Template_BondFF.f90\
+				$(SRC)/Template_AngleFF.f90\
 				$(SRC)/Template_Constraint.f90\
 				$(SRC)/Template_Forcefield.f90\
 	            $(SRC)/Template_SimBox.f90\
@@ -261,6 +264,7 @@ $(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/Box_SimpleBox.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o
 $(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o
 $(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o 
+$(OBJ)/Template_AngleFF.o: $(OBJ)/Template_IntraFF.o
 $(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o
 
 $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o
@@ -279,7 +283,7 @@ $(OBJ)/MolCon_SimpleRegrowth.o: $(OBJ)/Template_MolConstructor.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o $(OBJ)/Script_NeighType.o $(OBJ)/Script_TrajType.o
 
-$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o $(OBJ)/Script_BondType.o $(OBJ)/Script_RegrowType.o 
+$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o $(OBJ)/Script_BondType.o $(OBJ)/Script_AngleType.o $(OBJ)/Script_RegrowType.o 
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
 $(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o
 $(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o

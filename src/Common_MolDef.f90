@@ -3,6 +3,7 @@ module StructureTypes
   use VarPrecision 
   use Template_MolConstructor, only: MolConstructor
   use Template_IntraBond, only: Bond_FF
+  use Template_IntraAngle, only: Angle_FF
 
 
   type AtomDef 
@@ -15,7 +16,7 @@ module StructureTypes
   end type
 
   type AngleDef 
-    !    Insert Function Type
+    class(Angle_FF), allocatable :: angleFF
   end type
 
   type MiscDef 

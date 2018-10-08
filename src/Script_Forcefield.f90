@@ -3,6 +3,7 @@ module Input_Forcefield
   use VarPrecision
   use ForcefieldData
   use Input_FieldType
+  use Input_AngleType
   use Input_BondType
   use Input_Format
 
@@ -15,8 +16,8 @@ module Input_Forcefield
     use ForcefieldData, only: nForceFields, EnergyCalculator
     use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile
-    use Common_MolInfo, only: AtomData, MolData, BondData, &
-                             nMolTypes, nAtomTypes, nBondTypes
+    use Common_MolInfo, only: AtomData, MolData, BondData, AngleData, &
+                             nMolTypes, nAtomTypes, nBondTypes, nAngleTypes
     implicit none
     character(len=50), intent(in) :: fileName      
     integer, intent(out) :: lineStat
@@ -110,12 +111,30 @@ module Input_Forcefield
               curLine = iLine + i
 !              read(lineStore(curLine), *) BondData(i)%rEq
               call Script_BondType(lineStore(curLine), i, lineStat)
-              write(*,*) lineStat
+!              write(*,*) lineStat
             enddo   
           else
             write(*,*) "ERROR! The BondDef has already been used and can not be called twice"
             stop
           endif
+!        -----------------------------------------------------------------------------
+        case("angledef")
+          call FindCommandBlock(iLine, lineStore, "end_angledef", lineBuffer)
+          nItems = lineBuffer - 1
+          if( .not. allocated(AngleData) ) then
+            nAngleTypes = nItems
+            allocate(AngleData(1:nItems), stat = AllocateStat)
+            do i = 1, nItems
+              curLine = iLine + i
+!              read(lineStore(curLine), *) AngleData(i)%rEq
+              call Script_AngleType(lineStore(curLine), i, lineStat)
+!              write(*,*) lineStat
+            enddo   
+          else
+            write(*,*) "ERROR! The AngleDef has already been used and can not be called twice"
+            stop
+          endif
+
 
 !        -----------------------------------------------------------------------------
         case("molecule")

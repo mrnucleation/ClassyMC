@@ -10,6 +10,7 @@ module MolCon_SimpleRegrowth
 
   type, public, extends(MolConstructor) :: SimpleRegrowth
     real(dp), allocatable :: tempcoords(:, :)
+    integer :: centralAtom = 1
     contains
 !      procedure, public, pass :: Constructor => SimpleRegrowth_Constructor
       procedure, public, pass :: Prologue => SimpleRegrowth_Prologue
