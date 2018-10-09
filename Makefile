@@ -62,6 +62,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_NeighList.f90\
         		$(SRC)/Debug.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
+         		$(SRC)/Constrain_FreezeType.f90\
          		$(SRC)/Constrain_HardWall.f90\
 	        	$(SRC)/SearchSort.f90\
         		$(SRC)/Sampling_Metropolis.f90\

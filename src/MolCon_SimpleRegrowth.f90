@@ -128,9 +128,9 @@ module MolCon_SimpleRegrowth
         call FindBond(molType, atm1, atm2, bondType)
         call BondData(bondType) % bondFF % GenerateDist(r, prob)
         call Generate_UnitSphere(dx, dy, dz)
-        v1(1) = -r*dx
-        v1(2) = -r*dy
-        v1(3) = -r*dz
+        v1(1) = r*dx
+        v1(2) = r*dy
+        v1(3) = r*dz
         self%tempcoords(1, atm1) = r * dx
         self%tempcoords(2, atm1) = r * dy
         self%tempcoords(3, atm1) = r * dz

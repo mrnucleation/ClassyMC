@@ -10,6 +10,7 @@ contains
     use BoxData, only: BoxArray
     use ParallelVar, only: nout
     use Constrain_DistanceCriteria, only: DistCriteria
+    use Constrain_FreezeType, only: FreezeType
     use Constrain_HardWall, only: HardWall
 
     implicit none
@@ -37,6 +38,9 @@ contains
 
         case("hardwall")
           allocate( HardWall ::BoxArray(BoxNum)%box%Constrain(i)%method )
+
+        case("freezetype")
+          allocate( FreezeType ::BoxArray(BoxNum)%box%Constrain(i)%method )
 
         case default
           lineStat = -1

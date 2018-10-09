@@ -14,7 +14,7 @@ units angle deg
 
 AngleDef
 #  harmonic 1.0 1.0
-  ridgid 90.0 
+  ridgid 104.52
 End_AngleDef
 
 
@@ -30,11 +30,11 @@ molecule 1
 
   bonds
     1   1 2
-    1   2 3
+    1   1 3
   end_bonds
 
   angles
-    1   1 2 3
+    1    2 1 3
   end_angles
 end_molecule
 
