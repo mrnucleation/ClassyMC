@@ -160,15 +160,17 @@ module FF_Pair_LJ_Q_Cut
           if(rsq < self%rLJCutSq) then
             ep = self % epsTable(atmType1, atmType2)
             sig_sq = self % sigTable(atmType1, atmType2)          
+            write(*,*) ep, sig_sq, rsq
             LJ = (sig_sq/rsq)**3
             LJ = ep * LJ * (LJ-1E0_dp)
+            write(*,*) LJ
             E_LJ = E_LJ + LJ
             curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
             curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ 
           endif
 
           if(rsq < self%rQCutSq) then
-            q = self % qTable(atmType1, atmType2)          
+            q = self % qTable(atmType1, atmType2)
             r = sqrt(rsq)
             Ele = q/r
             E_Ele = E_Ele + Ele
@@ -180,8 +182,8 @@ module FF_Pair_LJ_Q_Cut
       enddo
     enddo
   
-!    write(nout,*) "Lennard-Jones Energy:", E_LJ
-!    write(nout,*) "Eletrostatic Energy:", E_Ele
+    write(nout,*) "Lennard-Jones Energy:", E_LJ
+    write(nout,*) "Eletrostatic Energy:", E_Ele
       
     E_T = E_LJ + E_Ele
   end subroutine
@@ -514,8 +516,8 @@ module FF_Pair_LJ_Q_Cut
             self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%eps(jType))
             self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%eps(jType))
 
-            self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sig(jType) )
-            self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sig(jType) )
+            self%sigTable(type1, jType) = (0.5E0_dp * (sig + self%sig(jType)))**2
+            self%sigTable(jType, type1) = (0.5E0_dp * (sig + self%sig(jType)))**2
 
             self%qTable(type1, jType) = q * self%q(jType) * coulombConst
             self%qTable(jType, type1) = q * self%q(jType) * coulombConst
@@ -544,31 +546,35 @@ module FF_Pair_LJ_Q_Cut
     implicit none
     class(Pair_LJ_Q_Cut), intent(inout) :: self
     integer :: i, j
+    
+    
+!    write(nout,*) self%rLJCut, self%rQCut
+!    write(nout,*) self%rLJCutSq, self%rQCutSq
+!    write(nout,*)
 
-    do i = 1, nAtomTypes
-      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
-    enddo
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
+!    enddo
 
-    write(nout,*)
-    do i = 1, nAtomTypes
-      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
-    enddo
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
+!    enddo
 
-    write(nout,*)
-    do i = 1, nAtomTypes
-      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
-    enddo
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
+!    enddo
 
-    write(nout,*)
-    do i = 1, nAtomTypes
-      write(nout, *) (self%qTable(i,j)/coulombConst, j=1,nAtomTypes)
-    enddo
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%qTable(i,j)/coulombConst, j=1,nAtomTypes)
+!    enddo
 
-    write(nout,*)
-    do i = 1, nAtomTypes
-      write(nout, *) (self%qTable(i,j), j=1,nAtomTypes)
-    enddo
-
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%qTable(i,j), j=1,nAtomTypes)
+!    enddo
 
 
   end subroutine

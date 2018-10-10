@@ -41,11 +41,12 @@ forcefieldtype
   LJ_Q_Cut
 end_forcefieldtype
 
+units energy kb
 # type epsilon sigma q rmin
 forcefield 1
-  rLJCut 15.5
-  rQCut 15.5
-  1  76.62634    3.15066       -0.834   0.7
-  2  0.0         0.0            0.417   0.5
+  LJRCut 15.5
+  QRCut 15.5
+  1  76.62634    3.15066       -0.834   1.0
+  2  0.0         0.0            0.417   0.6
 end_forcefield
 

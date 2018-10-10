@@ -87,7 +87,7 @@ use VarPrecision
     logical :: relative
     integer :: nTarget, nType, rawIndx, iConstrain
     integer :: CalcIndex, nMove, nCount
-    integer :: iAtom
+    integer :: iAtom, iDisp
     integer :: molType, molStart, molEnd, atomIndx, nAtoms
     integer :: targStart
     real(dp) :: insPoint(1:3)
@@ -169,6 +169,7 @@ use VarPrecision
       return
     endif
 
+    !Compute the generation probability
     Prob = real(trialBox%nMolTotal, dp) * self%avbmcVol
     Prob = Prob/(real(nCount, dp) * real(trialBox%nMolTotal+1, dp))
 !    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1

@@ -20,7 +20,7 @@ OPTIMIZE_FLAGS_GFORT := -O3
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
 DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -fpp
-DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp
+DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
 #DEBUGFLAGS += -fpe0

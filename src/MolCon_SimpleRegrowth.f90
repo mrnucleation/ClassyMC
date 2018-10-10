@@ -48,7 +48,6 @@ module MolCon_SimpleRegrowth
       atm = 1
       curMax = 0
       do iAtom = 1, nAtoms
-        write(*,*) freq(iAtom)
         if(curMax < freq(iAtom)) then
           curMax = freq(iAtom)
           atm = iAtom
@@ -128,8 +127,6 @@ module MolCon_SimpleRegrowth
         call FindBond(molType, atm1, atm2, bondType)
         call BondData(bondType) % bondFF % GenerateDist(r, prob)
         call Generate_UnitSphere(dx, dy, dz)
-!        write(*,*) r
-!        write(*,*) v1(1),v1(2),v1(3)
         v1(1) = r*dx
         v1(2) = r*dy
         v1(3) = r*dz
@@ -144,11 +141,6 @@ module MolCon_SimpleRegrowth
         self%tempcoords(1, atm3) = v2(1) 
         self%tempcoords(2, atm3) = v2(2)
         self%tempcoords(3, atm3) = v2(3)
-!        write(*,*) r, theta
-!        write(*,*) v1(1),v1(2),v1(3)
-!        write(*,*) v2(1),v2(2),v2(3)
-!        write(*,*) (v1(1)*v2(1) + v1(2)*v2(2) + v1(3)*v2(3))/ &
-!                   (sqrt(v1(1)**2 + v1(2)**2 + v1(3)**2)*r)
                    
 !        x = self%tempcoords(1, Atm2)
 !        y = self%tempcoords(2, Atm2)
@@ -178,9 +170,6 @@ module MolCon_SimpleRegrowth
           endif
 
         enddo
-!        do iDisp = 1, size(disp)
-!          write(*,*) iDisp, disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new
-!        enddo
     end select
 
 

@@ -394,8 +394,8 @@ module FF_Pair_LJ_Cut
             self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%eps(jType))
             self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%eps(jType))
 
-            self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sig(jType) )
-            self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sig(jType) )
+            self%sigTable(type1, jType) = (0.5E0_dp * (sig + self%sig(jType)))**2
+            self%sigTable(jType, type1) = (0.5E0_dp * (sig + self%sig(jType)))**2
 
             self%rMinTable(type1, jType) = max(rMin, self%rMin(jType))**2
             self%rMinTable(jType, type1) = max(rMin, self%rMin(jType))**2

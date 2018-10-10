@@ -156,7 +156,6 @@ use Template_NeighList, only: NeighListDef
     select type(disp)
 
       class is(Addition)
-!        write(*,*) "Add"
         call UpdateList_AddMol_RSq(self%parent, disp, tempList, tempNNei)
     end select
 
@@ -206,12 +205,8 @@ use Template_NeighList, only: NeighListDef
         if(self%sorted) then
           curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
         else
-!          write(*,*) self%list(1:nNei, curNei)
           curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
         endif
-!        write(*,*) "atmIndx", atmIndx
-!        write(*,*) "curIndx", curIndx
-!        write(*,*) 
 
 !        if(nNei <= 1) then
 !          self%nNeigh(curNei) = 0
@@ -252,8 +247,6 @@ use Template_NeighList, only: NeighListDef
         else
           curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
         endif
-!        write(*,*) "atmIndx", atmIndx
-!        write(*,*) "curIndx", curIndx
         if(curIndx /= 0) then
           self % list(curIndx, curNei) = atmIndx
         endif
@@ -337,10 +330,6 @@ use Template_NeighList, only: NeighListDef
       enddo
       molStart = molStart + self%parent%NMolMax(jType)
     enddo
-!    write(*,*) "NewList:", templist(1:tempNNei(iDisp), iDisp)
-!    if(present(nCount)) then
-!        write(*,*) nCount
-!    endif
   end subroutine
 !====================================================================
   subroutine RSqList_ProcessIO(self, line, lineStat)
@@ -465,8 +454,6 @@ use Template_NeighList, only: NeighListDef
     integer :: iList, iDisp, iAtom, iNei, nNei, neiIndx, j
     real(dp) :: rx, ry, rz, rsq
 
-!    write(*,*) tempNNei(:)
-!    write(*,*) tempList(:,1)
 
 
 
