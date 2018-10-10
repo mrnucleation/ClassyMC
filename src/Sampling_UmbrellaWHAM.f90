@@ -253,7 +253,8 @@ module UmbrellaWHAMRule
 
     accept = .false.
     biasE = -trialBox%beta * E_Diff + log(inProb) + (biasNew-biasOld) + extraTerms
-!    write(*,*) "Prob:", biasE, log(inProb), extraTerms
+!    write(*,*) "Energy:", E_diff
+!    write(*,*) "Prob:", biasE, log(inProb), extraTerms, trialBox%beta, biasNew-biasOld
     if(biasE > 0.0E0_dp) then
       accept = .true.
     elseif(biasE > log(grnd()) ) then

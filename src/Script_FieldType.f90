@@ -13,7 +13,7 @@ contains
     use FF_HardSphere, only: Pair_HardSphere
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
-    use FF_Pair_LJ_Ele_Cut, only: Pair_LJ_Ele_Cut
+    use FF_Pair_LJ_Q_Cut, only: Pair_LJ_Q_Cut
     use FF_Pair_Tersoff, only: Pair_Tersoff
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
     use ParallelVar, only: nout
@@ -38,7 +38,7 @@ contains
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
 
       case("lj_q_cut")
-        allocate(Pair_LJ_Ele_Cut::EnergyCalculator(FFNum) % Method)
+        allocate(Pair_LJ_Q_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
 
 !      case("lj_cut_nonei")

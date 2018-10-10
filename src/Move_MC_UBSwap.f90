@@ -12,8 +12,8 @@ use VarPrecision
     real(dp) :: inaccpt = 0E0_dp
     real(dp) :: outatmps = 1E-30_dp
     real(dp) :: outaccpt = 0E0_dp
-    real(dp) :: avbmcRad = 3.0E0_dp
-    real(dp) :: avbmcRadSq = 3.0E0_dp**2
+    real(dp) :: avbmcRad = 4.0E0_dp
+    real(dp) :: avbmcRadSq = 4.0E0_dp**2
     real(dp) :: avbmcVol = 0E0_dp
     type(Addition), allocatable :: newPart(:)
     type(Deletion) :: oldPart(1:1)
