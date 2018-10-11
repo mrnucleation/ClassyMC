@@ -320,7 +320,9 @@ contains
     integer :: i
 
     do i = 1, size(MolData)
-      call MolData(i) % molConstruct % Prologue
+      if(allocated(MolData(i) % molConstruct) ) then
+        call MolData(i) % molConstruct % Prologue
+      endif
     enddo
 
 

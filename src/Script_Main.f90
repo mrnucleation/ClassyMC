@@ -329,6 +329,7 @@
       use BoxData, only: BoxArray
       use Template_SimBox
       use ForcefieldData, only: EnergyCalculator, nForceFields
+      use MCMoveData, only: Moves
       use CommonSampling, only: sampling
       use VarPrecision
       use Units
@@ -353,8 +354,14 @@
            read(command2, *) intValue
            call BoxArray(intValue) % box % IOProcess(line, lineStat)
 
+        case("move")
+           call GetXCommand(line, command2, 3, lineStat)
+           read(command2, *) intValue
+           call Moves(intValue) % Move % ProcessIO(line, lineStat)
+
         case("sampling")
            call Sampling % ProcessIO(line, lineStat)
+
 
         case default
            lineStat = -1

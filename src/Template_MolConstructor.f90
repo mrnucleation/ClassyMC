@@ -11,6 +11,7 @@ module Template_MolConstructor
 
 
   type, public, extends(classyClass) :: MolConstructor
+    integer :: insPoints = 1
     real(dp) :: molType = -1
     contains
       procedure, public, pass :: Constructor
@@ -18,6 +19,7 @@ module Template_MolConstructor
       procedure, public, pass :: GenerateConfig
       procedure, public, pass :: ReverseConfig
       procedure, public, pass :: GasConfig
+      procedure, public, pass :: GetNInsertPoints
   end type
 !==========================================================================================
   contains
@@ -68,6 +70,15 @@ module Template_MolConstructor
 
     probGas = 1E0_dp
   end subroutine
+!==========================================================================================
+  function GetNInsertPoints(self) result(nPoints)
+    implicit none
+    class(MolConstructor), intent(inout) :: self
+    integer :: nPoints
+
+    nPoints = self%insPoints
+
+  end function
 !==========================================================================================
 end module
 !==========================================================================================

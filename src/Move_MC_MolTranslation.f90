@@ -8,7 +8,10 @@ use VarPrecision
   type, public, extends(MCMove) :: MolTranslate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    real(dp) :: max_dist = 0.2E0_dp
+    logical :: tuneMax = .true.
+    real(dp) :: limit = 3.00E0_dp
+    real(dp) :: targAccpt = 50E0_dp
+    real(dp) :: max_dist = 0.05E0_dp
 !    type(Displacement) :: disp(1:1)
     type(DisplacementNew), allocatable :: disp(:)
 
@@ -22,6 +25,7 @@ use VarPrecision
       procedure, pass :: Maintenance => MolTrans_Maintenance
       procedure, pass :: Prologue => MolTrans_Prologue
       procedure, pass :: Epilogue => MolTrans_Epilogue
+      procedure, pass :: ProcessIO => MolTrans_ProcessIO
   end type
 !========================================================
  contains
@@ -138,23 +142,23 @@ use VarPrecision
   subroutine MolTrans_Maintenance(self)
     implicit none
     class(MolTranslate), intent(inout) :: self
-    real(dp), parameter :: limit = 3.0E0_dp
+!    real(dp), parameter :: limit = 3.0E0_dp
       
-    if(self%atmps .lt. 0.5E0_dp) then
-      return
-    endif
-
-    if(self%GetAcceptRate() .gt. 50E0_dp) then
-      if(self%max_dist*1.01E0_dp .lt. limit) then
-        self%max_dist = self%max_dist * 1.01E0_dp
-      else 
-        self%max_dist = limit       
+    if(self%tuneMax) then
+      if(self%atmps .lt. 0.5E0_dp) then
+        return
       endif
-    else
-      self%max_dist = self%max_dist * 0.99E0_dp
-    endif
 
- 
+      if(self%GetAcceptRate() > self%targAccpt) then
+        if(self%max_dist*1.01E0_dp .lt. self%limit) then
+          self%max_dist = self%max_dist * 1.01E0_dp
+        else 
+          self%max_dist = self%limit       
+        endif
+      else
+        self%max_dist = self%max_dist * 0.99E0_dp
+      endif
+    endif
 
   end subroutine
 !=========================================================================
@@ -168,6 +172,7 @@ use VarPrecision
     endif
       
 
+    write(nout,"(1x,A,F15.8)") "(Molecule Translate) Maximum Displacement: ", self%max_dist
 
   end subroutine
 !=========================================================================
@@ -181,8 +186,52 @@ use VarPrecision
     write(nout,"(1x,A,I15)") "Molecule Translation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()
     write(nout,"(1x,A,F15.8)") "Molecule Translation Acceptance Rate: ", accptRate
-    write(nout,"(1x,A,F15.8)") "Final Maximum Displacement: ", self%max_dist
+    if(self%tunemax) then
+      write(nout,"(1x,A,F15.8)") "Final Maximum Displacement: ", self%max_dist
+    endif
  
+
+  end subroutine
+!=========================================================================
+  subroutine MolTrans_ProcessIO(self, line, lineStat)
+    use Input_Format, only: GetXCommand, maxLineLen
+    implicit none
+    class(MolTranslate), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line
+    integer, intent(out) :: lineStat
+    character(len=30) :: command
+    logical :: logicVal
+    real(dp) :: realVal
+
+    call GetXCommand(line, command, 4, lineStat)
+    select case( trim(adjustl(command)) )
+      case("dynamicmax")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self%tunemax = logicVal
+
+      case("dynamiclimit")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self%limit = realVal
+
+      case("dynamictarget")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self%targAccpt = realVal
+
+      case("maxdisplace")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self%max_dist = realVal
+
+
+      case default
+        lineStat = -1
+        return
+
+    end select
+    lineStat = 0
 
   end subroutine
 !========================================================

@@ -160,10 +160,10 @@ module FF_Pair_LJ_Q_Cut
           if(rsq < self%rLJCutSq) then
             ep = self % epsTable(atmType1, atmType2)
             sig_sq = self % sigTable(atmType1, atmType2)          
-            write(*,*) ep, sig_sq, rsq
+!            write(*,*) ep, sig_sq, rsq
             LJ = (sig_sq/rsq)**3
             LJ = ep * LJ * (LJ-1E0_dp)
-            write(*,*) LJ
+!            write(*,*) LJ
             E_LJ = E_LJ + LJ
             curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
             curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ 

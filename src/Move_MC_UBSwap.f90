@@ -12,9 +12,9 @@ use VarPrecision
     real(dp) :: inaccpt = 0E0_dp
     real(dp) :: outatmps = 1E-30_dp
     real(dp) :: outaccpt = 0E0_dp
-    real(dp) :: avbmcRad = 4.0E0_dp
-    real(dp) :: avbmcRadSq = 4.0E0_dp**2
-    real(dp) :: avbmcVol = 0E0_dp
+    real(dp) :: ubRad = 4.0E0_dp
+    real(dp) :: ubRadSq = 4.0E0_dp**2
+    real(dp) :: ubVol = 0E0_dp
     type(Addition), allocatable :: newPart(:)
     type(Deletion) :: oldPart(1:1)
 
@@ -125,7 +125,7 @@ use VarPrecision
 
     !Choose the position relative to the target atom 
     call Generate_UnitSphere(dx, dy, dz)
-    radius = self % avbmcRad * grnd()**(1.0E0_dp/3.0E0_dp)
+    radius = self % ubRad * grnd()**(1.0E0_dp/3.0E0_dp)
     dx = radius * dx
     dy = radius * dy
     dz = radius * dz
@@ -170,9 +170,9 @@ use VarPrecision
     endif
 
     !Compute the generation probability
-    Prob = real(trialBox%nMolTotal, dp) * self%avbmcVol
+    Prob = real(trialBox%nMolTotal, dp) * self%ubVol
     Prob = Prob/(real(nCount, dp) * real(trialBox%nMolTotal+1, dp))
-!    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1
+!    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%ubVol, nCount, trialBox%nMolTotal+1
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%newPart(1:nAtoms))
@@ -250,8 +250,8 @@ use VarPrecision
                            nNei  )
 
     Prob = real(nNei, dp) * real(trialBox%nMolTotal, dp)
-    Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%avbmcVol)
-!    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%avbmcVol, nNei, trialBox%nMolTotal-1
+    Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%ubVol)
+!    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%ubVol, nNei, trialBox%nMolTotal-1
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%oldPart(1:1))
@@ -287,7 +287,7 @@ use VarPrecision
         ry = y - trialBox % atoms(2, iAtom)
         rz = z - trialBox % atoms(3, iAtom)
         rsq = rx*rx + ry*ry + rz*rz
-        if(rsq < self%avbmcRadSq) then
+        if(rsq < self%ubRadSq) then
           nCount = nCount + 1
         endif
       endif
@@ -308,19 +308,23 @@ use VarPrecision
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(UB_Swap), intent(inout) :: self
-    integer :: iType, maxAtoms
+    integer :: iType, maxAtoms, maxPoints
 
     maxAtoms = 0
+    maxPoints = 0
     do iType = 1, nMolTypes
       if(MolData(iType)%nAtoms > maxAtoms) then
         maxAtoms = MolData(iType)%nAtoms 
       endif
+      if(MolData(iType)%molConstruct%GetNInsertPoints() > maxPoints) then
+        maxPoints = MolData(iType)%molConstruct%GetNInsertPoints()
+      endif
     enddo
 
 
-    self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
-    self%avbmcRadSq = self%avbmcRad * self%avbmcRad
-!    write(*,*) self%avbmcVol
+    self%ubVol = (4E0_dp/3E0_dp)*pi*self%ubRad**3
+    self%ubRadSq = self%ubRad * self%ubRad
+!    write(*,*) self%ubVol
 
     allocate( self%tempNNei(maxAtoms) )
     allocate( self%tempList(200,maxAtoms ) )

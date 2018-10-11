@@ -83,10 +83,11 @@ module MolCon_SimpleRegrowth
     integer :: bondType, angleType, molType
     integer :: atm1, atm2,atm3, iDisp, iAtom
     real(dp), intent(out) :: probconstruct
-    real(dp), dimension(1:3) :: v1, v2
+    real(dp), dimension(1:3) :: v1, v2, v3
     real(dp) :: dx, dy, dz, r, theta
-    real(dp) :: x,y,z
+    real(dp) :: r1, r2
     real(dp) :: prob
+    real(dp) :: ang1, ang2
 
     probconstruct = 1E0_dp
     select type(disp)
@@ -141,15 +142,41 @@ module MolCon_SimpleRegrowth
         self%tempcoords(1, atm3) = v2(1) 
         self%tempcoords(2, atm3) = v2(2)
         self%tempcoords(3, atm3) = v2(3)
-                   
-!        x = self%tempcoords(1, Atm2)
-!        y = self%tempcoords(2, Atm2)
-!        z = self%tempcoords(3, Atm2)
-!        do iAtom = 1, 3
-!          self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom) - x
-!          self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom) - y
-!          self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom) - z
-!        enddo
+!      case(4)
+!        Atm1 = self%sideAtoms(1)
+!        Atm2 = self%centralAtom
+!        Atm3 = self%sideAtoms(2)
+!        Atm4 = self%sideAtoms(3)
+!        self%tempcoords(1, atm2) = 0E0_dp
+!        self%tempcoords(2, atm2) = 0E0_dp
+!        self%tempcoords(3, atm2) = 0E0_dp
+!
+!        call FindBond(molType, atm1, atm2, bondType)
+!        call BondData(bondType) % bondFF % GenerateDist(r1, prob)
+!        call Generate_UnitSphere(dx, dy, dz)
+!        v1(1) = -r1*dx
+!        v1(2) = -r1*dy
+!        v1(3) = -r1*dz
+!        self%tempcoords(1, atm2) = r1 * dx
+!        self%tempcoords(2, atm2) = r1 * dy
+!        self%tempcoords(3, atm2) = r1 * dz
+!        call FindBond(nType, Atm2, Atm3, bondType)
+!        call BondData(bondType) % bondFF % GenerateDist(r2, prob)
+!
+!        call FindBond(nType, Atm2, Atm4, bondType)
+!        call BondData(bondType) % bondFF % GenerateDist(r3, prob)
+!        call FindAngle(nType, Atm1, Atm2, Atm3, bendType)
+!        call FindAngle(nType, Atm1, Atm2, Atm4, bendType2)
+!        call FindAngle(nType, Atm3, Atm2, Atm4, bendType3)
+!          wBending(iRosen) = 0d0
+!          call GenerateTwoBranches(ang1, ang2, dihed, bendType, bendType2, bendType3, wBending(iRosen))
+!          call Generate_UnitPyramid(v1, r2, r3, ang1, ang2, dihed, v2, v3)
+!          rosenTrial(iRosen)%x(atm3) = rosenTrial(iRosen)%x(atm2) + v2%x 
+!          rosenTrial(iRosen)%y(atm3) = rosenTrial(iRosen)%y(atm2) + v2%y
+!          rosenTrial(iRosen)%z(atm3) = rosenTrial(iRosen)%z(atm2) + v2%z
+!          rosenTrial(iRosen)%x(atm4) = rosenTrial(iRosen)%x(atm2) + v3%x 
+!          rosenTrial(iRosen)%y(atm4) = rosenTrial(iRosen)%y(atm2) + v3%y
+!          rosenTrial(iRosen)%z(atm4) = rosenTrial(iRosen)%z(atm2) + v3%z
       case default
         stop "Simple regrowth is not valid for this many atoms"
     end select

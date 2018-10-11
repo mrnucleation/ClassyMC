@@ -8,7 +8,9 @@ use VarPrecision
   type, public, extends(MCMove) :: PlaneRotate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    real(dp) :: max_rot = 0.2E0_dp
+    logical :: tuneMax = .true.
+    real(dp) :: targAccpt = 50E0_dp
+    real(dp) :: max_rot = 0.02E0_dp
     type(DisplacementNew), allocatable :: disp(:)
 !    real(dp), allocatable :: tempcoords(:,:)
 !    integer, allocatable :: tempNnei(:)
@@ -21,6 +23,7 @@ use VarPrecision
       procedure, pass :: Maintenance => PlaneRotate_Maintenance
       procedure, pass :: Prologue => PlaneRotate_Prologue
       procedure, pass :: Epilogue => PlaneRotate_Epilogue
+      procedure, pass :: ProcessIO => PlaneRotate_ProcessIO
   end type
 !========================================================
  contains
@@ -234,22 +237,21 @@ use VarPrecision
     class(PlaneRotate), intent(inout) :: self
     real(dp), parameter :: limit = pi
       
-    if(self%atmps .lt. 0.5E0_dp) then
-      return
-    endif
-
-    if(self%GetAcceptRate() .gt. 50E0_dp) then
-      if(self%max_rot*1.01E0_dp .lt. limit) then
-        self%max_rot = self%max_rot * 1.01E0_dp
-      else 
-        self%max_rot = limit       
+    if(self%tunemax) then
+      if(self%atmps < 0.5E0_dp) then
+        return
       endif
-    else
-      self%max_rot = self%max_rot * 0.99E0_dp
+
+      if(self%GetAcceptRate() > self%targAccpt) then
+        if(self%max_rot*1.01E0_dp < limit) then
+          self%max_rot = self%max_rot * 1.01E0_dp
+        else 
+          self%max_rot = limit       
+        endif
+      else
+        self%max_rot = self%max_rot * 0.99E0_dp
+      endif
     endif
-
- 
-
   end subroutine
 !=========================================================================
   subroutine PlaneRotate_Prologue(self)
@@ -260,9 +262,7 @@ use VarPrecision
     if(.not. allocated(self%disp)) then
       call self % Constructor
     endif
-      
-
-
+    write(nout,"(1x,A,F15.8)") "Plane Rotate: Maximum Rotation Angle: ", self%max_rot
   end subroutine
 !=========================================================================
   subroutine PlaneRotate_Epilogue(self)
@@ -275,8 +275,47 @@ use VarPrecision
     write(nout,"(1x,A,I15)") "Molecule Rotation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()
     write(nout,"(1x,A,F15.8)") "Molecule Rotation Acceptance Rate: ", accptRate
-    write(nout,"(1x,A,F15.8)") "Final Maximum Displacement: ", self%max_rot
+    if(self%tunemax) then
+      write(nout,"(1x,A,F15.8)") "Plane Rotate: Final Maximum Angle: ", self%max_rot
+    endif
  
+
+  end subroutine
+!=========================================================================
+  subroutine PlaneRotate_ProcessIO(self, line, lineStat)
+    use Input_Format, only: GetXCommand, maxLineLen
+    implicit none
+    class(PlaneRotate), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line
+    integer, intent(out) :: lineStat
+    character(len=30) :: command
+    logical :: logicVal
+    real(dp) :: realVal
+
+    call GetXCommand(line, command, 4, lineStat)
+    select case( trim(adjustl(command)) )
+      case("dynamicmax")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self%tunemax = logicVal
+
+      case("dynamictarget")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self%targAccpt = realVal
+
+      case("maxangle")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        write(*,*) realVal
+        self%max_rot = realVal
+
+      case default
+        lineStat = -1
+        return
+
+    end select
+    lineStat = 0
 
   end subroutine
 !========================================================

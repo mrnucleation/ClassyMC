@@ -3,7 +3,7 @@ module MCMoveData
 use VarPrecision
 use MoveClassDef, only: MCMove
 
-  integer :: nForceFields = 0
+!  integer :: nMovesTypes = 0
   type MoveArray 
     class(MCMove), allocatable :: Move
   end type

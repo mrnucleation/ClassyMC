@@ -56,12 +56,14 @@ module MoveClassDef
     return
   end function
 !=========================================================================
-  subroutine ProcessIO(self, line)
+  subroutine ProcessIO(self, line, lineStat)
     use Input_Format, only: maxLineLen
     implicit none
     class(MCMove), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
+    integer, intent(out) :: lineStat
 
+    lineStat = 0
   end subroutine
 !=========================================================================
 !  subroutine Maintenance(self)

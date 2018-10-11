@@ -354,6 +354,22 @@ contains
      
       end subroutine
 !========================================================
+    function Replace_Text (line, oldstr, newstr)  result(finalString)
+       character(*), intent(in)  :: line, oldstr, newstr
+       character(LEN(line)+100) :: finalString     ! provide outs with extra 100 char len
+       integer :: i, sizeOld, sizeReplace
+       finalString = line  
+       sizeOld = LEN_TRIM(oldstr) 
+       sizeReplace = LEN_TRIM(newstr)
+       do
+         i = index(finalString, oldstr(:sizeOld))  
+         if (i == 0) then
+           exit
+         endif
+         finalString = finalString(:i-1) // newstr(:sizeReplace) // finalString(i+sizeOld:)
+       end do
+   end function 
+!========================================================
       subroutine FindCommandBlock(iLine, lineStore, endCommand, lineBuffer)
       implicit none
       integer, intent(in) :: iLine
