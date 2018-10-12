@@ -89,6 +89,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Box_OrthoBox.f90\
         		$(SRC)/Box_Ultility.f90\
         		$(SRC)/RandomNew.f90\
+        		$(SRC)/FF_AENet.f90\
         		$(SRC)/FF_Einstein.f90\
         		$(SRC)/FF_HardSphere.f90\
         		$(SRC)/FF_LJ_Cut.f90\
@@ -117,7 +118,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Output_DumpCoords.f90\
 	        	$(SRC)/Traj_XYZFormat.f90\
 	        	$(SRC)/Traj_LAMMPSDump.f90\
-						$(SRC)/Input_Format.f90\
+				$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
         		$(SRC)/Sim_MonteCarlo.f90\
@@ -140,6 +141,8 @@ SRC_TEMPLATE := $(SRC)/Template_Master.f90\
 				$(SRC)/Template_MoveClass.f90\
 				$(SRC)/Template_MolConstructor.f90
 
+
+#SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
 SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
 
 # ====================================
@@ -147,6 +150,7 @@ SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN)
 # ====================================
 OBJ_MAIN:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_MAIN))
 OBJ_TEMPLATE:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_TEMPLATE))
+OBJ_AENET:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_AENET))
 
 OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN) 
 # ====================================
@@ -155,6 +159,11 @@ OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN)
 default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
 default: COMPFLAGS += $(DEBUGFLAGS)
 default: startUP classyMC finale
+
+aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
+aenet: COMPFLAGS += $(DEBUGFLAGS)
+aenet: COMPFLAGS += -DAENET
+aenet: startUP classyMC finale
 
 gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 gfortran: COMPFLAGS += $(DEBUGFLAGS)
@@ -193,7 +202,7 @@ $(OBJ)/%.o: $(TEMPLATE)/%.f90
 		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
        
-classyMC:$(OBJ_COMPLETE) 
+classyMC: $(OBJ_COMPLETE) 
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	

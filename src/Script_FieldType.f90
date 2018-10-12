@@ -16,6 +16,11 @@ contains
     use FF_Pair_LJ_Q_Cut, only: Pair_LJ_Q_Cut
     use FF_Pair_Tersoff, only: Pair_Tersoff
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
+
+#ifdef AENET
+    use FF_AENet, only: AENet
+#endif
+
     use ParallelVar, only: nout
     implicit none
     character(len=*), intent(in) :: line
@@ -60,8 +65,11 @@ contains
       case("tersoff")
         allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
+
 #ifdef AENET
       case("aenet")
+        allocate(AENet::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as AENet style"
 #endif
       case default
 !        write(*,*) "Here"
