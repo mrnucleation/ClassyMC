@@ -56,7 +56,7 @@ contains
     allocate(rawLines(1:nRawLines), stat = AllocateStat)
     IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
 
-    write(*,*) nRawLines
+!    write(*,*) nRawLines
 
     do iLine = 1, nRawLines
       read(54,"(A)") rawLines(iLine)

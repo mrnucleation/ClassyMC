@@ -100,7 +100,7 @@
 
          
       end subroutine
-	  
+  
 !==========================================================================     
 !     The purpose of this function is to generate two random position for two atoms
 !     given two fixed bond angles (bond_ang1 and bond_ang2), one dihedral angle (dihed) which 

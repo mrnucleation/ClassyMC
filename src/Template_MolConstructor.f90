@@ -3,7 +3,7 @@
 ! constructor class.
 !==========================================================================================
 module Template_MolConstructor
-  use CoordinateTypes, only: Displacement, Perturbation
+  use CoordinateTypes, only: Perturbation
   use MasterTemplate, only: classyClass
 !  use SimpleSimBox, only: SimpleBox
   use Template_SimBox, only: SimBox
@@ -12,7 +12,7 @@ module Template_MolConstructor
 
   type, public, extends(classyClass) :: MolConstructor
     integer :: insPoints = 1
-    real(dp) :: molType = -1
+    integer :: molType = -1
     contains
       procedure, public, pass :: Constructor
       procedure, public, pass :: SetMolType

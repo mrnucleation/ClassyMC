@@ -13,7 +13,7 @@ module FF_HardSphere
       procedure, pass :: DetailedECalc => Detailed_HardSphere
       procedure, pass :: DiffECalc => DiffECalc_HardSphere
       procedure, pass :: ShiftECalc_Single => Shift_HardSphere_Single
-      procedure, pass :: ShiftECalc_Multi => Shift_HardSphere_Multi
+!      procedure, pass :: ShiftECalc_Multi => Shift_HardSphere_Multi
       procedure, pass :: NewECalc => New_HardSphere
 !      procedure, pass :: OldECalc => Old_HardSphere
       procedure, pass :: ProcessIO => ProcessIO_HardSphere
@@ -114,11 +114,8 @@ module FF_HardSphere
          call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
 
       class is(Deletion)
-!         call self % OldECalc(curbox, disp, E_Diff, accept)
-        return
+         return
 
-!      class is(Displacement)
-!        stop
       class default
         write(*,*) "Unknown Perturbation Type."
     end select
@@ -167,20 +164,10 @@ module FF_HardSphere
  
   end subroutine
   !=====================================================================
-  subroutine Shift_HardSphere_Multi(self, curbox, disp, E_Diff)
-    implicit none
-      class(Pair_HardSphere), intent(inout) :: self
-      class(SimBox), intent(inout) :: curbox
-      type(displacement), intent(in) :: disp(:)
-      real(dp), intent(inout) :: E_Diff
-   
-  end subroutine
-  !=====================================================================
   subroutine New_HardSphere(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
     class(Pair_HardSphere), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-!    type(displacement), intent(in) :: disp(:)
     type(Addition), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
@@ -235,15 +222,6 @@ module FF_HardSphere
       enddo
     enddo
   end subroutine
-  !=====================================================================
-!  subroutine Old_HardSphere(self, curbox, disp, E_Diff)
-!    implicit none
-!    class(Pair_HardSphere), intent(inout) :: self
-!    class(SimBox), intent(inout) :: curbox
-!    type(displacement), intent(in) :: disp(:)
-!    real(dp), intent(inOut) :: E_Diff
-!
-!  end subroutine
   !=====================================================================
   subroutine ProcessIO_HardSphere(self, line)
     use Common_MolInfo, only: nAtomTypes

@@ -2,7 +2,7 @@
 module Template_NeighList
   use MasterTemplate, only: classyClass
   use VarPrecision
-  use CoordinateTypes, only: Perturbation, Displacement
+  use CoordinateTypes, only: Perturbation
 !use Template_SimBox, only: SimBox
 
   type, public, extends(classyClass) :: NeighListDef

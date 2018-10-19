@@ -1,7 +1,6 @@
 !==========================================================================================
 module SimpleSimBox
   use VarPrecision
-  use CoordinateTypes, only: Displacement
   use ForcefieldData, only: ECalcArray
   use ConstraintTemplate, only: constrainArray
   use Template_SimBox, only: SimBox
@@ -301,7 +300,7 @@ module SimpleSimBox
     use CoordinateTypes
     implicit none
     class(SimpleBox), intent(inout) :: self
-    type(Displacement), intent(inout) :: disp(:)
+    class(Perturbation), intent(inout) :: disp(:)
     integer :: iDisp, iList
     integer :: atmIndx, iAtom, jAtom
     real(dp) :: rx, ry, rz, rsq
@@ -313,7 +312,6 @@ module SimpleSimBox
     implicit none
     class(SimpleBox), intent(inout) :: self
     class(Perturbation), intent(in) :: disp(:)
-!    type(Displacement), intent(in) :: disp(:)
     logical :: accept
     integer :: nDisp, iConstrain
 
@@ -521,7 +519,6 @@ module SimpleSimBox
     use CoordinateTypes
     implicit none
     class(SimpleBox), intent(inout) :: self
-!    type(Displacement), intent(inout) :: disp(:)
     class(Perturbation), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     integer :: iDisp, dispLen, dispIndx
@@ -538,18 +535,6 @@ module SimpleSimBox
           self % atoms(3, dispIndx) = disp(iDisp)%z_new
         enddo
 
-       !-------------------------------------------------
-      class is(Displacement)
-        dispLen = size(disp)
-        do iDisp = 1, dispLen
-          if( disp(iDisp)%newAtom ) then 
-            dispIndx = disp(iDisp) % atmIndx
-            call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
-            self % atoms(1, dispIndx) = disp(iDisp)%x_new
-            self % atoms(2, dispIndx) = disp(iDisp)%y_new
-            self % atoms(3, dispIndx) = disp(iDisp)%z_new
-          endif
-        enddo
        !-------------------------------------------------
       class is(Addition)
         dispLen = size(disp)

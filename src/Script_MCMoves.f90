@@ -4,7 +4,7 @@ module Input_Moves
   use Input_Format
   use MCMoveData, only: Moves, MoveProb
 
-  use Move_AtomExchange, only: AtomExchange
+!  use Move_AtomExchange, only: AtomExchange
   use MCMove_AtomTranslation, only: AtomTranslate
   use MCMove_Delete, only: MoveDelete
   use MCMove_MolTranslation, only: MolTranslate
@@ -37,8 +37,8 @@ module Input_Moves
       case("atomtranslation")
         allocate(AtomTranslate::Moves(moveNum)%move)
 
-      case("atomexchange")
-        allocate(AtomExchange::Moves(moveNum)%move)
+!      case("atomexchange")
+!        allocate(AtomExchange::Moves(moveNum)%move)
 
       case("debugdelete")
         allocate(MoveDelete::Moves(moveNum)%move)

@@ -1,7 +1,7 @@
 !====================================================================
 module MinMetroRule
   use VarPrecision
-  use CoordinateTypes, only: Displacement, Perturbation, Addition, Deletion, VolChange
+  use CoordinateTypes, only: Perturbation, Addition, Deletion, VolChange
   use AcceptRuleTemplate, only: acceptrule
  
   type, public, extends(acceptrule) :: MinMetro
@@ -19,7 +19,6 @@ module MinMetroRule
     implicit none
     class(minmetro), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
-!    type(Displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(in) :: inProb
     real(dp), intent(in) :: E_Diff

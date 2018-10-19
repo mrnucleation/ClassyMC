@@ -2,7 +2,7 @@
 module UmbrellaRule
   use VarPrecision
   use AcceptRuleTemplate, only: AcceptRule
-  use CoordinateTypes, only: Displacement, Perturbation, Addition, Deletion, VolChange
+  use CoordinateTypes, only: Perturbation, Addition, Deletion, VolChange
  
   type, public, extends(AcceptRule) :: Umbrella
 

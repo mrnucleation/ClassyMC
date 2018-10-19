@@ -1,61 +1,102 @@
 !================================================================================
-module FF_Pair_Pedone
+module FF_Pair_Pedone_Cut
   use Template_ForceField, only: ForceField
   use VarPrecision
   use Template_SimBox, only: SimBox
   use CoordinateTypes
 
-  type, extends(forcefield) :: Pair_Pedone
+  type, extends(forcefield) :: Pair_Pedone_Cut
+    real(dp), allocatable :: eps(:)
+    real(dp), allocatable :: sig(:)
     real(dp), allocatable :: rMin(:)
+
+    real(dp), allocatable :: epsTable(:,:)
+    real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
-    type AtomDefPedone
-      character(len=20) :: atmName
-      character(len=5) :: Symb
-      real(dp) :: repul, rEq, q, alpha, delta, mass
-    end type
-
-
-    type(AtomDefPedone), allocatable :: pedoneData(:)
-    real(dp), allocatable :: repul_tab(:,:), rEq_tab(:,:)
-    real(dp), allocatable :: q_tab(:,:), alpha_Tab(:,:), D_Tab(:,:)
-
+!    real(dp) :: rCut, rCutSq
     contains
-      procedure, pass :: Constructor => Constructor_Pedone
-      procedure, pass :: DetailedECalc => Detailed_Pedone
-      procedure, pass :: ShiftECalc_Single => Shift_Pedone_Single
-      procedure, pass :: ShiftECalc_Multi => Shift_Pedone_Multi
-      procedure, pass :: NewECalc => New_Pedone
-      procedure, pass :: OldECalc => Old_Pedone
-      procedure, pass :: ProcessIO => ProcessIO_Pedone
-      procedure, pass :: Prologue => Prologue_Pedone
-      procedure, pass :: GetCutOff => GetCutOff_Pedone
+      procedure, pass :: Constructor => Constructor_Pedone_Cut
+      procedure, pass :: DetailedECalc => Detailed_Pedone_Cut
+      procedure, pass :: DiffECalc => DiffECalc_Pedone_Cut
+      procedure, pass :: ShiftECalc_Single => Shift_Pedone_Cut_Single
+      procedure, pass :: ShiftECalc_Multi => Shift_Pedone_Cut_Multi
+      procedure, pass :: NewECalc => New_Pedone_Cut
+      procedure, pass :: OldECalc => Old_Pedone_Cut
+      procedure, pass :: ProcessIO => ProcessIO_Pedone_Cut
+      procedure, pass :: Prologue => Prologue_Pedone_Cut
+      procedure, pass :: GetCutOff => GetCutOff_Pedone_Cut
   end type
 
   contains
   !=============================================================================+
-  subroutine Constructor_Pedone(self)
+  subroutine Constructor_Pedone_Cut(self)
     use Common_MolInfo, only: nAtomTypes
     implicit none
-    class(Pair_Pedone), intent(inout) :: self
+    class(Pair_Pedone_Cut), intent(inout) :: self
     integer :: AllocateStat
 
+    allocate(self%eps(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%sig(1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
+
+    allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
+    self%eps = 4E0_dp
+    self%sig = 1E0_dp
     self%rMin = 0.5E0_dp
+
+    self%epsTable = 4E0_dp
+    self%sigTable = 1E0_dp
     self%rMinTable = 0.5E0_dp
     self%rCut = 5E0_dp
     self%rCutSq = 5E0_dp**2
 
-    IF (AllocateStat /= 0) STOP "Allocation in the Pedone Pair Style"
+    IF (AllocateStat /= 0) STOP "Allocation in the LJ/Cut Pair Style"
+
+  end subroutine
+!============================================================================
+  subroutine DiffECalc_Pedone_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+    implicit none
+    class(Pair_Pedone_Cut), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+!    class(displacement), intent(in) :: disp(:)
+    class(Perturbation), intent(in) :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+    real(dp) :: E_Half
+
+    accept = .true.
+    curbox % dETable = 0E0_dp
+    E_Diff = 0E0_dp
+
+    select type(disp)
+      class is(DisplacementNew)
+         call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+
+      class is(Addition)
+!         write(*,*) size(tempList)
+         call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
+
+      class is(Deletion)
+         call self % OldECalc(curbox, disp, E_Diff)
+
+!      class is(Displacement)
+!        stop
+      class default
+        write(*,*) "Unknown Perturbation Type Encountered by the Pedone_Cut Pair Style."
+    end select
+
 
   end subroutine
   !===================================================================================
-  subroutine Detailed_Pedone(self, curbox, E_T, accept)
+  subroutine Detailed_Pedone_Cut(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(Pair_Pedone), intent(inout) :: self
+    class(Pair_Pedone_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
@@ -63,9 +104,9 @@ module FF_Pair_Pedone
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: LJ
-    real(dp) :: E_LJ
+    real(dp) :: ep, q_ij, alpha, delta, repul_C
+    real(dp) :: LJ, Ele, Morse
+    real(dp) :: E_LJ, E_Ele, E_Morse
     real(dp) :: rmin_ij      
 
     E_LJ = 0E0
@@ -80,6 +121,10 @@ module FF_Pair_Pedone
         if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then
           cycle
         endif
+        if( curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)  ) then
+          cycle
+        endif
+
         rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
         ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
@@ -87,8 +132,6 @@ module FF_Pair_Pedone
         rsq = rx**2 + ry**2 + rz**2
         if(rsq < self%rCutSq) then
           atmType2 = curbox % AtomType(jAtom)
-          ep = self % epsTable(atmType1, atmType2)
-          sig_sq = self % sigTable(atmType1, atmType2)          
           rmin_ij = self % rMinTable(atmType1, atmType2)          
           if(rsq < rmin_ij) then
             write(*,*) sqrt(rsq)
@@ -97,11 +140,36 @@ module FF_Pair_Pedone
             write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
             write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
           endif 
-          LJ = (sig_sq/rsq)**3
-          LJ = ep * LJ * (LJ-1E0)              
-          E_LJ = E_LJ + LJ
-          curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
-          curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ 
+          r_eq = rEq_tab(atmType1, atmType2)
+          q_ij = q_tab(atmType1, atmType2)
+          alpha = alpha_Tab(atmType1, atmType2)
+          delta = D_Tab(atmType1, atmType2)
+          repul_C = repul_tab(atmType1, atmType2)          
+
+          if(repul_C /= 0E0_dp) then
+            LJ = (1E0_dp/r)**6
+            LJ = repul_C * LJ
+            E_LJ = E_LJ + LJ
+          endif
+ 
+          r = sqrt(r)
+          Ele = q_ij/r
+          if(implcSolvent) then
+             born1 = bornRad(atmType1)
+             born2 = bornRad(atmType2)
+             Solvent = solventFunction(r, q_ij, born1, born2)
+             E_Solvent = E_Solvent + Solvent
+          endif
+          E_Ele = E_Ele + Ele
+
+          if(delta .ne. 0E0_dp) then
+             Morse = 1E0_dp - exp(-alpha*(r-r_eq))
+             Morse = delta*(Morse*Morse - 1E0_dp)
+             E_Morse = E_Morse + Morse
+          endif
+
+          curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ + Ele + Moorse
+          curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ + Ele + Moorse 
         endif
       enddo
     enddo
@@ -111,9 +179,9 @@ module FF_Pair_Pedone
     E_T = E_LJ    
   end subroutine
   !=====================================================================
-  subroutine Shift_Pedone_Single(self, curbox, disp, E_Diff, accept)
+  subroutine Shift_Pedone_Cut_Single(self, curbox, disp, E_Diff, accept)
     implicit none
-    class(Pair_Pedone), intent(inout) :: self
+    class(Pair_Pedone_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
 !    type(displacement), intent(in) :: disp(:)
     type(DisplacementNew), intent(in) :: disp(:)
@@ -134,6 +202,9 @@ module FF_Pair_Pedone
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
+
+!      write(*,*) iAtom, curbox%NeighList(1)%nNeigh(iAtom)
+!      write(*,*) iAtom, curbox%NeighList(1)%list(:, iAtom)
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
 
@@ -142,6 +213,7 @@ module FF_Pair_Pedone
         rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
+!        write(*,*) sqrt(rsq)
         atmType2 = curbox % AtomType(jAtom)
         if(rsq < self%rCutSq) then
           rmin_ij = self % rMinTable(atmType2, atmType1)          
@@ -165,9 +237,13 @@ module FF_Pair_Pedone
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
+!        write(*,*) sqrt(rsq)
         if(rsq < self%rCutSq) then
           ep = self % epsTable(atmType2, atmType1)
           sig_sq = self % sigTable(atmType2, atmType1)  
+          if(iAtom == jAtom) then
+            write(*,*) "NeighborList Error!", iAtom, jAtom
+          endif
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)              
@@ -181,20 +257,21 @@ module FF_Pair_Pedone
  
   end subroutine
   !=====================================================================
-  subroutine Shift_Pedone_Multi(self, curbox, disp, E_Diff)
+  subroutine Shift_Pedone_Cut_Multi(self, curbox, disp, E_Diff)
     implicit none
-      class(Pair_Pedone), intent(inout) :: self
+      class(Pair_Pedone_Cut), intent(inout) :: self
       class(SimBox), intent(inout) :: curbox
       type(displacement), intent(in) :: disp(:)
       real(dp), intent(inout) :: E_Diff
    
   end subroutine
   !=====================================================================
-  subroutine New_Pedone(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+  subroutine New_Pedone_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(Pair_Pedone), intent(inout) :: self
+    class(Pair_Pedone_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
+!    type(displacement), intent(in) :: disp(:)
+    type(Addition), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
@@ -210,29 +287,18 @@ module FF_Pair_Pedone
     E_Diff = 0E0_dp
     accept = .true.
 
+!    write(*,*) "Length:", size(tempNNei)
+!    write(*,*) "Length:", size(tempList)
+!    write(*,*)
     do iDisp = 1, dispLen
-      if(.not. disp(iDisp)%newAtom) then
-        cycle
-      endif
       iAtom = disp(iDisp)%atmIndx
+!      write(*,*) iAtom
       atmType1 = curbox % AtomType(iAtom)
+
       listIndx = disp(iDisp)%listIndex
-      if(disp(iDisp)%newlist) then
-        maxNei = tempNNei(listIndx)
-      else
-        maxNei = curbox%NeighList(1)%nNeigh(listIndx)
-      endif
-
+      maxNei = tempNNei(listIndx)
       do jNei = 1, maxNei
-        if(disp(iDisp)%newlist) then
-          jAtom = tempList(jNei, listIndx)
-        else
-          jAtom = curbox%NeighList(1)%list(jNei, listIndx)
-        endif
-        if( any(jAtom == disp(:)%atmIndx) ) then
-          cycle
-        endif
-
+        jAtom = tempList(jNei, listIndx)
         rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
         rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
@@ -253,6 +319,7 @@ module FF_Pair_Pedone
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
           E_Diff = E_Diff + LJ
+!          write(*,*) iAtom, jAtom, rsq, LJ
           curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
           curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
         endif
@@ -260,26 +327,27 @@ module FF_Pair_Pedone
     enddo
   end subroutine
   !=====================================================================
-  subroutine Old_Pedone(self, curbox, disp, E_Diff)
+  subroutine Old_Pedone_Cut(self, curbox, disp, E_Diff)
     implicit none
-    class(Pair_Pedone), intent(inout) :: self
+    class(Pair_Pedone_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
+!    type(displacement), intent(in) :: disp(:)
+    type(Deletion), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     integer :: iDisp, iAtom, jAtom, remLen, jNei
-    integer :: atmType1, atmType2
+    integer :: atmType1, atmType2, globIndx
+    integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: ep, sig_sq
     real(dp) :: LJ
     real(dp) :: rmin_ij      
 
     E_Diff = 0E0_dp
-    do iDisp = 1, size(disp)
-      if(.not. disp(iDisp)%oldAtom) then
-        cycle
-      endif
-      iAtom = disp(iDisp)%oldAtmIndx
 
+    globIndx = curBox % MolGlobalIndx(disp(1)%molType, disp(1)%molIndx)
+    call curBox % GetMolData(globIndx, molEnd=molEnd, molStart=molStart)
+
+    do iAtom = molStart, molEnd
       atmType1 = curbox % AtomType(iAtom) 
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
@@ -298,6 +366,7 @@ module FF_Pair_Pedone
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
+!          write(*,*) iAtom, jAtom, rsq, LJ
           E_Diff = E_Diff - LJ
           curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
           curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
@@ -306,12 +375,12 @@ module FF_Pair_Pedone
     enddo
   end subroutine
   !=====================================================================
-  subroutine ProcessIO_Pedone(self, line)
+  subroutine ProcessIO_Pedone_Cut(self, line)
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: CountCommands, GetXCommand
     use Input_Format, only: maxLineLen
     implicit none
-    class(Pair_Pedone), intent(inout) :: self
+    class(Pair_Pedone_Cut), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
     character(len=30) :: command
     logical :: param = .false.
@@ -348,8 +417,8 @@ module FF_Pair_Pedone
             self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%eps(jType))
             self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%eps(jType))
 
-            self%sigTable(type1, jType) = 0.5E0_dp * (sig + self%sig(jType) )
-            self%sigTable(jType, type1) = 0.5E0_dp * (sig + self%sig(jType) )
+            self%sigTable(type1, jType) = (0.5E0_dp * (sig + self%sig(jType)))**2
+            self%sigTable(jType, type1) = (0.5E0_dp * (sig + self%sig(jType)))**2
 
             self%rMinTable(type1, jType) = max(rMin, self%rMin(jType))**2
             self%rMinTable(jType, type1) = max(rMin, self%rMin(jType))**2
@@ -373,20 +442,19 @@ module FF_Pair_Pedone
 
   end subroutine
   !=============================================================================+
-  function GetCutOff_Pedone(self) result(rCut)
+  function GetCutOff_Pedone_Cut(self) result(rCut)
     implicit none
-    class(Pair_Pedone), intent(inout) :: self
+    class(Pair_Pedone_Cut), intent(inout) :: self
     real(dp) :: rCut
 
     rCut = self%rCut
   end function
-
   !=====================================================================
-  subroutine Prologue_Pedone(self)
+  subroutine Prologue_Pedone_Cut(self)
     use Common_MolInfo, only: nAtomTypes
     use ParallelVar, only: nout
     implicit none
-    class(Pair_Pedone), intent(inout) :: self
+    class(Pair_Pedone_Cut), intent(inout) :: self
     integer :: i, j
 
     do i = 1, nAtomTypes

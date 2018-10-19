@@ -2,7 +2,7 @@
 module MasterTemplate
   use VarPrecision
 
-  type, public :: classyClass
+  type, public, abstract :: classyClass
     integer :: maintFreq = 10
     contains
        procedure, pass :: Epilogue

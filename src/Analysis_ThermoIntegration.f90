@@ -84,10 +84,9 @@ use VarPrecision
 !=========================================================================
   subroutine ThermoInt_CalcNewState(self, disp, newVal)
     use AnalysisData, only: analyCommon
-    use CoordinateTypes, only: Displacement, Perturbation
+    use CoordinateTypes, only: Perturbation
     implicit none
     class(ThermoIntegration), intent(inout) :: self
-!    type(Displacement), intent(in), optional :: disp(:)
     class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
 

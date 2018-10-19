@@ -36,7 +36,7 @@ contains
     lineStat  = 0
     read(line, *) FF_Type
 
-    !Safety check to ensure that the index number is within proper bounds
+    !Forcefield objects go here!
     select case(trim(adjustl(FF_Type)))
       case("lj_cut")
         allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)

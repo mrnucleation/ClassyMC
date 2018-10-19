@@ -56,7 +56,7 @@ use VarPrecision
 !=========================================================================
   subroutine ClusterSize_CalcNewState(self, disp, newVal)
     use AnalysisData, only: analyCommon
-    use CoordinateTypes, only: Displacement, DisplacementNew, Perturbation, Deletion, Addition
+    use CoordinateTypes, only: DisplacementNew, Perturbation, Deletion, Addition
     implicit none
     class(ClusterSize), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
@@ -65,19 +65,6 @@ use VarPrecision
 
     Diff = 0
     select type(disp)
-      class is(Displacement)
-        if(disp(1)%newAtom) then
-          if(disp(1)%molType == self%molType) then
-            Diff = Diff + 1
-          endif
-        endif
-        
-        if(disp(1)%oldAtom) then
-          if(disp(1)%oldMolType == self%molType) then
-            Diff = Diff - 1
-          endif
-        endif
-
       class is(Deletion)
           if(disp(1)%MolType == self%molType) then
             Diff = Diff - 1
@@ -87,8 +74,6 @@ use VarPrecision
           if(disp(1)%MolType == self%molType) then
             Diff = Diff + 1
           endif
-
-!      class default
         
     end select
 !    write(*,*) "Newcalc", Diff, self%nMol

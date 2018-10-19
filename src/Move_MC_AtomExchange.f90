@@ -1,7 +1,6 @@
 !=========================================================================
 module Move_AtomExchange
 use SimpleSimBox, only: SimpleBox
-use CoordinateTypes, only: Displacement
 use VarPrecision
 use MoveClassDef
 
@@ -32,10 +31,9 @@ use MoveClassDef
 
 !=========================================================================
   subroutine AtomExchange_GeneratePosition(self, disp)
-    use CoordinateTypes, only: Displacement
     implicit none
     class(AtomExchange), intent(in) :: self
-    type(Displacement), intent(inout) :: disp
+    class(Perturbation), intent(inout) :: disp
   end subroutine
 !=========================================================================
   subroutine AtomExchange_FullMove(self, trialBox, accept)

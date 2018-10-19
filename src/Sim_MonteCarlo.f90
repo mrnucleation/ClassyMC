@@ -72,7 +72,7 @@ contains
         call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
-      if(mod(iCycle, screenfreq) == 0) then
+      if(mod(iCycle, int(screenfreq,8)) == 0) then
         write(nout, *) iCycle, BoxArray(1)%box%ETotal,  BoxArray(1)%box%NMol,(Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
         flush(nout)
       endif
@@ -116,7 +116,7 @@ contains
     if( allocated(AnalysisArray) ) then
       do iAn = 1, size(AnalysisArray)
         if( AnalysisArray(iAn)%func%perMove .eqv. moveloop) then
-          if((mod(iCycle, AnalysisArray(iAn)%func%UpdateFreq) == 0) .or.  AnalysisArray(iAn)%func%perMove) then
+          if((mod(iCycle, int(AnalysisArray(iAn)%func%UpdateFreq,8)) == 0) .or.  AnalysisArray(iAn)%func%perMove) then
 !            write(*,*) iCycle, iMove, AnalysisArray(iAn)%func%perMove, moveloop
             call AnalysisArray(iAn) % func % Compute(accept)
           endif
@@ -139,7 +139,7 @@ contains
 
 !    if(printBox) then
       do i = 1, size(BoxArray)
-        if(mod(iCycle, BoxArray(i)%box%maintFreq) == 0) then
+        if(mod(iCycle, int(BoxArray(i)%box%maintFreq,8)) == 0) then
           call BoxArray(i) % box % Maintenance
         endif
       enddo
@@ -148,7 +148,7 @@ contains
 
     if(printAcc) then
       do i = 1, size(Moves)
-        if(mod(iCycle, Moves(i)%move%maintFreq) == 0) then
+        if(mod(iCycle, int(Moves(i)%move%maintFreq,8)) == 0) then
           call Moves(i) % move % Maintenance
         endif
       enddo
@@ -166,13 +166,13 @@ contains
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
 
-    if(mod(iCycle, Sampling%maintFreq) == 0 ) then
+    if(mod(iCycle, int(Sampling%maintFreq,8)) == 0 ) then
       call Sampling % Maintenance
     endif
 
     if( allocated(AnalysisArray) ) then
       do i = 1, size(AnalysisArray)
-        if(mod(iCycle, AnalysisArray(i)%func%maintFreq) == 0) then
+        if(mod(iCycle, int(AnalysisArray(i)%func%maintFreq,8)) == 0) then
           call AnalysisArray(i) % func % Maintenance
         endif
       enddo
@@ -180,7 +180,7 @@ contains
 
     if( allocated(TrajArray) ) then
       do i = 1, size(TrajArray)
-        if(mod(iCycle, TrajArray(i)%traj%maintFreq) == 0) then
+        if(mod(iCycle, int(TrajArray(i)%traj%maintFreq,8)) == 0) then
           call TrajArray(i) % traj % Maintenance
         endif
       enddo
@@ -194,6 +194,7 @@ contains
 
 
     do i = 1, size(Moves)
+!      if(mod(iCycle, int(Moves(i)%move%maintFreq,8)) == 0) then
       if(mod(iCycle, Moves(i)%move%maintFreq) == 0) then
         call Moves(i) % move % Maintenance
       endif
@@ -209,7 +210,7 @@ contains
 
     if( allocated(TrajArray) ) then
       do iTraj = 1, size(TrajArray)
-        if(mod(iCycle, TrajArray(iTraj)%traj%outfreq) == 0) then
+        if(mod(iCycle, int(TrajArray(iTraj)%traj%outfreq,8)) == 0) then
           call TrajArray(iTraj) % traj % WriteFrame
         endif
       enddo

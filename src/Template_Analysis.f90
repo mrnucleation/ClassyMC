@@ -1,7 +1,7 @@
 !=========================================================================
 module AnaylsisClassDef
   use MasterTemplate, only: classyClass
-  use CoordinateTypes, only: Displacement, Perturbation
+  use CoordinateTypes, only: Perturbation
   use VarPrecision
 
   type, public, extends(classyClass) :: Analysis
@@ -30,10 +30,9 @@ module AnaylsisClassDef
   end subroutine
 !=========================================================================
   subroutine CalcNewState(self, disp, newVal)
-    use CoordinateTypes, only: Displacement, Perturbation
+    use CoordinateTypes, only: Perturbation
     implicit none
     class(Analysis), intent(inout) :: self
-!    type(Displacement), intent(in), optional :: disp(:)
     class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
   end subroutine

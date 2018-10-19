@@ -6,6 +6,7 @@ atomdef
 end_atomdef
 
 molecule 1
+  RegrowthType Simple
   atoms
     1
   end_atoms

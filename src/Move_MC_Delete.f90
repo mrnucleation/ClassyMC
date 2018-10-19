@@ -2,7 +2,7 @@
 !Guarnteed delete move.  Only used for debuging. 
 !
 module MCMove_Delete
-use CoordinateTypes, only: Displacement, Deletion
+use CoordinateTypes, only: Deletion
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
@@ -10,11 +10,10 @@ use VarPrecision
   type, public, extends(MCMove) :: MoveDelete
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-!    type(Displacement) :: disp(1:1)
     type(Deletion) :: disp(1:1)
     contains
       procedure, pass :: Constructor => MoveDelete_Constructor
-      procedure, pass :: GeneratePosition => MoveDelete_GeneratePosition
+!      procedure, pass :: GeneratePosition => MoveDelete_GeneratePosition
       procedure, pass :: FullMove => MoveDelete_FullMove
       procedure, pass :: Maintenance => MoveDelete_Maintenance
 
@@ -29,13 +28,6 @@ use VarPrecision
 !    allocate( self%tempNNei(1) )
 !    allocate( self%tempList(10, 1) )
 
-  end subroutine
-!========================================================
-  subroutine MoveDelete_GeneratePosition(self, disp)
-    use RandomGen, only: grnd
-    implicit none
-    class(MoveDelete), intent(in) :: self
-    type(Displacement), intent(inout) :: disp
   end subroutine
 !===============================================
   subroutine MoveDelete_FullMove(self, trialBox, accept) 

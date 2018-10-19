@@ -4,7 +4,6 @@ module OrthoBoxDef
 !  use NeighListDef, only: NeighList
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
-  use CoordinateTypes, only: Displacement
 
 
   !Sim Box Definition
@@ -120,7 +119,6 @@ module OrthoBoxDef
 !    use CoordinateTypes
 !    implicit none
 !    class(OrthoBox), intent(inout) :: self
-!    type(Displacement), intent(inout) :: disp(:)
 !    integer :: iDisp, dispLen, dispIndx
 !
 !    dispLen = size(disp)

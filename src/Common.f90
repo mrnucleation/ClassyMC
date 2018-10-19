@@ -7,19 +7,6 @@ module CoordinateTypes
     
   end type
 
-  !Old Style Displacement, 
-  type, extends(Perturbation) :: Displacement
-    logical :: newAtom = .false.
-    integer(kind=atomIntType) :: molType, atmIndx, molIndx
-    real(dp) :: x_new, y_new, z_new
-
-    logical :: oldAtom = .false.
-    integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
-
-    logical :: newList = .false.
-    integer :: listIndex = -1
-  end type
-
   !Move type where a single particle's position is changed.
   type, extends(Perturbation) :: DisplacementNew
     integer(kind=atomIntType) :: molType, atmIndx, molIndx, atmSubIndx

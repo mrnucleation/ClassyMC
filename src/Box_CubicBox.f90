@@ -5,7 +5,6 @@ module CubicBoxDef
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
 !  use NeighListDef
-  use CoordinateTypes, only: Displacement
 !  use ConstraintTemplate, only: constrainArray
 
 
@@ -138,7 +137,6 @@ module CubicBoxDef
 !    use CoordinateTypes
 !    implicit none
 !    class(CubeBox), intent(inout) :: self
-!    type(Displacement), intent(inout) :: disp(:)
 !    integer :: iDisp, dispLen, dispIndx
 !
 !    dispLen = size(disp)

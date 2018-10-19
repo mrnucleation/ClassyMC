@@ -16,9 +16,11 @@ OPTIMIZE_FLAGS_IFORT += -no-wrap-margin
 OPTIMIZE_FLAGS_IFORT += -fpp
 OPTIMIZE_FLAGS_IFORT += -fpe0
 OPTIMIZE_FLAGS_IFORT += -traceback
-OPTIMIZE_FLAGS_GFORT := -O3
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
+
+OPTIMIZE_FLAGS_GFORT := -O3 -fpp
+
 DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -fpp
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
@@ -36,6 +38,7 @@ DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug 
 # ====================================
 
 SRC := $(CUR_DIR)/src
+LIB := $(CUR_DIR)/lib
 OBJ := $(CUR_DIR)/objects
 
 
@@ -70,7 +73,6 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Sampling_Umbrella.f90\
         		$(SRC)/Sampling_UmbrellaWHAM.f90\
         		$(SRC)/Move_MC_AtomTranslation.f90\
-        		$(SRC)/Move_MC_AtomExchange.f90\
         		$(SRC)/Move_MC_MolTranslation.f90\
         		$(SRC)/Move_MC_ThermoLambda.f90\
         		$(SRC)/Move_MC_Delete.f90\
@@ -160,10 +162,11 @@ default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
 default: COMPFLAGS += $(DEBUGFLAGS)
 default: startUP classyMC finale
 
-aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
+#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
+aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET
-aenet: startUP classyMC finale
+aenet: startUP classyMCAENet finale
 
 gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 gfortran: COMPFLAGS += $(DEBUGFLAGS)
@@ -171,6 +174,11 @@ gfortran: startUP classyMC finale
 
 debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT)
 debug: startUP_debug classyMC_debug finale
+
+debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
+debugaenet: COMPFLAGS += -DAENET
+debugaenet: startUP classyMCAENet finale
+
 
 debug_gfortran: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
 debug_gfortran: startUP_debug classyMC_debug finale
@@ -183,6 +191,7 @@ clean: removeObjects removeExec finale
 #        Compile Commands
 # ====================================
 
+%.o: %.mod
 
 .f90.o :     
 		@echo Creating $<
@@ -208,7 +217,12 @@ classyMC: $(OBJ_COMPLETE)
 		@echo =============================================	
 		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 	
-
+classyMCAENet: $(OBJ_COMPLETE)  $(LIB)/libaenet.a
+		@echo =============================================
+		@echo     Compiling and Linking Source Files
+		@echo =============================================	
+		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
+	
 classyMC_debug: $(OBJ_COMPLETE) 
 	    
 		@echo =============================================

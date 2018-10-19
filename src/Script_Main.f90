@@ -27,12 +27,19 @@
     
 !      Get the filename from the command line. 
       nArgs = command_argument_count()
-      if(nArgs > 1) then
-        stop "This program only takes one argument"
-      elseif(nArgs == 1) then
+      if(nArgs > 0) then
+!        stop "This program only takes one argument"
+           
+!      elseif(nArgs == 1) then
         call get_command_argument(1, fileName)
+        nLines = 0
         call LoadFile(lineStore, nLines, lineNumber, fileName)
-        write(nout, *) "File successfully loaded!"
+        if(nLines == 0) then
+          write(*,*) "ERROR! Input file is empty or could not be read!"
+          stop
+        else
+          write(nout, *) "File successfully loaded!"
+        endif
       elseif(nArgs == 0) then
         write(*,*) "ERROR! No Input File has been given!"
         stop

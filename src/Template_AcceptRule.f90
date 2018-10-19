@@ -2,7 +2,7 @@
 module AcceptRuleTemplate
   use MasterTemplate, only: classyClass
   use VarPrecision
-  use CoordinateTypes, only: Displacement, Perturbation
+  use CoordinateTypes, only: Perturbation
 
   type, public, extends(classyClass) :: acceptrule
     contains

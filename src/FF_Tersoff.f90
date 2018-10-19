@@ -28,7 +28,7 @@ module FF_Pair_Tersoff
       procedure, pass :: DetailedECalc => Detailed_Tersoff
       procedure, pass :: ShiftECalc_Single => Shift_Tersoff_Single
 !      procedure, pass :: ShiftECalc_Multi => Shift_Tersoff_Multi
-      procedure, pass :: NewECalc => New_Tersoff
+!      procedure, pass :: NewECalc => New_Tersoff
 !      procedure, pass :: OldECalc => Old_Tersoff
       procedure, pass :: ProcessIO => ProcessIO_Tersoff
       procedure, pass :: GetCutOff => GetCutOff_Tersoff
@@ -215,7 +215,7 @@ module FF_Pair_Tersoff
     implicit none
     class(Pair_Tersoff), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(displacementNew), intent(in) :: disp(:)
+    type(DisplacementNew), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
     integer :: iDisp, iAtom, iNei, jNei, jAtom, kNei, kAtom, dispLen
@@ -608,36 +608,6 @@ module FF_Pair_Tersoff
  
 !    write(*,*) E_Diff
   end subroutine  
-!===================================================================== 
-  subroutine New_Tersoff(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
-    implicit none
-    class(Pair_Tersoff), intent(inout) :: self
-    class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
-    integer, intent(in) :: tempList(:,:), tempNNei(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
-
-    integer :: iDisp, iAtom, iNei, jNei, jAtom, kNei, kAtom, dispLen
-!    integer :: maxIndx, minIndx
-    integer :: atmType1, atmType2, atmType3
-    real(dp) :: rMaxSq, rMinSq
-    real(dp) :: rxij, ryij, rzij, rij
-    real(dp) :: rxjk, ryjk, rzjk, rjk
-    real(dp) :: rxik, ryik, rzik, rik
-    real(dp) :: sub
-    real(dp) :: rmin_ij
-    real(dp) :: A, B, c, d, Req, D2 
-    real(dp) :: lam1, lam2
-    real(dp) :: Zeta, Zeta2
-    real(dp) :: BetaPar, n, h
-    real(dp) :: b1, b2, V1, V2
-    real(dp) :: angijk, angjik
-    real(dp) :: E_Tersoff
-    integer :: nRecalc
-    integer :: recalcList(1:200)
-
-  end subroutine
 !=====================================================================
   subroutine ProcessIO_Tersoff(self, line)
     use Common_MolInfo, only: nAtomTypes

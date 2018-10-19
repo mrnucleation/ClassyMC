@@ -19,7 +19,7 @@ module FF_Pair_LJ_Cut
       procedure, pass :: DetailedECalc => Detailed_LJ_Cut
       procedure, pass :: DiffECalc => DiffECalc_LJ_Cut
       procedure, pass :: ShiftECalc_Single => Shift_LJ_Cut_Single
-      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
+!      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
       procedure, pass :: NewECalc => New_LJ_Cut
       procedure, pass :: OldECalc => Old_LJ_Cut
       procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
@@ -61,7 +61,6 @@ module FF_Pair_LJ_Cut
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-!    class(displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
@@ -83,8 +82,6 @@ module FF_Pair_LJ_Cut
       class is(Deletion)
          call self % OldECalc(curbox, disp, E_Diff)
 
-!      class is(Displacement)
-!        stop
       class default
         write(*,*) "Unknown Perturbation Type Encountered by the LJ_Cut Pair Style."
     end select
@@ -234,20 +231,10 @@ module FF_Pair_LJ_Cut
  
   end subroutine
   !=====================================================================
-  subroutine Shift_LJ_Cut_Multi(self, curbox, disp, E_Diff)
-    implicit none
-      class(Pair_LJ_Cut), intent(inout) :: self
-      class(SimBox), intent(inout) :: curbox
-      type(displacement), intent(in) :: disp(:)
-      real(dp), intent(inout) :: E_Diff
-   
-  end subroutine
-  !=====================================================================
   subroutine New_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-!    type(displacement), intent(in) :: disp(:)
     type(Addition), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
@@ -308,7 +295,6 @@ module FF_Pair_LJ_Cut
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-!    type(displacement), intent(in) :: disp(:)
     type(Deletion), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     integer :: iDisp, iAtom, jAtom, remLen, jNei

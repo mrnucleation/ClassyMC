@@ -29,10 +29,10 @@ module MoveClassDef
   end subroutine
 !=========================================================================
   subroutine GeneratePosition(self, disp)
-    use CoordinateTypes, only: Displacement
+    use CoordinateTypes, only: Perturbation
     implicit none
     class(MCMove), intent(in) :: self
-    type(Displacement), intent(inout) :: disp
+    class(Perturbation), intent(inout) :: disp
   end subroutine
 !=========================================================================
   subroutine FullMove(self, trialBox, accept)

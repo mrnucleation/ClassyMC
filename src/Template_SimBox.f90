@@ -9,7 +9,7 @@ module Template_SimBox
   use VarPrecision
 !  use ForcefieldData, only: ECalcArray
   use Template_NeighList, only: NeighListDef
-  use CoordinateTypes, only: Displacement, Perturbation
+  use CoordinateTypes, only: Perturbation
 !  use ConstraintTemplate, only: constrainArray
 
 
@@ -108,7 +108,6 @@ module Template_SimBox
     implicit none
     class(SimBox), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
-!    type(Displacement), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
   end subroutine
 !==========================================================================================
@@ -116,7 +115,7 @@ module Template_SimBox
     use CoordinateTypes
     implicit none
     class(SimBox), intent(inout) :: self
-    type(Displacement), intent(inout) :: disp(:)
+    class(Perturbation), intent(inout) :: disp(:)
   end subroutine
 !==========================================================================================
   subroutine UpdateVol(self, scalar)

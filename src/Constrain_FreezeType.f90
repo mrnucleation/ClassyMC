@@ -5,7 +5,7 @@
 module Constrain_FreezeType
   use VarPrecision
   use ConstraintTemplate, only: constraint
-  use CoordinateTypes, only: Displacement, Perturbation
+  use CoordinateTypes, only: Perturbation
   use CoordinateTypes, only: DisplacementNew, Deletion, Addition
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout

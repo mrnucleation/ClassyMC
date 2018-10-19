@@ -14,8 +14,8 @@ module FF_Einstein
       procedure, pass :: Constructor => Constructor_Pair_Einstein
       procedure, pass :: DetailedECalc => Detailed_Pair_Einstein
       procedure, pass :: ShiftECalc_Single => Shift_Pair_Einstein_Single
-      procedure, pass :: NewECalc => New_Pair_Einstein
-      procedure, pass :: OldECalc => Old_Pair_Einstein
+!      procedure, pass :: NewECalc => New_Pair_Einstein
+!      procedure, pass :: OldECalc => Old_Pair_Einstein
       procedure, pass :: ProcessIO => ProcessIO_Pair_Einstein
   end type
 
@@ -110,57 +110,6 @@ module FF_Einstein
       E_Diff = E_Diff - self%kSpring*rsq
     enddo
  
-  end subroutine
-  !=====================================================================
-  subroutine New_Pair_Einstein(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
-    implicit none
-    class(Pair_Einstein), intent(inout) :: self
-    class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
-    integer, intent(in) :: tempList(:,:), tempNNei(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
-
-    integer :: iDisp, iAtom, jAtom, dispLen, maxNei, listIndx, jNei
-    integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-
-    dispLen = size(disp)
-    E_Diff = 0E0_dp
-    accept = .true.
-    do iDisp = 1, dispLen
-      iAtom = disp(iDisp)%atmIndx
-
-      rx = disp(iDisp)%x_new  -  self % initPos(1, iAtom)
-      ry = disp(iDisp)%y_new  -  self % initPos(2, iAtom) 
-      rz = disp(iDisp)%z_new  -  self % initPos(3, iAtom)
-      call curbox%Boundary(rx, ry, rz)
-      rsq = rx*rx + ry*ry + rz*rz
-      E_Diff = E_Diff + self%kSpring*rsq
-    enddo
-  end subroutine
-  !=====================================================================
-  subroutine Old_Pair_Einstein(self, curbox, disp, E_Diff)
-    implicit none
-    class(Pair_Einstein), intent(inout) :: self
-    class(SimBox), intent(inout) :: curbox
-    type(displacement), intent(in) :: disp(:)
-    real(dp), intent(inOut) :: E_Diff
-    integer :: iDisp, iAtom, dispLen
-    real(dp) :: rx, ry, rz, rsq
-
-    E_Diff = 0E0_dp
-    do iDisp = 1, dispLen
-      iAtom = disp(iDisp)%oldAtmIndx
-
-      rx = curBox % atoms(1, iAtom)  -  self % initPos(1, iAtom)
-      ry = curBox % atoms(2, iAtom)  -  self % initPos(2, iAtom)
-      rz = curBox % atoms(3, iAtom)  -  self % initPos(3, iAtom)
-      call curbox%Boundary(rx, ry, rz)
-      rsq = rx*rx + ry*ry + rz*rz
-      E_Diff = E_Diff - self%kSpring*rsq
-    enddo
-
   end subroutine
   !=====================================================================
   subroutine ProcessIO_Pair_Einstein(self, line)
