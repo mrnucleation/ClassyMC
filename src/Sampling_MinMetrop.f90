@@ -2,7 +2,7 @@
 module MinMetroRule
   use VarPrecision
   use CoordinateTypes, only: Perturbation, Addition, Deletion, VolChange
-  use AcceptRuleTemplate, only: acceptrule
+  use Template_AcceptRule, only: acceptrule
  
   type, public, extends(acceptrule) :: MinMetro
     contains

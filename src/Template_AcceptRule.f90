@@ -1,5 +1,5 @@
 !====================================================================
-module AcceptRuleTemplate
+module Template_AcceptRule
   use MasterTemplate, only: classyClass
   use VarPrecision
   use CoordinateTypes, only: Perturbation

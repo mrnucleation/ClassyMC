@@ -1,7 +1,7 @@
 !====================================================================
 module UmbrellaWHAMRule
   use VarPrecision
-  use AcceptRuleTemplate, only: AcceptRule
+  use Template_AcceptRule, only: acceptrule
   use CoordinateTypes, only: DisplacementNew, Perturbation, Addition, Deletion, VolChange
  
   type, public, extends(AcceptRule) :: UmbrellaWHAM
