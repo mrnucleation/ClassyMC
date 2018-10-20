@@ -2,7 +2,7 @@
 module UmbrellaWHAMRule
   use VarPrecision
   use Template_AcceptRule, only: acceptrule
-  use CoordinateTypes, only: DisplacementNew, Perturbation, Addition, Deletion, VolChange
+  use CoordinateTypes, only: Displacement, Perturbation, Addition, Deletion, VolChange
  
   type, public, extends(AcceptRule) :: UmbrellaWHAM
 
@@ -238,7 +238,7 @@ module UmbrellaWHAMRule
  
     extraTerms = 0E0_dp
     select type(disp)
-!      class is(DisplacementNew)
+!      class is(Displacement)
 !          write(*,*) "DISPLACEMENT!"
       class is(Addition)
           extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)

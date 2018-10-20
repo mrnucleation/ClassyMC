@@ -72,7 +72,7 @@ module FF_Pair_LJ_Cut
     E_Diff = 0E0_dp
 
     select type(disp)
-      class is(DisplacementNew)
+      class is(Displacement)
          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
 
       class is(Addition)
@@ -157,8 +157,7 @@ module FF_Pair_LJ_Cut
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-!    type(displacement), intent(in) :: disp(:)
-    type(DisplacementNew), intent(in) :: disp(:)
+    type(Displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 

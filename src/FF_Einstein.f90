@@ -80,7 +80,7 @@ module FF_Einstein
     implicit none
     class(Pair_Einstein), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(displacementnew), intent(in) :: disp(:)
+    type(Displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 

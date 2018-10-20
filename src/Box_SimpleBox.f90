@@ -525,7 +525,7 @@ module SimpleSimBox
 
     select type(disp)
        !-------------------------------------------------
-      class is(DisplacementNew)
+      class is(Displacement)
         dispLen = size(disp)
         do iDisp = 1, dispLen
           dispIndx = disp(iDisp) % atmIndx

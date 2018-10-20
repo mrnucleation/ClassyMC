@@ -215,7 +215,7 @@ module FF_Pair_Tersoff
     implicit none
     class(Pair_Tersoff), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(DisplacementNew), intent(in) :: disp(:)
+    type(Displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
     integer :: iDisp, iAtom, iNei, jNei, jAtom, kNei, kAtom, dispLen

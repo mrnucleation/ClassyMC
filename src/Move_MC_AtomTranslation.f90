@@ -1,6 +1,6 @@
 !========================================================
 module MCMove_AtomTranslation
-use CoordinateTypes, only: DisplacementNew
+use CoordinateTypes, only: Displacement
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
@@ -9,8 +9,7 @@ use VarPrecision
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
     real(dp) :: max_dist = 0.2E0_dp
-!    type(Displacement) :: disp(1:1)
-    type(DisplacementNew) :: disp(1:1)
+    type(Displacement) :: disp(1:1)
 
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
@@ -42,7 +41,7 @@ use VarPrecision
     use RandomGen, only: grnd
     implicit none
     class(AtomTranslate), intent(in) :: self
-    type(DisplacementNew), intent(inout) :: disp
+    type(Displacement), intent(inout) :: disp
     real(dp) :: dx, dy, dz
       dx = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
       dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)

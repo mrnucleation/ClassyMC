@@ -1,6 +1,6 @@
 !========================================================
 module MCMove_MolTranslation
-use CoordinateTypes, only: DisplacementNew
+use CoordinateTypes, only: Displacement
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
@@ -13,7 +13,7 @@ use VarPrecision
     real(dp) :: targAccpt = 50E0_dp
     real(dp) :: max_dist = 0.05E0_dp
 !    type(Displacement) :: disp(1:1)
-    type(DisplacementNew), allocatable :: disp(:)
+    type(Displacement), allocatable :: disp(:)
 
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
@@ -53,7 +53,7 @@ use VarPrecision
 !    use RandomGen, only: grnd
 !    implicit none
 !    class(MolTranslate), intent(in) :: self
-!    type(DisplacementNew), intent(inout) :: disp
+!    type(Displacement), intent(inout) :: disp
 !    real(dp) :: dx, dy, dz
 !      dx = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
 !      dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)

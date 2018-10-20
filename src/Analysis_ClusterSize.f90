@@ -56,7 +56,7 @@ use VarPrecision
 !=========================================================================
   subroutine ClusterSize_CalcNewState(self, disp, newVal)
     use AnalysisData, only: analyCommon
-    use CoordinateTypes, only: DisplacementNew, Perturbation, Deletion, Addition
+    use CoordinateTypes, only: Perturbation, Deletion, Addition
     implicit none
     class(ClusterSize), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)

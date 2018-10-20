@@ -269,7 +269,6 @@ use Template_NeighList, only: NeighListDef
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: iDisp
-!    type(Displacement), intent(inout) :: disp
     class(Perturbation), intent(inout) :: disp
     integer, intent(inout) :: tempList(:,:), tempNNei(:)
     integer, optional :: nCount
@@ -291,7 +290,7 @@ use Template_NeighList, only: NeighListDef
         xn = disp%x_new
         yn = disp%y_new
         zn = disp%z_new
-      class is (DisplacementNew)
+      class is (Displacement)
         disp % newlist = .true.
         disp % listIndex = iDisp
         iAtom = disp%atmIndx

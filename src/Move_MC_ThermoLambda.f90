@@ -7,7 +7,7 @@ module Move_ThermoLambda
   use FF_ThermoIntegration, only: Pair_ThermoIntegration
   use ForcefieldData, only: EnergyCalculator
   use AnalysisData, only: AnalysisArray
-  use CoordinateTypes, only: DisplacementNew
+  use CoordinateTypes, only: Displacement
 
 
   type, public, extends(MCMove) :: ThermoLambda
@@ -16,7 +16,7 @@ module Move_ThermoLambda
     integer :: AnalyFunc = -1
     integer :: EFunc = -1
     real(dp) :: maxLam = 0.001E0_dp
-    type(DisplacementNew) :: disp(1:1)
+    type(Displacement) :: disp(1:1)
     contains
       procedure, pass :: Prologue => ThermoLambda_Prologue
 !      procedure, pass :: Constructor => ThermoLambda_Constructor

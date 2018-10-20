@@ -6,7 +6,7 @@ module Constrain_DistanceCriteria
   use VarPrecision
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Perturbation
-  use CoordinateTypes, only: DisplacementNew, Deletion, Addition
+  use CoordinateTypes, only: Displacement, Deletion, Addition
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
 
@@ -186,7 +186,7 @@ module Constrain_DistanceCriteria
     !based on the what kind of perturbation was performed.
     select type(disp)
        !----------------------------------------------------------------------------
-      class is(DisplacementNew)
+      class is(Displacement)
         self%newTopoList = self%topoList 
         accept = .true.
 !        write(*,*) "Disp"

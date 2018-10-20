@@ -1,6 +1,6 @@
 !========================================================
 module MCMove_PlaneRotation
-use CoordinateTypes, only: DisplacementNew
+use CoordinateTypes, only: Displacement
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
@@ -11,7 +11,7 @@ use VarPrecision
     logical :: tuneMax = .true.
     real(dp) :: targAccpt = 50E0_dp
     real(dp) :: max_rot = 0.02E0_dp
-    type(DisplacementNew), allocatable :: disp(:)
+    type(Displacement), allocatable :: disp(:)
 !    real(dp), allocatable :: tempcoords(:,:)
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
@@ -52,7 +52,7 @@ use VarPrecision
 !    use RandomGen, only: grnd
 !    implicit none
 !    class(PlaneRotate), intent(in) :: self
-!    type(DisplacementNew), intent(inout) :: disp
+!    type(Displacement), intent(inout) :: disp
 !    real(dp) :: dx, dy, dz
 !      dx = self % max_rot * (2E0_dp*grnd() - 1E0_dp)
 !      dy = self % max_rot * (2E0_dp*grnd() - 1E0_dp)

@@ -70,7 +70,7 @@ use SimpleSimBox, only: SimpleBox
   end subroutine
 !=========================================================================
   subroutine DistPair_CalcNewState(self, disp, newVal)
-    use CoordinateTypes, only: DisplacementNew, Perturbation
+    use CoordinateTypes, only: Displacement, Perturbation
     implicit none
     class(DistPair), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
@@ -78,7 +78,7 @@ use SimpleSimBox, only: SimpleBox
     real(dp) :: rx, ry, rz, rsq, r
 
     select type(disp)
-      class is(DisplacementNew)
+      class is(Displacement)
         if(disp(1)%atmIndx == self%atom1 ) then
           rx = disp(1)%x_new - self%box % atoms(1, self%atom2)
           ry = disp(1)%y_new - self%box % atoms(2, self%atom2)

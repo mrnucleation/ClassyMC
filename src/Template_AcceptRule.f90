@@ -19,7 +19,6 @@ module Template_AcceptRule
     implicit none
     class(acceptrule), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
-!    type(Displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(in) :: E_Diff, inProb
     logical :: accept

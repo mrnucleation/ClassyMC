@@ -1,6 +1,6 @@
 !========================================================
 module MCMove_UB_Swap
-use CoordinateTypes, only: DisplacementNew, Addition, Deletion
+use CoordinateTypes, only: Addition, Deletion
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
