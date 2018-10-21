@@ -585,6 +585,27 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
+  subroutine SimpleBox_GetReducedCoords(self,realCoords,reducedCoords )
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    real(dp), intent(in) :: realCoords(:)
+    real(dp), intent(out) :: reducedCoords(1:3)
+
+    reducedCoords = 0E0_dp
+    stop "GetReducedCoords routine has been called on a system where no box is defined."
+
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_GetRealCoords(self, reducedCoords, realCoords)
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    real(dp), intent(in) :: reducedCoords(:)
+    real(dp), intent(out) :: realCoords(1:3)
+
+    realCoords = 0E0_dp
+    stop "GetReducedCoords routine has been called on a system where no box is defined."
+  end subroutine
+!==========================================================================================
   subroutine SimpleBox_Prologue(self)
     use Common_MolInfo, only: nMolTypes
     use ParallelVar, only: nout

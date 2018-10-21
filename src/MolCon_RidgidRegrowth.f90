@@ -30,8 +30,8 @@ module MolCon_RidgidRegrowth
       endif
     enddo
 
-
     allocate( tempcoords(1:3, 1:maxAtoms) )
+
   end subroutine
 !==========================================================================================
   subroutine RidgidRegrowth_GenerateConfig(self, trialBox, disp, probconstruct)
@@ -47,9 +47,9 @@ module MolCon_RidgidRegrowth
     real(dp) :: x1, y1, z1
     real(dp) :: x_rid_cm, y_rid_cm, z_rid_cm
 
-    x1 = tempcoords%x(1)
-    y1 = tempcoords%y(1)
-    z1 = tempcoords%z(1)
+    x1 = tempcoords(1, 1)
+    y1 = tempcoords(2, 1)
+    z1 = tempcoords(3, 1)
     do i = 1, 
       tempcoords(1, i) = tempcoords(1, i) - x1
       tempcoords(2, i) = tempcoords(2, i) - y1
