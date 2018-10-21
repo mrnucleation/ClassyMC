@@ -1,0 +1,19 @@
+This is a short list kept by the developer to keep track of features that are still in need of implimentation
+
+
+1. Finish AE Net Wrapper
+2. Finish the Intra Molecular Interaction Framework
+3. Finish Rosenbluth Sampling Modules
+4. Impliment More Monte Carlo Moves
+5. Finish the functions required for Gibb's Ensemble
+6. Start work on allowing the user to select different parallelization schemes.
+7. Impliment Energy Biased AVBMC and Vanilla AVBMC
+8. Screen Output Module needs work.
+9. CBMC and support for larger molecules is needed.
+10. Long Range Solver for bulk systems required.
+11. Python Wrapper coupled with modifications for the script interface.
+12. Python Scripts for converting Classy formats to LAMMPS and other common formats.
+
+Nice things to think about doing in the future:
+
+1. Internal library for common forcefields.

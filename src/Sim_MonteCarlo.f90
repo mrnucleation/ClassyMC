@@ -35,17 +35,19 @@ contains
     iMove = 0
 
     call Prologue(iCycle, iMove)
-    write(nout, *) "============================================"
-    write(nout, *) "       Simulation Start!"
-    write(nout, *) "============================================"
-
-    flush(nout)
+    call SafetyCheck
     nBoxes = size(BoxArray)
     boxNum = 1
 
     call Analyze(iCycle, iMove, accept, .true.)
     call Analyze(iCycle, iMove, accept, .false.)
     !-------Main Monte Carlo Simulation Loop-------
+    write(nout, *) "============================================"
+    write(nout, *) "       Simulation Start!"
+    write(nout, *) "============================================"
+
+    flush(nout)
+
     do iCycle = 1, nCycles
 
       !-----Start Move Loop
@@ -262,8 +264,47 @@ contains
     enddo
 
   end subroutine
+!===========================================================================
+  subroutine SafetyCheck
+    use AnalysisData, only: AnalysisArray
+    use BoxData, only: BoxArray
+    use Common_MolInfo, only: MolData
+    use MCMoveData, only: Moves, MoveProb
+    use TrajData, only: TrajArray
+    use CommonSampling, only: Sampling
+    use ParallelVar, only: nout
+    implicit none
+    integer :: i
+
+    call Sampling % SafetyCheck
+    
+    do i = 1, size(MolData)
+      call MolData(i) % molConstruct % SafetyCheck
+    enddo
 
 
+
+    if( allocated(AnalysisArray) ) then
+      do i = 1, size(AnalysisArray)
+        call AnalysisArray(i) % func % SafetyCheck
+      enddo
+    endif
+
+    if( allocated(TrajArray) ) then
+      do i = 1, size(TrajArray)
+        call TrajArray(i) % traj % SafetyCheck
+      enddo
+    endif
+
+    do i = 1, size(BoxArray)
+      call BoxArray(i) % box % SafetyCheck
+    enddo
+
+    do i = 1, size(Moves)
+      call Moves(i) % move % SafetyCheck
+    enddo
+
+  end subroutine
 !===========================================================================
   subroutine Epilogue(iCycle, iMove)
     use AnalysisData, only: AnalysisArray

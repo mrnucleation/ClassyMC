@@ -257,20 +257,10 @@ module FF_Pair_Pedone_Cut
  
   end subroutine
   !=====================================================================
-  subroutine Shift_Pedone_Cut_Multi(self, curbox, disp, E_Diff)
-    implicit none
-      class(Pair_Pedone_Cut), intent(inout) :: self
-      class(SimBox), intent(inout) :: curbox
-      type(displacement), intent(in) :: disp(:)
-      real(dp), intent(inout) :: E_Diff
-   
-  end subroutine
-  !=====================================================================
   subroutine New_Pedone_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
     class(Pair_Pedone_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-!    type(displacement), intent(in) :: disp(:)
     type(Addition), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff

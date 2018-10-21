@@ -284,7 +284,6 @@ contains
      
       end subroutine
 !========================================================            
-!     This subroutine collects all commands on a line and returns them as an array.
     subroutine CountCommands(line, nItems)
       use VarPrecision
       implicit none

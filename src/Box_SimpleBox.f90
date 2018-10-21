@@ -67,6 +67,9 @@ module SimpleSimBox
       procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
       procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
 
+      procedure, pass :: GetReducedCoords => SimpleBox_GetReducedCoords
+      procedure, pass :: GetRealCoords => SimpleBox_GetRealCoords
+
 !      procedure, public, pass :: GetThermo
 !      procedure, public, pass :: ThermoLookUp
 
