@@ -1,4 +1,6 @@
 !========================================================            
+! 
+!========================================================            
       module ScriptInput
       use Input_Format
 !      integer, parameter :: maxLineLen = 100   
@@ -11,6 +13,7 @@
       use Input_Sampling, only: Script_SamplingType
       use Input_NeighType, only: Script_NeighType
       use Input_Initialize, only: Script_Initialize
+      use SimControl, only: TimeStart, TimeEnd
       use ParallelVar
       use Units
       implicit none
@@ -55,7 +58,7 @@
       lineBuffer = 0
       do iLine = 1, nLines
 !        write(*,*) trim(adjustl(lineStore(iLine)))
-        if(lineBuffer .gt. 0) then
+        if(lineBuffer > 0) then
           lineBuffer = lineBuffer - 1
           cycle
         endif
@@ -86,7 +89,12 @@
           case("set")
             call setCommand( lineStore(iLine), lineStat )
 
-          case("simtype")
+          case("run")
+            call CPU_TIME(TimeStart)
+            call RunMonteCarlo
+            call CPU_TIME(TimeEnd)
+
+
             
           case default
             write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)

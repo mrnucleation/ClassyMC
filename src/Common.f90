@@ -19,14 +19,14 @@ module CoordinateTypes
   end type
 
   !Move type where one particle is removed and another is inserted
-  type, extends(Perturbation) :: Exchange
-    integer(kind=atomIntType) :: molType, atmIndx, molIndx
-    real(dp) :: x_new, y_new, z_new
-    integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
-
-    logical :: newList = .false.
-    integer :: listIndex = -1
-  end type
+!  type, extends(Perturbation) :: Exchange
+!    integer(kind=atomIntType) :: molType, atmIndx, molIndx
+!    real(dp) :: x_new, y_new, z_new
+!    integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
+!
+!    logical :: newList = .false.
+!    integer :: listIndex = -1
+!  end type
 
   !Move type where one particle is removed 
   type, extends(Perturbation) :: Deletion
@@ -68,6 +68,7 @@ module ParallelVar
 end module  
 !======================================================
 module SimControl
+  use VarPrecision
   integer :: simType = 1
   integer(kind=8) :: nCycles = 0
   integer(kind=8) :: nMoves = 0
@@ -76,6 +77,8 @@ module SimControl
   logical :: printBox = .true.
   logical :: printAcc = .true.
 
+  real(dp) :: TimeStart = 0E0_dp
+  real(dp) :: TimeEnd = 0E0_dp
 end module  
 !======================================================
 

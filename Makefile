@@ -7,6 +7,7 @@ FC := mpif90
 #FC := /opt/openmpi/bin/mpif90
 #FC := mpifort
 #FC := gfortran
+AR := ar
 CC := mpicc
 OPTIMIZE_FLAGS_IFORT := -O3
 OPTIMIZE_FLAGS_IFORT += -xHost
@@ -19,7 +20,7 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
 
-OPTIMIZE_FLAGS_GFORT := -O3 -fpp
+OPTIMIZE_FLAGS_GFORT := -O3 -cpp
 
 DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -fpp
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
