@@ -54,7 +54,7 @@ contains
 
 !      Read in the file line by line
     allocate(rawLines(1:nRawLines), stat = AllocateStat)
-    IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+    IF (AllocateStat /= 0) STOP "*** Unable to load input script ***"
 
 !    write(*,*) nRawLines
 
@@ -78,7 +78,7 @@ contains
       endif
     enddo
 
-    IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+    IF (AllocateStat /= 0) STOP "*** Input_Format: Not enough memory ***"
 
     allocate( lineArray(1:nLines), stat = AllocateStat )
     allocate( lineNumber(1:nLines), stat = AllocateStat )
@@ -95,7 +95,7 @@ contains
       endif 
     enddo
 
-    IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+    IF (AllocateStat /= 0) STOP "*** Input_Format: Not enough memory ***"
 
     if(allocated(rawLines)) then
       deallocate(rawLines)

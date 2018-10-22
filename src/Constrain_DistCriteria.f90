@@ -102,11 +102,11 @@ module Constrain_DistanceCriteria
     enddo
 
 
-    write(*,*) "REAL!"
-    do iMol = 1, totalMol
-      write(*,*) (self%topoList(jMol, iMol), jMol=1,totalMol)
-    enddo
-    write(*,*)
+!    write(*,*) "REAL!"
+!    do iMol = 1, totalMol
+!      write(*,*) (self%topoList(jMol, iMol), jMol=1,totalMol)
+!    enddo
+!    write(*,*)
 
     if(all(self%topoList .eqv. .false.) ) then
       accept = .false.

@@ -32,11 +32,15 @@ contains
         call GetXCommand(line, command, 4, lineStat)
         read(command,*) intVal
         allocate( RSqList::BoxArray(boxNum)%box%NeighList(1:intVal) )
-
+!        do i =1, intVal
+!          call BoxArray(boxNum)%box%NeighList(i)%Constructor(boxNum)
+!        enddo
       case default
         lineStat = -1
         return
     end select
+
+
 
 
   end subroutine

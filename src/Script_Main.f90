@@ -92,6 +92,7 @@
 
           case("run")
             call CPU_TIME(TimeStart)
+            call Script_Initialize
             call RunMonteCarlo
             call CPU_TIME(TimeEnd)
 
@@ -117,8 +118,6 @@
         deallocate(lineStore)
       endif
 
-      call Script_Initialize
-!      call Script_SafetyCheck
 
       end subroutine
 !========================================================            

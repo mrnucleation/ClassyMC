@@ -43,6 +43,8 @@
 
 #  Create trajectory
 #    xyz 1 100 "Traj.xyz"
-#  End_Create
+#End_Create
 
+
+   Run
 #=====================================

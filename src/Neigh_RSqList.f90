@@ -85,7 +85,7 @@ use Template_NeighList, only: NeighListDef
 
     self%list = 0
     self%nNeigh = 0 
-    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+    IF (AllocateStatus /= 0) STOP "*** NeighRSQList: Not enough memory ***"
 
     self%restrictType = .false.
   end subroutine

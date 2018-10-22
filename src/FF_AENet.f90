@@ -13,11 +13,11 @@ module FF_AENet
 
   !AENet Library functions
 #ifdef AENET
-!  use predict_lib, only: initialize_lib, get_energy_lib
-  use aenet, only: aenet_init, aenet_atomic_energy, &
-                   aenet_Rc_min, aenet_Rc_max,
+  use predict_lib, only: initialize_lib, get_energy_lib
+!  use aenet, only: aenet_init, aenet_atomic_energy, &
+!                   aenet_Rc_min, aenet_Rc_max,
   use geometry, only: geo_recip_lattice
-  use input, only: InputData, 
+  use input, only: InputData
 #endif
 
   real(dp), parameter :: boltz = 8.6173303E-5_dp
@@ -56,6 +56,7 @@ module FF_AENet
     class(AENet), intent(inout) :: self
 
     type(InputData) :: inp
+    character(len=100) :: str1, str2
     integer :: iBox, atomLimit, iType
     integer :: AllocateStat
 
@@ -68,18 +69,23 @@ module FF_AENet
      allocate(self%atomTypes(1:atomLimit))
      allocate(self%tempcoords(3, 1:atomLimit))
      write(nout, *) "Initializing AENet"
-     inp = read_InpPredict(inFile)
-!     call initialize_lib(str1, str2, indata)
+!     inp = read_InpPredict(inFile)
+     call initialize_lib(str1, str2, inp)
 !     call initialize(str1, str2, indata)
-     call aenet_init(inp%typeName, stat)
-     do iType = 1, inp%nTypes
-       call aenet_load_potential(itype, inp%netFile(itype), stat)
-     enddo
+!     call aenet_init(inp%typeName, stat)
+!     do iType = 1, inp%nTypes
+!       call aenet_load_potential(itype, inp%netFile(itype), stat)
+!     enddo
 
-     self%rCut = aenet_Rc_max
-     self%rCutSq = aenet_Rc_max * aenet_Rc_max
+!     self%rCut = aenet_Rc_max
+!     self%rCutSq = aenet_Rc_max * aenet_Rc_max
      allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
      allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+     self%rMin = 0E0_dp
+     self%rMinTable = 0E0_dp
+
+     self%rCut = 4.0E0_dp
+     self%rCutSq = 4.0E0_dp**2
 
 
   end subroutine
@@ -202,15 +208,15 @@ module FF_AENet
      enddo
 
 
-!     call get_energy_lib(self%box, nCurAtoms, &
-     do iAtom = 1, ncurAtoms
-          call aenet_atomic_energy(coo_i, type_i, nnb, nbcoo, nbtype, &
-                                   E_i, stat)
-     enddo
+!     do iAtom = 1, ncurAtoms
+!          call aenet_atomic_energy(coo_i, type_i, nnb, nbcoo, nbtype, &
+!                                   E_i, stat)
+!     enddo
 !     call get_energy(self%box, nCurAtoms, &
-!                         self%tempcoords, &
-!                         self%atomTypes, pbc, &
-!                         Ecoh, E_T)
+     call get_energy_lib(self%box, nCurAtoms, &
+                         self%tempcoords, &
+                         self%atomTypes, pbc, &
+                         Ecoh, E_T)
 
      E_T = E_T * curbox%nMolTotal / boltz
      write(nout, *) "Total Neuro Net Energy:", E_T, Ecoh
@@ -247,7 +253,7 @@ module FF_AENet
     !Check the rMin criteria first to ensure there is no overlap prior to
     !passing the configuration to AENet
     select type(disp)
-      class is(DisplacementNew)
+      class is(Displacement)
         do iDisp = 1, size(disp)
           iAtom = disp(iDisp)%atmIndx
           atmType1 = curbox % AtomType(iAtom)
@@ -293,7 +299,7 @@ module FF_AENet
     nCurAtoms = 0
     select type(disp)
 !       -----------------------------------------------------
-      class is(DisplacementNew)
+      class is(Displacement)
         do iAtom = 1, curbox%nMaxAtoms
           if(curbox%MolIndx(iAtom) == disp(1)%molIndx) then
             do iDisp = 1, size(disp)

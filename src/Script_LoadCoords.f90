@@ -65,7 +65,7 @@ module Input_LoadCoords
           endif
       end select
 
-      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+      IF (AllocateStat /= 0) STOP "*** Unable to read coordinate file ***"
 
       ! Ensure that the called processes exited properly.
       if(lineStat .eq. -1) then

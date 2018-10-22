@@ -170,7 +170,7 @@ module Input_Forcefield
           stop
       end select
 
-      IF (AllocateStat /= 0) STOP "*** Not enough memory ***"
+      IF (AllocateStat /= 0) STOP "*** Unable to read forcefield file ***"
 
       ! Ensure that the called processes exited properly.
       if(lineStat .eq. -1) then

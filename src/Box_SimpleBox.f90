@@ -189,7 +189,7 @@ module SimpleSimBox
     allocate(self%NMol(1:nMolTypes), stat=AllocateStatus)
     allocate(self%NMolMax(1:nMolTypes), stat=AllocateStatus)
     allocate(self%NMolMin(1:nMolTypes), stat=AllocateStatus)
-    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"
+    IF (AllocateStatus /= 0) STOP "*** SimpleBox: Unable to allocate Mol Bounds ***"
   end subroutine
 !==========================================================================================
   subroutine Simplebox_LoadDimension(self, line, lineStat)
