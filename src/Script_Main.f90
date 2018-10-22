@@ -14,6 +14,7 @@
       use Input_NeighType, only: Script_NeighType
       use Input_Initialize, only: Script_Initialize
       use SimControl, only: TimeStart, TimeEnd
+      use SimMonteCarlo, only: RunMonteCarlo
       use ParallelVar
       use Units
       implicit none
