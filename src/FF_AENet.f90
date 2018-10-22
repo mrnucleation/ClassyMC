@@ -218,8 +218,9 @@ module FF_AENet
                          self%atomTypes, pbc, &
                          Ecoh, E_T)
 
+     write(nout, *) "Raw Neuro Net Energy:", E_T, Ecoh
      E_T = E_T * curbox%nMolTotal / boltz
-     write(nout, *) "Total Neuro Net Energy:", E_T, Ecoh
+     write(nout, *) "Total Neuro Net Energy:", E_T
 
   end subroutine
 !============================================================================
@@ -423,7 +424,8 @@ module FF_AENet
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp, self%tempcoords)/(2.0d0*pi)
      call get_energy_lib(self%box, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
 
-     E_T = E_T * nTotalMol / boltz
+!     E_T = E_T * nTotalMol / boltz
+     E_T = Ecoh * nTotalMol / boltz
      E_Diff = curbox%ETotal - E_T
   end subroutine
 !=============================================================================+
