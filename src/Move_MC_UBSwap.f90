@@ -304,7 +304,7 @@ use VarPrecision
 !=========================================================================
   subroutine UB_Swap_Prologue(self)
     use ParallelVar, only: nout
-    use Constants, only: pi
+    use ClassyConstants, only: pi
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(UB_Swap), intent(inout) :: self

@@ -26,6 +26,7 @@ use SimpleSimBox, only: SimpleBox
       procedure, pass :: ProcessIO => DistPair_ProcessIO
       procedure, pass :: WriteInfo => DistPair_WriteInfo
       procedure, pass :: GetResult => DistPair_GetResult
+      procedure, pass :: CastCommonType => DistPair_CastCommonType
 !      procedure, pass :: Finalize => DistPair_Finalize
   end type
 
@@ -74,34 +75,36 @@ use SimpleSimBox, only: SimpleBox
     implicit none
     class(DistPair), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
+    integer :: iDisp
     real(dp), intent(in), optional :: newVal
     real(dp) :: rx, ry, rz, rsq, r
 
+    r = self%dist
     select type(disp)
       class is(Displacement)
-        if(disp(1)%atmIndx == self%atom1 ) then
-          rx = disp(1)%x_new - self%box % atoms(1, self%atom2)
-          ry = disp(1)%y_new - self%box % atoms(2, self%atom2)
-          rz = disp(1)%z_new - self%box % atoms(3, self%atom2)
-          call self%box% Boundary(rx, ry, rz)
-          rsq = rx*rx + ry*ry + rz*rz
-          r = sqrt(rsq)
+        do iDisp = 1, size(disp)
+          if(disp(iDisp)%atmIndx == self%atom1 ) then
+            rx = disp(iDisp)%x_new - self%box % atoms(1, self%atom2)
+            ry = disp(iDisp)%y_new - self%box % atoms(2, self%atom2)
+            rz = disp(iDisp)%z_new - self%box % atoms(3, self%atom2)
+            call self%box% Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            r = sqrt(rsq)
            
-        elseif(disp(1)%atmIndx == self%atom2 ) then
-          rx = disp(1)%x_new - self%box % atoms(1, self%atom1)
-          ry = disp(1)%y_new - self%box % atoms(2, self%atom1)
-          rz = disp(1)%z_new - self%box % atoms(3, self%atom1)
-          call self%box% Boundary(rx, ry, rz)
-          rsq = rx*rx + ry*ry + rz*rz
-          r = sqrt(rsq)
-        else
-          r = self%dist
-        endif
+          elseif(disp(iDisp)%atmIndx == self%atom2 ) then
+            rx = disp(iDisp)%x_new - self%box % atoms(1, self%atom1)
+            ry = disp(iDisp)%y_new - self%box % atoms(2, self%atom1)
+            rz = disp(iDisp)%z_new - self%box % atoms(3, self%atom1)
+            call self%box% Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            r = sqrt(rsq)
+          endif
+       enddo
     end select
 
 !    write(*,*) r
     select type(anaVar =>  analyCommon(self%analyID)%val)
-      type is(real)
+      type is(real(dp))
         anaVar = r 
     end select
 
@@ -143,6 +146,20 @@ use SimpleSimBox, only: SimpleBox
 
     var = self%dist
   end function
+!=========================================================================
+  subroutine DistPair_CastCommonType(self, anaVar)
+    implicit none
+    class(DistPair), intent(inout) :: self
+    class(*), allocatable, intent(inout) :: anaVar
+    real(dp) :: def
+
+
+    if(.not. allocated(anaVar) ) then
+      allocate(anaVar, source=def)
+      write(*,*) "Allocated as Real"
+    endif
+
+  end subroutine
 !=========================================================================
 end module
 !=========================================================================

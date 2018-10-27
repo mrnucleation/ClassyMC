@@ -227,7 +227,7 @@ use VarPrecision
 !=========================================================================
   subroutine UB_Simp_Prologue(self)
     use ParallelVar, only: nout
-    use Constants, only: pi
+    use ClassyConstants, only: pi
     implicit none
     class(UB_Simple), intent(inout) :: self
 

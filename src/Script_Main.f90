@@ -7,7 +7,7 @@
       contains
 !========================================================            
       subroutine Script_ReadParameters
-      use Constants
+      use ClassyConstants
       use Input_Forcefield
       use Input_AnalysisType, only: Script_AnalysisType
       use Input_Sampling, only: Script_SamplingType

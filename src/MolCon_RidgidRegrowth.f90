@@ -35,7 +35,7 @@ module MolCon_RidgidRegrowth
   end subroutine
 !==========================================================================================
   subroutine RidgidRegrowth_GenerateConfig(self, trialBox, disp, probconstruct)
-    use Constants, only: two_pi
+    use ClassyConstants, only: two_pi
     use Common_MolInfo, only: MolData
     implicit none
     class(MolConstructor), intent(inout) :: self

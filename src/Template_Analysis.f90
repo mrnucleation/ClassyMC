@@ -61,6 +61,9 @@ module AnaylsisClassDef
     class(*), allocatable, intent(inout) :: anaVar
     real(dp) :: def
 
+    write(*,*) "The Allocated Analysis Type does not have it's CastCommonType defined."
+
+    stop
 
     if(.not. allocated(anaVar) ) then
       allocate(anaVar, source=def)

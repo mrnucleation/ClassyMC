@@ -28,7 +28,7 @@ module Template_SimBox
     real(dp), allocatable :: chempot(:)
 
     real(dp), allocatable :: ETable(:), dETable(:)
-    real(dp), allocatable :: atoms(:,:)
+    real(dp), allocatable :: atoms(:,:), centerMass(:)
 
     integer, allocatable :: NMolMin(:), NMolMax(:)
     integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)

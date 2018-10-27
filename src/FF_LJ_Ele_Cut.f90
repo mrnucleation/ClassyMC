@@ -6,7 +6,7 @@ module FF_Pair_LJ_Q_Cut
   use VarPrecision
   use Template_SimBox, only: SimBox
   use CoordinateTypes
-  use Constants, only: coulombConst
+  use ClassyConstants, only: coulombConst
 
   type, extends(forcefield) :: Pair_LJ_Q_Cut
     real(dp), allocatable :: eps(:)

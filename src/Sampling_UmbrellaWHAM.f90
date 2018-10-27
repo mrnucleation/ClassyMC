@@ -203,7 +203,6 @@ module UmbrellaWHAMRule
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
-!    type(Displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(in) :: inProb
     real(dp), intent(in) :: E_Diff
@@ -227,8 +226,10 @@ module UmbrellaWHAMRule
     call self%GetNewBiasIndex(self%newIndx, accept)
 
 
+
     if(.not. accept) then
 !      self%UHist(self%oldIndx) = self%UHist(oldIndx) + 1E0_dp
+!      write(*,*) "Early Reject"
       return
     endif
 
@@ -238,8 +239,6 @@ module UmbrellaWHAMRule
  
     extraTerms = 0E0_dp
     select type(disp)
-!      class is(Displacement)
-!          write(*,*) "DISPLACEMENT!"
       class is(Addition)
           extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
       class is(Deletion)
@@ -294,7 +293,7 @@ module UmbrellaWHAMRule
             self%binIndx(iBias) = intVal - nint(self%valMin(iBias))
 !            write(2,*) intVal, self%binIndx(iBias), nint(self%valMin(iBias))
 
-        type is(real)
+        type is(real(dp))
 !            biasVal = biasVar
             self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
        end select
@@ -330,25 +329,32 @@ module UmbrellaWHAMRule
    ! Get the variables that are used for the biasing and figure out which histogram bin they
    ! fall into. 
     accept = .true.
+    biasVal = 0E0_dp
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       select type( biasVar => analyCommon(analyIndx)%val )
         type is(integer)
 !             write(*,*) "new vals", biasVar, self%valMax(iBias),  self%valMin(iBias)
             biasVal = real(biasVar, dp)
-        type is(real)
+        type is(real(dp))
+            biasVal = real(biasVar, dp)
 !            write(*,*) biasVar
-            biasVal = biasVar
+        class default
+             write(*,*) "WHAT TYPE IS THIS?! I DON'T KNOW, HELP!"
+
+
+
       end select
 
 
+!      write(*,*) self%valMax(iBias), biasVal
       if(biasVal > self%valMax(iBias) ) then
 !        write(*,*) "Reject Max"
         accept = .false.
         return
       endif
       if(biasVal < self%valMin(iBias) ) then
-!        write(*,*) "Reject Min"
+!        write(*,*) "Reject Min", biasVal, self%valMin(iBias)
         accept = .false.
         return
       endif
@@ -358,8 +364,9 @@ module UmbrellaWHAMRule
         type is(integer)
             self%binIndx(iBias) = biasVar-nint(self%valMin(iBias))
 !            write(*,*) biasVar, self%binIndx(iBias), self%valMin(iBias),self%UBinSize(iBias)
-        type is(real)
+        type is(real(dp))
             self%binIndx(iBias) = floor((biasVar-self%valMin(iBias))/self%UBinSize(iBias))
+!            write(*,*) biasVar, self%binIndx(iBias), self%valMin(iBias),self%UBinSize(iBias)
       end select
 
 

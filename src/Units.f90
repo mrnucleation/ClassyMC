@@ -13,7 +13,7 @@
 ! Using this convension it is also possible to work in reduced
 ! units such as the Lennard-Jones units.
 !==============================================================
-module Constants
+module ClassyConstants
   use VarPrecision
   real(dp), parameter :: pi=4d0*datan(1d0) 
   real(dp), parameter :: two_pi=8d0*datan(1d0)
@@ -87,7 +87,7 @@ module Units
   end function
 !===================================================================      
   real(dp) function FindAngularUnit(unitName)
-    use Constants, only: pi
+    use ClassyConstants, only: pi
     implicit none 
     character(len=*), intent(in) :: unitName       
         

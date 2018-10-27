@@ -50,7 +50,7 @@ module FF_AENet
   subroutine Constructor_AENet(self)
     use BoxData, only: BoxArray
     use Common_MolInfo, only: nMolTypes, nAtomTypes
-    use Constants, only: pi
+    use ClassyConstants, only: pi
     use ParallelVar, only: nout
     implicit none
     class(AENet), intent(inout) :: self
@@ -92,7 +92,7 @@ module FF_AENet
 !==========================================================================+
   subroutine DetailedECalc_AENet(self, curbox, E_T, accept)
 !    use boxData, only: self%boxArray
-    use Constants, only: pi
+    use ClassyConstants, only: pi
     use ParallelVar, only: nout
     implicit none
     class(AENet), intent(inout) :: self
@@ -158,7 +158,7 @@ module FF_AENet
          self%box(3,3) = tempdim(2, 3) - tempdim(1, 3)
      end select
 
-     write(*,*) "Offset:", xoffset, yoffset, zoffset
+!     write(*,*) "Offset:", xoffset, yoffset, zoffset
      do iAtom = 1, nCurAtoms
        self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom) - xoffset
        self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom) - yoffset
@@ -177,7 +177,7 @@ module FF_AENet
        end select
      enddo
 
-     write(*,*) "Max:", xmax, ymax, zmax
+!     write(*,*) "Max:", xmax, ymax, zmax
      select type(curbox)
        class is(SimpleBox)
          self%box(1,1) = 3*(xmax + 1e-5)
@@ -185,27 +185,27 @@ module FF_AENet
          self%box(3,3) = 3*(zmax + 1e-5)
      end select
 
-     write(*,*) "Box:"
-     do i = 1,3
-       write(*,*) (self%box(i,j), j =1,3)
-     enddo
+!     write(*,*) "Box:"
+!     do i = 1,3
+!       write(*,*) (self%box(i,j), j =1,3)
+!     enddo
      self%boxrecp(:,:) = geo_recip_lattice(self%box)
-     do i = 1,3
-       write(*,*) (self%boxrecp(i,j), j =1,3)
-     enddo
+!     do i = 1,3
+!       write(*,*) (self%boxrecp(i,j), j =1,3)
+!     enddo
 
-     write(*,*) "Coords:"
-     do i = 1, nCurAtoms
-       write(*,*) self%atomTypes(i), (self%tempcoords(j, i), j=1,3)
-     enddo
+!     write(*,*) "Coords:"
+!     do i = 1, nCurAtoms
+!       write(*,*) self%atomTypes(i), (self%tempcoords(j, i), j=1,3)
+!     enddo
 
 
 
-     write(*,*) "Post Transform:"
+!     write(*,*) "Post Transform:"
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3, 1:nCurAtoms)) / (2E0_dp * pi)
-     do i = 1, nCurAtoms
-       write(*,*) self%atomTypes(i), (self%tempcoords(j, i), j=1,3)
-     enddo
+!     do i = 1, nCurAtoms
+!       write(*,*) self%atomTypes(i), (self%tempcoords(j, i), j=1,3)
+!     enddo
 
 
 !     do iAtom = 1, ncurAtoms
@@ -225,7 +225,7 @@ module FF_AENet
   end subroutine
 !============================================================================
   subroutine DiffECalc_AENet(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
-    use Constants, only: pi
+    use ClassyConstants, only: pi
     implicit none
     class(AENet), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
@@ -234,9 +234,9 @@ module FF_AENet
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
-    logical :: pbc
+    logical :: pbc=.false.
     integer :: nCurAtoms = 0
-    integer :: iAtom, jAtom, jNei
+    integer :: iAtom, jAtom, jNei, j
     integer :: atmType1, atmType2
     integer :: iDisp, nTotalMol
     real(dp) :: E_T, ecoh
@@ -254,6 +254,7 @@ module FF_AENet
     !Check the rMin criteria first to ensure there is no overlap prior to
     !passing the configuration to AENet
     select type(disp)
+      !-----------------------------------------------------
       class is(Displacement)
         do iDisp = 1, size(disp)
           iAtom = disp(iDisp)%atmIndx
@@ -262,6 +263,7 @@ module FF_AENet
             jAtom = curbox%NeighList(1)%list(jNei, iAtom)
             atmType2 = curbox % AtomType(jAtom)
             rmin_ij = self % rMinTable(atmType2, atmType1)          
+!            write(*,*) rmin_ij
 
             rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
             ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
@@ -274,6 +276,7 @@ module FF_AENet
             endif 
           enddo
         enddo
+      !-----------------------------------------------------
       class is(Addition)
         do iDisp = 1, size(disp)
           iAtom = disp(iDisp)%atmIndx
@@ -298,6 +301,8 @@ module FF_AENet
 
     ! Convert the Classy Array into an Array that AENet can read.
     nCurAtoms = 0
+    self%tempcoords = 0E0_dp
+    self%atomTypes = 0
     select type(disp)
 !       -----------------------------------------------------
       class is(Displacement)
@@ -372,7 +377,21 @@ module FF_AENet
     xoffset = 0E0_dp
     yoffset = 0E0_dp
     zoffset = 0E0_dp
-    nCurAtoms = 0
+    select type(curbox)
+      type is(SimpleBox)
+        do iAtom = 1, nCurAtoms
+          if(xoffset > self%tempcoords(1, iAtom)) then
+            xoffset = self%tempcoords(1, iAtom)
+          endif
+          if(yoffset > self%tempcoords(2, iAtom)) then
+            yoffset = self%tempcoords(2, iAtom)
+          endif
+          if(zoffset > self%tempcoords(3, iAtom)) then
+            zoffset = self%tempcoords(3, iAtom)
+          endif
+      enddo 
+!      write(*,*) "OFFSET:", xoffset, yoffset, zoffset
+    end select
     self%box = 0E0_dp
 
     xmax = 0E0_dp
@@ -399,7 +418,7 @@ module FF_AENet
        self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom) - yoffset
        self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom) - zoffset
        select type(curbox)
-         class is(SimpleBox)
+         type is(SimpleBox)
            if(xmax < self%tempcoords(1, iAtom)) then
              xmax = self%tempcoords(1, iAtom)
            endif
@@ -411,22 +430,56 @@ module FF_AENet
            endif
        end select
      enddo
+
      select type(curbox)
        class is(SimpleBox)
-         self%box(1,1) = xmax + 1e-5
-         self%box(2,2) = ymax + 1e-5
-         self%box(3,3) = zmax + 1e-5
+         self%box(1,1) = xmax + 1e-2
+         self%box(2,2) = ymax + 1e-2
+         self%box(3,3) = zmax + 1e-2
      end select
 
+     if(nCurAtoms == 0) then
+       E_Diff = -curbox%Etotal
+       return
+     endif
+!     write(2,*) "nCurAtoms", nCurAtoms
+!     do iAtom = 1, nCurAtoms
+!       write(2,*) self%atomTypes(iAtom), self%tempcoords(1, iAtom), self%tempcoords(2, iAtom), self%tempcoords(3, iAtom)
+!     enddo
+!     write(2,*)
+!     do iAtom = 1, 3
+!       write(2,*) (self%box(j, iAtom),j=1,3)
+!     enddo
 
 
+     self%boxrecp = 0E0_dp
      self%boxrecp(:,:) = geo_recip_lattice(self%box)
-     self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp, self%tempcoords)/(2.0d0*pi)
-     call get_energy_lib(self%box, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
+!     write(2,*)
+!     do iAtom = 1, 3
+!       write(2,*) (self%boxrecp(j, iAtom),j=1,3)
+!     enddo
 
-!     E_T = E_T * nTotalMol / boltz
-     E_T = Ecoh * nTotalMol / boltz
-     E_Diff = curbox%ETotal - E_T
+
+     self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
+!     do iAtom = 1, nCurAtoms
+!       write(2,*) self%atomTypes(iAtom), self%tempcoords(1, iAtom), self%tempcoords(2, iAtom), self%tempcoords(3, iAtom)
+!     enddo
+!     write(2,*)
+
+!     call get_energy_lib(self%box, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
+     call get_energy_lib(self%box, nCurAtoms, &
+                         self%tempcoords, &
+                         self%atomTypes, pbc, &
+                         Ecoh, E_T)
+
+
+     E_T = E_T * nTotalMol / boltz
+!     E_T = Ecoh * nTotalMol / boltz
+     E_Diff = E_T - curbox%ETotal
+!     write(2,*) "Engergy", E_Diff, E_T, curbox%ETotal
+!     write(2,*)
+
+
   end subroutine
 !=============================================================================+
 !End -DAENET safety block

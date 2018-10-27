@@ -3,7 +3,7 @@ module Analysis_RDF
 
 use AnaylsisClassDef, only: Analysis
 use SimpleSimBox, only: SimpleBox
-use Constants, only: pi
+use ClassyConstants, only: pi
 use VarPrecision
 
   type, public, extends(Analysis) :: rdf

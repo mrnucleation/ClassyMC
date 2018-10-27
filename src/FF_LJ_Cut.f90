@@ -22,6 +22,7 @@ module FF_Pair_LJ_Cut
 !      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
       procedure, pass :: NewECalc => New_LJ_Cut
       procedure, pass :: OldECalc => Old_LJ_Cut
+!      procedure, pass :: IsoVolECalc => IsoVol_LJ_Cut
       procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
       procedure, pass :: Prologue => Prologue_LJ_Cut
       procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
@@ -82,8 +83,12 @@ module FF_Pair_LJ_Cut
       class is(Deletion)
          call self % OldECalc(curbox, disp, E_Diff)
 
+!      class is(IsoVolChange)
+!         call self % IsoVolECalc
+
       class default
         write(*,*) "Unknown Perturbation Type Encountered by the LJ_Cut Pair Style."
+
     end select
 
 
@@ -301,7 +306,7 @@ module FF_Pair_LJ_Cut
     integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: ep, sig_sq
-    real(dp) :: LJ
+    real(dp) :: LJ, LJ2
     real(dp) :: rmin_ij      
 
     E_Diff = 0E0_dp
@@ -336,6 +341,68 @@ module FF_Pair_LJ_Cut
       enddo
     enddo
   end subroutine
+  !=====================================================================
+#ifdef IMLAZY
+  subroutine IsoVol_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+    implicit none
+    class(Pair_LJ_Cut), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    type(IsoVolChange), intent(in) :: disp(:)
+!    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    integer :: iAtom, jAtom, maxNei, listIndx, jNei
+    integer :: atmType1, atmType2
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: rx2, ry2, rz2, rsq2
+    real(dp) :: ep, sig_sq, ratio
+    real(dp) :: LJ, LJ2
+    real(dp) :: rmin_ij      
+
+    ratio = disp(1)%volNew/disp(1)%volOld
+    do iAtom = 1, curbox%nMaxAtoms-1
+      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+        cycle
+      endif
+      atmType1 = curbox % AtomType(iAtom)
+      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        if(jAtom < iAtom) then
+          cycle
+        endif
+        rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
+        ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
+        rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
+        rx2 = rx*ratio
+        ry2 = ry*ratio
+        rz2 = rz*ratio
+        call curbox%Boundary(rx, ry, rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%rCutSq) then
+          atmType2 = curbox % AtomType(jAtom)
+          rmin_ij = self%rMinTable(atmType2, atmType1)          
+        
+          if(rsq < rmin_ij) then
+            accept = .false.
+            return
+          endif
+          ep = self%epsTable(atmType2, atmType1)
+          sig_sq = self%sigTable(atmType2, atmType1)          
+
+          LJ = (sig_sq/rsq)
+          LJ = LJ * LJ * LJ
+          LJ = ep * LJ * (LJ-1E0_dp)
+          E_Diff = E_Diff + LJ
+!          write(*,*) iAtom, jAtom, rsq, LJ
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
+        endif
+      enddo
+    enddo
+
+  end subroutine
+#endif
   !=====================================================================
   subroutine ProcessIO_LJ_Cut(self, line)
     use Common_MolInfo, only: nAtomTypes

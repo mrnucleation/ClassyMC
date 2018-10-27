@@ -1,4 +1,12 @@
 !================================================================================
+! Pedone Pair Class for the modeling of Silicates
+! For details please see the original paper
+! J. Phys. Chem. B, 2006, 110 (24), pp 11780–11795  DOI: 10.1021/jp0611018
+! This module also includes the implicit solvent model shown in
+! Computational Materials Science  2018 Volume 149 202-207, DOI:10.1016/j.commatsci.2018.03.034.
+! and in
+!
+!================================================================================
 module FF_Pair_Pedone_Cut
   use Template_ForceField, only: ForceField
   use VarPrecision
@@ -6,16 +14,18 @@ module FF_Pair_Pedone_Cut
   use CoordinateTypes
 
   type, extends(forcefield) :: Pair_Pedone_Cut
-    real(dp), allocatable :: eps(:)
-    real(dp), allocatable :: sig(:)
     real(dp), allocatable :: rMin(:)
-
-    real(dp), allocatable :: epsTable(:,:)
-    real(dp), allocatable :: sigTable(:,:)
     real(dp), allocatable :: rMinTable(:,:)
+
+ 
+    logical :: implicitSolvent = .false.
+    real(dp), allocatable :: repul_tab(:,:), rEq_tab(:,:)
+    real(dp), allocatable :: q_tab(:,:), alpha_Tab(:,:), D_Tab(:,:)
+    real(dp), allocatable :: bornRad(:)
 !    real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Constructor => Constructor_Pedone_Cut
+      procedure, pass :: SolventFunction => Pedone_SolventFunction
       procedure, pass :: DetailedECalc => Detailed_Pedone_Cut
       procedure, pass :: DiffECalc => DiffECalc_Pedone_Cut
       procedure, pass :: ShiftECalc_Single => Shift_Pedone_Cut_Single
@@ -35,33 +45,42 @@ module FF_Pair_Pedone_Cut
     class(Pair_Pedone_Cut), intent(inout) :: self
     integer :: AllocateStat
 
-    allocate(self%eps(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%sig(1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
-
-    allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
-    allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
-    self%eps = 4E0_dp
-    self%sig = 1E0_dp
-    self%rMin = 0.5E0_dp
+    allocate(self%repul_tab(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%rEq_tab(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%q_tab(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%alpha_tab(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%D_tab(1:nAtomTypes), stat = AllocateStat)
 
-    self%epsTable = 4E0_dp
-    self%sigTable = 1E0_dp
+    self%repul_tab = 0E0_dp
+    self%rEq_tab = 0E0_dp
+    self%q_tab = 0E0_dp
+    self%alpha_tab = 0E0_dp
+    self%D_tab = 0E0_dp
+
+    self%rMin = 0.5E0_dp
     self%rMinTable = 0.5E0_dp
     self%rCut = 5E0_dp
     self%rCutSq = 5E0_dp**2
 
-    IF (AllocateStat /= 0) STOP "Allocation in the LJ/Cut Pair Style"
+    IF (AllocateStat /= 0) STOP "Allocation Error in the Pedone Pair Style"
 
   end subroutine
+!======================================================================================      
+  pure real(dp) function Pedone_SolventFunction(r, q_ij, born1, born2) 
+    real(dp), intent(in) :: r, q_ij, born1, born2
+    real(dp) :: f
+
+    f = sqrt(r*r + born1*born2*exp(-r*r/(4d0*born1*born2) ) ) 
+    solventFunction = -0.5d0*(1d0-1d0/dieletric)*q_ij / f
+  end function
 !============================================================================
   subroutine DiffECalc_Pedone_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
     class(Pair_Pedone_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-!    class(displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
@@ -73,18 +92,15 @@ module FF_Pair_Pedone_Cut
     E_Diff = 0E0_dp
 
     select type(disp)
-      class is(DisplacementNew)
+      class is(Displacement)
          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
 
       class is(Addition)
-!         write(*,*) size(tempList)
          call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
 
       class is(Deletion)
          call self % OldECalc(curbox, disp, E_Diff)
 
-!      class is(Displacement)
-!        stop
       class default
         write(*,*) "Unknown Perturbation Type Encountered by the Pedone_Cut Pair Style."
     end select
@@ -147,14 +163,14 @@ module FF_Pair_Pedone_Cut
           repul_C = repul_tab(atmType1, atmType2)          
 
           if(repul_C /= 0E0_dp) then
-            LJ = (1E0_dp/r)**6
+            LJ = (1E0_dp/rsq)**6
             LJ = repul_C * LJ
             E_LJ = E_LJ + LJ
           endif
  
-          r = sqrt(r)
+          r = sqrt(rsq)
           Ele = q_ij/r
-          if(implcSolvent) then
+          if(self%implicitSolvent) then
              born1 = bornRad(atmType1)
              born2 = bornRad(atmType2)
              Solvent = solventFunction(r, q_ij, born1, born2)
@@ -183,8 +199,7 @@ module FF_Pair_Pedone_Cut
     implicit none
     class(Pair_Pedone_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-!    type(displacement), intent(in) :: disp(:)
-    type(DisplacementNew), intent(in) :: disp(:)
+    type(Displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 

@@ -31,7 +31,7 @@
       end subroutine      
 !=======================================================
       real(dp) function Gaussian() result(num)
-      use Constants
+      use ClassyConstants
       use VarPrecision
       implicit none
       real(dp) :: y1, w, x1, x2
@@ -69,7 +69,7 @@
 !     Using these vectors, the new vector(v2) is calculated using a rotational matrix
  
       subroutine Generate_UnitCone(v1,r2,bond_ang,v2)
-      use Constants      
+      use ClassyConstants      
       use CoordinateTypes
       implicit none
       real(dp), dimension(1:3), intent(in) :: v1
@@ -111,7 +111,7 @@
 !     Using these vectors, the new vectors(v2 and v3) is calculated using a rotational matrix
 
       subroutine Generate_UnitPyramid(v1, r2, r3, bond_ang1, bond_ang2, dihed, v2, v3)
-      use Constants      
+      use ClassyConstants      
       use CoordinateTypes
       implicit none
       real(dp), dimension(1:3), intent(in) :: v1
@@ -162,7 +162,7 @@
 !     The coordinate is created using a relative orthonormal framework given by these vectors
 !     w1=(x2,y2,z2)   w2=(-y2,x2,0)  w3=(-x2*z2, -y2*z2, x2^2 + y2^2)
       subroutine Generate_UnitTorsion(v1,v2,r3,bond_ang,tors_angle,v3)
-      use Constants      
+      use ClassyConstants      
       use CoordinateTypes
       implicit none
       real(dp), dimension(1:3), intent(in) :: v1,v2
@@ -229,7 +229,7 @@
 !     Using these vectors, the new vectors(v2 and v3) is calculated using a rotational matrix
 
       subroutine Generate_UnitTetrahedral(v1, r2, r3, r4, bond_ang1, bond_ang2, bond_ang3, dihed1, dihed2, v2, v3, v4)
-      use Constants      
+      use ClassyConstants      
       use CoordinateTypes
       implicit none
       real(dp), dimension(1:3), intent(in) :: v1
@@ -286,7 +286,7 @@
 
 !=======================================================
   function ListRNG(list, norm) result(bin)
-    use Constants
+    use ClassyConstants
     use VarPrecision
     implicit none
     real(dp), intent(in) :: list(:)

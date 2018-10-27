@@ -40,25 +40,25 @@ module CoordinateTypes
     integer :: listIndex = -1
   end type
 
-  !Move type where the volume of the entire box is changed.
-  type, extends(Perturbation) :: VolChange
-    real(dp) :: volNew, volOld
-  end type
-
   !Move type where an atom of one type is exchanged for an atom of another type.
   type, extends(Perturbation) :: Exchange
     type(Addition) :: inAtom
     type(Deletion) :: outAtom
   end type
 
+  !Move type where the volume of the entire box is changed.
+  type, extends(Perturbation) :: VolChange
+    real(dp) :: volNew, volOld
+  end type
 
   !Move type where the volume of the box changes equally in all directions
-!    type, extends(VolChange) :: IsoVolChange
-!    real(dp) :: volNew, volOld
-!  end type
+  type, extends(VolChange) :: IsoVolChange
+  end type
 
-
-
+  !Move type where the volume of the box changes unequally 
+  type, extends(VolChange) :: AnisoVolChange
+    real(dp), allocatable :: scaleVal(:)
+  end type
 
 end module
 !======================================================

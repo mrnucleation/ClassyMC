@@ -55,6 +55,7 @@ module SimpleSimBox
       procedure, pass :: Boundary => SimpleBox_Boundary
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
       procedure, pass :: IOProcess => SimpleBox_IOProcess
+!      procedure, pass :: IOProcessCommon => SimpleBox_IOProcessCommon
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: DumpData => SimpleBox_DumpData
 
@@ -130,6 +131,7 @@ module SimpleSimBox
 
     allocate(self%MolStartIndx(1:maxMol), stat=AllocateStatus)
     allocate(self%MolEndIndx(1:maxMol), stat=AllocateStatus)
+    allocate(self%centerMass(1:maxMol), stat=AllocateStatus)
 
     allocate(self%TypeFirst(1:nMolTypes), stat=AllocateStatus)
     allocate(self%TypeLast(1:nMolTypes), stat=AllocateStatus)
@@ -493,6 +495,7 @@ module SimpleSimBox
       lastMol = lastMol + self%NMolMax(iType) 
     enddo
     lastMol = lastMol + self%NMol(nType)
+    self%centermass(molIndx) = self%centermass(lastMol)
 !    if(molIndx == lastMol) then
 !      self % NMol(nType) = self % NMol(nType) - 1 
 !      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
@@ -520,6 +523,7 @@ module SimpleSimBox
 !==========================================================================================
   subroutine SimpleBox_UpdatePosition(self, disp, tempList, tempNNei)
     use CoordinateTypes
+    use Common_MolInfo, only: MolData
     implicit none
     class(SimpleBox), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
@@ -537,6 +541,7 @@ module SimpleSimBox
           self % atoms(2, dispIndx) = disp(iDisp)%y_new
           self % atoms(3, dispIndx) = disp(iDisp)%z_new
         enddo
+
 
        !-------------------------------------------------
       class is(Addition)
@@ -677,6 +682,8 @@ module SimpleSimBox
       endif
     endif
 
+    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
+    write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
     if( size(self%Constrain) > 0 ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % Epilogue

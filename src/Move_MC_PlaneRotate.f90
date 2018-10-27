@@ -232,7 +232,7 @@ use VarPrecision
   end subroutine
 !=========================================================================
   subroutine PlaneRotate_Maintenance(self)
-    use Constants, only: pi
+    use ClassyConstants, only: pi
     implicit none
     class(PlaneRotate), intent(inout) :: self
     real(dp), parameter :: limit = pi
