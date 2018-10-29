@@ -563,14 +563,7 @@ module SimpleSimBox
     end select
 
 
-
-    
-!    if(disp(iDisp)%newlist) then
-!      call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
-!    endif
-
   end subroutine
-
 !==========================================================================================
   subroutine SimpleBox_Maintenance(self)
     use CoordinateTypes
