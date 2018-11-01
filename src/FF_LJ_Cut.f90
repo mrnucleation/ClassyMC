@@ -192,15 +192,16 @@ module FF_Pair_LJ_Cut
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
 !        write(*,*) sqrt(rsq)
+
         atmType2 = curbox % AtomType(jAtom)
+        ep = self % epsTable(atmType2, atmType1)
+        sig_sq = self % sigTable(atmType2, atmType1)  
         if(rsq < self%rCutSq) then
           rmin_ij = self % rMinTable(atmType2, atmType1)          
           if(rsq < rmin_ij) then
             accept = .false.
             return
           endif 
-          ep = self % epsTable(atmType2, atmType1)
-          sig_sq = self % sigTable(atmType2, atmType1)  
 
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
@@ -217,8 +218,6 @@ module FF_Pair_LJ_Cut
         rsq = rx*rx + ry*ry + rz*rz
 !        write(*,*) sqrt(rsq)
         if(rsq < self%rCutSq) then
-          ep = self % epsTable(atmType2, atmType1)
-          sig_sq = self % sigTable(atmType2, atmType1)  
           if(iAtom == jAtom) then
             write(*,*) "NeighborList Error!", iAtom, jAtom
           endif
@@ -408,6 +407,7 @@ module FF_Pair_LJ_Cut
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: CountCommands, GetXCommand
     use Input_Format, only: maxLineLen
+    use Units, only: inEngUnit, inLenUnit
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
@@ -426,6 +426,7 @@ module FF_Pair_LJ_Cut
         read(command, *) rCut
         self % rCut = rCut
         self % rCutSq = rCut * rCut
+
       case default
         param = .true.
     end select
@@ -437,10 +438,14 @@ module FF_Pair_LJ_Cut
       select case(nPar)
         case(4)
           read(line, *) type1, ep, sig, rMin
+          ep = ep * inEngUnit
+          sig = sig * inLenUnit
+          rMin = rMin * inLenUnit
 
-          self%eps(type1) = ep
-          self%sig(type1) = sig
-          self%rMin(type1) = rMin
+          self%eps(type1) = ep 
+          self%sig(type1) = sig 
+          self%rMin(type1) = rMin 
+
 
           do jType = 1, nAtomTypes
             self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%eps(jType))

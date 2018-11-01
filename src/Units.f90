@@ -24,6 +24,13 @@ end module
 !===================================================================      
 module Units
   use VarPrecision
+  real(dp) :: inEngUnit = 1E0_dp
+  real(dp) :: inLenUnit = 1E0_dp
+  real(dp) :: inAngUnit = 1E0_dp
+  character(len=6) :: inengStr = "kb"
+  character(len=6) :: inlenStr = "ang"
+  character(len=6) :: inangStr = "rad"
+
   real(dp) :: outEngUnit = 1E0_dp
   real(dp) :: outLenUnit = 1E0_dp
   real(dp) :: outAngUnit = 1E0_dp

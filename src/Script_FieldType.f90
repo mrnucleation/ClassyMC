@@ -14,6 +14,7 @@ contains
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Q_Cut, only: Pair_LJ_Q_Cut
+    use FF_Pair_Pedone_Cut, only: Pair_Pedone_Cut
     use FF_Pair_Tersoff, only: Pair_Tersoff
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
 
@@ -61,6 +62,11 @@ contains
       case("thermointegration")
         allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
+
+      case("pedone")
+        allocate(Pair_Pedone_Cut::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Pedone Cut style"
+
 
       case("tersoff")
         allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)

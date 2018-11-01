@@ -79,10 +79,6 @@ contains
         flush(nout)
       endif
 
-!      if(mod(iCycle, 100) == 0) then
-!        call BoxArray(1) % box % NeighList(1) % BuildList
-!      endif
-
       call Analyze(iCycle, iMove, accept, .false.)
       call Maintenance(iCycle, iMove)
       call Trajectory(iCycle, iMove)

@@ -7,6 +7,7 @@ module MoveClassDef
   type, public, extends(classyClass) :: MCMove
     real(dp) :: atmps = 1E-30_dp
     real(dp) :: accpt = 0E0_dp
+    real(dp), allocatable :: boxProb(:)
 
     !Temporary Neighborlist Variables
     integer, allocatable :: tempNnei(:)
@@ -17,6 +18,7 @@ module MoveClassDef
       procedure, pass :: GeneratePosition 
       procedure, pass :: FullMove
       procedure, pass :: GetAcceptRate
+      procedure, pass :: GetBoxProb
       procedure, pass :: ProcessIO
 !      procedure, pass :: Maintenance 
   end type
@@ -55,6 +57,13 @@ module MoveClassDef
 
     return
   end function
+!=========================================================================
+  subroutine GetBoxProb(self, boxProb)
+    implicit none
+    class(MCMove), intent(inout) :: self
+    real(dp), intent(inout) :: boxProb(:)
+
+  end subroutine
 !=========================================================================
   subroutine ProcessIO(self, line, lineStat)
     use Input_Format, only: maxLineLen

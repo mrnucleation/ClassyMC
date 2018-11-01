@@ -10,7 +10,7 @@ contains
     use ParallelVar, only: nout
     use Anaylsis_ClusterSize, only: ClusterSize
     use Analysis_RDF, only: rdf
-    use Anaylsis_ThermAverage, only: ThermAverage
+    use Anaylsis_ThermoAverage, only: ThermoAverage
     use Anaylsis_DistPair, only: DistPair
     use Anaylsis_ThermoIntegration, only: ThermoIntegration
     implicit none
@@ -30,7 +30,7 @@ contains
         allocate(rdf::AnalysisArray(AnaNum) % func)
 
       case("thermoaverage")
-        allocate(thermAverage::AnalysisArray(AnaNum) % func)
+        allocate(thermoAverage::AnalysisArray(AnaNum) % func)
 
       case("thermointegration")
         allocate(ThermoIntegration::AnalysisArray(AnaNum) % func)

@@ -19,7 +19,7 @@ module OrthoBoxDef
 !      procedure, pass :: GetDimensions => Ortho_GetDimensions
       procedure, pass :: Boundary => Ortho_Boundary
 !      procedure, pass :: UpdatePosition => Ortho_UpdatePosition
-      procedure, pass :: IOProcess => Ortho_IOProcess
+      procedure, pass :: ProcessIO => Ortho_ProcessIO
       procedure, pass :: DumpData => Ortho_DumpData
   end type
 
@@ -132,7 +132,7 @@ module OrthoBoxDef
 !
 !  end subroutine
 !==========================================================================================
-  subroutine Ortho_IOProcess(self, line, lineStat)
+  subroutine Ortho_ProcessIO(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     use ForcefieldData, only: EnergyCalculator

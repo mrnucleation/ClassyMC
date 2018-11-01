@@ -46,10 +46,13 @@ contains
 
     nSum = 0
     nType = -1
+    molIndx = 0
     do iType = 1, nMolTypes
       nSum = nSum + box%NMol(iType)
+
 !      write(*,*) iType, nSum
-!      write(*,*) globIndx, molIndx
+!      write(*,*) globIndx
+!      write(*,*)
       if(globIndx <= nSum) then
         nType = iType
         exit

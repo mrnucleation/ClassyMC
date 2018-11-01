@@ -82,7 +82,7 @@ use VarPrecision
     accept = .true.
 
     !Propose move
-    rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
+    rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp )
     call FindMolecule(trialbox, rawIndx, nMove)
     call trialBox % GetMolData(nMove, molStart=molStart, molEnd=molEnd, &
                                molType=molType)

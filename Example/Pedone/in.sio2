@@ -1,0 +1,52 @@
+#======================================
+#  set rng_seed -6
+  set rng_seed 4272
+  set NeighSkin 2.0
+  set moves 100
+  set cycles 60000
+  SamplingType Metropolis
+#  SamplingType UmbrellaWHAM
+#  SamplingType Umbrella
+#  modify Sampling biasvariables 1
+#  modify Sampling analysis 1
+#  modify Sampling bounds 1 9 1.0 10.0
+#  modify Sampling reference 1.0
+#  modify Sampling whamfreq 100000
+
+  ForceField "PedoneSiO2.clFF"
+
+  Create Boxes
+    fromfile "SiO2.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 3000
+  modify box 1 buildfreq 100
+
+  modify box 1 chempotential 1 -90.210340372
+  modify box 1 chempotential 2 -90.210340372
+  NeighList 1 rsqlist 1
+
+  Create Moves
+#    AtomTranslation 2.0
+    MolTranslation 2.0
+    UBSwap 1.0
+  End_Create
+
+#  Create constraint 1
+#    distancecriteria 1 1.5 1
+#  End_Create
+
+  Create Analysis
+    clustersize 1 1 
+#    distpair 1 2 
+  End_Create
+
+
+  Create trajectory
+    dump 1 100 "Traj.lammpstrj"
+  End_Create
+
+
+   Run
+#=====================================

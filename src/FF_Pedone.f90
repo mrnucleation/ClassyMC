@@ -18,9 +18,10 @@ module FF_Pair_Pedone_Cut
 
  
     logical :: implicitSolvent = .false.
-    real(dp), allocatable :: repul_tab(:,:), rEq_tab(:,:)
-    real(dp), allocatable :: q_tab(:,:), alpha_Tab(:,:), D_Tab(:,:)
+    real(dp), allocatable :: repul_tab(:,:), rEqTable(:,:)
+    real(dp), allocatable :: qTable(:,:), alpha_Tab(:,:), D_Tab(:,:)
     real(dp), allocatable :: bornRad(:)
+    real(dp), allocatable :: q(:)
 !    real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Constructor => Constructor_Pedone_Cut
@@ -28,7 +29,7 @@ module FF_Pair_Pedone_Cut
       procedure, pass :: DetailedECalc => Detailed_Pedone_Cut
       procedure, pass :: DiffECalc => DiffECalc_Pedone_Cut
       procedure, pass :: ShiftECalc_Single => Shift_Pedone_Cut_Single
-      procedure, pass :: ShiftECalc_Multi => Shift_Pedone_Cut_Multi
+!      procedure, pass :: ShiftECalc_Multi => Shift_Pedone_Cut_Multi
       procedure, pass :: NewECalc => New_Pedone_Cut
       procedure, pass :: OldECalc => Old_Pedone_Cut
       procedure, pass :: ProcessIO => ProcessIO_Pedone_Cut
@@ -47,15 +48,16 @@ module FF_Pair_Pedone_Cut
     allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
 
-    allocate(self%repul_tab(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%rEq_tab(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%q_tab(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%alpha_tab(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%D_tab(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%repul_tab(1:nAtomTypes,1:natomtypes), stat = AllocateStat)
+    allocate(self%rEqTable(1:nAtomTypes,1:natomtypes), stat = AllocateStat)
+    allocate(self%qTable(1:natomtypes,1:natomtypes), stat = AllocateStat)
+    allocate(self%alpha_tab(1:nAtomTypes, 1:natomtypes), stat = AllocateStat)
+    allocate(self%D_tab(1:nAtomTypes, 1:natomtypes), stat = AllocateStat)
 
+    allocate(self%q(1:nAtomTypes), stat = AllocateStat)
     self%repul_tab = 0E0_dp
-    self%rEq_tab = 0E0_dp
-    self%q_tab = 0E0_dp
+    self%rEqTable = 0E0_dp
+    self%qTable = 0E0_dp
     self%alpha_tab = 0E0_dp
     self%D_tab = 0E0_dp
 
@@ -70,12 +72,13 @@ module FF_Pair_Pedone_Cut
 
   end subroutine
 !======================================================================================      
-  pure real(dp) function Pedone_SolventFunction(r, q_ij, born1, born2) 
+  pure function Pedone_SolventFunction(self,r, q_ij, born1, born2) result(f)
+    class(Pair_Pedone_Cut), intent(in) :: self
     real(dp), intent(in) :: r, q_ij, born1, born2
     real(dp) :: f
 
-    f = sqrt(r*r + born1*born2*exp(-r*r/(4d0*born1*born2) ) ) 
-    solventFunction = -0.5d0*(1d0-1d0/dieletric)*q_ij / f
+    f = sqrt(r*r + born1*born2*exp(-r*r/(4E0_dp*born1*born2) ) ) 
+    f = -0.5E0_dp*(1E0_dp-1E0_dp/dieletric)*q_ij / f
   end function
 !============================================================================
   subroutine DiffECalc_Pedone_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
@@ -120,8 +123,9 @@ module FF_Pair_Pedone_Cut
     integer :: iType, jType, iAtom, jAtom
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, q_ij, alpha, delta, repul_C
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: born1, born2
+    real(dp) :: q_ij, alpha, delta, repul_C, r_eq
     real(dp) :: LJ, Ele, Morse, Solvent
     real(dp) :: E_LJ, E_Ele, E_Morse, E_Solvent
     real(dp) :: rmin_ij      
@@ -159,13 +163,15 @@ module FF_Pair_Pedone_Cut
             write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
             write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
             write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
+            accept = .false.
           endif 
-          r_eq = rEq_tab(atmType2, atmType1)
-          q_ij = q_tab(atmType2, atmType1)
-          alpha = alpha_Tab(atmType2, atmType1)
-          delta = D_Tab(atmType2, atmType1)
-          repul_C = repul_tab(atmType2, atmType1)
+          r_eq = self%rEqTable(atmType2, atmType1)
+          q_ij = self%qTable(atmType2, atmType1)
+          alpha = self%alpha_Tab(atmType2, atmType1)
+          delta = self%D_Tab(atmType2, atmType1)
+          repul_C = self%repul_tab(atmType2, atmType1)
 
+          write(*,*) r_eq, q_ij, alpha, delta, repul_C
           LJ = 0E0_dp
           if(repul_C /= 0E0_dp) then
             LJ = (1E0_dp/rsq)**6
@@ -179,7 +185,7 @@ module FF_Pair_Pedone_Cut
           if(self%implicitSolvent) then
              born1 = self%bornRad(atmType1)
              born2 = self%bornRad(atmType2)
-             Solvent = solventFunction(r, q_ij, born1, born2)
+             Solvent = self%solventFunction(r, q_ij, born1, born2)
              E_Solvent = E_Solvent + Solvent
           endif
           E_Ele = E_Ele + Ele
@@ -190,8 +196,8 @@ module FF_Pair_Pedone_Cut
              E_Morse = E_Morse + Morse
           endif
 
-          curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ + Ele + Moorse + Solvent
-          curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ + Ele + Moorse + Solvent
+          curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ + Ele + Morse + Solvent
+          curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ + Ele + Morse + Solvent
         endif
       enddo
     enddo
@@ -203,7 +209,7 @@ module FF_Pair_Pedone_Cut
       write(nout,*) "Solvation Energy:", E_Solvent
     endif
       
-    E_T = E_LJ + E_Solvent, + E_Ele + E_Morse
+    E_T = E_LJ + E_Solvent + E_Ele + E_Morse
   end subroutine
   !=====================================================================
   subroutine Shift_Pedone_Cut_Single(self, curbox, disp, E_Diff, accept)
@@ -217,8 +223,9 @@ module FF_Pair_Pedone_Cut
     integer :: iDisp, iAtom, jNei, jAtom, dispLen
 !    integer :: maxIndx, minIndx
     integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, q_ij, alpha, delta, repul_C
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: born1, born2
+    real(dp) :: q_ij, alpha, delta, repul_C, r_eq
     real(dp) :: LJ, Ele, Morse, Solvent
     real(dp) :: rmin_ij      
 
@@ -248,7 +255,7 @@ module FF_Pair_Pedone_Cut
             return
           endif 
 
-          repul_C = repul_tab(atmType2, atmType1)
+          repul_C = self%repul_tab(atmType2, atmType1)
           if(repul_C /= 0E0_dp) then
             LJ = (1E0_dp/rsq)**6
             LJ = repul_C * LJ
@@ -256,7 +263,7 @@ module FF_Pair_Pedone_Cut
             curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
             curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
           endif
-          q_ij = q_tab(atmType2, atmType1)
+          q_ij = self % qTable(atmType2, atmType1)
 
           r = sqrt(rsq)
           Ele = q_ij/r
@@ -268,16 +275,16 @@ module FF_Pair_Pedone_Cut
           if(self%implicitSolvent) then
              born1 = self%bornRad(atmType1)
              born2 = self%bornRad(atmType2)
-             Solvent = solventFunction(r, q_ij, born1, born2)
+             Solvent = self%solventFunction(r, q_ij, born1, born2)
              E_Diff = E_Diff + Solvent
              curbox % dETable(iAtom) = curbox % dETable(iAtom) + Solvent
              curbox % dETable(jAtom) = curbox % dETable(jAtom) + Solvent
           endif
 
-          delta = D_Tab(atmType2, atmType1)
-          if(delta .ne. 0E0_dp) then
-             alpha = alpha_Tab(atmType2, atmType1)
-             r_eq = rEq_tab(atmType2, atmType1)
+          delta = self % D_Tab(atmType2, atmType1)
+          if(delta /= 0E0_dp) then
+             alpha = self%alpha_Tab(atmType2, atmType1)
+             r_eq = self%rEqTable(atmType2, atmType1)
              Morse = 1E0_dp - exp(-alpha*(r-r_eq))
              Morse = delta*(Morse*Morse - 1E0_dp)
              E_Diff = E_Diff + Morse
@@ -297,7 +304,7 @@ module FF_Pair_Pedone_Cut
             write(*,*) "NeighborList Error!", iAtom, jAtom
           endif
 
-          repul_C = repul_tab(atmType2, atmType1)
+          repul_C = self % repul_tab(atmType2, atmType1)
           if(repul_C /= 0E0_dp) then
             LJ = (1E0_dp/rsq)**6
             LJ = repul_C * LJ
@@ -305,7 +312,7 @@ module FF_Pair_Pedone_Cut
             curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
             curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
           endif
-          q_ij = q_tab(atmType2, atmType1)
+          q_ij = self %qTable(atmType2, atmType1)
 
           r = sqrt(rsq)
           Ele = q_ij/r
@@ -317,19 +324,19 @@ module FF_Pair_Pedone_Cut
           if(self%implicitSolvent) then
              born1 = self%bornRad(atmType1)
              born2 = self%bornRad(atmType2)
-             Solvent = solventFunction(r, q_ij, born1, born2)
-             E_Diff = E_Diff + Solvent
+             Solvent = self%solventFunction(r, q_ij, born1, born2)
+             E_Diff = E_Diff - Solvent
              curbox % dETable(iAtom) = curbox % dETable(iAtom) - Solvent
              curbox % dETable(jAtom) = curbox % dETable(jAtom) - Solvent
           endif
 
-          delta = D_Tab(atmType2, atmType1)
-          if(delta .ne. 0E0_dp) then
-             alpha = alpha_Tab(atmType2, atmType1)
-             r_eq = rEq_tab(atmType2, atmType1)
+          delta = self%D_Tab(atmType2, atmType1)
+          if(delta /= 0E0_dp) then
+             alpha = self%alpha_Tab(atmType2, atmType1)
+             r_eq = self%rEqTable(atmType2, atmType1)
              Morse = 1E0_dp - exp(-alpha*(r-r_eq))
              Morse = delta*(Morse*Morse - 1E0_dp)
-             E_Diff = E_Diff + Morse
+             E_Diff = E_Diff - Morse
              curbox % dETable(iAtom) = curbox % dETable(iAtom) - Morse
              curbox % dETable(jAtom) = curbox % dETable(jAtom) - Morse
           endif
@@ -351,8 +358,9 @@ module FF_Pair_Pedone_Cut
 
     integer :: iDisp, iAtom, jAtom, dispLen, maxNei, listIndx, jNei
     integer :: atmType1, atmType2
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, q_ij, alpha, delta, repul_C
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: born1, born2
+    real(dp) :: q_ij, alpha, delta, repul_C, r_eq
     real(dp) :: LJ, Ele, Morse, Solvent
     real(dp) :: rmin_ij      
 
@@ -365,7 +373,6 @@ module FF_Pair_Pedone_Cut
 !    write(*,*)
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
-!      write(*,*) iAtom
       atmType1 = curbox % AtomType(iAtom)
 
       listIndx = disp(iDisp)%listIndex
@@ -386,7 +393,7 @@ module FF_Pair_Pedone_Cut
             return
           endif
 
-          repul_C = repul_tab(atmType2, atmType1)
+          repul_C = self%repul_tab(atmType2, atmType1)
           if(repul_C /= 0E0_dp) then
             LJ = (1E0_dp/rsq)**6
             LJ = repul_C * LJ
@@ -394,7 +401,7 @@ module FF_Pair_Pedone_Cut
             curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
             curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
           endif
-          q_ij = q_tab(atmType2, atmType1)
+          q_ij = self%qTable(atmType2, atmType1)
 
           r = sqrt(rsq)
           Ele = q_ij/r
@@ -406,16 +413,16 @@ module FF_Pair_Pedone_Cut
           if(self%implicitSolvent) then
              born1 = self%bornRad(atmType1)
              born2 = self%bornRad(atmType2)
-             Solvent = solventFunction(r, q_ij, born1, born2)
+             Solvent = self%solventFunction(r, q_ij, born1, born2)
              E_Diff = E_Diff + Solvent
              curbox % dETable(iAtom) = curbox % dETable(iAtom) + Solvent
              curbox % dETable(jAtom) = curbox % dETable(jAtom) + Solvent
           endif
 
-          delta = D_Tab(atmType2, atmType1)
-          if(delta .ne. 0E0_dp) then
-             alpha = alpha_Tab(atmType2, atmType1)
-             r_eq = rEq_tab(atmType2, atmType1)
+          delta = self%D_Tab(atmType2, atmType1)
+          if(delta /= 0E0_dp) then
+             alpha = self % alpha_Tab(atmType2, atmType1)
+             r_eq = self % rEqTable(atmType2, atmType1)
              Morse = 1E0_dp - exp(-alpha*(r-r_eq))
              Morse = delta*(Morse*Morse - 1E0_dp)
              E_Diff = E_Diff + Morse
@@ -436,9 +443,10 @@ module FF_Pair_Pedone_Cut
     integer :: iDisp, iAtom, jAtom, remLen, jNei
     integer :: atmType1, atmType2, globIndx
     integer :: molEnd, molStart
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: LJ
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: born1, born2
+    real(dp) :: q_ij, alpha, delta, repul_C, r_eq
+    real(dp) :: LJ, Ele, Morse, Solvent
     real(dp) :: rmin_ij      
 
     E_Diff = 0E0_dp
@@ -459,7 +467,7 @@ module FF_Pair_Pedone_Cut
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-          repul_C = repul_tab(atmType2, atmType1)
+          repul_C = self%repul_tab(atmType2, atmType1)
           if(repul_C /= 0E0_dp) then
             LJ = (1E0_dp/rsq)**6
             LJ = repul_C * LJ
@@ -467,7 +475,7 @@ module FF_Pair_Pedone_Cut
             curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
             curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
           endif
-          q_ij = q_tab(atmType2, atmType1)
+          q_ij = self%qTable(atmType2, atmType1)
 
           r = sqrt(rsq)
           Ele = q_ij/r
@@ -479,16 +487,16 @@ module FF_Pair_Pedone_Cut
           if(self%implicitSolvent) then
              born1 = self%bornRad(atmType1)
              born2 = self%bornRad(atmType2)
-             Solvent = solventFunction(r, q_ij, born1, born2)
+             Solvent = self%solventFunction(r, q_ij, born1, born2)
              E_Diff = E_Diff - Solvent
              curbox % dETable(iAtom) = curbox % dETable(iAtom) - Solvent
              curbox % dETable(jAtom) = curbox % dETable(jAtom) - Solvent
           endif
 
-          delta = D_Tab(atmType2, atmType1)
-          if(delta .ne. 0E0_dp) then
-             alpha = alpha_Tab(atmType2, atmType1)
-             r_eq = rEq_tab(atmType2, atmType1)
+          delta = self%D_Tab(atmType2, atmType1)
+          if(delta /= 0E0_dp) then
+             alpha = self % alpha_Tab(atmType2, atmType1)
+             r_eq = self % rEqTable(atmType2, atmType1)
              Morse = 1E0_dp - exp(-alpha*(r-r_eq))
              Morse = delta*(Morse*Morse - 1E0_dp)
              E_Diff = E_Diff - Morse
@@ -503,8 +511,10 @@ module FF_Pair_Pedone_Cut
   !=====================================================================
   subroutine ProcessIO_Pedone_Cut(self, line)
     use Common_MolInfo, only: nAtomTypes
+    use ClassyConstants, only: coulombConst
     use Input_Format, only: CountCommands, GetXCommand
     use Input_Format, only: maxLineLen
+    use Units, only: inEngUnit, inLenUnit
     implicit none
     class(Pair_Pedone_Cut), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
@@ -513,7 +523,7 @@ module FF_Pair_Pedone_Cut
     logical :: logicVal
     integer :: jType, lineStat
     integer :: type1, type2, nPar
-    real(dp) :: q, repC, delta, alpha, rCut, rMin
+    real(dp) :: q, repC, delta, alpha, rCut, rMin, rEq
   
 
     call GetXCommand(line, command, 1, lineStat)
@@ -537,15 +547,20 @@ module FF_Pair_Pedone_Cut
 !      call GetAllCommands(line, parlist, nPar, lineStat)
       call CountCommands(line, nPar)
       select case(nPar)
-        case(4)
+        case(7)
           read(line, *) type1, repC, rEq, alpha, delta, q, rMin
           self%q(type1) = q
+          repC = repC * inEngUnit/inLenUnit**12
+          rEq = rEq * inLenUnit
+          alpha = alpha / inLenUnit**2
+          delta = delta * inEngUnit
+          rMin = rMin * inLenUnit
 
           self%repul_tab(1, type1) = repC
           self%repul_tab(type1, 1) = repC
 
-          self%rEq_tab(1, type1) = rEq
-          self%rEq_tab(type1, 1) = rEq
+          self%rEqTable(1, type1) = rEq
+          self%rEqTable(type1, 1) = rEq
 
           self%alpha_tab(1, type1) = alpha
           self%alpha_tab(type1, 1) = alpha
@@ -557,6 +572,9 @@ module FF_Pair_Pedone_Cut
           do jType = 1, nAtomTypes
             self%qTable(type1, jType) = q * self%q(jType) * coulombConst
             self%qTable(jType, type1) = q * self%q(jType) * coulombConst
+
+            self%rMinTable(type1, jType) = max(rMin, self%rMin(jType))**2
+            self%rMinTable(jType, type1) = max(rMin, self%rMin(jType))**2
           enddo
         case default
           lineStat = -1
@@ -581,18 +599,8 @@ module FF_Pair_Pedone_Cut
     integer :: i, j
 
     do i = 1, nAtomTypes
-      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
-    enddo
-
-    do i = 1, nAtomTypes
-      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
-    enddo
-
-    do i = 1, nAtomTypes
       write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
     enddo
-
-
 
   end subroutine
   !=====================================================================

@@ -17,6 +17,8 @@ use Template_NeighList, only: NeighListDef
 !      real(dp) :: rCut, rCutSq
 !      logical :: restrictType = .false.
 !      integer, allocatable :: allowed(:)
+!      integer :: safetyCheck = .false.
+
       class(SimpleBox), pointer :: parent => null()
     contains
       procedure, pass :: Constructor => RSqList_Constructor 
@@ -377,15 +379,22 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
   subroutine Builder_RSq(trialBox)
     use Common_MolInfo, only: nMolTypes, MolData
+    use Common_NeighData, only: neighSkin
     use ParallelVar, only: nout
     implicit none
     class(SimpleBox), intent(inout) :: trialBox
     integer :: iList
     integer :: iType, jType, iAtom, jAtom, j
     integer :: iUp, iLow, jUp, jLow, molStart, jMolStart, jMolEnd, atmType
+    integer :: nNeigh
+!    integer, allocatable :: oldlist(:)
     real(dp) :: rx, ry, rz, rsq
 
+!    if(trialBox%NeighList(1)%safetyCheck) then
+!      allocate(oldlist(1:trialBix%NeighList(1)%maxNei)
+!    endif
 
+!    write(*,*) "Building"
     do iList = 1, size(trialBox%NeighList)
       trialBox%NeighList(iList)%nNeigh = 0
       trialBox%NeighList(iList)%list = 0
@@ -422,6 +431,7 @@ use Template_NeighList, only: NeighListDef
             endif
           endif
           if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
+
             trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
             if(trialBox%NeighList(iList)%nNeigh(iAtom) > trialBox%NeighList(iList)%maxNei) then
               write(nout, *) "Neighborlist overflow!"
@@ -437,6 +447,15 @@ use Template_NeighList, only: NeighListDef
         enddo
       enddo  
     enddo
+
+!    write(2,*) "----------------------------"
+!    do iAtom = 1, trialBox%nMaxAtoms
+!      if( trialBox%MolSubIndx(iAtom) > trialBox%NMol(trialBox%MolType(iAtom)) ) then
+!        cycle
+!      endif
+!      nNeigh = trialBox%NeighList(1)%nNeigh(iAtom)
+!      write(2,*) iAtom, "|", trialBox%NeighList(1)%list(1:nNeigh, iAtom)
+!    enddo
 
 
     do iList = 1, size(trialBox%NeighList)

@@ -7,7 +7,7 @@ module TrajectoryTemplate
     integer :: fileUnit = -1
     integer :: boxNum = -1
     integer :: outFreq = 5000
-    character(len=50) :: fileName
+    character(len=500) :: fileName
     contains
        procedure, pass :: SetUnit
        procedure, pass :: SetBox
@@ -58,8 +58,22 @@ module TrajectoryTemplate
   end subroutine
 !====================================================================
   subroutine OpenFile(self) 
+    use Input_Format, only: ReplaceText
+    use ParallelVar, only: myid
     implicit none
-    class(trajectory), intent(in) :: self
+    class(trajectory), intent(inout) :: self
+    integer :: iCharacter
+    character(len=30) :: idString
+
+    do iCharacter = 1, len(self%filename)
+      if(self%filename(iCharacter:iCharacter) == "&") then
+        write(idString, *) myid
+        self%filename = ReplaceText(self%filename, "&", trim(adjustl(idString)))
+        exit
+      endif
+    enddo
+
+
 
     open( unit=self%fileUnit, file=trim(adjustl(self%filename)) )
   end subroutine

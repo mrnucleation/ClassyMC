@@ -353,8 +353,8 @@ contains
      
       end subroutine
 !========================================================
-    function Replace_Text (line, oldstr, newstr)  result(finalString)
-       character(*), intent(in)  :: line, oldstr, newstr
+   function ReplaceText(line, oldstr, newstr) result(finalString)
+     character(*), intent(in)  :: line, oldstr, newstr
        character(LEN(line)+100) :: finalString     ! provide outs with extra 100 char len
        integer :: i, sizeOld, sizeReplace
        finalString = line  

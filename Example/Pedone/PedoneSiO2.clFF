@@ -1,0 +1,37 @@
+moleculetypes 2
+
+atomdef
+#  Element - Atomic Mass
+  "O"  16.00
+  "Si" 28.0855
+end_atomdef
+
+#Oxygen Topology
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+#Silicon Topology
+molecule 2
+  RegrowthType Simple
+  atoms
+    2
+  end_atoms
+end_molecule
+
+forcefieldtype
+  Pedone
+end_forcefieldtype
+
+
+units energy ev
+# type, C, rEq, alpha, delta, q, rMin
+forcefield 1
+  rCut 15.5
+  1 22.0  3.618701 1.379316  0.042395 -1.2 1.0 #O
+  2  1.0  2.1      2.006700  0.340554  2.4 1.0 #Si
+end_forcefield
+

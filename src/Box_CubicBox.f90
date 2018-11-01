@@ -1,12 +1,7 @@
 !==========================================================================================
 module CubicBoxDef
   use SimpleSimBox, only: SimpleBox
-!  use NeighListDef, only: NeighList
   use VarPrecision
-!  use ForcefieldData, only: ECalcArray
-!  use NeighListDef
-!  use ConstraintTemplate, only: constrainArray
-
 
   !Sim Box Definition
   type, public, extends(SimpleBox) :: CubeBox
@@ -16,7 +11,7 @@ module CubicBoxDef
       procedure, pass :: LoadDimension => Cube_LoadDimension
       procedure, pass :: GetDimensions => Cube_GetDimensions
       procedure, pass :: Boundary => Cube_Boundary
-      procedure, pass :: IOProcess => Cube_IOProcess
+      procedure, pass :: ProcessIO => Cube_ProcessIO
       procedure, pass :: DumpData => Cube_DumpData
       procedure, pass :: Prologue => Cube_Prologue
   end type
@@ -150,7 +145,7 @@ module CubicBoxDef
 !
 !  end subroutine
 !==========================================================================================
-  subroutine Cube_IOProcess(self, line, lineStat)
+  subroutine Cube_ProcessIO(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     use ForcefieldData, only: EnergyCalculator
@@ -302,11 +297,15 @@ module CubicBoxDef
     do iType = 1, nMolTypes    
       self%nMolTotal = self%nMolTotal + self % NMol(iType)
     enddo
+    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
+    write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
 
+
+
+    write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%boxL**3
 
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
-    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
 
 
   end subroutine

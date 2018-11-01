@@ -4,7 +4,7 @@ module IntraAngle_Ridgid
   use VarPrecision
   use Template_SimBox, only: SimBox
   use CoordinateTypes
-  use Units, only: outAngUnit
+  use Units, only: inAngUnit
 
   type, public, extends(Angle_FF) :: RidgidAngle
 !    real(dp) :: r0
@@ -72,7 +72,7 @@ module IntraAngle_Ridgid
 
     call GetXCommand(line, command, 2, lineStat)
     read(command, *) self%theta0
-    self%theta0 = self%theta0*outAngUnit
+    self%theta0 = self%theta0*inAngUnit
 
     if(lineStat /= 0) then
       write(*,*) "Missing input rquired for the ridgid Angle style"

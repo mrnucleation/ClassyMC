@@ -367,7 +367,7 @@
         case("box")
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue
-           call BoxArray(intValue) % box % IOProcess(line, lineStat)
+           call BoxArray(intValue) % box % ProcessIO(line, lineStat)
 
         case("move")
            call GetXCommand(line, command2, 3, lineStat)
@@ -376,7 +376,6 @@
 
         case("sampling")
            call Sampling % ProcessIO(line, lineStat)
-
 
         case default
            lineStat = -1

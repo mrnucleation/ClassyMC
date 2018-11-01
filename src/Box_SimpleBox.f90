@@ -54,8 +54,8 @@ module SimpleSimBox
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
       procedure, pass :: Boundary => SimpleBox_Boundary
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
-      procedure, pass :: IOProcess => SimpleBox_IOProcess
-!      procedure, pass :: IOProcessCommon => SimpleBox_IOProcessCommon
+      procedure, pass :: ProcessIO => SimpleBox_ProcessIO
+!      procedure, pass :: ProcessIOCommon => SimpleBox_ProcessIOCommon
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: DumpData => SimpleBox_DumpData
 
@@ -337,7 +337,7 @@ module SimpleSimBox
 
   end function
 !==========================================================================================
-  subroutine SimpleBox_IOProcess(self, line, lineStat)
+  subroutine SimpleBox_ProcessIO(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     use ForcefieldData, only: EnergyCalculator

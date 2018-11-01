@@ -322,13 +322,13 @@ module Input_Forcefield
     select case(trim(adjustl(command)))
       case("energy")
         call GetXCommand(line, unitType, 3, lineStat)
-        outEngUnit = FindEngUnit(unitType)
+        inEngUnit = FindEngUnit(unitType)
       case("angle")
         call GetXCommand(line, unitType, 3, lineStat)
-        outAngUnit = FindAngularUnit(unitType)
+        inAngUnit = FindAngularUnit(unitType)
       case("length")
         call GetXCommand(line, unitType, 3, lineStat)
-        outLenUnit = FindLengthUnit(unitType)
+        inLenUnit = FindLengthUnit(unitType)
       case default
         lineStat = -1
     end select

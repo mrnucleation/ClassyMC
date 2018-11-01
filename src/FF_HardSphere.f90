@@ -13,9 +13,7 @@ module FF_HardSphere
       procedure, pass :: DetailedECalc => Detailed_HardSphere
       procedure, pass :: DiffECalc => DiffECalc_HardSphere
       procedure, pass :: ShiftECalc_Single => Shift_HardSphere_Single
-!      procedure, pass :: ShiftECalc_Multi => Shift_HardSphere_Multi
       procedure, pass :: NewECalc => New_HardSphere
-!      procedure, pass :: OldECalc => Old_HardSphere
       procedure, pass :: ProcessIO => ProcessIO_HardSphere
       procedure, pass :: Prologue => Prologue_HardSphere
       procedure, pass :: GetCutOff => GetCutOff_HardSphere

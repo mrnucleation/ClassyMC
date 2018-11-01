@@ -327,7 +327,7 @@ use VarPrecision
 !    write(*,*) self%ubVol
 
     allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(200,maxAtoms ) )
+    allocate( self%tempList(2000,maxAtoms ) )
     allocate( self%newPart(1:maxAtoms) )
   end subroutine
 !=========================================================================

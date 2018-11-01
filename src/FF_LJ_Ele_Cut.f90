@@ -427,6 +427,7 @@ module FF_Pair_LJ_Q_Cut
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: CountCommands, GetXCommand
     use Input_Format, only: maxLineLen
+    use Units, only: inEngUnit, inLenUnit
     implicit none
     class(Pair_LJ_Q_Cut), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
@@ -491,6 +492,10 @@ module FF_Pair_LJ_Q_Cut
       select case(nPar)
         case(5)
           read(line, *) type1, ep, sig, q, rMin
+          ep = ep * inEngUnit
+          sig = sig * inLenUnit
+          rMin = rMin * inLenUnit
+
 
           self%eps(type1) = ep
           self%sig(type1) = sig

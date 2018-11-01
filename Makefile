@@ -69,6 +69,7 @@ SRC_MAIN := $(SRC)/Common.f90\
          		$(SRC)/Constrain_FreezeType.f90\
          		$(SRC)/Constrain_HardWall.f90\
 	        	$(SRC)/SearchSort.f90\
+        		$(SRC)/Sampling_AcceptAll.f90\
         		$(SRC)/Sampling_Metropolis.f90\
         		$(SRC)/Sampling_MinMetrop.f90\
         		$(SRC)/Sampling_Umbrella.f90\
@@ -84,7 +85,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
         		$(SRC)/Analysis_DistPair.f90\
         		$(SRC)/Analysis_RDF.f90\
-        		$(SRC)/Analysis_ThermAverage.f90\
+        		$(SRC)/Analysis_ThermoAverage.f90\
         		$(SRC)/Analysis_ThermoIntegration.f90\
         		$(SRC)/Box_Presets.f90\
         		$(SRC)/Box_SimpleBox.f90\
@@ -97,6 +98,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_HardSphere.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Ele_Cut.f90\
+        		$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_Tersoff.f90\
         		$(SRC)/FF_ThermoInt.f90\
         		$(SRC)/Intra_BondRidgid.f90\

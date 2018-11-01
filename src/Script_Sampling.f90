@@ -7,6 +7,7 @@ module Input_Sampling
   contains
 !================================================================================
   subroutine Script_SamplingType(iLine, lineStore, lineStat)
+    use AcceptAllRule, only: AcceptAll
     use MetropolisRule, only: Metropolis
     use MinMetroRule, only: MinMetro
     use UmbrellaRule, only: Umbrella
@@ -28,6 +29,9 @@ module Input_Sampling
     endif
     call LowerCaseLine(command)
     select case(trim(adjustl(command)))
+      case("acceptall")
+        allocate(acceptall::sampling)
+
       case("metropolis")
         allocate(metropolis::sampling)
 

@@ -47,6 +47,7 @@ module UmbrellaWHAMRule
        procedure, pass :: Constructor => UmbrellaWHAM_Constructor
        procedure, pass :: MakeDecision => UmbrellaWHAM_MakeDecision
        procedure, pass :: UpdateStatistics => UmbrellaWHAM_UpdateStatistics
+
        procedure, pass :: GetBiasIndex => UmbrellaWHAM_GetBiasIndex
        procedure, pass :: GetNewBiasIndex => UmbrellaWHAM_GetNewBiasIndex
        procedure, pass :: ReadInitialBias => UmbrellaWHAM_ReadInitialBias

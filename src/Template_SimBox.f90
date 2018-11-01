@@ -49,7 +49,7 @@ module Template_SimBox
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
       procedure, public, pass :: ComputeEnergy
-      procedure, public, pass :: IOProcess
+      procedure, public, pass :: ProcessIO
       procedure, public, pass :: DumpData
       procedure, public, pass :: GetThermo
       procedure, public, pass :: ThermoLookUp
@@ -130,7 +130,7 @@ module Template_SimBox
     class(SimBox), intent(inout) :: self
   end subroutine
 !==========================================================================================
-  subroutine IOProcess(self, line, lineStat)
+  subroutine ProcessIO(self, line, lineStat)
     use Input_Format, only: maxLineLen
     implicit none
     class(SimBox), intent(inout) :: self

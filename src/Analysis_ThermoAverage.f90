@@ -1,9 +1,9 @@
 !=========================================================================
-module Anaylsis_ThermAverage
+module Anaylsis_ThermoAverage
 use AnaylsisClassDef, only: Analysis
 use VarPrecision
 
-  type, public, extends(Analysis):: ThermAverage
+  type, public, extends(Analysis):: ThermoAverage
 !    logical :: perMove = .false.
 !    integer :: IOUnit = -1
 !    integer :: UpdateFreq = -1
@@ -17,21 +17,22 @@ use VarPrecision
     real(dp) :: nSamp = 1E-40_dp
     contains
 !      procedure, pass :: Initialize
-      procedure, pass :: Compute => Therm_Compute
+      procedure, pass :: Compute => Thermo_Compute
 !      procedure, pass :: Maintenance 
-      procedure, pass :: ProcessIO => Therm_ProcessIO
-      procedure, pass :: WriteInfo => Therm_WriteInfo
-      procedure, pass :: GetResult => Therm_GetResult
-      procedure, pass :: GetSTDev => Therm_GetSTDev
-      procedure, pass :: Finalize => Therm_Finalize
+      procedure, pass :: ProcessIO => Thermo_ProcessIO
+      procedure, pass :: WriteInfo => Thermo_WriteInfo
+      procedure, pass :: GetResult => Thermo_GetResult
+      procedure, pass :: GetSTDev => Thermo_GetSTDev
+      procedure, pass :: Finalize => Thermo_Finalize
+      procedure, pass :: CastCommonType => Thermo_CastCommonType
   end type
 
  contains
 !=========================================================================
-  subroutine Therm_Compute(self, accept)
+  subroutine Thermo_Compute(self, accept)
     use BoxData, only: BoxArray
     implicit none
-    class(ThermAverage), intent(inout) :: self
+    class(ThermoAverage), intent(inout) :: self
     logical, intent(in) :: accept
     real(dp) :: thermVal
 
@@ -43,16 +44,19 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
-  subroutine Therm_ProcessIO(self, line)
+  subroutine Thermo_ProcessIO(self, line)
     use BoxData, only: BoxArray
     use Input_Format, only: maxLineLen, GetXCommand
     implicit none
-    class(ThermAverage), intent(inout) :: self
+    class(ThermoAverage), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
     character(len=30) :: command
     integer :: lineStat = 0
     integer :: intVal
 
+
+    !Input format
+    ! ThermoAverage (BoxNum) (Thermo Variable) (Avg Frequency)
     call GetXCommand(line, command, 2, lineStat)
     read(command, *) intVal
     self%boxNum = intVal
@@ -68,37 +72,37 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
-  subroutine Therm_WriteInfo(self)
+  subroutine Thermo_WriteInfo(self)
     use ParallelVar, only: nout
     implicit none
-    class(ThermAverage), intent(inout) :: self
+    class(ThermoAverage), intent(inout) :: self
 
     write(nout, *) trim(adjustl(self%varName)), " Average: ", self%GetResult(), "+\-", self%GetSTDev()
   end subroutine
 !=========================================================================
-  function Therm_GetResult(self) result(var)
+  function Thermo_GetResult(self) result(var)
     implicit none
-    class(ThermAverage), intent(in) :: self
+    class(ThermoAverage), intent(in) :: self
     real(dp) :: var
 
     var = self%varSum/self%nSamp
   end function
 !=========================================================================
-  function Therm_GetSTDev(self) result(var)
+  function Thermo_GetSTDev(self) result(var)
     implicit none
-    class(ThermAverage), intent(in) :: self
+    class(ThermoAverage), intent(in) :: self
     real(dp) :: var
 
     var = self%varSumSq/self%nSamp - (self%varSum/self%nSamp)**2
     var = sqrt(var)
   end function
 !=========================================================================
-  subroutine Therm_Finalize(self)
+  subroutine Thermo_Finalize(self)
     use MPI
     use ParallelVar, only: myid
     implicit none
     integer :: ierror
-    class(ThermAverage), intent(inout) :: self
+    class(ThermoAverage), intent(inout) :: self
     real(dp) :: dummy
 
     dummy = self%varSum
@@ -118,6 +122,22 @@ use VarPrecision
     endif
 
   end subroutine
+!=========================================================================
+  subroutine Thermo_CastCommonType(self, anaVar)
+    implicit none
+    class(ThermoAverage), intent(inout) :: self
+    class(*), allocatable, intent(inout) :: anaVar
+    real(dp) :: def
+
+
+    if(.not. allocated(anaVar) ) then
+      allocate(anaVar, source=def)
+      write(*,*) "Allocated as Real"
+    endif
+
+  end subroutine
+
+
 !=========================================================================
 end module
 !=========================================================================
