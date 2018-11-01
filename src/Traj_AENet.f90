@@ -1,9 +1,9 @@
 !====================================================================
-module Traj_Lammps
+module Traj_AENet
   use VarPrecision
   use TrajectoryTemplate, only: trajectory
 
-  type, public, extends(trajectory) :: LAMMPSDump
+  type, public, extends(trajectory) :: AENetDump
     logical :: recenter = .false.
 !    integer :: fileUnit = -1
 !    integer :: boxNum = -1
@@ -13,25 +13,25 @@ module Traj_Lammps
     real(dp), allocatable :: boxDim(:,:)
     character(len=50) :: boxStr
     contains
-       procedure, pass :: WriteFrame => LAMMPSDump_WriteFrame
+       procedure, pass :: WriteFrame => AENetDump_WriteFrame
 !       procedure, pass :: SetUnit
 !       procedure, pass :: SetBox
 !       procedure, pass :: SetFileName
 !       procedure, pass :: SetFreq
 !       procedure, pass :: OpenFile
 !       procedure, pass :: CloseFile
-       procedure, pass :: Prologue => LAMMPSDump_Prologue
-       procedure, pass :: Epilogue => LAMMPSDump_Epilogue
+       procedure, pass :: Prologue => AENetDump_Prologue
+       procedure, pass :: Epilogue => AENetDump_Epilogue
 
   end type
 !====================================================================
   contains
 !====================================================================
-  subroutine LAMMPSDump_WriteFrame(self, iCycle) 
+  subroutine AENetDump_WriteFrame(self, iCycle) 
     use BoxData, only: BoxArray
     use Common_MolInfo, only: AtomData
     implicit none
-    class(LAMMPSDump), intent(inout) :: self
+    class(AENetDump), intent(inout) :: self
     integer(kind=8), intent(in) :: iCycle
     integer :: iAtom, jDim, boxNum, i
     integer :: nDim, atomType, molType
@@ -40,8 +40,9 @@ module Traj_Lammps
     boxNum = self%boxNum
     nDim = BoxArray(boxNum)%box%nDimension
 
-    write(self%fileUnit, "(A)") "ITEM: TIMESTEP"
-    write(self%fileUnit, *) "0"
+    write(self%fileUnit, *) 
+    write(self%fileUnit, *) 
+    write(self%fileUnit, *) "Atoms" 
 
     write(self%fileUnit, "(A)") "ITEM: NUMBER OF ATOMS "
     write(self%fileUnit, *) BoxArray(boxNum)%box%nAtoms
@@ -69,11 +70,10 @@ module Traj_Lammps
 
   end subroutine
 !====================================================================
-  subroutine LAMMPSDump_Prologue(self) 
+  subroutine AENetDump_Prologue(self) 
     use BoxData, only: BoxArray
     implicit none
-    class(LAMMPSDump), intent(inout) :: self
-    integer(kind=8) :: iCycle = 0
+    class(AENetDump), intent(inout) :: self
 
     select type(box => BoxArray(self%boxnum)%box)
       class default
@@ -84,15 +84,14 @@ module Traj_Lammps
 
     end select
 
-    call self % WriteFrame(iCycle)
+    call self % WriteFrame
   end subroutine
 !====================================================================
-  subroutine LAMMPSDump_Epilogue(self) 
+  subroutine AENetDump_Epilogue(self) 
     implicit none
-    class(LAMMPSDump), intent(inout) :: self
-    integer(kind=8) :: iCycle = -1
+    class(AENetDump), intent(inout) :: self
 
-    call self % WriteFrame(iCycle)
+    call self % WriteFrame
   end subroutine
 !====================================================================
 end module

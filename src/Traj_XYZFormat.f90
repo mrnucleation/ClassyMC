@@ -25,11 +25,12 @@ module Traj_XYZ
 !====================================================================
   contains
 !====================================================================
-  subroutine TrajXYZ_WriteFrame(self) 
+  subroutine TrajXYZ_WriteFrame(self, iCycle) 
     use BoxData, only: BoxArray
     use Common_MolInfo, only: AtomData
     implicit none
     class(trajXYZ), intent(inout) :: self
+    integer(kind=8), intent(in) :: iCycle
     integer :: iAtom, jDim, boxNum
     integer :: nDim, atomType, molType
     real(dp) :: xcm, ycm, zcm
@@ -64,15 +65,17 @@ module Traj_XYZ
   subroutine TrajXYZ_Prologue(self) 
     implicit none
     class(trajXYZ), intent(inout) :: self
+    integer(kind=8) :: iCycle = 0
 
-    call self % WriteFrame
+    call self % WriteFrame(iCycle)
   end subroutine
 !====================================================================
   subroutine TrajXYZ_Epilogue(self) 
     implicit none
     class(trajXYZ), intent(inout) :: self
+    integer(kind=8) :: iCycle = -1
 
-    call self % WriteFrame
+    call self % WriteFrame(iCycle)
   end subroutine
 !====================================================================
 end module

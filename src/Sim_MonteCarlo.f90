@@ -209,7 +209,7 @@ contains
     if( allocated(TrajArray) ) then
       do iTraj = 1, size(TrajArray)
         if(mod(iCycle, int(TrajArray(iTraj)%traj%outfreq,8)) == 0) then
-          call TrajArray(iTraj) % traj % WriteFrame
+          call TrajArray(iTraj) % traj % WriteFrame(iCycle)
         endif
       enddo
     endif

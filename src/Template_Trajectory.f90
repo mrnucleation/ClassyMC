@@ -78,9 +78,10 @@ module TrajectoryTemplate
     open( unit=self%fileUnit, file=trim(adjustl(self%filename)) )
   end subroutine
 !====================================================================
-  subroutine WriteFrame(self) 
+  subroutine WriteFrame(self, iCycle) 
     implicit none
     class(trajectory), intent(inout) :: self
+    integer(kind=8), intent(in) :: iCycle
 
 
   end subroutine
