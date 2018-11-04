@@ -18,7 +18,7 @@ module Template_SimBox
     character(len=15) :: boxStr = "Empty"
     integer :: boxID
     integer :: nAtoms, nMaxAtoms
-    integer :: nMolTotal
+    integer :: nMolTotal, maxMol
     integer :: nDimension = 3
 
     !Thermodynamic Variables
@@ -28,7 +28,7 @@ module Template_SimBox
     real(dp), allocatable :: chempot(:)
 
     real(dp), allocatable :: ETable(:), dETable(:)
-    real(dp), allocatable :: atoms(:,:), centerMass(:)
+    real(dp), allocatable :: atoms(:,:), centerMass(:,:)
 
     integer, allocatable :: NMolMin(:), NMolMax(:)
     integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
@@ -48,6 +48,7 @@ module Template_SimBox
       procedure, public, pass :: LoadDimension
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
+      procedure, public, pass :: BoundaryNew
       procedure, public, pass :: ComputeEnergy
       procedure, public, pass :: ProcessIO
       procedure, public, pass :: DumpData
@@ -94,6 +95,14 @@ module Template_SimBox
   subroutine Boundary(self, rx, ry, rz)
     implicit none
     class(SimBox), intent(in) :: self
+    real(dp), intent(inout) :: rx, ry, rz 
+
+  end subroutine
+!==========================================================================================
+  subroutine BoundaryNew(self, rx, ry, rz, disp)
+    implicit none
+    class(SimBox), intent(in) :: self
+    class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(inout) :: rx, ry, rz 
 
   end subroutine

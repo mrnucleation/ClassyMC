@@ -2,6 +2,7 @@
 module CubicBoxDef
   use SimpleSimBox, only: SimpleBox
   use VarPrecision
+  use CoordinateTypes
 
   !Sim Box Definition
   type, public, extends(SimpleBox) :: CubeBox
@@ -11,9 +12,11 @@ module CubicBoxDef
       procedure, pass :: LoadDimension => Cube_LoadDimension
       procedure, pass :: GetDimensions => Cube_GetDimensions
       procedure, pass :: Boundary => Cube_Boundary
+      procedure, pass :: BoundaryNew => Cube_BoundaryNew
       procedure, pass :: ProcessIO => Cube_ProcessIO
       procedure, pass :: DumpData => Cube_DumpData
       procedure, pass :: Prologue => Cube_Prologue
+      procedure, pass :: UpdateVolume => Cube_UpdateVolume
   end type
 
 !==========================================================================================
@@ -127,6 +130,33 @@ module CubicBoxDef
   endif
 
   end subroutine
+!==========================================================================================
+  subroutine Cube_BoundaryNew(self, rx, ry, rz, disp)
+  implicit none
+  class(CubeBox), intent(in) :: self
+  class(Perturbation), intent(in) :: disp(:)
+  real(dp), intent(inout) :: rx, ry, rz 
+  real(dp) :: scaleFactor
+
+  select type(disp)
+    class is(OrthoVolChange)
+      scaleFactor = disp(1)%xScale
+  end select
+  
+  if(abs(rx) > self%boxL2*scaleFactor) then
+    rx = rx - sign(self%boxL*scaleFactor, rx)
+  endif
+
+  if(abs(ry) > self%boxL2*scaleFactor) then
+    ry = ry - sign(self%boxL*scaleFactor, ry)
+  endif
+
+  if(abs(rz) > self%boxL2*scaleFactor) then
+    rz = rz - sign(self%boxL*scaleFactor, rz)
+  endif
+
+  end subroutine
+
 !==========================================================================================
 !  subroutine Cube_UpdatePosition(self, disp)
 !    use CoordinateTypes
@@ -263,6 +293,7 @@ module CubicBoxDef
     class(CubeBox), intent(inout) :: self
     logical :: accept
     integer :: iAtom, iDims, iConstrain, iType
+    integer :: iMol, molStart
 
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
@@ -304,10 +335,30 @@ module CubicBoxDef
 
     write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%boxL**3
 
+    self%volume = self%boxL**3
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
 
+    do iMol = 1, self%maxMol
+      call self%GetMolData(iMol, molStart=molStart)
+      if( self%MolSubIndx(molStart) <= self%NMol(self%MolType(molStart)) ) then
+        call self%ComputeCM(iMol)
+      endif
+    enddo
 
+  end subroutine
+!==========================================================================================
+  subroutine Cube_UpdateVolume(self, disp)
+    implicit none
+    class(CubeBox), intent(inout) :: self
+    class(Perturbation), intent(inout) :: disp(:)
+
+    select type(disp)
+      class is(OrthoVolChange)
+        self%volume = disp(1)%volNew
+        self%boxL = self%boxL*(disp(1)%volNew/disp(1)%volOld)**(1E0_dp/3E0_dp)
+        self%boxL2 = self%boxL/2E0_dp
+    end select
   end subroutine
 !==========================================================================================
 

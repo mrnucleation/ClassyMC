@@ -14,13 +14,14 @@ module Template_AcceptRule
 !====================================================================
   contains
 !====================================================================
-  function MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
+  function MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb ) result(accept)
     use Template_SimBox, only: SimBox
     implicit none
     class(acceptrule), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(in) :: E_Diff, inProb
+    real(dp), intent(in) :: E_Diff
+    real(dp), intent(in), optional :: inProb, logProb
     logical :: accept
 
     accept = .true.

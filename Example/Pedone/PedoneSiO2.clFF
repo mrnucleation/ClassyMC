@@ -30,7 +30,7 @@ end_forcefieldtype
 units energy ev
 # type, C, rEq, alpha, delta, q, rMin
 forcefield 1
-  rCut 15.5
+  rCut 17.5
   1 22.0  3.618701 1.379316  0.042395 -1.2 1.0 #O
   2  1.0  2.1      2.006700  0.340554  2.4 1.0 #Si
 end_forcefield

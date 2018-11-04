@@ -8,9 +8,9 @@ module OrthoBoxDef
 
   !Sim Box Definition
   type, public, extends(SimpleBox) :: OrthoBox
-    real(dp) :: boxLx, boxLx2
-    real(dp) :: boxLy, boxLy2
-    real(dp) :: boxLz, boxLz2
+    real(dp) :: boxLx, boxLx2, xlo, xhi
+    real(dp) :: boxLy, boxLy2, ylo, yhi
+    real(dp) :: boxLz, boxLz2, zlo, zhi
     contains
 !      procedure, pass :: Constructor => Ortho_Constructor
       procedure, pass :: Prologue => Ortho_Prologue

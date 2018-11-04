@@ -128,22 +128,32 @@ module UmbrellaRule
 
   end subroutine
 !====================================================================
-  function Umbrella_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
+  function Umbrella_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb) result(accept)
     use AnalysisData, only: AnalysisArray
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     implicit none
     class(Umbrella), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
-!    type(Displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(in) :: inProb
+    real(dp), intent(in), optional :: inProb, logProb
     real(dp), intent(in) :: E_Diff
 
     logical :: accept
     integer :: iBias, oldIndx, newIndx, indx
     real(dp) :: biasE, biasOld, biasNew
-    real(dp) :: extraTerms, chemPot
+    real(dp) :: extraTerms, chemPot, probTerm
+
+    if(present(inProb)) then
+      probTerm = log(inProb)
+    elseif(present(logProb)) then
+      probTerm = logProb
+    else
+      write(*,*) "Coding Error! Probability has not been passed into Sampling "
+      stop
+    endif
+
+
 
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
@@ -181,7 +191,7 @@ module UmbrellaRule
 
 
     accept = .false.
-    biasE = -trialBox%beta * E_Diff + log(inProb) + (biasNew-biasOld)
+    biasE = -trialBox%beta * E_Diff + probTerm + (biasNew-biasOld)
 !    write(2,*) E_Diff, log(inProb),  (biasNew-biasOld)
 !    write(2,*) biasE
     if(biasE > 0.0E0_dp) then

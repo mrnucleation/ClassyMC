@@ -61,7 +61,14 @@ module MoveClassDef
   subroutine GetBoxProb(self, boxProb)
     implicit none
     class(MCMove), intent(inout) :: self
+    integer :: iBox
     real(dp), intent(inout) :: boxProb(:)
+
+    do iBox = 1, size(boxProb)
+      boxProb(iBox) = self%boxProb(iBox)
+    enddo
+
+
 
   end subroutine
 !=========================================================================

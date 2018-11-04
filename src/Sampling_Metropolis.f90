@@ -13,7 +13,7 @@ module MetropolisRule
 !====================================================================
   contains
 !====================================================================
-  function Metropolis_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
+  function Metropolis_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb) result(accept)
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     use ParallelVar, only: nout
@@ -21,19 +21,30 @@ module MetropolisRule
     class(metropolis), intent(inout) :: self
     class(simBox), intent(in) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(in) :: inProb
+    real(dp), intent(in), optional:: inProb, logProb
     real(dp), intent(in) :: E_Diff
     logical :: accept
     integer :: iDisp
-    real(dp) :: biasE, extraTerms, chemPot
+    real(dp) :: biasE, extraTerms, chemPot, probTerm
 
     accept = .false.
-    if(inProb <= 0E0_dp) then
-      return
+    if(present(inProb)) then
+      if(inProb <= 0E0_dp) then
+        return
 !      write(nout,*) "Probability:", inProb
 !      stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is zero or negative!"
+      endif
     endif
 
+
+    if(present(inProb)) then
+      probTerm = log(inProb)
+    elseif(present(logProb)) then
+      probTerm = logProb
+    else
+      write(*,*) "Coding Error! Probability has not been passed into Sampling "
+      stop
+    endif
 
      ! The purpose of this section is to add any terms such as the isobaric or
      ! grand canonical ensemble terms (IE the PV or chemical potential) to the
@@ -50,7 +61,7 @@ module MetropolisRule
           extraTerms = extraTerms + (disp(1)%volNew -disp(1)%volOld)*trialBox%pressure*trialBox%beta
     end select
 
-    biasE = -trialBox%beta * E_Diff + log(inProb) + extraTerms
+    biasE = -trialBox%beta * E_Diff + probTerm + extraTerms
     if(biasE > 0.0E0_dp) then
       accept = .true.
     elseif( biasE > log(grnd()) ) then

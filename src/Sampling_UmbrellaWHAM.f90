@@ -197,7 +197,7 @@ module UmbrellaWHAMRule
     self%oldIndx = 1
   end subroutine
 !====================================================================
-  function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
+  function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb) result(accept)
     use AnalysisData, only: AnalysisArray
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
@@ -205,18 +205,29 @@ module UmbrellaWHAMRule
     class(UmbrellaWHAM), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(in) :: inProb
+    real(dp), intent(in), optional :: inProb, logProb
     real(dp), intent(in) :: E_Diff
 
     logical :: accept
     integer :: iBias, indx
     real(dp) :: biasE, biasOld, biasNew
-    real(dp) :: extraTerms, ranNum
+    real(dp) :: extraTerms, ranNum, probTerm
 
     if(inProb <= 0E0_dp) then
       accept = .false.
       return
     endif
+
+    if(present(inProb)) then
+      probTerm = log(inProb)
+    elseif(present(logProb)) then
+      probTerm = logProb
+    else
+      write(*,*) "Coding Error! Probability has not been passed into Sampling "
+      stop
+    endif
+
+
 
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
@@ -252,7 +263,7 @@ module UmbrellaWHAMRule
 !    write(*,*) "Bias", self%oldindx, biasOld, self%newIndx, biasNew
 
     accept = .false.
-    biasE = -trialBox%beta * E_Diff + log(inProb) + (biasNew-biasOld) + extraTerms
+    biasE = -trialBox%beta * E_Diff + probTerm + (biasNew-biasOld) + extraTerms
 !    write(*,*) "Energy:", E_diff
 !    write(*,*) "Prob:", biasE, log(inProb), extraTerms, trialBox%beta, biasNew-biasOld
     if(biasE > 0.0E0_dp) then

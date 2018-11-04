@@ -367,7 +367,7 @@ module FF_Pair_LJ_Q_Cut
     type(Deletion), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     integer :: iDisp, iAtom, jAtom, remLen, jNei
-    integer :: atmType1, atmType2, globIndx
+    integer :: atmType1, atmType2
     integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq, r
     real(dp) :: ep, sig_sq, q
@@ -376,8 +376,9 @@ module FF_Pair_LJ_Q_Cut
 
     E_Diff = 0E0_dp
 
-    globIndx = curBox % MolGlobalIndx(disp(1)%molType, disp(1)%molIndx)
-    call curBox % GetMolData(globIndx, molEnd=molEnd, molStart=molStart)
+!    globIndx = curBox % MolGlobalIndx(disp(1)%molType, disp(1)%molIndx)
+!    call curBox % GetMolData(globIndx, molEnd=molEnd, molStart=molStart)
+    call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
 
     do iAtom = molStart, molEnd
       atmType1 = curbox % AtomType(iAtom) 

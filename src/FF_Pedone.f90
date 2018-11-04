@@ -171,7 +171,7 @@ module FF_Pair_Pedone_Cut
           delta = self%D_Tab(atmType2, atmType1)
           repul_C = self%repul_tab(atmType2, atmType1)
 
-          write(*,*) r_eq, q_ij, alpha, delta, repul_C
+!          write(*,*) r_eq, q_ij, alpha, delta, repul_C
           LJ = 0E0_dp
           if(repul_C /= 0E0_dp) then
             LJ = (1E0_dp/rsq)**6
@@ -451,8 +451,9 @@ module FF_Pair_Pedone_Cut
 
     E_Diff = 0E0_dp
 
-    globIndx = curBox % MolGlobalIndx(disp(1)%molType, disp(1)%molIndx)
-    call curBox % GetMolData(globIndx, molEnd=molEnd, molStart=molStart)
+!    write(*,*) disp(1)%molType, disp(1)%molIndx
+!    globIndx = curBox % MolGlobalIndx(disp(1)%molType, )
+    call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
 
     do iAtom = molStart, molEnd
       atmType1 = curbox % AtomType(iAtom) 
@@ -598,9 +599,9 @@ module FF_Pair_Pedone_Cut
     class(Pair_Pedone_Cut), intent(inout) :: self
     integer :: i, j
 
-    do i = 1, nAtomTypes
-      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
-    enddo
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
+!    enddo
 
   end subroutine
   !=====================================================================

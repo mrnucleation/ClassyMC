@@ -11,9 +11,6 @@ module CoordinateTypes
   type, extends(Perturbation) :: Displacement
     integer(kind=atomIntType) :: molType, atmIndx, molIndx, atmSubIndx
     real(dp) :: x_new, y_new, z_new
-
-!    integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
-
     logical :: newList = .false.
     integer :: listIndex = -1
   end type
@@ -51,14 +48,17 @@ module CoordinateTypes
     real(dp) :: volNew, volOld
   end type
 
-  !Move type where the volume of the box changes equally in all directions
-  type, extends(VolChange) :: IsoVolChange
+  !Move type where the vol
+  type, extends(VolChange) :: OrthoVolChange
+    real(dp) :: xScale, yScale, zScale
   end type
 
-  !Move type where the volume of the box changes unequally 
-  type, extends(VolChange) :: AnisoVolChange
-    real(dp), allocatable :: scaleVal(:)
+  !Move type where the vol
+  type, extends(VolChange) :: TriVolChange
+    real(dp) :: xScale, yScale, zScale
   end type
+
+
 
 end module
 !======================================================

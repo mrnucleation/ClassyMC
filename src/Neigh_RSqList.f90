@@ -276,7 +276,7 @@ use Template_NeighList, only: NeighListDef
     integer, optional :: nCount
     real(dp), optional :: rCount
     integer :: jType, jAtom, j, iAtom
-    integer :: jUp, jLow, molStart, molIndx, jMol
+    integer :: jUp, jLow, molIndx, jMol
     real(dp) :: xn, yn, zn
     real(dp) :: rx, ry, rz, rsq
 
@@ -305,8 +305,8 @@ use Template_NeighList, only: NeighListDef
     templist(:, iDisp) = 0
     tempNNei(iDisp) = 0
 
-    molStart = 1
-    do jType = 1, nMolTypes
+!    molStart = 1
+!    do jType = 1, nMolTypes
       do jAtom = 1, self%parent%nMaxAtoms
         if( self%parent%MolSubIndx(jAtom) == molIndx ) then
           cycle
@@ -329,8 +329,9 @@ use Template_NeighList, only: NeighListDef
           endif
         endif
       enddo
-      molStart = molStart + self%parent%NMolMax(jType)
-    enddo
+!      molStart = molStart + self%parent%NMolMax(jType)
+!    enddo
+!    write(2,"(A, 1000(I3))") "New",   templist(1:tempNNei(iDisp), iDisp)
   end subroutine
 !====================================================================
   subroutine RSqList_ProcessIO(self, line, lineStat)
@@ -480,10 +481,11 @@ use Template_NeighList, only: NeighListDef
 !        write(2,*) "----------------------------"
 !        write(2,*) "Add"
 !        do iAtom = 1, trialBox%nMaxatoms
-!          write(2,*) iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
+!          write(2,"(I3,A,1000(I3))") iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
 !        enddo
 !        write(2,*)
         do iDisp = 1, size(disp)
+!          write(2,"(A,A,1000(I3))") "NewList","|", (tempList(j, iDisp) ,j=1,tempNNei(iDisp))
           iAtom = disp(iDisp)%atmIndx
           trialBox % NeighList(iList) % nNeigh(iAtom) = tempNNei(iDisp)
           do iNei = 1, tempNNei(iDisp)
@@ -494,7 +496,7 @@ use Template_NeighList, only: NeighListDef
           enddo
         enddo
 !        do iAtom = 1, trialBox%nMaxatoms
-!          write(2,*) iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
+!          write(2,"(I3,A,1000(I3))") iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
 !        enddo
 !        write(2,*)
       endif

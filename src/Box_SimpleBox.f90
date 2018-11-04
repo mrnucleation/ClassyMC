@@ -5,6 +5,7 @@ module SimpleSimBox
   use ConstraintTemplate, only: constrainArray
   use Template_SimBox, only: SimBox
   use Template_Intra_FF, only: Intra_FF
+  use CoordinateTypes
 
 
   !Sim Box Definition
@@ -54,16 +55,23 @@ module SimpleSimBox
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
       procedure, pass :: Boundary => SimpleBox_Boundary
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
+      procedure, pass :: ComputeCM => SimpleBox_ComputeCM
+
+
       procedure, pass :: ProcessIO => SimpleBox_ProcessIO
 !      procedure, pass :: ProcessIOCommon => SimpleBox_ProcessIOCommon
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: DumpData => SimpleBox_DumpData
 
+      !Coordinate Processing Functions
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetMolData => SimpleBox_GetMolData
+
+      !Update Functions
       procedure, pass :: AddMol => SimpleBox_AddMol
       procedure, pass :: DeleteMol => SimpleBox_DeleteMol
       procedure, pass :: Update => SimpleBox_Update
+      procedure, pass :: UpdateVolume => SimpleBox_UpdateVolume
       procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
       procedure, pass :: UpdatePosition => SimpleBox_UpdatePosition
       procedure, pass :: UpdateNeighLists => SimpleBox_UpdateNeighLists
@@ -95,7 +103,7 @@ module SimpleSimBox
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer :: AllocateStatus
-    integer :: iType, iMol, iAtom, atmIndx, molIndx, maxMol
+    integer :: iType, iMol, iAtom, atmIndx, molIndx, maxMol, maxSingleMol
  
     if( .not. allocated(self%NMolMin) ) then
       write(*,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
@@ -131,18 +139,19 @@ module SimpleSimBox
 
     allocate(self%MolStartIndx(1:maxMol), stat=AllocateStatus)
     allocate(self%MolEndIndx(1:maxMol), stat=AllocateStatus)
-    allocate(self%centerMass(1:maxMol), stat=AllocateStatus)
+    allocate(self%centerMass(1:3, 1:maxMol), stat=AllocateStatus)
 
     allocate(self%TypeFirst(1:nMolTypes), stat=AllocateStatus)
     allocate(self%TypeLast(1:nMolTypes), stat=AllocateStatus)
 
-    maxMol = maxval(self%NMolMax(:))
-    allocate(self%MolGlobalIndx(1:nMolTypes, 1:maxMol), stat=AllocateStatus)
+    maxSingleMol = maxval(self%NMolMax(:))
+    allocate(self%MolGlobalIndx(1:nMolTypes, 1:maxSingleMol), stat=AllocateStatus)
 
     allocate(self%chempot(1:nMolTypes), stat=AllocateStatus)
     self%chempot = 0E0_dp
     IF (AllocateStatus /= 0) STOP "Allocation Error in Simulation Box Def"
 
+    self%maxMol = maxMol
     self%AtomType = 0
     self%MolType = 0
     self%MolIndx = 0
@@ -202,6 +211,52 @@ module SimpleSimBox
     integer, intent(out) :: lineStat
 
     lineStat = 0
+
+  end subroutine
+!==========================================================================================
+  subroutine Simplebox_ComputeCM(self, molIndx)
+    use Common_MolInfo, only: AtomData 
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(in) :: molIndx
+    integer :: iAtom, atmType
+    integer :: molStart, molEnd
+    real(dp) :: xcm, ycm, zcm, totalMass
+    real(dp) :: x1, y1, z1
+    real(dp) :: xn, yn, zn
+
+    call self%GetMolData(molIndx, molStart=molStart, molEnd=molEnd)
+    totalMass = 0E0_dp
+    xcm = 0E0_dp
+    ycm = 0E0_dp
+    zcm = 0E0_dp
+
+    x1 = self%atoms(1, molStart)
+    y1 = self%atoms(2, molStart)
+    z1 = self%atoms(3, molStart)
+
+    do iAtom = molStart, molEnd
+      atmType = self % AtomType(iAtom) 
+      xn = self%atoms(1, iAtom) - x1
+      yn = self%atoms(2, iAtom) - y1
+      zn = self%atoms(3, iAtom) - z1
+      call self%Boundary(xn, yn, zn)
+      xcm = xcm + AtomData(atmType)%mass * xn
+      ycm = ycm + AtomData(atmType)%mass * yn
+      zcm = zcm + AtomData(atmType)%mass * zn
+      totalMass = totalMass + AtomData(atmType)%mass
+    enddo
+
+    do iAtom = molStart, molEnd
+      xcm = xcm/totalMass + x1
+      ycm = ycm/totalMass + y1
+      zcm = zcm/totalMass + z1
+    enddo
+    call self%Boundary(xcm, ycm, zcm)
+
+    self % centerMass(1, molIndx) = xcm
+    self % centerMass(2, molIndx) = ycm
+    self % centerMass(3, molIndx) = zcm
 
   end subroutine
 !==========================================================================================
@@ -299,6 +354,12 @@ module SimpleSimBox
     self % ETotal = self % ETotal + E_Diff
     self % ETable = self % ETable + self % dETable
 
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_UpdateVolume(self, disp)
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    class(Perturbation), intent(inout) :: disp(:)
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_UpdateNeighLists(self, disp)
@@ -495,7 +556,7 @@ module SimpleSimBox
       lastMol = lastMol + self%NMolMax(iType) 
     enddo
     lastMol = lastMol + self%NMol(nType)
-    self%centermass(molIndx) = self%centermass(lastMol)
+    self%centermass(1:3,molIndx) = self%centermass(1,3:lastMol)
 !    if(molIndx == lastMol) then
 !      self % NMol(nType) = self % NMol(nType) - 1 
 !      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
@@ -529,6 +590,8 @@ module SimpleSimBox
     class(Perturbation), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     integer :: iDisp, dispLen, dispIndx
+    integer :: iAtom, iMol, molStart, molEnd
+    real(dp) :: dx, dy, dz
 
     select type(disp)
        !-------------------------------------------------
@@ -541,6 +604,7 @@ module SimpleSimBox
           self % atoms(2, dispIndx) = disp(iDisp)%y_new
           self % atoms(3, dispIndx) = disp(iDisp)%z_new
         enddo
+        call self%ComputeCM(disp(1)%molIndx)
 
 
        !-------------------------------------------------
@@ -555,9 +619,31 @@ module SimpleSimBox
         enddo
         call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
         call self % AddMol(disp(1)%molType)
+        call self % ComputeCM(disp(1)%molIndx)
 
        !-------------------------------------------------
+      class is(OrthoVolChange)
+        do iMol = 1, self%maxMol
+          call self%GetMolData(iMol, molStart=molStart, molEnd=molEnd)
+          if( self%MolSubIndx(molStart) <= self%NMol(self%MolType(molStart)) ) then
+            dx = (disp(1)%xScale-1E0_dp) * self%centerMass(1, iMol)
+            dy = (disp(1)%yScale-1E0_dp) * self%centerMass(2, iMol)
+            dz = (disp(1)%zScale-1E0_dp) * self%centerMass(3, iMol)
+            do iAtom = molStart, molEnd
+!              write(*,*) self%atoms(1:3, iAtom)
+              self%atoms(1, iAtom) = self%atoms(1, iAtom) + dx
+              self%atoms(2, iAtom) = self%atoms(2, iAtom) + dy
+              self%atoms(3, iAtom) = self%atoms(3, iAtom) + dz
+!              write(*,*) self%atoms(1:3, iAtom)
+            enddo
+            self%centerMass(1, iMol) = self%centerMass(1, iMol) * disp(1)%xScale
+            self%centerMass(2, iMol) = self%centerMass(2, iMol) * disp(1)%yScale
+            self%centerMass(3, iMol) = self%centerMass(3, iMol) * disp(1)%zScale
+          endif
+        enddo
+        call self%UpdateVolume(disp)
 
+       !-------------------------------------------------
       class default
         stop "The code does not know how to update coordinates for this perturbation type."
     end select
@@ -611,8 +697,8 @@ module SimpleSimBox
     implicit none
     class(SimpleBox), intent(inout) :: self
     logical :: accept
-    integer :: iConstrain
-    integer :: iType
+    integer :: iConstrain, iMol
+    integer :: iType, molStart
 
     self%nMolTotal = 0
     do iType = 1, nMolTypes    
@@ -638,7 +724,12 @@ module SimpleSimBox
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit
 
-
+    do iMol = 1, self%maxMol
+      call self%GetMolData(iMol, molStart=molStart)
+      if( self%MolSubIndx(molStart) <= self%NMol(self%MolType(molStart)) ) then
+        call self%ComputeCM(iMol)
+      endif
+    enddo
 
   end subroutine
 !==========================================================================================

@@ -12,7 +12,6 @@ use VarPrecision
     real(dp) :: limit = 3.00E0_dp
     real(dp) :: targAccpt = 50E0_dp
     real(dp) :: max_dist = 0.05E0_dp
-!    type(Displacement) :: disp(1:1)
     type(Displacement), allocatable :: disp(:)
 
 !    integer, allocatable :: tempNnei(:)
@@ -130,7 +129,7 @@ use VarPrecision
 
 
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%disp(1:nAtoms))
+    accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:nAtoms), inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)

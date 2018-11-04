@@ -22,7 +22,7 @@ module FF_Pair_LJ_Cut
 !      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
       procedure, pass :: NewECalc => New_LJ_Cut
       procedure, pass :: OldECalc => Old_LJ_Cut
-!      procedure, pass :: IsoVolECalc => IsoVol_LJ_Cut
+      procedure, pass :: OrthoVolECalc => OrthoVol_LJ_Cut
       procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
       procedure, pass :: Prologue => Prologue_LJ_Cut
       procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
@@ -55,42 +55,6 @@ module FF_Pair_LJ_Cut
     self%rCutSq = 5E0_dp**2
 
     IF (AllocateStat /= 0) STOP "Allocation in the LJ/Cut Pair Style"
-
-  end subroutine
-!============================================================================
-  subroutine DiffECalc_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
-    implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
-    class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
-    integer, intent(in) :: tempList(:,:), tempNNei(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
-    real(dp) :: E_Half
-
-    accept = .true.
-    curbox % dETable = 0E0_dp
-    E_Diff = 0E0_dp
-
-    select type(disp)
-      class is(Displacement)
-         call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
-
-      class is(Addition)
-!         write(*,*) size(tempList)
-         call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
-
-      class is(Deletion)
-         call self % OldECalc(curbox, disp, E_Diff)
-
-!      class is(IsoVolChange)
-!         call self % IsoVolECalc
-
-      class default
-        write(*,*) "Unknown Perturbation Type Encountered by the LJ_Cut Pair Style."
-
-    end select
-
 
   end subroutine
   !===================================================================================
@@ -157,6 +121,44 @@ module FF_Pair_LJ_Cut
       
     E_T = E_LJ    
   end subroutine
+!============================================================================
+  subroutine DiffECalc_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+    implicit none
+    class(Pair_LJ_Cut), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    class(Perturbation), intent(in) :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+    real(dp) :: E_Half
+
+    accept = .true.
+    curbox % dETable = 0E0_dp
+    E_Diff = 0E0_dp
+
+    select type(disp)
+      class is(Displacement)
+         call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+
+      class is(Addition)
+!         write(*,*) size(tempList)
+         call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
+
+      class is(Deletion)
+         call self % OldECalc(curbox, disp, E_Diff)
+
+      class is(OrthoVolChange)
+         call self % OrthoVolECalc( curbox, disp, E_Diff, accept)
+
+      class default
+        write(*,*) "Unknown Perturbation Type Encountered by the LJ_Cut Pair Style."
+        stop
+
+    end select
+
+
+  end subroutine
+
   !=====================================================================
   subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff, accept)
     implicit none
@@ -301,7 +303,7 @@ module FF_Pair_LJ_Cut
     type(Deletion), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     integer :: iDisp, iAtom, jAtom, remLen, jNei
-    integer :: atmType1, atmType2, globIndx
+    integer :: atmType1, atmType2
     integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: ep, sig_sq
@@ -310,8 +312,8 @@ module FF_Pair_LJ_Cut
 
     E_Diff = 0E0_dp
 
-    globIndx = curBox % MolGlobalIndx(disp(1)%molType, disp(1)%molIndx)
-    call curBox % GetMolData(globIndx, molEnd=molEnd, molStart=molStart)
+!    globIndx = curBox % MolGlobalIndx(disp(1)%molType, disp(1)%molIndx)
+    call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
 
     do iAtom = molStart, molEnd
       atmType1 = curbox % AtomType(iAtom) 
@@ -341,67 +343,87 @@ module FF_Pair_LJ_Cut
     enddo
   end subroutine
   !=====================================================================
-#ifdef IMLAZY
-  subroutine IsoVol_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+  subroutine OrthoVol_LJ_Cut(self, curbox, disp, E_Diff, accept)
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(IsoVolChange), intent(in) :: disp(:)
-!    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    type(OrthoVolChange), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 
     integer :: iAtom, jAtom, maxNei, listIndx, jNei
     integer :: atmType1, atmType2
+    integer :: molIndx1, molIndx2
+    real(dp) :: dxi, dyi, dzi
+    real(dp) :: dxj, dyj, dzj
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: rx2, ry2, rz2, rsq2
     real(dp) :: ep, sig_sq, ratio
     real(dp) :: LJ, LJ2
     real(dp) :: rmin_ij      
 
-    ratio = disp(1)%volNew/disp(1)%volOld
+    E_Diff = 0E0_dp
     do iAtom = 1, curbox%nMaxAtoms-1
       if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
         cycle
       endif
       atmType1 = curbox % AtomType(iAtom)
+      molIndx1 = curbox % MolIndx(iAtom)
+      dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
+      dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
+      dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-        if(jAtom < iAtom) then
+        if(jAtom <= iAtom) then
           cycle
         endif
-        rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
-        ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
-        rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
-        rx2 = rx*ratio
-        ry2 = ry*ratio
-        rz2 = rz*ratio
+        rx =  curbox % atoms(1, iAtom)- curbox % atoms(1, jAtom)
+        ry =  curbox % atoms(2, iAtom)- curbox % atoms(2, jAtom)
+        rz =  curbox % atoms(3, iAtom)- curbox % atoms(3, jAtom)
+
+        molIndx2 = curbox % MolIndx(jAtom)
+        dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
+        dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
+        dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
+        rx2 = rx + (dxi - dxj)
+        ry2 = ry + (dyi - dyj)
+        rz2 = rz + (dzi - dzj)
         call curbox%Boundary(rx, ry, rz)
+        call curbox%BoundaryNew(rx2, ry2, rz2, disp)
         rsq = rx*rx + ry*ry + rz*rz
-        if(rsq < self%rCutSq) then
-          atmType2 = curbox % AtomType(jAtom)
-          rmin_ij = self%rMinTable(atmType2, atmType1)          
-        
-          if(rsq < rmin_ij) then
+        rsq2 = rx2*rx2 + ry2*ry2 + rz2*rz2
+
+        atmType2 = curbox % AtomType(jAtom)
+        rmin_ij = self%rMinTable(atmType2, atmType1)          
+        ep = self%epsTable(atmType2, atmType1)
+        sig_sq = self%sigTable(atmType2, atmType1)          
+        if(rsq2 < self%rCutSq) then
+          if(rsq2 < rmin_ij) then
             accept = .false.
             return
           endif
-          ep = self%epsTable(atmType2, atmType1)
-          sig_sq = self%sigTable(atmType2, atmType1)          
+          LJ2 = (sig_sq/rsq2)
+          LJ2 = LJ2 * LJ2 * LJ2
+          LJ2 = ep * LJ2 * (LJ2-1E0_dp)
+        else
+          LJ2 = 0E0_dp
+        endif
 
+        if(rsq < self%rCutSq) then
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
-          E_Diff = E_Diff + LJ
-!          write(*,*) iAtom, jAtom, rsq, LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
+        else
+          LJ = 0E0_dp
         endif
+
+        E_Diff = E_Diff + LJ2 - LJ
+        curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ2 - LJ
+        curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ2 - LJ
       enddo
     enddo
 
   end subroutine
-#endif
   !=====================================================================
   subroutine ProcessIO_LJ_Cut(self, line)
     use Common_MolInfo, only: nAtomTypes

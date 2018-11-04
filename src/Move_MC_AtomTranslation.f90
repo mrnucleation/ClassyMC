@@ -117,7 +117,7 @@ use VarPrecision
 
 
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%disp(1:1))
+    accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:1), inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)

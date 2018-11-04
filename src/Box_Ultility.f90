@@ -50,8 +50,6 @@ contains
     do iType = 1, nMolTypes
       nSum = nSum + box%NMol(iType)
 
-!      write(*,*) iType, nSum
-!      write(*,*) globIndx
 !      write(*,*)
       if(globIndx <= nSum) then
         nType = iType

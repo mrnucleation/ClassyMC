@@ -3,7 +3,8 @@
   set rng_seed 4272
   set NeighSkin 2.0
   set moves 100
-  set cycles 60000
+  set cycles 100000
+  set screenfrequency 10
   SamplingType Metropolis
 #  SamplingType UmbrellaWHAM
 #  SamplingType Umbrella
@@ -23,13 +24,13 @@
   modify box 1 temperature 3000
   modify box 1 buildfreq 100
 
-  modify box 1 chempotential 1 -90.210340372
-  modify box 1 chempotential 2 -90.210340372
+  modify box 1 chempotential 1 -9.210340372
+  modify box 1 chempotential 2 -9.210340372
   NeighList 1 rsqlist 1
 
   Create Moves
 #    AtomTranslation 2.0
-    MolTranslation 2.0
+    MolTranslation 200.0
     UBSwap 1.0
   End_Create
 

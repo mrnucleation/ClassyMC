@@ -175,7 +175,7 @@ use VarPrecision
 !    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%ubVol, nCount, trialBox%nMolTotal+1
 
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%newPart(1:nAtoms))
+    accept = sampling % MakeDecision(trialBox, E_Diff,  self%newPart(1:nAtoms), inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
@@ -254,7 +254,7 @@ use VarPrecision
 !    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%ubVol, nNei, trialBox%nMolTotal-1
 
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%oldPart(1:1))
+    accept = sampling % MakeDecision(trialBox, E_Diff,self%oldPart(1:1),inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp

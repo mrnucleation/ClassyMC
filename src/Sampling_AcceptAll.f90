@@ -21,7 +21,7 @@ module AcceptAllRule
 !====================================================================
   contains
 !====================================================================
-  function AcceptAll_MakeDecision(self, trialBox, E_Diff, inProb, disp) result(accept)
+  function AcceptAll_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb) result(accept)
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     use ParallelVar, only: nout
@@ -29,7 +29,7 @@ module AcceptAllRule
     class(AcceptAll), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(in) :: inProb
+    real(dp), intent(in), optional:: inProb, logProb
     real(dp), intent(in) :: E_Diff
     logical :: accept
     

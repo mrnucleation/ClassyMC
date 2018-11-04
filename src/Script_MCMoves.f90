@@ -9,6 +9,7 @@ module Input_Moves
   use MCMove_Delete, only: MoveDelete
   use MCMove_MolTranslation, only: MolTranslate
 !  use MCMove_UB_Simple, only: UB_Simple
+  use MCMove_IsoVol, only: IsoVol
   use MCMove_UB_Swap, only: UB_Swap
   use MCMove_PlaneRotation, only: PlaneRotate
   use Move_ThermoLambda, only: ThermoLambda
@@ -48,6 +49,9 @@ module Input_Moves
 
       case("thermolambda")
         allocate(ThermoLambda::Moves(moveNum)%move)
+
+      case("isovol")
+        allocate(IsoVol::Moves(moveNum)%move)
 
       case("planerotate")
         allocate(PlaneRotate::Moves(moveNum)%move)
