@@ -15,8 +15,8 @@
 !==============================================================
 module ClassyConstants
   use VarPrecision
-  real(dp), parameter :: pi=4d0*datan(1d0) 
-  real(dp), parameter :: two_pi=8d0*datan(1d0)
+  real(dp), parameter :: pi=4E0_dp*datan(1E0_dp) 
+  real(dp), parameter :: two_pi=8E0_dp*datan(1E0_dp)
         
   !All units are in Boltzmann Reduced Units (kb = 1/K)
   real(dp), parameter :: coulombConst = 1.671009770E5_dp
@@ -24,19 +24,24 @@ end module
 !===================================================================      
 module Units
   use VarPrecision
+  real(dp), parameter :: PaToBoltz = 0.724297303E-7_dp
   real(dp) :: inEngUnit = 1E0_dp
   real(dp) :: inLenUnit = 1E0_dp
   real(dp) :: inAngUnit = 1E0_dp
+  real(dp) :: inPressUnit = 1E0_dp
   character(len=6) :: inengStr = "kb"
   character(len=6) :: inlenStr = "ang"
   character(len=6) :: inangStr = "rad"
+  character(len=6) :: inPressStr = "atm"
 
   real(dp) :: outEngUnit = 1E0_dp
   real(dp) :: outLenUnit = 1E0_dp
   real(dp) :: outAngUnit = 1E0_dp
+  real(dp) :: outPressUnit = 1E0_dp
   character(len=6) :: engStr = "kb"
   character(len=6) :: lenStr = "ang"
   character(len=6) :: angStr = "rad"
+  character(len=6) :: pressStr = "atm"
 
 
 !===================================================================      
@@ -52,17 +57,17 @@ module Units
 !     engStr = 
      select case(trim(adjustl(unitName)))
        case("j-mol")
-         units = 1d0/8.3144621d0
+         units = 1E0_dp/8.3144621E0_dp
        case("kj-mol")
-         units = 1d0/8.3144621d-3
+         units = 1E0_dp/8.3144621d-3
        case("cal-mol")
-         units = 1d0/1.9872041d0
+         units = 1E0_dp/1.9872041E0_dp
        case("kcal-mol")
-         units = 1d0/1.9872041d-3
+         units = 1E0_dp/1.9872041d-3
        case("ev") 
-         units = 1d0/8.6173303d-5
+         units = 1E0_dp/8.6173303d-5
        case("kb")
-         units = 1d0
+         units = 1E0_dp
        case default
          write(*,*) "Error! Invalid Energy Unit Type!"
          write(*,*) unitName
@@ -71,19 +76,20 @@ module Units
         
      end function
 !===================================================================      
-  real(dp) function FindLengthUnit(unitName)
+  function FindLengthUnit(unitName) result(units)
      implicit none 
      character(len=*) :: unitName       
+     real(dp) :: units
       
      select case(trim(adjustl(unitName)))
        case("nm")
-         FindLengthUnit = 1d-1
+         units = 1E-1_dp
        case("a")
-         FindLengthUnit = 1d0
+         units = 1E0_dp
        case("ang")
-         FindLengthUnit = 1d0
+         units = 1E0_dp
        case("sigma")
-         FindLengthUnit = 1d0                  
+         units = 1E0_dp                  
        case default
          write(*,*) "Error! Invalid Length Unit Type!"
          write(*,*) unitName
@@ -93,24 +99,25 @@ module Units
       
   end function
 !===================================================================      
-  real(dp) function FindAngularUnit(unitName)
+  function FindAngularUnit(unitName) result(units)
     use ClassyConstants, only: pi
     implicit none 
     character(len=*), intent(in) :: unitName       
+     real(dp) :: units
         
     select case(trim(adjustl(unitName)))
       case("deg")
-        FindAngularUnit = pi/180d0
+        units = pi/180E0_dp
       case("degree")
-        FindAngularUnit = pi/180d0
+        units = pi/180E0_dp
       case("degrees")
-        FindAngularUnit = pi/180d0                  
+        units = pi/180E0_dp                  
       case("rad")
-        FindAngularUnit = 1d0
+        units = 1E0_dp
       case("radian")
-        FindAngularUnit = 1d0
+        units = 1E0_dp
       case("radians")
-        FindAngularUnit = 1d0                 
+        units = 1E0_dp                 
       case default
         write(*,*) "Error! Invalid Angular Unit Type!"
         write(*,*) unitName
@@ -118,6 +125,37 @@ module Units
       end select
    
   end function          
+!===================================================================      
+  function FindPressureUnit(unitName) result(units)
+     implicit none 
+     character(len=*) :: unitName       
+     real(dp) :: units
+      
+     select case(trim(adjustl(unitName)))
+       case("atm")
+         units = 1E0_dp/(PaToBoltz*101325)
+
+       case("pa")
+         units = 1E0_dp/PaToBoltz
+
+       case("bar")
+         units = 1E0_dp/(PaToBoltz*1E-5)
+
+       case("mmhg")
+         units = 1E0_dp/(PaToBoltz*133.322E0_dp)
+
+       case("lj")
+         units = 1E0_dp
+
+       case default
+         write(*,*) "Error! Invalid Pressure Unit Type!"
+         write(*,*) unitName
+         stop
+      end select
+
+      
+  end function
+
 !===================================================================      
 end module    
 !===================================================================

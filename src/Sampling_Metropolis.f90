@@ -58,7 +58,7 @@ module MetropolisRule
       class is(Deletion)
           extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
       class is(VolChange)
-          extraTerms = extraTerms + (disp(1)%volNew -disp(1)%volOld)*trialBox%pressure*trialBox%beta
+          extraTerms = extraTerms - (disp(1)%volNew-disp(1)%volOld) * trialBox%pressure*trialBox%beta
     end select
 
     biasE = -trialBox%beta * E_Diff + probTerm + extraTerms

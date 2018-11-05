@@ -177,13 +177,15 @@ module Template_SimBox
       case(1) !Energy
         thermVal = self % ETotal
       case(2) !Ethalpy
-        thermVal = self % HTotal
+        thermVal = self % ETotal + self%Pressure*self%Volume
       case(3) !Volume
         thermVal = self % volume
       case(4) !Temperature
         thermVal = self % temperature
       case(5) !Pressure
         thermVal = self % pressure
+      case(6) !Density
+        thermVal = self % nMolTotal/self%volume
     end select
 
   end function
@@ -207,6 +209,8 @@ module Template_SimBox
         thermInt = 4
       case("pressure") !Pressure
         thermInt = 5
+      case("density") !Density
+        thermInt = 6
     end select
 
   end function

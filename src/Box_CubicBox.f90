@@ -333,9 +333,11 @@ module CubicBoxDef
 
 
 
+    self%volume = self%boxL**3
+    write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure
+    write(nout,*) "Box ", self%boxID, " Volume: ", self%volume
     write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%boxL**3
 
-    self%volume = self%boxL**3
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
 
@@ -345,6 +347,54 @@ module CubicBoxDef
         call self%ComputeCM(iMol)
       endif
     enddo
+
+  end subroutine
+!==========================================================================================
+  subroutine CubeBox_Epilogue(self)
+    use ParallelVar, only: nout
+    use Units, only: outEngUnit
+    implicit none
+    class(CubeBox), intent(inout) :: self
+    integer :: iConstrain
+    real(dp) :: E_Culm
+
+    E_Culm = self%ETotal
+
+    write(nout,*) "--------Box", self%boxID , "Energy---------"
+    call self % ComputeEnergy
+    call self % NeighList(1) % BuildList
+
+    write(nout, *) "Final Energy:", self % ETotal/outEngUnit
+    if(self%ETotal /= 0) then
+      if( abs((E_Culm-self%ETotal)/self%ETotal) > 1E-7_dp ) then
+        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "Box: ", self%boxID
+        write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit
+        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit
+        write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit
+      endif
+    else
+      if( abs(E_Culm-self%ETotal) > 1E-7_dp ) then
+        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "Box: ", self%boxID
+        write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit
+        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit
+        write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit
+      endif
+    endif
+
+    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
+    write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
+    self%volume = self%boxL**3
+    write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure
+    write(nout,*) "Box ", self%boxID, " Volume: ", self%volume
+    write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%boxL**3
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % Epilogue
+      enddo
+    endif
+
 
   end subroutine
 !==========================================================================================

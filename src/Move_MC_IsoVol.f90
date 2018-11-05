@@ -13,6 +13,7 @@ module MCMove_Isovol
   type, public, extends(MCMove) :: IsoVol
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp   
+    integer :: style = 1
     real(dp) :: maxDv = 0.01E0_dp
     logical :: tuneMax = .true.
     real(dp) :: limit = 3.00E0_dp
@@ -59,23 +60,33 @@ module MCMove_Isovol
     real(dp) :: E_Diff, scaleFactor
 
     self % atmps = self % atmps + 1E0_dp
-    dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
-!    write(*,*) trialBox%volume, dV, trialBox%volume + dV
-    self%disp(1)% volNew = trialBox%volume+dV
-    self%disp(1)% volOld = trialBox%volume
+    select case(self%style)
+      case(1) !Log Scale
+        dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
+        self%disp(1)%volNew = trialBox%volume * exp(dV)
+        self%disp(1)%volOld = trialBox%volume
+
+      case(2) !Linear Scale
+        dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
+        self%disp(1)%volNew = trialBox%volume + dV
+        self%disp(1)%volOld = trialBox%volume
+      case default
+        stop
+
+    end select
     if(self%disp(1)%volNew < 0E0_dp) then
       return
     endif
 
     select type(trialBox)
       class is(CubeBox)
-        scaleFactor = ((trialBox%volume+dV)/(trialBox%volume))**(1E0_dp/3E0_dp)
+        scaleFactor = (self%disp(1)%volNew/self%disp(1)%volOld)**(1E0_dp/3E0_dp)
         self%disp(1)%xScale = scaleFactor
         self%disp(1)%yScale = scaleFactor
         self%disp(1)%zScale = scaleFactor
 
       class is(OrthoBox)
-        scaleFactor = ((trialBox%volume+dV)/(trialBox%volume))**(1E0_dp/3E0_dp)
+        scaleFactor = (self%disp(1)%volNew/self%disp(1)%volOld)**(1E0_dp/3E0_dp)
         self%disp(1)%xScale = scaleFactor
         self%disp(1)%yScale = scaleFactor
         self%disp(1)%zScale = scaleFactor
@@ -98,8 +109,13 @@ module MCMove_Isovol
     endif
 
 !    write(*,*) E_Diff
+    select case(self%style)
+      case(1) !Log Scale
+        prob = (trialBox%nMolTotal+1) * log(self%disp(1)%volNew / self%disp(1)%volOld) 
+      case(2) !Linear Scale
+        prob = trialBox%nMolTotal * log(self%disp(1)%volNew / self%disp(1)%volOld) 
+    end select
 
-    prob = trialBox%nMolTotal * log(self%disp(1)% volNew/ self%disp(1)% volOld) 
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:1), logProb=prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
@@ -191,6 +207,14 @@ module MCMove_Isovol
         read(command, *) realVal
         self%maxDv = realVal
 
+      case("style")
+        call GetXCommand(line, command, 5, lineStat)
+        select case(trim(adjustl(command)))
+          case("log")
+            self%style = 1
+          case("linear")
+            self%style = 2
+        end select
       case default
         lineStat = -1
         return
