@@ -11,6 +11,7 @@ contains
     use ParallelVar, only: nout
     use Traj_Lammps, only: LAMMPSDump
     use Traj_XYZ, only: trajXYZ
+    use Traj_XSF, only: trajXSF
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: TrajNum
@@ -28,6 +29,9 @@ contains
 
       case("xyz")
         allocate(trajXYZ::TrajArray(TrajNum) % traj)
+
+      case("xsf")
+        allocate(trajXSF::TrajArray(TrajNum) % traj)
 
       case default
         lineStat = -1

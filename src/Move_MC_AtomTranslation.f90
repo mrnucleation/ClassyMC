@@ -26,10 +26,17 @@ use VarPrecision
  contains
 !========================================================
   subroutine AtomTrans_Constructor(self)
+    use BoxData, only: BoxArray
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(AtomTranslate), intent(inout) :: self
-!    integer :: iType, maxAtoms
+    integer :: nBoxes
+
+    if(.not. allocated(self%boxProb)) then
+      nBoxes = size(boxArray)
+      allocate( self%boxProb(1:nBoxes) )
+      self%boxProb = 1E0_dp/real(nBoxes,dp)
+    endif
 
 
 

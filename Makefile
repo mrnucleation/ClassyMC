@@ -16,6 +16,7 @@ OPTIMIZE_FLAGS_IFORT+= -no-prec-div
 OPTIMIZE_FLAGS_IFORT += -no-wrap-margin
 OPTIMIZE_FLAGS_IFORT += -fpp
 OPTIMIZE_FLAGS_IFORT += -fpe0
+OPTIMIZE_FLAGS_IFORT += -pg
 OPTIMIZE_FLAGS_IFORT += -traceback
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
@@ -123,6 +124,7 @@ SRC_MAIN := $(SRC)/Common.f90\
  	        	$(SRC)/Script_TrajType.f90\
 	        	$(SRC)/Output_DumpCoords.f90\
 	        	$(SRC)/Traj_XYZFormat.f90\
+	        	$(SRC)/Traj_XSF.f90\
 	        	$(SRC)/Traj_LAMMPSDump.f90\
 				$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
@@ -316,7 +318,7 @@ $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Force
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o $(OBJ)/Script_BondType.o $(OBJ)/Script_AngleType.o $(OBJ)/Script_RegrowType.o 
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
 $(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o
-$(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o
+$(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XSF.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o
 $(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Common_BoxData.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o

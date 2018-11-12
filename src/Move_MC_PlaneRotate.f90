@@ -29,10 +29,17 @@ use VarPrecision
  contains
 !========================================================
   subroutine PlaneRotate_Constructor(self)
+    use BoxData, only: BoxArray
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(PlaneRotate), intent(inout) :: self
-    integer :: iType, maxAtoms
+    integer :: iType, maxAtoms, nBoxes
+
+    if(.not. allocated(self%boxProb)) then
+      nBoxes = size(boxArray)
+      allocate( self%boxProb(1:nBoxes) )
+      self%boxProb = 1E0_dp/real(nBoxes,dp)
+    endif
 
     maxAtoms = 0
     do iType = 1, nMolTypes

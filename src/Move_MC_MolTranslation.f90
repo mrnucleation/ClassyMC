@@ -31,9 +31,16 @@ use VarPrecision
 !========================================================
   subroutine MolTrans_Constructor(self)
     use Common_MolInfo, only: MolData, nMolTypes
+    use BoxData, only: BoxArray
     implicit none
     class(MolTranslate), intent(inout) :: self
-    integer :: iType, maxAtoms
+    integer :: iType, maxAtoms, nBoxes
+
+    if(.not. allocated(self%boxProb)) then
+      nBoxes = size(boxArray)
+      allocate( self%boxProb(1:nBoxes) )
+      self%boxProb = 1E0_dp/real(nBoxes,dp)
+    endif
 
     maxAtoms = 0
     do iType = 1, nMolTypes
@@ -204,7 +211,7 @@ use VarPrecision
 
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
-      case("dynamicmax")
+      case("tunemax")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) logicVal
         self%tunemax = logicVal

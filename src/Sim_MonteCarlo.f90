@@ -29,7 +29,8 @@ contains
     integer :: iAtom, moveNum, boxNum
     integer(kind=8) :: iCycle, iMove
     character(len=50) :: fileName
-    class(MCMove), pointer :: curMove
+!    class(MCMove), pointer :: curMove
+    real(dp), allocatable :: boxProb(:)
 
     iCycle = 0
     iMove = 0
@@ -37,6 +38,7 @@ contains
     call Prologue(iCycle, iMove)
     call SafetyCheck
     nBoxes = size(BoxArray)
+    allocate( boxProb(1:nBoxes) )
     boxNum = 1
 
     call Analyze(iCycle, iMove, accept, .true.)
@@ -53,14 +55,17 @@ contains
       !-----Start Move Loop
       do iMove = 1, nMoves
         moveNum = ListRNG(MoveProb)
-        curMove => Moves(moveNum) % Move 
-        select type( curMove )
+        
+        select type( curMove => Moves(moveNum) % Move )
           class is (MCMultiBoxMove)
             call curMove % MultiBox (accept)
  
           class is (MCMove)
+
             if(nBoxes > 1) then
-              boxNum = floor(grnd()*nBoxes + 1E0_dp)
+!              boxNum = floor(grnd()*nBoxes + 1E0_dp)
+              call curMove % GetBoxProb(boxProb)
+              boxNum = ListRNG(boxProb)
             endif
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
 

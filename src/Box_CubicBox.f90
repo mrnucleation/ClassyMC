@@ -99,7 +99,7 @@ module CubicBoxDef
     use Input_Format, only: GetXCommand
     implicit none
     class(CubeBox), intent(inout) :: self
-    real(dp), intent(out) :: list(:, :)
+    real(dp), intent(inout) :: list(:, :)
 
     integer :: iDimen
 

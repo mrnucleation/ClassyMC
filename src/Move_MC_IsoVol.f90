@@ -38,6 +38,9 @@ module MCMove_Isovol
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(IsoVol), intent(inout) :: self
+    integer :: nBoxes
+
+
 
     allocate( self%tempNNei(1) )
     allocate( self%tempList(1, 1) )
@@ -149,10 +152,17 @@ module MCMove_Isovol
   end subroutine
 !=========================================================================
   subroutine IsoVol_Prologue(self)
+    use BoxData, only: BoxArray
     use ParallelVar, only: nout
     implicit none
     class(IsoVol), intent(inout) :: self
+    integer :: nBoxes
 
+    if(.not. allocated(self%boxProb)) then
+      nBoxes = size(boxArray)
+      allocate( self%boxProb(1:nBoxes) )
+      self%boxProb = 1E0_dp/real(nBoxes,dp)
+    endif
 
     write(nout,"(1x,A,F15.8)") "(Iso-Volume) Maximum Volume Change: ", self%maxdV
 
