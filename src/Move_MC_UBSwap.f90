@@ -177,6 +177,14 @@ use VarPrecision
       return
     endif
 
+    !Check Post Energy Constraint
+    accept = trialBox % CheckPostEnergy( self%newPart(1:nAtoms), E_Diff )
+    if(.not. accept) then
+      return
+    endif
+
+
+
     !Compute the generation probability
     Prob = real(trialBox%nMolTotal, dp) * self%ubVol
     Prob = Prob/(real(nCount, dp) * real(trialBox%nMolTotal+1, dp))
@@ -247,6 +255,14 @@ use VarPrecision
 !      write(*,*) "Energy Rejection"
       return
     endif
+
+    !Check Post Energy Constraint
+    accept = trialBox % CheckPostEnergy( self%oldPart(1:1), E_Diff )
+    if(.not. accept) then
+      return
+    endif
+
+
 
     call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
     call self % CountSites(trialBox, &

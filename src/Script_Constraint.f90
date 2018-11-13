@@ -10,6 +10,8 @@ contains
     use BoxData, only: BoxArray
     use ParallelVar, only: nout
     use Constrain_DistanceCriteria, only: DistCriteria
+    use Constrain_EnergyCeiling, only: EnergyCeiling
+    use Constrain_EnergyFloor, only: EnergyFloor
     use Constrain_FreezeType, only: FreezeType
     use Constrain_HardWall, only: HardWall
 
@@ -35,6 +37,13 @@ contains
       select case(trim(adjustl(command)))
         case("distancecriteria")
           allocate( DistCriteria::BoxArray(BoxNum)%box%Constrain(i)%method )
+
+        case("energyceiling")
+          allocate( EnergyCeiling ::BoxArray(BoxNum)%box%Constrain(i)%method )
+
+
+        case("energyfloor")
+          allocate( EnergyFloor ::BoxArray(BoxNum)%box%Constrain(i)%method )
 
         case("hardwall")
           allocate( HardWall ::BoxArray(BoxNum)%box%Constrain(i)%method )

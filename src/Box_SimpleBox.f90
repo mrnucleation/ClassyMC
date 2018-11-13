@@ -61,11 +61,19 @@ module SimpleSimBox
       procedure, pass :: ProcessIO => SimpleBox_ProcessIO
 !      procedure, pass :: ProcessIOCommon => SimpleBox_ProcessIOCommon
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
+      procedure, pass :: CheckPostEnergy => SimpleBox_CheckPostEnergy
       procedure, pass :: DumpData => SimpleBox_DumpData
 
       !Coordinate Processing Functions
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetMolData => SimpleBox_GetMolData
+
+      !Property Gathering Functions
+      procedure, pass :: GetNewEnergy => Simplebox_GetNewEnergy
+      procedure, pass :: GetNewMolCount => Simplebox_GetNewMolCount
+!      procedure, pass :: GetNewAtomCount => Simplebox_GetNewAtomCount
+
+
 
       !Update Functions
       procedure, pass :: AddMol => SimpleBox_AddMol
@@ -398,6 +406,34 @@ module SimpleSimBox
 
   end function
 !==========================================================================================
+  function SimpleBox_CheckPostEnergy(self, disp, E_Diff) result(accept)
+    use CoordinateTypes
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    class(Perturbation), intent(in) :: disp(:)
+    real(dp), intent(in) :: E_Diff
+    logical :: accept
+    integer :: nDisp, iConstrain
+
+    accept = .true.
+    if( .not. allocated(self%Constrain) ) then
+      return
+    endif
+
+
+    nDisp = size(disp)
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % PostEnergy( self, disp(1:nDisp), E_Diff, accept )
+      enddo
+      if(.not. accept) then
+        return
+      endif
+    endif
+
+  end function
+
+!==========================================================================================
   subroutine SimpleBox_ProcessIO(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
@@ -527,6 +563,33 @@ module SimpleSimBox
     endif
 
   end subroutine
+!==========================================================================================
+  function SimpleBox_GetNewEnergy(self, E_Diff) result(E_New)
+    implicit none
+    class(SimpleBox), intent(in) :: self
+    real(dp), intent(in)  :: E_Diff
+    real(dp)  :: E_New
+
+    E_New = self % ETotal + E_Diff
+
+  end function
+!==========================================================================================
+  function SimpleBox_GetNewMolCount(self, disp) result(nNew)
+    implicit none
+    class(SimpleBox), intent(in) :: self
+    class(Perturbation), intent(in) :: disp(:)
+    integer :: nNew, molType
+
+    nNew = self%nMolTotal
+
+    select type(disp)
+      class is(Addition)
+        nNew = nNew + 1
+      class is(Deletion)
+        nNew = nNew - 1
+    end select
+
+  end function
 !==========================================================================================
   subroutine SimpleBox_AddMol(self, molType)
     use Common_MolInfo, only: nMolTypes, MolData

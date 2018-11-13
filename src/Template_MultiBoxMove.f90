@@ -6,7 +6,7 @@ use MoveClassDef, only: MCMove
 
   type, public, extends(MCMove) :: MCMultiBoxMove
 !    real(dp) :: atmps, accpt
-    integer, allocatable :: allowedBox(:)
+!    integer, allocatable :: allowedBox(:)
     contains
 !      procedure, pass :: GeneratePosition 
 !      procedure, pass :: FullMove

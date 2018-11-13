@@ -10,8 +10,8 @@ module ConstraintTemplate
       procedure, pass :: Constructor
       procedure, pass :: CheckInitialConstraint
       procedure, pass :: DiffCheck
+      procedure, pass :: PostEnergy
       procedure, pass :: ProcessIO
-!      procedure, pass :: Update
   end type
 
   type, public :: constrainArray
@@ -45,9 +45,16 @@ module ConstraintTemplate
     logical, intent(out) :: accept
     accept = .true.
 
-    select type(disp)
-
-    end select
+  end subroutine
+!=============================================================
+  subroutine PostEnergy(self, trialBox, disp, E_Diff, accept)
+    implicit none
+    class(constraint), intent(inout) :: self
+    class(SimBox), intent(in) :: trialBox
+    class(Perturbation), intent(in) :: disp(:)
+    real(dp), intent(in) :: E_Diff
+    logical, intent(out) :: accept
+    accept = .true.
 
 
   end subroutine
@@ -60,14 +67,6 @@ module ConstraintTemplate
 
     lineStat = 0
   end subroutine
-!=============================================================
-!  subroutine Update(self, trialBox, disp)
-!    implicit none
-!    class(constraint), intent(inout) :: self
-!    class(SimBox), intent(in) :: trialBox
-!    class(Perturbation), intent(in) :: disp(:)
-!
-!  end subroutine
 !=============================================================
 end module
 !=============================================================

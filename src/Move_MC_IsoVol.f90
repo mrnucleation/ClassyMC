@@ -111,6 +111,14 @@ module MCMove_Isovol
       return
     endif
 
+    !Check Post Energy Constraint
+    accept = trialBox % CheckPostEnergy( self%disp(1:1), E_Diff )
+    if(.not. accept) then
+      return
+    endif
+
+
+
 !    write(*,*) E_Diff
     select case(self%style)
       case(1) !Log Scale

@@ -134,6 +134,14 @@ use VarPrecision
       return
     endif
 
+    !Check Post Energy Constraint
+    accept = trialBox % CheckPostEnergy( self%disp(1:nAtoms), E_Diff )
+    if(.not. accept) then
+      return
+    endif
+
+
+
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:nAtoms), inProb=Prob)
