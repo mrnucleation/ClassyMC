@@ -2,10 +2,11 @@
 moleculetypes 1
 
 atomdef
-  "Na"  1.0
+  "O"  18.016
 end_atomdef
 
 molecule 1
+  RegrowthType Simple
   atoms
     1
   end_atoms

@@ -67,6 +67,7 @@ module SimpleSimBox
       !Coordinate Processing Functions
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetMolData => SimpleBox_GetMolData
+      procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
 
       !Property Gathering Functions
       procedure, pass :: GetNewEnergy => Simplebox_GetNewEnergy
@@ -563,6 +564,26 @@ module SimpleSimBox
     endif
 
   end subroutine
+
+!==========================================================================================
+  function SimpleBox_GetMaxAtoms(self) result(nMax)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer :: nMax
+    integer :: maxMol, iType
+    
+
+    self%nMaxAtoms = 0
+    maxMol = 0
+    do iType = 1, nMolTypes
+      self%nMaxAtoms = self%nMaxAtoms + self%NMolMax(iType)*MolData(iType)%nAtoms
+      maxMol = maxMol + self%NMolMax(iType)
+    enddo
+    nMax = self%nMaxAtoms
+
+
+  end function
 !==========================================================================================
   function SimpleBox_GetNewEnergy(self, E_Diff) result(E_New)
     implicit none

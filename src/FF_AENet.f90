@@ -41,6 +41,7 @@ module FF_AENet
       procedure, pass :: DiffECalc => DiffECalc_AENet
 #endif
       procedure, pass :: ProcessIO => ProcessIO_AENet
+      procedure, pass :: Prologue => Prologue_AENet
 !      procedure, pass :: GetCutOff
   end type
 
@@ -59,15 +60,6 @@ module FF_AENet
     character(len=100) :: str1, str2
     integer :: iBox, atomLimit, iType
     integer :: AllocateStat
-
-     atomLimit = 0
-     do iBox = 1, size(BoxArray)
-       if( atomLimit < boxArray(iBox) % box % nMaxAtoms) then
-         atomLimit = boxArray(iBox) % box % nMaxAtoms
-       endif
-     enddo
-     allocate(self%atomTypes(1:atomLimit))
-     allocate(self%tempcoords(3, 1:atomLimit))
      write(nout, *) "Initializing AENet"
 !     inp = read_InpPredict(inFile)
      call initialize_lib(str1, str2, inp)
@@ -117,7 +109,7 @@ module FF_AENet
     nCurAtoms = 0
     self%box = 0E0_dp
     self%tempcoords = 0E0_dp
-    self%atomTypes = 0
+!    self%atomTypes = 1
     xmax = 0E0_dp
     ymax = 0E0_dp
     zmax = 0E0_dp
@@ -158,7 +150,6 @@ module FF_AENet
          self%box(3,3) = tempdim(2, 3) - tempdim(1, 3)
      end select
 
-!     write(*,*) "Offset:", xoffset, yoffset, zoffset
      do iAtom = 1, nCurAtoms
        self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom) - xoffset
        self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom) - yoffset
@@ -177,7 +168,6 @@ module FF_AENet
        end select
      enddo
 
-!     write(*,*) "Max:", xmax, ymax, zmax
      select type(curbox)
        class is(SimpleBox)
          self%box(1,1) = 3*(xmax + 1e-5)
@@ -185,41 +175,22 @@ module FF_AENet
          self%box(3,3) = 3*(zmax + 1e-5)
      end select
 
-!     write(*,*) "Box:"
-!     do i = 1,3
-!       write(*,*) (self%box(i,j), j =1,3)
-!     enddo
+
      self%boxrecp(:,:) = geo_recip_lattice(self%box)
-!     do i = 1,3
-!       write(*,*) (self%boxrecp(i,j), j =1,3)
-!     enddo
-
-!     write(*,*) "Coords:"
-!     do i = 1, nCurAtoms
-!       write(*,*) self%atomTypes(i), (self%tempcoords(j, i), j=1,3)
-!     enddo
-
-
-
-!     write(*,*) "Post Transform:"
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3, 1:nCurAtoms)) / (2E0_dp * pi)
-!     do i = 1, nCurAtoms
-!       write(*,*) self%atomTypes(i), (self%tempcoords(j, i), j=1,3)
-!     enddo
-
 
 !     do iAtom = 1, ncurAtoms
 !          call aenet_atomic_energy(coo_i, type_i, nnb, nbcoo, nbtype, &
 !                                   E_i, stat)
 !     enddo
-!     call get_energy(self%box, nCurAtoms, &
-     call get_energy_lib(self%box, nCurAtoms, &
-                         self%tempcoords, &
-                         self%atomTypes, pbc, &
+     call get_energy_lib(self%box(1:3, 1:3), nCurAtoms, &
+                         self%tempcoords(1:3, 1:nCurAtoms), &
+                         self%atomTypes(1:nCurAtoms), pbc, &
                          Ecoh, E_T)
 
      write(nout, *) "Raw Neuro Net Energy:", E_T, Ecoh
-     E_T = E_T * curbox%nMolTotal / boltz
+!     E_T = E_T * curbox%nMolTotal / boltz
+     E_T = E_T / boltz
      write(nout, *) "Total Neuro Net Energy:", E_T
 
   end subroutine
@@ -263,7 +234,6 @@ module FF_AENet
             jAtom = curbox%NeighList(1)%list(jNei, iAtom)
             atmType2 = curbox % AtomType(jAtom)
             rmin_ij = self % rMinTable(atmType2, atmType1)          
-!            write(*,*) rmin_ij
 
             rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
             ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
@@ -302,7 +272,7 @@ module FF_AENet
     ! Convert the Classy Array into an Array that AENet can read.
     nCurAtoms = 0
     self%tempcoords = 0E0_dp
-    self%atomTypes = 0
+    self%atomTypes = 1
     select type(disp)
 !       -----------------------------------------------------
       class is(Displacement)
@@ -390,7 +360,6 @@ module FF_AENet
             zoffset = self%tempcoords(3, iAtom)
           endif
       enddo 
-!      write(*,*) "OFFSET:", xoffset, yoffset, zoffset
     end select
     self%box = 0E0_dp
 
@@ -442,42 +411,22 @@ module FF_AENet
        E_Diff = -curbox%Etotal
        return
      endif
-!     write(2,*) "nCurAtoms", nCurAtoms
-!     do iAtom = 1, nCurAtoms
-!       write(2,*) self%atomTypes(iAtom), self%tempcoords(1, iAtom), self%tempcoords(2, iAtom), self%tempcoords(3, iAtom)
-!     enddo
-!     write(2,*)
-!     do iAtom = 1, 3
-!       write(2,*) (self%box(j, iAtom),j=1,3)
-!     enddo
-
 
      self%boxrecp = 0E0_dp
      self%boxrecp(:,:) = geo_recip_lattice(self%box)
-!     write(2,*)
-!     do iAtom = 1, 3
-!       write(2,*) (self%boxrecp(j, iAtom),j=1,3)
-!     enddo
-
 
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
-!     do iAtom = 1, nCurAtoms
-!       write(2,*) self%atomTypes(iAtom), self%tempcoords(1, iAtom), self%tempcoords(2, iAtom), self%tempcoords(3, iAtom)
-!     enddo
-!     write(2,*)
-
-!     call get_energy_lib(self%box, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
-     call get_energy_lib(self%box, nCurAtoms, &
-                         self%tempcoords, &
-                         self%atomTypes, pbc, &
-                         Ecoh, E_T)
+     call get_energy_lib(self%box(1:3,1:3), nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
+!     call get_energy_lib(self%box, nCurAtoms, &
+!                         self%tempcoords, &
+!                         self%atomTypes, pbc, &
+!                         Ecoh, E_T)
 
 
-     E_T = E_T * nTotalMol / boltz
+!     E_T = E_T * nTotalMol / boltz
+     E_T = E_T / boltz
 !     E_T = Ecoh * nTotalMol / boltz
      E_Diff = E_T - curbox%ETotal
-!     write(2,*) "Engergy", E_Diff, E_T, curbox%ETotal
-!     write(2,*)
 
 
   end subroutine
@@ -533,13 +482,23 @@ module FF_AENet
 
   end subroutine
 !=============================================================================+
-!  function GetCutOff(self) result(rCut)
-!    implicit none
-!    class(AENet), intent(inout) :: self
-!    real(dp) :: rCut
-!
-!    rCut = self%rCut
-!  end function
+  subroutine Prologue_AENet(self)
+    use BoxData, only: BoxArray
+    use Common_MolInfo, only: nMolTypes, nAtomTypes
+    implicit none
+    class(AENet), intent(inout) :: self
+    integer :: atomLimit, iBox
+      atomLimit = 0
+     do iBox = 1, size(BoxArray)
+       if( atomLimit < boxArray(iBox) % box % GetMaxAtoms()) then
+         atomLimit = boxArray(iBox) % box % GetMaxAtoms()
+       endif
+     enddo
+     allocate(self%atomTypes(1:atomLimit))
+     allocate(self%tempcoords(3, 1:atomLimit))
+
+
+  end subroutine
 !=============================================================================+
 end module
 !=============================================================================+
