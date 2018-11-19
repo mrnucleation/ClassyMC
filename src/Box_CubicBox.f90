@@ -17,6 +17,10 @@ module CubicBoxDef
       procedure, pass :: DumpData => Cube_DumpData
       procedure, pass :: Prologue => Cube_Prologue
       procedure, pass :: UpdateVolume => Cube_UpdateVolume
+
+
+      procedure, pass :: GetRealCoords => Cube_GetRealCoords
+      procedure, pass :: GetReducedCoords => Cube_GetReducedCoords
   end type
 
 !==========================================================================================
@@ -394,6 +398,34 @@ module CubicBoxDef
         call self%Constrain(iConstrain) % method % Epilogue
       enddo
     endif
+
+
+  end subroutine
+!==========================================================================================
+  subroutine Cube_GetReducedCoords(self,realCoords,reducedCoords )
+    implicit none
+    class(CubeBox), intent(inout) :: self
+    real(dp), intent(in) :: realCoords(:)
+    real(dp), intent(out) :: reducedCoords(1:3)
+    integer :: i
+
+    do i = 1, self%nDimension
+      reducedCoords(i) = (realCoords(i)+self%boxL2)/self%boxL
+    enddo
+
+
+  end subroutine
+!==========================================================================================
+  subroutine Cube_GetRealCoords(self, reducedCoords, realCoords)
+    implicit none
+    class(CubeBox), intent(inout) :: self
+    real(dp), intent(in) :: reducedCoords(:)
+    real(dp), intent(out) :: realCoords(1:3)
+    integer :: i
+
+    do i = 1, self%nDimension
+      realCoords(i) = self%boxL*reducedCoords(i) - self%boxL2
+    enddo
 
 
   end subroutine

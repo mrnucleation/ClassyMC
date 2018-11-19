@@ -78,6 +78,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Sampling_Umbrella.f90\
         		$(SRC)/Sampling_UmbrellaWHAM.f90\
         		$(SRC)/Move_MC_AtomTranslation.f90\
+        		$(SRC)/Move_MC_BasicSwap.f90\
         		$(SRC)/Move_MC_Delete.f90\
         		$(SRC)/Move_MC_MolTranslation.f90\
         		$(SRC)/Move_MC_IsoVol.f90\

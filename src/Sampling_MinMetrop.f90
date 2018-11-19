@@ -49,6 +49,7 @@ module MinMetroRule
     biasE = -trialBox%beta * E_Diff + probTerm + extraTerms
     if(biasE <= 0.0E0_dp) then
       accept = .true.
+      write(*,*) biasE
     else
       accept = .false.
     endif

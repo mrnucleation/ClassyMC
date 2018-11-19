@@ -19,18 +19,39 @@ use VarPrecision
 !    integer, allocatable :: tempList(:, :)
 
     contains
+    procedure, pass :: SafetyCheck => Basic_Swap_SafetyCheck
       procedure, pass :: Constructor => Basic_Swap_Constructor
 !      procedure, pass :: GeneratePosition => Basic_Swap_GeneratePosition
       procedure, pass :: FullMove => Basic_Swap_FullMove
       procedure, pass :: SwapIn => Basic_Swap_SwapIn
       procedure, pass :: SwapOut => Basic_Swap_SwapOut
-      procedure, pass :: CountSites => Basic_Swap_CountSites
 !      procedure, pass :: Maintenance => Basic_Swap_Maintenance
       procedure, pass :: Prologue => Basic_Swap_Prologue
       procedure, pass :: Epilogue => Basic_Swap_Epilogue
   end type
 !========================================================
  contains
+!========================================================
+  subroutine Basic_Swap_SafetyCheck(self)
+    use BoxData, only: boxArray
+    use SimpleSimBox, only: SimpleBox
+    implicit none
+    class(Basic_Swap), intent(inout) :: self
+    integer :: iBox
+
+    !Ensure a boundary condition is set.
+    do iBox = 1, size(BoxArray)
+      select type(box => BoxArray(iBox)%box)
+        type is(SimpleBox)
+            write(*,*) "WARNING! Basic Swap move is not designed to work without"
+            write(*,*) "a bounding box!"
+            write(*,*) "Box Number:", iBox
+      end select
+    enddo
+
+
+
+  end subroutine
 !========================================================
   subroutine Basic_Swap_Constructor(self)
     use Common_MolInfo, only: MolData, nMolTypes
@@ -84,11 +105,12 @@ use VarPrecision
     logical :: relative
     integer :: nTarget, nType, rawIndx, iConstrain
     integer :: CalcIndex, nMove, nCount
-    integer :: iAtom, iDisp
+    integer :: i, iAtom, iDisp
     integer :: molType, molStart, molEnd, atomIndx, nAtoms
     integer :: targStart
+    real(dp) :: reduced(1:3)
     real(dp) :: insPoint(1:3)
-    real(dp) :: dx, dy, dz
+    real(dp) :: dx, dy, dz, vol
     real(dp) :: E_Diff, biasE, radius
     real(dp) :: Prob = 1E0_dp
     real(dp) :: ProbSub
@@ -110,25 +132,12 @@ use VarPrecision
     nMove = trialbox%MolGlobalIndx(nType, nMove)
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart, &
                                molEnd=molEnd)
-    !Choose an atom to serve as the target for the new molecule.
-!    rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
-!    call FindAtom(trialbox, rawIndx, nTarget)
-    rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
-    call FindMolecule(trialbox, rawIndx, nTarget)
-    call trialBox % GetMolData(nTarget, molStart=targStart)
-
 
 !    call MolData(molType) % molConstruct % ReverseConfig( trialBox, ProbSub, accept)
-
-    !Choose the position relative to the target atom 
-    call Generate_UnitSphere(dx, dy, dz)
-    radius = self % ubRad * grnd()**(1.0E0_dp/3.0E0_dp)
-    dx = radius * dx
-    dy = radius * dy
-    dz = radius * dz
-    insPoint(1) = trialBox%atoms(1, targStart) + dx
-    insPoint(2) = trialBox%atoms(2, targStart) + dy
-    insPoint(3) = trialBox%atoms(3, targStart) + dz
+    do i=1,3
+      reduced(i) = grnd()
+    enddo
+    call trialBox%GetRealCoords(reduced, insPoint)
 
 
     nAtoms = MolData(molType)%nAtoms
@@ -145,11 +154,6 @@ use VarPrecision
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))
-      if(iAtom == 1) then
-        call self % CountSites(trialBox, self%newPart(1)%x_new, self%newPart(1)%y_new, &
-                               self%newPart(1)%z_new, self%tempNNei(1), self%tempList(:,1), &
-                               nCount )
-      endif
       self%newPart(iAtom)%listIndex = iAtom
     enddo 
 
@@ -167,12 +171,12 @@ use VarPrecision
     endif
 
     !Compute the generation probability
-    Prob = real(trialBox%nMolTotal, dp) * self%ubVol
-    Prob = Prob/(real(nCount, dp) * real(trialBox%nMolTotal+1, dp))
+    vol = trialBox % GetThermo(3)
+    Prob = vol/real(trialBox%nMolTotal+1, dp) 
 !    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%ubVol, nCount, trialBox%nMolTotal+1
 
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%newPart(1:nAtoms))
+    accept = sampling % MakeDecision(trialBox, E_Diff,  self%newPart(1:nAtoms), inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
@@ -198,7 +202,7 @@ use VarPrecision
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex, nNei, nCount
     real(dp) :: dx, dy, dz
-    real(dp) :: E_Diff, biasE
+    real(dp) :: E_Diff, biasE, vol
     real(dp) :: Prob = 1E0_dp
     real(dp) :: Probconstruct = 1E0_dp
 
@@ -208,9 +212,11 @@ use VarPrecision
 
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
+    if(rawIndx > trialBox%nMolTotal) then
+      rawIndx = trialBox%nMolTotal
+    endif
     call FindMolecule(trialbox, rawIndx, nMove)
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart)
-
 
     if(trialBox%NMol(molType) - 1 < trialBox%NMolMin(molType)) then
 !      write(*,*) "Bounds Rejection"
@@ -238,20 +244,13 @@ use VarPrecision
     endif
 
     call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
-    call self % CountSites(trialBox, &
-                           trialBox%atoms(1,molStart), &
-                           trialBox%atoms(2,molStart), &
-                           trialBox%atoms(3,molStart), &
-                           trialBox%NeighList(1)%nNeigh(molStart), &
-                           trialBox%NeighList(1)%list(:,molStart), &
-                           nNei  )
 
-    Prob = real(nNei, dp) * real(trialBox%nMolTotal, dp)
-    Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%ubVol)
+    vol = trialBox % GetThermo(3)
+    Prob = real(trialBox%nMolTotal, dp)/vol
 !    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%ubVol, nNei, trialBox%nMolTotal-1
 
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%oldPart(1:1))
+    accept = sampling % MakeDecision(trialBox, E_Diff,self%oldPart(1:1),inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp
@@ -259,36 +258,6 @@ use VarPrecision
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 
-
-  end subroutine
-!========================================================
-  subroutine Basic_Swap_CountSites(self, trialBox, x,y,z, nNei, tempList, nCount)
-    use Common_MolInfo, only: MolData, nMolTypes
-    implicit none
-    class(Basic_Swap), intent(inout) :: self
-    class(SimpleBox), intent(inout) :: trialBox
-    integer, intent(in) :: NNei
-    integer, intent(in) :: tempList(:)
-    real(dp), intent(in) :: x,y,z
-    integer, intent(out) :: NCount
-    integer :: iNei, iAtom, molIndx
-    real(dp) :: rx, ry,rz, rsq
-
-
-    nCount = 0
-    do iNei = 1, NNei
-      iAtom = tempList(iNei)
-      molIndx = trialBox%MolIndx(iAtom)
-      if(iAtom == trialBox%MolStartIndx(molIndx)) then
-        rx = x - trialBox % atoms(1, iAtom)
-        ry = y - trialBox % atoms(2, iAtom)
-        rz = z - trialBox % atoms(3, iAtom)
-        rsq = rx*rx + ry*ry + rz*rz
-        if(rsq < self%ubRadSq) then
-          nCount = nCount + 1
-        endif
-      endif
-    enddo
 
   end subroutine
 !=========================================================================
@@ -319,8 +288,6 @@ use VarPrecision
     enddo
 
 
-    self%ubVol = (4E0_dp/3E0_dp)*pi*self%ubRad**3
-    self%ubRadSq = self%ubRad * self%ubRad
 !    write(*,*) self%ubVol
 
     allocate( self%tempNNei(maxAtoms) )
@@ -334,20 +301,20 @@ use VarPrecision
     class(Basic_Swap), intent(inout) :: self
     real(dp) :: accptRate
       
-    write(nout,"(1x,A,I15)") "UB Moves Accepted: ", nint(self%accpt)
-    write(nout,"(1x,A,I15)") "UB Moves Attempted: ", nint(self%atmps)
+    write(nout,"(1x,A,I15)") "Basic Swap Moves Accepted: ", nint(self%accpt)
+    write(nout,"(1x,A,I15)") "Basic Swap Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()
-    write(nout,"(1x,A,F15.8)") "UB Acceptance Rate: ", accptRate
+    write(nout,"(1x,A,F15.8)") "Basic Swap Acceptance Rate: ", accptRate
 
-    write(nout,"(1x,A,I15)") "UB Out Moves Accepted: ", nint(self%outaccpt)
-    write(nout,"(1x,A,I15)") "UB Out Moves Attempted: ", nint(self%outatmps)
+    write(nout,"(1x,A,I15)") "Basic Swap Out Moves Accepted: ", nint(self%outaccpt)
+    write(nout,"(1x,A,I15)") "Basic Swap Out Moves Attempted: ", nint(self%outatmps)
     accptRate = 1E2_dp * self%outaccpt/self%outatmps
-    write(nout,"(1x,A,F15.8)") "UB Out Acceptance Rate: ", accptRate
+    write(nout,"(1x,A,F15.8)") "Basic Swap Out Acceptance Rate: ", accptRate
 
-    write(nout,"(1x,A,I15)") "UB In Moves Accepted: ", nint(self%inaccpt)
-    write(nout,"(1x,A,I15)") "UB In Moves Attempted: ", nint(self%inatmps)
+    write(nout,"(1x,A,I15)") "Basic Swap In Moves Accepted: ", nint(self%inaccpt)
+    write(nout,"(1x,A,I15)") "Basic Swap In Moves Attempted: ", nint(self%inatmps)
     accptRate = 1E2_dp * self%outaccpt/self%outatmps
-    write(nout,"(1x,A,F15.8)") "UB In Acceptance Rate: ", accptRate
+    write(nout,"(1x,A,F15.8)") "Basic Swap In Acceptance Rate: ", accptRate
  
 
   end subroutine

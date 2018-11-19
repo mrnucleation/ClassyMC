@@ -24,6 +24,7 @@
   modify box 1 temperature 3000
   modify box 1 buildfreq 100
 
+  #Format box (boxnum) chempotential (moltype) (value)
   modify box 1 chempotential 1 -9.210340372
   modify box 1 chempotential 2 -9.210340372
   NeighList 1 rsqlist 1
@@ -31,7 +32,8 @@
   Create Moves
 #    AtomTranslation 2.0
     MolTranslation 200.0
-    UBSwap 1.0
+#    UBSwap 1.0
+    BasicSwap 1.0
   End_Create
 
 #  Create constraint 1

@@ -58,6 +58,8 @@ contains
     enddo
 
     if(nType < 1) then
+      write(*,*) box%NMol
+      write(*,*) nType, globIndx
       stop "Catestrophic Error! Global Index passed to FindMolecule is invaild"
     endif
 
