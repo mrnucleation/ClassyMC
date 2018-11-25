@@ -197,7 +197,7 @@ module UmbrellaWHAMRule
     self%oldIndx = 1
   end subroutine
 !====================================================================
-  function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb) result(accept)
+  function UmbrellaWHAM_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb, extraIn) result(accept)
     use AnalysisData, only: AnalysisArray
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
@@ -206,6 +206,7 @@ module UmbrellaWHAMRule
     class(SimBox), intent(in) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(in), optional :: inProb, logProb
+    real(dp), intent(in), optional:: extraIn
     real(dp), intent(in) :: E_Diff
 
     logical :: accept
@@ -229,6 +230,7 @@ module UmbrellaWHAMRule
 
 
 
+
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
       call AnalysisArray(indx) % func % CalcNewState(disp)
@@ -248,16 +250,13 @@ module UmbrellaWHAMRule
     biasOld = self%UBias(self%oldIndx)
     biasNew = self%UBias(self%newIndx)
 
- 
-    extraTerms = 0E0_dp
-    select type(disp)
-      class is(Addition)
-          extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
-      class is(Deletion)
-          extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
-      class is(VolChange)
-          extraTerms = extraTerms + (disp(1)%volNew -disp(1)%volOld)*trialBox%pressure*trialBox%beta
-    end select
+     if(present(extraIn)) then
+      extraTerms = extraIn
+    else
+      extraTerms = 0E0_dp
+    endif
+
+
 
 
 !    write(*,*) "Bias", self%oldindx, biasOld, self%newIndx, biasNew
@@ -271,19 +270,11 @@ module UmbrellaWHAMRule
     elseif(biasE > log(grnd()) ) then
       accept = .true.
     endif
-!    write(*,*) "Accept?", accept
-
-!    select type(disp)
-!      class is(Addition)
-!      class is(Deletion)
-!        write(*,*) biasE, -trialBox%beta, E_Diff,  log(inProb), (biasNew-biasOld), extraTerms, accept, ranNum
-!    end select
 
   end function
 !==========================================================================
   function UmbrellaWHAM_GetBiasIndex(self)  result(biasIndx)
-    use AnalysisData, only: AnalysisArray
-    use AnalysisData, only: analyCommon
+    use AnalysisData, only: AnalysisArray, analyCommon
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: biasIndx

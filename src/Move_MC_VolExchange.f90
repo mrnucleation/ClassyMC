@@ -10,7 +10,7 @@ module MCMove_Isovol
   use VarPrecision
   use MoveClassDef
 
-  type, public, extends(MCMove) :: IsoVol
+  type, public, extends(MCMultiBoxMove) :: VolExchange
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp   
     integer :: style = 1
@@ -20,24 +20,25 @@ module MCMove_Isovol
     real(dp) :: targAccpt = 50E0_dp
 
     integer :: nDim = 3
-    type(OrthoVolChange) :: disp(1:1)
-    type(TriVolChange) :: disptri(1:1)
+    type(OrthoVolChange) :: disp1(1:1)
+    type(OrthoVolChange) :: disp2(1:1)
+!    type(TriVolChange) :: disptri(1:1)
     contains
-      procedure, pass :: Constructor => IsoVol_Constructor
-      procedure, pass :: FullMove => IsoVol_FullMove
+      procedure, pass :: Constructor => VolExchange_Constructor
+      procedure, pass :: FullMove => VolExchange_FullMove
 !      procedure, pass :: GetAcceptRate
-      procedure, pass :: Maintenance => IsoVol_Maintenance
-      procedure, pass :: Prologue => IsoVol_Prologue
-      procedure, pass :: Epilogue => IsoVol_Epilogue
-      procedure, pass :: ProcessIO => IsoVol_ProcessIO
+      procedure, pass :: Maintenance => VolExchange_Maintenance
+      procedure, pass :: Prologue => VolExchange_Prologue
+      procedure, pass :: Epilogue => VolExchange_Epilogue
+      procedure, pass :: ProcessIO => VolExchange_ProcessIO
   end type
 
  contains
 !========================================================
-  subroutine IsoVol_Constructor(self)
+  subroutine VolExchange_Constructor(self)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
-    class(IsoVol), intent(inout) :: self
+    class(VolExchange), intent(inout) :: self
     integer :: nBoxes
 
 
@@ -46,29 +47,57 @@ module MCMove_Isovol
     allocate( self%tempList(1, 1) )
   end subroutine
 !=========================================================================
-  subroutine IsoVol_FullMove(self, trialBox, accept)
+!=========================================================================
+  subroutine MultiBox(self, accept)
+    use BoxData, only: BoxArray
     use Common_MolInfo, only: nMolTypes
     use Box_Utility, only: FindAtom, FindFirstEmptyMol
-    use ForcefieldData, only: EnergyCalculator
-    use RandomGen, only: grnd
+    use RandomGen, only: grnd, ListRNG
     use CommonSampling, only: sampling
 
     implicit none
-    class(IsoVol), intent(inout) :: self
-    class(SimpleBox), intent(inout) :: trialBox
+    class(MCMultiBoxMove), intent(inout) :: self
     logical, intent(out) :: accept
-    integer :: i
+    integer :: i, boxNum
+    class(SimpleBox), pointer :: box1, box2
     real(dp) :: dV
-    real(dp) :: OldProb, NewProb, Prob, extraTerms
-    real(dp) :: E_Diff, scaleFactor
+    real(dp) :: Prob, Norm, extraTerms, half
+    real(dp) :: E_Diff1, E_Diff2, scaleFactor
+    real(dp) :: rescale(1:size(self%boxprob))
+
+
+
+    boxNum = ListRNG(self%boxProb)
+    box1 => BoxArray(boxNum)%box
+    rescale = self%boxprob
+    rescale(boxNum) = 0E0_dp
+    do i = 1, size(rescale)
+      norm = norm + rescale(i)
+    enddo
+    if(norm == 0E0_dp) then
+      write(0,*) "WARNING! To use VolExchange a nonzero probability must"
+      write(0,*) "be set for more than one box!"
+      stop 
+    endif
+    do i = 1, size(rescale)
+      rescale(i) = rescale(i)/norm
+    enddo
+    boxNum = ListRNG(rescale)
+    box2 => BoxArray(boxNum)%box
+
+
+
 
     self % atmps = self % atmps + 1E0_dp
     select case(self%style)
       case(1) !Log Scale
         dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
-        self%disp(1)%volNew = trialBox%volume * exp(dV)
-        self%disp(1)%volOld = trialBox%volume
+        dV = exp(dV) - 1E0_dp
+        self%disp1(1)%volNew = trialBox%volume + dV
+        self%disp1(1)%volOld = trialBox%volume
 
+        self%disp1(1)%volNew = trialBox%volume - dV
+        self%disp1(1)%volOld = trialBox%volume
       case(2) !Linear Scale
         dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
         self%disp(1)%volNew = trialBox%volume + dV
@@ -77,71 +106,125 @@ module MCMove_Isovol
         stop
 
     end select
-    if(self%disp(1)%volNew < 0E0_dp) then
+    if(self%disp1(1)%volNew < 0E0_dp) then
+      return
+    endif
+    if(self%disp2(1)%volNew < 0E0_dp) then
       return
     endif
 
+
+    !Compute how much to scale the sides of the box by for box1
     select type(trialBox)
       class is(CubeBox)
-        scaleFactor = (self%disp(1)%volNew/self%disp(1)%volOld)**(1E0_dp/3E0_dp)
-        self%disp(1)%xScale = scaleFactor
-        self%disp(1)%yScale = scaleFactor
-        self%disp(1)%zScale = scaleFactor
+        scaleFactor = (self%disp1(1)%volNew/self%disp1(1)%volOld)**(1E0_dp/3E0_dp)
+        self%disp1(1)%xScale = scaleFactor
+        self%disp1(1)%yScale = scaleFactor
+        self%disp1(1)%zScale = scaleFactor
 
       class is(OrthoBox)
-        scaleFactor = (self%disp(1)%volNew/self%disp(1)%volOld)**(1E0_dp/3E0_dp)
-        self%disp(1)%xScale = scaleFactor
-        self%disp(1)%yScale = scaleFactor
-        self%disp(1)%zScale = scaleFactor
+        scaleFactor = (self%disp1(1)%volNew/self%disp(1)%volOld)**(1E0_dp/3E0_dp)
+        self%disp1(1)%xScale = scaleFactor
+        self%disp1(1)%yScale = scaleFactor
+        self%disp1(1)%zScale = scaleFactor
+
+      class default
+        stop "This type of box is not compatible with volume change moves."
+    end select
+
+    !Compute how much to scale the sides of the box by for box2
+    select type(trialBox)
+      class is(CubeBox)
+        scaleFactor = (self%disp2(1)%volNew/self%disp2(1)%volOld)**(1E0_dp/3E0_dp)
+        self%disp2(1)%xScale = scaleFactor
+        self%disp2(1)%yScale = scaleFactor
+        self%disp2(1)%zScale = scaleFactor
+
+      class is(OrthoBox)
+        scaleFactor = (self%disp2(1)%volNew/self%disp2(1)%volOld)**(1E0_dp/3E0_dp)
+        self%disp2(1)%xScale = scaleFactor
+        self%disp2(1)%yScale = scaleFactor
+        self%disp2(1)%zScale = scaleFactor
 
       class default
         stop "This type of box is not compatible with volume change moves."
     end select
 
 
-    !Check Constraint
-    accept = trialBox % CheckConstraint( self%disp(1:1) )
+
+
+    !Check Constraint of Box1
+    accept = box1 % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then
       return
     endif
-
-    !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
-    if(.not. accept) then
-      return
-    endif
-
-    !Check Post Energy Constraint
-    accept = trialBox % CheckPostEnergy( self%disp(1:1), E_Diff )
+    !Check Constraint of Box2
+    accept = box2 % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then
       return
     endif
 
 
+    !Energy Calculation for Box 1
+    call box1 % EFunc % Method % DiffECalc(box1, self%disp1(1:1), self%tempList, self%tempNNei, E_Diff1, accept)
+    if(.not. accept) then
+      return
+    endif
+    !Check Post Energy Constraint for Box 1
+    accept = box1 % CheckPostEnergy( self%disp1(1:1), E_Diff1 )
+    if(.not. accept) then
+      return
+    endif
 
-!    write(*,*) E_Diff
+    !Energy Calculation for Box 2
+    call box2 % EFunc % Method % DiffECalc(box2, self%disp2(1:1), self%tempList, self%tempNNei, E_Diff2, accept)
+    if(.not. accept) then
+      return
+    endif
+    !Check Post Energy Constraint for Box 2
+    accept = box2 % CheckPostEnergy( self%disp2(1:1), E_Diff2 )
+    if(.not. accept) then
+      return
+    endif
+
+
+
+
+
+    !Compute the Proposal probability for Box1
     select case(self%style)
       case(1) !Log Scale
-        prob = (trialBox%nMolTotal+1) * log(self%disp(1)%volNew / self%disp(1)%volOld) 
+        prob = (box1%nMolTotal+1) * log(self%disp1(1)%volNew / self%disp1(1)%volOld) 
       case(2) !Linear Scale
-        prob = trialBox%nMolTotal * log(self%disp(1)%volNew / self%disp(1)%volOld) 
+        prob = box1%nMolTotal * log(self%disp1(1)%volNew / self%disp1(1)%volOld) 
     end select
 
-    !Get PV term
-    extraTerms = sampling % GetExtraTerms(self%disp(1:1), trialBox)
-    !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:1), logProb=prob, extraIn=extraTerms)
+    !Compute the Proposal probability for Box2
+    select case(self%style)
+      case(1) !Log Scale
+        prob = prob + (box2%nMolTotal+1) * log(self%disp2(1)%volNew / self%disp2(1)%volOld) 
+      case(2) !Linear Scale
+        prob = prob + box2%nMolTotal * log(self%disp2(1)%volNew / self%disp2(1)%volOld) 
+    end select
+
+
+
+    accept = sampling % MakeDecision(box1, E_Diff, self%disp(1:1), logProb=prob,
+    extraIn=extraTerms)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
-      call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
+      call box1 % UpdateEnergy(E_Diff)
+      call box1 % UpdatePosition(self%disp1(1:1), self%tempList, self%tempNNei)
+
+      call box2 % UpdateEnergy(E_Diff)
+      call box2 % UpdatePosition(self%disp2(1:1), self%tempList, self%tempNNei)
     endif
 
   end subroutine
 !=========================================================================
-  subroutine IsoVol_Maintenance(self)
+  subroutine VolExchange_Maintenance(self)
     implicit none
-    class(IsoVol), intent(inout) :: self
+    class(VolExchange), intent(inout) :: self
 !    real(dp), parameter :: limit = 3.0E0_dp
       
     if(self%tuneMax) then
@@ -162,11 +245,11 @@ module MCMove_Isovol
 
   end subroutine
 !=========================================================================
-  subroutine IsoVol_Prologue(self)
+  subroutine VolExchange_Prologue(self)
     use BoxData, only: BoxArray
     use ParallelVar, only: nout
     implicit none
-    class(IsoVol), intent(inout) :: self
+    class(VolExchange), intent(inout) :: self
     integer :: nBoxes
 
     if(.not. allocated(self%boxProb)) then
@@ -179,10 +262,10 @@ module MCMove_Isovol
 
   end subroutine
 !=========================================================================
-  subroutine IsoVol_Epilogue(self)
+  subroutine VolExchange_Epilogue(self)
     use ParallelVar, only: nout
     implicit none
-    class(IsoVol), intent(inout) :: self
+    class(VolExchange), intent(inout) :: self
     real(dp) :: accptRate
       
     write(nout,"(1x,A,I15)") "Iso-Volume  Moves Accepted: ", nint(self%accpt)
@@ -196,10 +279,10 @@ module MCMove_Isovol
 
   end subroutine
 !=========================================================================
-  subroutine IsoVol_ProcessIO(self, line, lineStat)
+  subroutine VolExchange_ProcessIO(self, line, lineStat)
     use Input_Format, only: GetXCommand, maxLineLen
     implicit none
-    class(IsoVol), intent(inout) :: self
+    class(VolExchange), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
     integer, intent(out) :: lineStat
     character(len=30) :: command

@@ -100,7 +100,7 @@ use VarPrecision
     integer :: targStart
     real(dp) :: insPoint(1:3)
     real(dp) :: dx, dy, dz
-    real(dp) :: E_Diff, biasE, radius
+    real(dp) :: E_Diff, biasE, radius, extraTerms
     real(dp) :: Prob = 1E0_dp
     real(dp) :: ProbSub
 
@@ -190,8 +190,10 @@ use VarPrecision
     Prob = Prob/(real(nCount, dp) * real(trialBox%nMolTotal+1, dp))
 !    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%ubVol, nCount, trialBox%nMolTotal+1
 
+    !Get the chemical potential term for GCMC
+    extraTerms = sampling % GetExtraTerms(self%newpart(1:nAtoms), trialBox)
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff,  self%newPart(1:nAtoms), inProb=Prob)
+    accept = sampling % MakeDecision(trialBox, E_Diff,  self%newPart(1:nAtoms), inProb=Prob, extraIn=extraTerms)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
@@ -217,7 +219,7 @@ use VarPrecision
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex, nNei, nCount
     real(dp) :: dx, dy, dz
-    real(dp) :: E_Diff, biasE
+    real(dp) :: E_Diff, biasE, extraTerms
     real(dp) :: Prob = 1E0_dp
     real(dp) :: Probconstruct = 1E0_dp
 
@@ -277,8 +279,11 @@ use VarPrecision
     Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%ubVol)
 !    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%ubVol, nNei, trialBox%nMolTotal-1
 
+    !Get chemical potential term
+    extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), trialBox)
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff,self%oldPart(1:1),inProb=Prob)
+    accept = sampling % MakeDecision(trialBox, E_Diff,  self%oldPart(1:1), inProb=Prob, extraIn=extraTerms)
+
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp

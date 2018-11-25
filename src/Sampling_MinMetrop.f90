@@ -13,7 +13,7 @@ module MinMetroRule
 !====================================================================
   contains
 !====================================================================
-  function MinMetro_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb) result(accept)
+  function MinMetro_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb, extraIn) result(accept)
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     implicit none
@@ -21,19 +21,11 @@ module MinMetroRule
     class(simBox), intent(in) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
     real(dp), intent(in), optional:: inProb, logProb
+    real(dp), intent(in), optional:: extraIn
     real(dp), intent(in) :: E_Diff
     logical :: accept
     real(dp) :: biasE, extraTerms, probTerm
 
-    extraTerms = 0E0_dp
-    select type(disp)
-      class is(Addition)
-          extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
-      class is(Deletion)
-          extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
-      class is(VolChange)
-          extraTerms = extraTerms + (disp(1)%volNew -disp(1)%volOld)*trialBox%pressure*trialBox%beta
-    end select
 
     if(present(inProb)) then
       probTerm = log(inProb)
@@ -42,6 +34,12 @@ module MinMetroRule
     else
       write(*,*) "Coding Error! Probability has not been passed into Sampling "
       stop
+    endif
+
+    if(present(extraIn)) then
+      extraTerms = extraIn
+    else
+      extraTerms = 0E0_dp
     endif
 
 

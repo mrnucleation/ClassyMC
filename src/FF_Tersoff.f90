@@ -31,6 +31,7 @@ module FF_Pair_Tersoff
 !      procedure, pass :: ShiftECalc_Multi => Shift_Tersoff_Multi
       procedure, pass :: NewECalc => New_Tersoff
       procedure, pass :: OldECalc => Old_Tersoff
+!      procedure, pass :: OrthoVolECalc => OrthoVol_Tersoff
       procedure, pass :: ProcessIO => ProcessIO_Tersoff
       procedure, pass :: GetCutOff => GetCutOff_Tersoff
   end type
@@ -1150,6 +1151,97 @@ module FF_Pair_Tersoff
 
 
   end subroutine
+  !=====================================================================
+#ifdef IMLAZY
+  subroutine OrthoVol_LJ_Cut(self, curbox, disp, E_Diff, accept)
+    implicit none
+    class(Pair_LJ_Cut), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    type(OrthoVolChange), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    accept = .true.
+    do iAtom = 1, curbox%nMaxAtoms
+      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+        cycle
+      endif
+      atmType1 = curbox % AtomType(iAtom)
+      do jAtom = 1, curbox%nMaxAtoms
+        if(iAtom == jAtom) then
+          cycle
+        endif
+        atmType2 = curbox % AtomType(jAtom)
+        if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then        
+          cycle
+        endif
+        Reqij = self%tersoffPair(atmType2, atmType1) % REq
+        Dij = self%tersoffPair(atmType2, atmType1) % D
+        rMax = Dij + Reqij
+        rMax_sq = rMax * rMax
+
+        rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
+        ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
+        rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
+        call curbox%Boundary(rxij, ryij, rzij)
+        rij = rxij*rxij + ryij*ryij + rzij*rzij
+        if(rij > rMax_Sq) then
+          cycle
+        endif
+        rij = sqrt(rij)
+        Zeta = 0E0_dp
+        do kAtom = 1, curbox%nMaxAtoms
+          if( (kAtom == iAtom) .or. (kAtom == jAtom) ) then
+            cycle
+          endif
+          if( curbox%MolSubIndx(kAtom) > curbox%NMol(curbox%MolType(kAtom)) ) then        
+            cycle
+          endif
+          atmType3 = curbox % AtomType(kAtom)
+          Reqik = self%tersoffPair(atmType1, atmType3) % REq
+          Dik = self%tersoffPair(atmType1, atmType3) % D
+          rMax = Reqik + Dik
+          rMax_sq = rMax * rMax
+
+          rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
+          ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
+          rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
+          call curbox%Boundary(rxik, ryik, rzik)
+          rik = rxik*rxik + ryik*ryik + rzik*rzik
+          if(rik < rMax_sq) then
+            rik = sqrt(rik)
+
+            c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
+            d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
+            h = self%tersoffAngle(atmType1, atmType2, atmType3) % h
+            angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+            Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Reqik, Dik)
+          endif
+        enddo
+
+        if(Zeta .ne. 0E0_dp) then
+          BetaPar = self%tersoffPair(atmType1, atmType2)%beta
+          n =  self%tersoffPair(atmType1, atmType2)%n
+          b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
+        else
+          b1 = 1E0_dp
+        endif      
+   
+        A = self%tersoffPair(atmType1, atmType2) % A
+        B = self%tersoffPair(atmType1, atmType2) % B
+        lam1 = self%tersoffPair(atmType1, atmType2)%lam1
+        lam2 = self%tersoffPair(atmType1, atmType2)%lam2
+        V1 = 0.5E0_dp * self%Fc_Func(rij, Reqij, Dij) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij))
+        E_Tersoff = E_Tersoff + V1
+        curbox%ETable(iAtom) = curbox%ETable(iAtom) + V1
+        curbox%ETable(jAtom) = curbox%ETable(jAtom) + V1
+      enddo
+    enddo
+
+
+  end subroutine
+
+#endif IMLAZY
 !=====================================================================
   subroutine ProcessIO_Tersoff(self, line)
     use Common_MolInfo, only: nAtomTypes

@@ -107,6 +107,7 @@ module CubicBoxDef
 
     integer :: iDimen
 
+    list = 0E0_dp
     do iDimen = 1, self%nDimension
       list(1, iDimen) = -self%boxL2
       list(2, iDimen) = self%boxL2

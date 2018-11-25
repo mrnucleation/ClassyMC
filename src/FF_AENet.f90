@@ -99,6 +99,8 @@ module FF_AENet
     real(dp) :: Ecoh
     real(dp) :: xoffset, yoffset, zoffset
     real(dp) :: xmax, ymax, zmax
+    real(dp) :: dx, dy, dz
+    real(dp) :: xscale, yscale, zscale
     real(dp) :: tempdim(1:3,1:3)
 
 
@@ -110,6 +112,7 @@ module FF_AENet
     self%box = 0E0_dp
     self%tempcoords = 0E0_dp
 !    self%atomTypes = 1
+
     xmax = 0E0_dp
     ymax = 0E0_dp
     zmax = 0E0_dp
@@ -119,12 +122,12 @@ module FF_AENet
       endif
       nCurAtoms = nCurAtoms + 1
       self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
-      self%tempcoords(1, nCurAtoms) = curBox%atoms(1, iAtom)
-      self%tempcoords(2, nCurAtoms) = curBox%atoms(2, iAtom)
-      self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom)
+      self%tempcoords(1, nCurAtoms) = curBox%atoms(1, iAtom) 
+      self%tempcoords(2, nCurAtoms) = curBox%atoms(2, iAtom) 
+      self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom) 
 
       select type(curbox)
-        class is(SimpleBox)
+        type is(SimpleBox)
           if(xoffset > self%tempcoords(1, nCurAtoms)) then
             xoffset = self%tempcoords(1, nCurAtoms)
           endif
@@ -169,7 +172,7 @@ module FF_AENet
      enddo
 
      select type(curbox)
-       class is(SimpleBox)
+       type is(SimpleBox)
          self%box(1,1) = 3*(xmax + 1e-5)
          self%box(2,2) = 3*(ymax + 1e-5)
          self%box(3,3) = 3*(zmax + 1e-5)
@@ -208,12 +211,14 @@ module FF_AENet
     logical :: pbc=.false.
     integer :: nCurAtoms = 0
     integer :: iAtom, jAtom, jNei, j
-    integer :: atmType1, atmType2
+    integer :: atmType1, atmType2, molIndx1
     integer :: iDisp, nTotalMol
     real(dp) :: E_T, ecoh
     real(dp) :: rmin_ij
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: xoffset, yoffset, zoffset
+    real(dp) :: dx, dy, dz
+    real(dp) :: xscale, yscale, zscale
     real(dp) :: xmax, ymax, zmax
     real(dp) :: tempdim(1:3,1:3)
 
@@ -221,6 +226,9 @@ module FF_AENet
     E_Diff = 0E0_dp
 
     nTotalMol = curbox%nMolTotal
+    xscale = 1E0_dp
+    yscale = 1E0_dp
+    zscale = 1E0_dp
 
     !Check the rMin criteria first to ensure there is no overlap prior to
     !passing the configuration to AENet
@@ -267,6 +275,7 @@ module FF_AENet
             endif 
           enddo
         enddo
+
     end select
 
     ! Convert the Classy Array into an Array that AENet can read.
@@ -341,6 +350,23 @@ module FF_AENet
             self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom)
           endif
         enddo
+!       -----------------------------------------------------
+      class is(OrthoVolChange)
+        do iAtom = 1, curbox%nMaxAtoms
+          if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+            cycle
+          endif
+          molIndx1 = curbox % MolIndx(iAtom)
+          dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
+          dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
+          dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
+          nCurAtoms = nCurAtoms + 1
+          self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
+          self%tempcoords(1, nCurAtoms) = curBox%atoms(1, iAtom) + dx
+          self%tempcoords(2, nCurAtoms) = curBox%atoms(2, iAtom) + dy
+          self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom) + dz
+        enddo
+!       -----------------------------------------------------
     end select
 
     accept = .true.
@@ -374,12 +400,13 @@ module FF_AENet
          call curbox%GetDimensions(tempdim)
          ! self%box dimensions given back as xlow, xhigh, ylow, yhigh, etc.  
          ! Need to be converted to AENet format
-         xoffset = tempdim(1, 1)
-         yoffset = tempdim(1, 2)
-         zoffset = tempdim(1, 3)
-         self%box(1,1) = tempdim(2, 1) - tempdim(1, 1)
-         self%box(2,2) = tempdim(2, 2) - tempdim(1, 2)
-         self%box(3,3) = tempdim(2, 3) - tempdim(1, 3)
+         xoffset = tempdim(1, 1)*xScale
+         yoffset = tempdim(1, 2)*yScale
+         zoffset = tempdim(1, 3)*zScale
+         self%box(1,1) = (tempdim(2, 1) - tempdim(1, 1))*xScale
+         self%box(2,2) = (tempdim(2, 2) - tempdim(1, 2))*yScale
+         self%box(3,3) = (tempdim(2, 3) - tempdim(1, 3))*zScale
+
      end select
 
      do iAtom = 1, nCurAtoms
@@ -401,10 +428,16 @@ module FF_AENet
      enddo
 
      select type(curbox)
-       class is(SimpleBox)
+       type is(SimpleBox)
          self%box(1,1) = xmax + 1e-2
          self%box(2,2) = ymax + 1e-2
          self%box(3,3) = zmax + 1e-2
+!       class default
+!         do iAtom = 1, nCurAtoms
+!           self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom)/self%box(1,1)
+!           self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom)/self%box(2,2)
+!           self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom)/self%box(3,3)
+!         enddo
      end select
 
      if(nCurAtoms == 0) then
@@ -414,8 +447,18 @@ module FF_AENet
 
      self%boxrecp = 0E0_dp
      self%boxrecp(:,:) = geo_recip_lattice(self%box)
-
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
+!     do iAtom = 1, 3
+!       write(*,*) self%box(1:3, iAtom)
+!     enddo
+!     do iAtom = 1, nCurAtoms
+!       write(*,*) self%tempcoords(1:3, iAtom)
+!     enddo
+!     do iAtom = 1, nCurAtoms
+!       self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom)/self%box(1,1)
+!       self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom)/self%box(2,1)
+!       self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom)/self%box(3,1)
+!     enddo
      call get_energy_lib(self%box(1:3,1:3), nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
 !     call get_energy_lib(self%box, nCurAtoms, &
 !                         self%tempcoords, &

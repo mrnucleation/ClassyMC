@@ -128,7 +128,7 @@ module UmbrellaRule
 
   end subroutine
 !====================================================================
-  function Umbrella_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb) result(accept)
+  function Umbrella_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb, extraIn) result(accept)
     use AnalysisData, only: AnalysisArray
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
@@ -136,7 +136,7 @@ module UmbrellaRule
     class(Umbrella), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(in), optional :: inProb, logProb
+    real(dp), intent(in), optional :: inProb, logProb, extraIn
     real(dp), intent(in) :: E_Diff
 
     logical :: accept

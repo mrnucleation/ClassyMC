@@ -63,7 +63,9 @@ module CoordinateTypes
 end module
 !======================================================
 module ParallelVar
-  integer :: myid, p_size, ierror, tag, nout, seed
+  integer :: myid, p_size, ierror, tag, seed
+  integer :: stderr = 0
+  integer :: nout
   integer :: paraMode = 1
 end module  
 !======================================================
