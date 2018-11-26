@@ -6,13 +6,13 @@ module Input_Moves
 
 !  use Move_AtomExchange, only: AtomExchange
   use MCMove_AtomTranslation, only: AtomTranslate
+  use MCMove_Basic_Swap, only: Basic_Swap
   use MCMove_Delete, only: MoveDelete
   use MCMove_MolTranslation, only: MolTranslate
-!  use MCMove_UB_Simple, only: UB_Simple
-  use MCMove_Basic_Swap, only: Basic_Swap
+  use MCMove_PlaneRotation, only: PlaneRotate
   use MCMove_IsoVol, only: IsoVol
   use MCMove_UB_Swap, only: UB_Swap
-  use MCMove_PlaneRotation, only: PlaneRotate
+  use MCMove_VolExchange, only: VolExchange
   use Move_ThermoLambda, only: ThermoLambda
 
   contains
@@ -60,7 +60,8 @@ module Input_Moves
       case("planerotate")
         allocate(PlaneRotate::Moves(moveNum)%move)
 
-
+      case("volexchange")
+        allocate(VolExchange::Moves(moveNum)%move)
 
       case("ubswap")
 !        allocate(UB_Simple::Moves(moveNum)%move)

@@ -66,6 +66,8 @@ contains
 !              boxNum = floor(grnd()*nBoxes + 1E0_dp)
               call curMove % GetBoxProb(boxProb)
               boxNum = ListRNG(boxProb)
+            else
+              boxNum = 1
             endif
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
 

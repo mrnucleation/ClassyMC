@@ -42,6 +42,8 @@ module MoveClassDef
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
 
+    write(0,*) "FullMove for this move type has not been defined!"
+    stop
     accept = .true.
   end subroutine
 !=========================================================================

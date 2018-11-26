@@ -2,13 +2,14 @@
 ! Monte Carlo move for the Isobaric ensemble. This move scales the dimensions
 ! of the simulation box uniformly in all directions. 
 !=========================================================================
-module MCMove_Isovol
+module MCMove_VolExchange
   use CoordinateTypes, only: OrthoVolChange, TriVolChange
   use SimpleSimBox, only: SimpleBox
   use CubicBoxDef, only: CubeBox
   use OrthoBoxDef, only: OrthoBox
   use VarPrecision
-  use MoveClassDef
+!  use MoveClassDef
+  use MultiBoxMoveDef, only: MCMultiBoxMove
 
   type, public, extends(MCMultiBoxMove) :: VolExchange
 !    real(dp) :: atmps = 1E-30_dp
@@ -25,7 +26,8 @@ module MCMove_Isovol
 !    type(TriVolChange) :: disptri(1:1)
     contains
       procedure, pass :: Constructor => VolExchange_Constructor
-      procedure, pass :: FullMove => VolExchange_FullMove
+!      procedure, pass :: FullMove => VolExchange_FullMove
+      procedure, pass :: MultiBox => VolExchange_MultiBox
 !      procedure, pass :: GetAcceptRate
       procedure, pass :: Maintenance => VolExchange_Maintenance
       procedure, pass :: Prologue => VolExchange_Prologue
@@ -47,8 +49,7 @@ module MCMove_Isovol
     allocate( self%tempList(1, 1) )
   end subroutine
 !=========================================================================
-!=========================================================================
-  subroutine MultiBox(self, accept)
+  subroutine VolExchange_MultiBox(self, accept)
     use BoxData, only: BoxArray
     use Common_MolInfo, only: nMolTypes
     use Box_Utility, only: FindAtom, FindFirstEmptyMol
@@ -56,7 +57,7 @@ module MCMove_Isovol
     use CommonSampling, only: sampling
 
     implicit none
-    class(MCMultiBoxMove), intent(inout) :: self
+    class(VolExchange), intent(inout) :: self
     logical, intent(out) :: accept
     integer :: i, boxNum
     class(SimpleBox), pointer :: box1, box2
@@ -67,8 +68,12 @@ module MCMove_Isovol
 
 
 
+    !Randomly choose which boxes will exchange volume
     boxNum = ListRNG(self%boxProb)
     box1 => BoxArray(boxNum)%box
+
+    !To avoid picking the same box twice, rescale the probability such that
+    !box1's probability is equal to 0.
     rescale = self%boxprob
     rescale(boxNum) = 0E0_dp
     do i = 1, size(rescale)
@@ -87,21 +92,26 @@ module MCMove_Isovol
 
 
 
-
+    !Increment attempt counter.
     self % atmps = self % atmps + 1E0_dp
+
+    !Randomly chose the amount of volume that will be exchanged.
     select case(self%style)
       case(1) !Log Scale
         dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
         dV = exp(dV) - 1E0_dp
-        self%disp1(1)%volNew = trialBox%volume + dV
-        self%disp1(1)%volOld = trialBox%volume
+        self%disp1(1)%volNew = box1%volume + dV
+        self%disp1(1)%volOld = box1%volume
 
-        self%disp1(1)%volNew = trialBox%volume - dV
-        self%disp1(1)%volOld = trialBox%volume
+        self%disp2(1)%volNew = box2%volume - dV
+        self%disp2(1)%volOld = box2%volume
       case(2) !Linear Scale
         dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
-        self%disp(1)%volNew = trialBox%volume + dV
-        self%disp(1)%volOld = trialBox%volume
+        self%disp1(1)%volNew = box1%volume + dV
+        self%disp1(1)%volOld = box1%volume
+
+        self%disp2(1)%volNew = box2%volume - dV
+        self%disp2(1)%volOld = box2%volume
       case default
         stop
 
@@ -115,7 +125,7 @@ module MCMove_Isovol
 
 
     !Compute how much to scale the sides of the box by for box1
-    select type(trialBox)
+    select type(box1)
       class is(CubeBox)
         scaleFactor = (self%disp1(1)%volNew/self%disp1(1)%volOld)**(1E0_dp/3E0_dp)
         self%disp1(1)%xScale = scaleFactor
@@ -123,7 +133,7 @@ module MCMove_Isovol
         self%disp1(1)%zScale = scaleFactor
 
       class is(OrthoBox)
-        scaleFactor = (self%disp1(1)%volNew/self%disp(1)%volOld)**(1E0_dp/3E0_dp)
+        scaleFactor = (self%disp1(1)%volNew/self%disp1(1)%volOld)**(1E0_dp/3E0_dp)
         self%disp1(1)%xScale = scaleFactor
         self%disp1(1)%yScale = scaleFactor
         self%disp1(1)%zScale = scaleFactor
@@ -133,7 +143,7 @@ module MCMove_Isovol
     end select
 
     !Compute how much to scale the sides of the box by for box2
-    select type(trialBox)
+    select type(box2)
       class is(CubeBox)
         scaleFactor = (self%disp2(1)%volNew/self%disp2(1)%volOld)**(1E0_dp/3E0_dp)
         self%disp2(1)%xScale = scaleFactor
@@ -154,12 +164,12 @@ module MCMove_Isovol
 
 
     !Check Constraint of Box1
-    accept = box1 % CheckConstraint( self%disp(1:1) )
+    accept = box1 % CheckConstraint( self%disp1(1:1) )
     if(.not. accept) then
       return
     endif
     !Check Constraint of Box2
-    accept = box2 % CheckConstraint( self%disp(1:1) )
+    accept = box2 % CheckConstraint( self%disp2(1:1) )
     if(.not. accept) then
       return
     endif
@@ -208,15 +218,24 @@ module MCMove_Isovol
     end select
 
 
+    !Get the PV contribution to the Boltzmann weight for both boxes.
+    extraTerms = sampling % GetExtraTerms(self%disp1(1:1), box1)
+    half = sampling % GetExtraTerms(self%disp2(1:1), box2)
+    extraTerms = extraTerms + half
 
-    accept = sampling % MakeDecision(box1, E_Diff, self%disp(1:1), logProb=prob,
-    extraIn=extraTerms)
+!    write(*,*)  E_Diff1, E_Diff2, extraTerms, prob
+!    accept = sampling % MakeDecision(box1, E_Diff, self%disp1(1:1), logProb=prob,&
+!                                     extraIn=extraTerms)
+    accept = sampling % MakeDecision2Box(box1,  box2, E_Diff1, E_Diff2, &
+                            self%disp1(1:1), self%disp2(1:1), logProb=prob, &
+                            extraIn=extraTerms )
+
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call box1 % UpdateEnergy(E_Diff)
+      call box1 % UpdateEnergy(E_Diff1)
       call box1 % UpdatePosition(self%disp1(1:1), self%tempList, self%tempNNei)
 
-      call box2 % UpdateEnergy(E_Diff)
+      call box2 % UpdateEnergy(E_Diff2)
       call box2 % UpdatePosition(self%disp2(1:1), self%tempList, self%tempNNei)
     endif
 
@@ -258,7 +277,7 @@ module MCMove_Isovol
       self%boxProb = 1E0_dp/real(nBoxes,dp)
     endif
 
-    write(nout,"(1x,A,F15.8)") "(Iso-Volume) Maximum Volume Change: ", self%maxdV
+    write(nout,"(1x,A,F15.8)") "(Volume Exchange) Maximum Volume Change: ", self%maxdV
 
   end subroutine
 !=========================================================================
@@ -268,10 +287,10 @@ module MCMove_Isovol
     class(VolExchange), intent(inout) :: self
     real(dp) :: accptRate
       
-    write(nout,"(1x,A,I15)") "Iso-Volume  Moves Accepted: ", nint(self%accpt)
-    write(nout,"(1x,A,I15)") "Iso-Volume  Moves Attempted: ", nint(self%atmps)
+    write(nout,"(1x,A,I15)") "Volume Exchange Moves Accepted: ", nint(self%accpt)
+    write(nout,"(1x,A,I15)") "Volume Exchange Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()
-    write(nout,"(1x,A,F15.8)") "Iso-Volume Acceptance Rate: ", accptRate
+    write(nout,"(1x,A,F15.8)") "Volume Exchange Acceptance Rate: ", accptRate
     if(self%tunemax) then
       write(nout,"(1x,A,F15.8)") "Final Maximum Volume Change: ", self%maxDv
     endif

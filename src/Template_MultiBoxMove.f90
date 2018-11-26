@@ -33,6 +33,8 @@ use MoveClassDef, only: MCMove
 !    class(SimpleBox), intent(inout) :: trialBox(:)
     logical, intent(out) :: accept
 
+    write(0,*) "WARNING! MultiBox has not been defined for this move type!"
+    stop
     accept = .true.
   end subroutine
 !=========================================================================
