@@ -8,6 +8,7 @@ use VarPrecision
   type, public, extends(MCMove) :: MolTranslate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
+    logical :: proportional = .true.
     logical :: tuneMax = .true.
     real(dp) :: limit = 3.00E0_dp
     real(dp) :: targAccpt = 50E0_dp
@@ -23,6 +24,7 @@ use VarPrecision
       procedure, pass :: FullMove => MolTrans_FullMove
       procedure, pass :: Maintenance => MolTrans_Maintenance
       procedure, pass :: Prologue => MolTrans_Prologue
+      procedure, pass :: Update => MolTrans_Update
       procedure, pass :: Epilogue => MolTrans_Epilogue
       procedure, pass :: ProcessIO => MolTrans_ProcessIO
   end type
@@ -207,6 +209,25 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
+  subroutine MolTrans_Update(self)
+    use BoxData, only: BoxArray
+    use ParallelVar, only: nout
+    implicit none
+    class(MolTranslate), intent(inout) :: self
+    integer :: iBox
+    real(dp) :: norm
+
+      if(self%proportional) then
+        norm = 0E0_dp
+        do iBox = 1, size(BoxArray)
+          norm = norm + real(BoxArray(ibox)%box%nMolTotal,dp)
+        enddo
+        do iBox = 1, size(BoxArray)
+          self%boxprob(iBox) = real(BoxArray(ibox)%box%nMolTotal,dp)/norm
+        enddo
+      endif
+  end subroutine
+!=========================================================================
   subroutine MolTrans_ProcessIO(self, line, lineStat)
     use Input_Format, only: GetXCommand, maxLineLen
     implicit none
@@ -239,6 +260,10 @@ use VarPrecision
         read(command, *) realVal
         self%max_dist = realVal
 
+      case("proportional")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self%proportional = logicVal
 
       case default
         lineStat = -1

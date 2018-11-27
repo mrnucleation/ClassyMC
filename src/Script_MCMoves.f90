@@ -6,6 +6,7 @@ module Input_Moves
 
 !  use Move_AtomExchange, only: AtomExchange
   use MCMove_AtomTranslation, only: AtomTranslate
+  use MCMove_ParticleExchange, only: ParticleExchange
   use MCMove_Basic_Swap, only: Basic_Swap
   use MCMove_Delete, only: MoveDelete
   use MCMove_MolTranslation, only: MolTranslate
@@ -57,6 +58,9 @@ module Input_Moves
       case("isovol")
         allocate(IsoVol::Moves(moveNum)%move)
 
+      case("particleexchange")
+        allocate(ParticleExchange::Moves(moveNum)%move)
+
       case("planerotate")
         allocate(PlaneRotate::Moves(moveNum)%move)
 
@@ -64,7 +68,6 @@ module Input_Moves
         allocate(VolExchange::Moves(moveNum)%move)
 
       case("ubswap")
-!        allocate(UB_Simple::Moves(moveNum)%move)
         allocate(UB_Swap::Moves(moveNum)%move)
 
       case default

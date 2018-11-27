@@ -76,6 +76,7 @@ module MCMove_VolExchange
     !box1's probability is equal to 0.
     rescale = self%boxprob
     rescale(boxNum) = 0E0_dp
+    norm = 0E0_dp
     do i = 1, size(rescale)
       norm = norm + rescale(i)
     enddo
