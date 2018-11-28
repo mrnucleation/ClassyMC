@@ -211,13 +211,14 @@ module FF_AENet
     logical :: pbc=.false.
     integer :: nCurAtoms = 0
     integer :: iAtom, jAtom, jNei, j
-    integer :: atmType1, atmType2, molIndx1
+    integer :: atmType1, atmType2, molIndx1, molIndx2
     integer :: iDisp, nTotalMol
     real(dp) :: E_T, ecoh
     real(dp) :: rmin_ij
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: xoffset, yoffset, zoffset
     real(dp) :: dx, dy, dz
+    real(dp) :: dxj, dyj, dzj
     real(dp) :: xscale, yscale, zscale
     real(dp) :: xmax, ymax, zmax
     real(dp) :: tempdim(1:3,1:3)
@@ -226,9 +227,18 @@ module FF_AENet
     E_Diff = 0E0_dp
 
     nTotalMol = curbox%nMolTotal
-    xscale = 1E0_dp
-    yscale = 1E0_dp
-    zscale = 1E0_dp
+    select type(disp)
+      class is(OrthoVolChange)
+        xscale = disp(1)%xScale
+        yscale = disp(1)%yScale
+        zscale = disp(1)%zScale
+
+      class default
+        xscale = 1E0_dp
+        yscale = 1E0_dp
+        zscale = 1E0_dp
+
+    end select
 
     !Check the rMin criteria first to ensure there is no overlap prior to
     !passing the configuration to AENet
@@ -275,6 +285,35 @@ module FF_AENet
             endif 
           enddo
         enddo
+      class is(OrthoVolChange)
+        do iAtom = 1, curBox%nMaxAtoms
+          if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+            cycle
+          endif
+          atmType1 = curbox % AtomType(iAtom)
+          molIndx1 = curbox % MolIndx(iAtom)
+          dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
+          dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
+          dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
+          do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+            jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+            molIndx2 = curbox % MolIndx(jAtom)
+            atmType2 = curbox % AtomType(jAtom)
+            dxj = curbox % centerMass(1, molIndx2) * (xScale-1E0_dp)
+            dyj = curbox % centerMass(2, molIndx2) * (yScale-1E0_dp)
+            dzj = curbox % centerMass(3, molIndx2) * (zScale-1E0_dp)
+            rx = curbox %atoms(1, iAtom) + dx  -  curbox % atoms(1, jAtom) - dxj
+            ry = curbox %atoms(2, iAtom) + dy  -  curbox % atoms(2, jAtom) - dyj
+            rz = curbox %atoms(3, iAtom) + dz  -  curbox % atoms(3, jAtom) - dzj
+            rsq = rx*rx + ry*ry + rz*rz
+            rmin_ij = self % rMinTable(atmType2, atmType1)      
+            if(rsq < rmin_ij) then
+              accept = .false.
+              return
+            endif 
+          enddo
+        enddo
+
 
     end select
 

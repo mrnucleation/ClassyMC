@@ -4,6 +4,8 @@
   set NeighSkin 2.0
   set moves 100
   set cycles 20000
+#  SamplingType AcceptAll
+  set screenfrequency 100
   SamplingType Metropolis
 #  SamplingType UmbrellaWHAM
 #  SamplingType Umbrella

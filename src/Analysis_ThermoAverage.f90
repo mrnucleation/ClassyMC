@@ -132,7 +132,7 @@ use VarPrecision
 
     if(.not. allocated(anaVar) ) then
       allocate(anaVar, source=def)
-      write(*,*) "Allocated as Real"
+!      write(*,*) "Allocated as Real"
     endif
 
   end subroutine
