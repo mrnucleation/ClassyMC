@@ -240,11 +240,13 @@ module FF_Pair_LJ_Q_Cut
           endif
 
           if(rsq < self%rQCutSq) then
-            r = sqrt(rsq)
-            Ele = q/r
-            E_Diff = E_Diff + Ele
-            curbox % dETable(iAtom) = curbox % dETable(iAtom) + Ele
-            curbox % dETable(jAtom) = curbox % dETable(jAtom) + Ele
+            if(q /= 0E0_dp) then
+              r = sqrt(rsq)
+              Ele = q/r
+              E_Diff = E_Diff + Ele
+              curbox % dETable(iAtom) = curbox % dETable(iAtom) + Ele
+              curbox % dETable(jAtom) = curbox % dETable(jAtom) + Ele
+            endif
           endif
         endif
 
@@ -355,6 +357,7 @@ module FF_Pair_LJ_Q_Cut
               curbox % dETable(jAtom) = curbox % dETable(jAtom) + Ele
             endif
           endif
+
         endif
       enddo
     enddo

@@ -27,6 +27,8 @@ module Traj_XSF
 !====================================================================
   subroutine TrajXSF_WriteFrame(self, iCycle) 
     use BoxData, only: BoxArray
+    use SimpleSimBox, only: SimpleBox
+    use CubicBoxDef, only: CubeBox 
     use Common_MolInfo, only: AtomData
     implicit none
     class(trajXSF), intent(inout) :: self
@@ -35,36 +37,66 @@ module Traj_XSF
     integer :: nDim, atomType, molType
     real(dp) :: cm(1:3)
     real(dp), parameter :: eVConv = 8.6173303E-5_dp
+    class(SimpleBox), pointer :: box
+    real(dp) :: Lx, Ly, Lz
+    real(dp) :: dimensions(1:2, 1:3)
 
 
     boxNum = self%boxNum
-    nDim = BoxArray(boxNum)%box%nDimension
-    write(self%fileUnit, "(A, F25.10, A)") "# total energy =", BoxArray(boxNum)%box%ETotal * eVConv , " ev"
+    box => BoxArray(boxNum)%box
+    nDim = box%nDimension
+    write(self%fileUnit, "(A, F25.10, A)") "# total energy =", box%ETotal * eVConv , " ev"
     write(self%fileUnit, *) 
-    write(self%fileUnit, *) "ATOMS"
 
-    cm = 1E80_dp
-    do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
-      molType = BoxArray(boxNum)%box%MolType(iAtom)
-      atomType = BoxArray(boxNum)%box%AtomType(iAtom)
-      if(BoxArray(boxNum)%box%NMol(molType) >= BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
-        do jDim =1, 3
-          if(BoxArray(boxNum)%box%atoms(jDim, iAtom) < cm(jDim)) then
-            cm(jDim) = BoxArray(boxNum)%box%atoms(jDim, iAtom) - 1e-5
+    select type(box)
+      type is(SimpleBox)
+        write(self%fileUnit, *) "ATOMS"
+        cm = 1E80_dp
+        do iAtom = 1, box%nMaxAtoms
+          molType = box%MolType(iAtom)
+          atomType = box%AtomType(iAtom)
+          if(box%NMol(molType) >= box%MolSubIndx(iAtom) ) then
+            do jDim =1, 3
+              if(box%atoms(jDim, iAtom) < cm(jDim)) then
+                cm(jDim) = box%atoms(jDim, iAtom) - 1e-5
+              endif
+            enddo
           endif
         enddo
-      endif
-    enddo
+
+      class is(CubeBox)
+        write(self%fileUnit, *) "CRYSTAL"
+        write(self%fileUnit, *) "PRIMVEC"
+        call box%GetDimensions(dimensions(1:2, 1:3))
+        cm(1) = dimensions(1,1)
+        cm(2) = dimensions(1,2)
+        cm(3) = dimensions(1,3)
+        Lx = dimensions(2,1) - dimensions(1,1)
+        Ly = dimensions(2,2) - dimensions(1,2)
+        Lz = dimensions(2,3) - dimensions(1,3)
+
+        write(self%fileUnit, *) Lx, 0.0, 0.0
+        write(self%fileUnit, *) 0.0, Ly, 0.0
+        write(self%fileUnit, *) 0.0, 0.0, Lz
+        
+
+        write(self%fileUnit, *) "PRIMCOORD"
+        write(self%fileUnit, *) box%nAtoms, 1
+
+      class default
+        stop "Traj_XSF does not know how to handle this box type"
+
+    end select
 
 
 
-    do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
-      molType = BoxArray(boxNum)%box%MolType(iAtom)
-      atomType = BoxArray(boxNum)%box%AtomType(iAtom)
-      if(BoxArray(boxNum)%box%NMol(molType) < BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
+    do iAtom = 1, box%nMaxAtoms
+      molType = box%MolType(iAtom)
+      atomType = box%AtomType(iAtom)
+      if(box%NMol(molType) < box%MolSubIndx(iAtom) ) then
         cycle
       else
-        write(self%fileUnit, *) AtomData(atomType)%symb, (BoxArray(boxNum)%box%atoms(jDim, iAtom)-cm(jDim), jDim=1,nDim), (0.0, jDim=1,3)
+        write(self%fileUnit, *) AtomData(atomType)%symb, (box%atoms(jDim, iAtom)-cm(jDim), jDim=1,nDim), (0.0, jDim=1,3)
       endif
     enddo
 

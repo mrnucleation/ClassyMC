@@ -111,6 +111,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Intra_BondRidgid.f90\
         		$(SRC)/Intra_BondHarmonic.f90\
         		$(SRC)/Intra_AngleRidgid.f90\
+        		$(SRC)/MolCon_RidgidRegrowth.f90\
         		$(SRC)/MolCon_SimpleRegrowth.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
  	        	$(SRC)/Script_AngleType.f90\

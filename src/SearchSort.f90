@@ -63,7 +63,7 @@ contains
 
     curIndx = 1
 
-    listSize = size(list)
+    listSize = size(list)+1
     if(listSize < 1) then
       stop "Critical Error! A list size of 0 has beeen passed to the sort function!"
     endif
@@ -74,7 +74,7 @@ contains
 !      write(*,*) "-------------"
 !      write(*,*) list
 !      write(*,*)
-!      write(*,*) val, curIndx, list(curIndx), lower, upper
+!      write(2,*) "sort",val, curIndx, list(curIndx), lower, upper
       if(loop > listSize) then
         curIndx = 0
         exit

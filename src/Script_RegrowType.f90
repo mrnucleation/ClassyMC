@@ -9,6 +9,7 @@ contains
     use Common_MolInfo, only: MolData
     use ForcefieldData, only: nForceFields
     use MolCon_SimpleRegrowth, only: SimpleRegrowth
+    use MolCon_RidgidRegrowth, only: RidgidRegrowth
     use ParallelVar, only: nout
     implicit none
     character(len=*), intent(in) :: line
@@ -27,7 +28,9 @@ contains
 
     !Safety check to ensure that the index number is within proper bounds
     select case(trim(adjustl(Regrow_Type)))
-!      case("ridgid")
+      case("ridgid")
+        allocate(RidgidRegrowth :: MolData(molNum)%molConstruct )
+        write(nout,*) "Molecule uses ridgid regrowth"
 
       case("simple")
         allocate(SimpleRegrowth :: MolData(molNum)%molConstruct )
@@ -37,9 +40,9 @@ contains
         lineStat = -1
         return
     end select
-!    call MolData(molNum)%molConstruct%ProcessIO(line)
 !    call MolData(molNum)%molConstruct%Constructor(molNum)
     call MolData(molNum)%molConstruct%SetMolType(molNum)
+    call MolData(molNum)%molConstruct%ProcessIO(line, linestat)
 
   end subroutine
 !================================================================================

@@ -640,7 +640,7 @@ module SimpleSimBox
       lastMol = lastMol + self%NMolMax(iType) 
     enddo
     lastMol = lastMol + self%NMol(nType)
-    self%centermass(1:3,molIndx) = self%centermass(1,3:lastMol)
+    self%centermass(1:3,molIndx) = self%centermass(1:3, lastMol)
 !    if(molIndx == lastMol) then
 !      self % NMol(nType) = self % NMol(nType) - 1 
 !      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms

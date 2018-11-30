@@ -8,6 +8,7 @@ module FF_AENet
   use Template_SimBox, only: SimBox
   use SimpleSimBox, only: SimpleBox
   use CubicBoxDef, only: CubeBox
+  use OrthoBoxDef, only: OrthoBox
   use VarPrecision
   use CoordinateTypes
 
@@ -151,6 +152,17 @@ module FF_AENet
          self%box(1,1) = tempdim(2, 1) - tempdim(1, 1)
          self%box(2,2) = tempdim(2, 2) - tempdim(1, 2)
          self%box(3,3) = tempdim(2, 3) - tempdim(1, 3)
+
+       class is(OrthoBox)
+         pbc = .true.
+         call curbox%GetDimensions(tempdim)
+         xoffset = tempdim(1, 1)
+         yoffset = tempdim(1, 2)
+         zoffset = tempdim(1, 3)
+         self%box(1,1) = tempdim(2, 1) - tempdim(1, 1)
+         self%box(2,2) = tempdim(2, 2) - tempdim(1, 2)
+         self%box(3,3) = tempdim(2, 3) - tempdim(1, 3)
+
      end select
 
      do iAtom = 1, nCurAtoms
@@ -435,6 +447,18 @@ module FF_AENet
      !Collect the self%box dimensions and determine the offset. 
      select type(curbox)
        class is(CubeBox)
+         pbc = .true.
+         call curbox%GetDimensions(tempdim)
+         ! self%box dimensions given back as xlow, xhigh, ylow, yhigh, etc.  
+         ! Need to be converted to AENet format
+         xoffset = tempdim(1, 1)*xScale
+         yoffset = tempdim(1, 2)*yScale
+         zoffset = tempdim(1, 3)*zScale
+         self%box(1,1) = (tempdim(2, 1) - tempdim(1, 1))*xScale
+         self%box(2,2) = (tempdim(2, 2) - tempdim(1, 2))*yScale
+         self%box(3,3) = (tempdim(2, 3) - tempdim(1, 3))*zScale
+
+       class is(OrthoBox)
          pbc = .true.
          call curbox%GetDimensions(tempdim)
          ! self%box dimensions given back as xlow, xhigh, ylow, yhigh, etc.  

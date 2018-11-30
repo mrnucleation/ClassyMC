@@ -69,7 +69,7 @@ module MolCon_SimpleRegrowth
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct,insPoint )
+  subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct, insPoint)
     use Common_MolInfo, only: MolData, BondData, AngleData, nMolTypes
     use MolSearch, only: FindBond, FindAngle
     use RandomGen, only: Generate_UnitSphere, Generate_UnitCone

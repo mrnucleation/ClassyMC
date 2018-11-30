@@ -279,13 +279,24 @@ contains
     implicit none
     integer :: i
 
-    call Sampling % SafetyCheck
-    
+    if(.not. allocated(MolData)) then
+      write(0,*) "*******************************************************************************"
+      write(0,*) "  CRITICAL ERROR! Molecular Topology Information has not been defined!"
+      write(0,*) "*******************************************************************************"
+      stop
+    endif
     do i = 1, size(MolData)
-      call MolData(i) % molConstruct % SafetyCheck
+      if(.not. allocated(MolData(i)%molConstruct)) then
+        write(0,*) "*******************************************************************************"
+        write(0,*) "  WARNING! Molecule reconstructor is not defined in the forcefield file!"
+        write(0,*) "  Swap moves and any move which generates a new configuration from scratch will not work!"
+        write(0,*) "*******************************************************************************"
+      else
+        call MolData(i) % molConstruct % SafetyCheck
+      endif
     enddo
 
-
+    call Sampling % SafetyCheck
 
     if( allocated(AnalysisArray) ) then
       do i = 1, size(AnalysisArray)
@@ -299,13 +310,27 @@ contains
       enddo
     endif
 
-    do i = 1, size(BoxArray)
-      call BoxArray(i) % box % SafetyCheck
-    enddo
+    if( allocated(BoxArray) ) then
+      do i = 1, size(BoxArray)
+        call BoxArray(i) % box % SafetyCheck
+      enddo
+    else
+      write(0,*) "*******************************************************************************"
+      write(0,*) "  CRITICAL ERROR! No Simulation Boxes have not been defined!"
+      write(0,*) "*******************************************************************************"
+      stop
+    endif
 
-    do i = 1, size(Moves)
-      call Moves(i) % move % SafetyCheck
-    enddo
+    if( allocated(BoxArray) ) then
+      do i = 1, size(Moves)
+        call Moves(i) % move % SafetyCheck
+      enddo
+    else
+      write(0,*) "*******************************************************************************"
+      write(0,*) "  WARNING! No Monte Carlo Moves have been defined!"
+      write(0,*) "  Nothing will move! Are you ok with this?"
+      write(0,*) "*******************************************************************************"
+    endif
 
   end subroutine
 !===========================================================================

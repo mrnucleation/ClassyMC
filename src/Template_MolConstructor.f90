@@ -20,6 +20,7 @@ module Template_MolConstructor
       procedure, public, pass :: ReverseConfig
       procedure, public, pass :: GasConfig
       procedure, public, pass :: GetNInsertPoints
+      procedure, public, pass :: ProcessIO
   end type
 !==========================================================================================
   contains
@@ -79,6 +80,15 @@ module Template_MolConstructor
     nPoints = self%insPoints
 
   end function
+!==========================================================================================
+  subroutine ProcessIO(self, line, linestat)
+    implicit none
+    class(MolConstructor), intent(inout) :: self
+    character(len=*), intent(in) :: line
+    integer, intent(out) :: linestat
+
+    linestat = 0
+  end subroutine
 !==========================================================================================
 end module
 !==========================================================================================

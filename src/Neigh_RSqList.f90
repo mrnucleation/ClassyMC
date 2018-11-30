@@ -186,7 +186,7 @@ use Template_NeighList, only: NeighListDef
 !    write(2,*) "Delete"
 !    write(2,*) "Removed Mol:", molIndx
 !    do iAtom = 1, self%parent%nMaxatoms
-!      write(2,*) iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
+!      write(2,"(I3,A,1000(I3))") iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
 !    enddo
 !    write(2,*) "Sorted?:", self%sorted
 
@@ -194,8 +194,10 @@ use Template_NeighList, only: NeighListDef
 !      atmIndx = nStart + iAtom - 1
 !      topAtom = topStart + iAtom - 1
 
+
       atmIndx = nEnd - iAtom + 1
       topAtom = topEnd - iAtom + 1
+!      write(2,*) "iAtom", atmIndx, "topAtom", topAtom
       !Remove the deleted from the list of it's neighbors
       do iNei = 1, self % nNeigh(atmIndx)
         curNei = self % list(iNei, atmIndx)
@@ -218,6 +220,7 @@ use Template_NeighList, only: NeighListDef
 !        else
 !
 !        endif
+!        write(2,*) "curNei", curNei, "Indexes", curIndx, atmIndx
         if(curIndx /= 0) then
           if(nNei > 2) then
             self%list(1:nNei, curNei ) = [self%list(1:curIndx-1, curNei), &
@@ -228,9 +231,17 @@ use Template_NeighList, only: NeighListDef
             endif
           endif
           self%nNeigh(curNei) = self%nNeigh(curNei) - 1 
+
         endif
       enddo
-      
+    enddo
+!    do iAtom = 1, self%parent%nMaxatoms
+!      write(2,"(I3,A,1000(I3))") iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
+!    enddo
+
+    do iAtom = 1, MolData(nType)%nAtoms
+      atmIndx = nEnd - iAtom + 1
+      topAtom = topEnd - iAtom + 1     
       !Move the top atom into the spot formerly taken up by the deleted atom.
       do iNei = 1, self % nNeigh(topAtom)
         self%list(iNei, atmIndx) = self%list(iNei, topAtom)
@@ -246,18 +257,23 @@ use Template_NeighList, only: NeighListDef
         endif
         if(self%sorted) then
           curIndx = BinarySearch( topAtom, self%list(1:nNei, curNei) )
+          self%sorted = .false.
         else
           curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
         endif
+!        write(2,*) "Second", "curNei", curNei, "Indexes", curIndx, topAtom
         if(curIndx /= 0) then
           self % list(curIndx, curNei) = atmIndx
         endif
       enddo
       self%nNeigh(topAtom) = 0
+!      do iNei = 1, self%parent%nMaxatoms
+!        write(2,"(I3,A,1000(I3))") iNei,"|", (self%list(j, iNei) ,j=1,self%nNeigh(iNei))
+!      enddo
     enddo
 
 !    do iAtom = 1, self%parent%nMaxatoms
-!      write(2,*) iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
+!      write(2,"(I3,A,1000(I3))") iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
 !    enddo
 !    write(2,*) "---------------------------------"
 
@@ -482,7 +498,7 @@ use Template_NeighList, only: NeighListDef
 !        write(2,*) "Add"
 !        do iAtom = 1, trialBox%nMaxatoms
 !          write(2,"(I3,A,1000(I3))") iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
-!        enddo
+!1        enddo
 !        write(2,*)
         do iDisp = 1, size(disp)
 !          write(2,"(A,A,1000(I3))") "NewList","|", (tempList(j, iDisp) ,j=1,tempNNei(iDisp))
