@@ -29,6 +29,7 @@ use VarPrecision
       procedure, pass :: SwapOut => UB_Swap_SwapOut
       procedure, pass :: CountSites => UB_Swap_CountSites
 !      procedure, pass :: Maintenance => UB_Swap_Maintenance
+      procedure, pass :: ProcessIO => UB_Swap_ProcessIO
       procedure, pass :: Prologue => UB_Swap_Prologue
       procedure, pass :: Epilogue => UB_Swap_Epilogue
   end type
@@ -54,17 +55,6 @@ use VarPrecision
 !    allocate( self%tempNNei(1) )
 !    allocate( self%tempList(200, 1) )
   end subroutine
-!========================================================
-!  subroutine UB_Swap_GeneratePosition(self, disp)
-!    use RandomGen, only: grnd
-!    implicit none
-!    class(UB_Swap), intent(in) :: self
-!    type(DisplacementNew), intent(inout) :: disp
-!    real(dp) :: dx, dy, dz
-!      dx = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
-!      dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
-!      dz = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
-!  end subroutine
 !===============================================
   subroutine UB_Swap_FullMove(self, trialBox, accept) 
     use RandomGen, only: grnd
@@ -383,6 +373,34 @@ use VarPrecision
  
 
   end subroutine
+!=========================================================================
+  subroutine UB_Swap_ProcessIO(self, line, lineStat)
+    use Input_Format, only: GetXCommand, maxLineLen
+    implicit none
+    class(UB_Swap), intent(inout) :: self
+    character(len=maxLineLen), intent(in) :: line
+    integer, intent(out) :: lineStat
+    character(len=30) :: command
+    logical :: logicVal
+    real(dp) :: realVal
+
+    call GetXCommand(line, command, 4, lineStat)
+    select case( trim(adjustl(command)) )
+      case("radius")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self%ubRad = realVal
+        self%ubRadSq = realVal*realVal
+
+      case default
+        lineStat = -1
+        return
+
+    end select
+    lineStat = 0
+
+  end subroutine
+
 !========================================================
 end module
 !========================================================

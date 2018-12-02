@@ -704,7 +704,7 @@ module FF_Pair_Tersoff
             accept = .false.
             return
           endif
-          if(all(recalcList /= jAtom) ) then
+          if(all(recalcList(1:nRecalc) /= jAtom) ) then
             nRecalc = nRecalc + 1
             recalcList(nRecalc) = jAtom
           endif
@@ -758,50 +758,91 @@ module FF_Pair_Tersoff
       enddo
     enddo
 
+
     !Since the Tersoff is a three body potential, moving a single particle can change the bonded 
     !interaction of particles that did not move.  These interactions must also be recomputed.
+
+    !Compute the remaining U_ji interaction
+    do iNei = 1, nRecalc
+      Zeta = 0E0_dp  !Zeta is the angle term for the new config
+      iAtom = recalcList(iNei)
+      atmType1 = curbox % AtomType(iAtom)
+      atmType2 = curbox % AtomType(disp(1)%atmIndx)
+      rxij = disp(1)%x_new  -  curbox % atoms(1, iAtom)
+      ryij = disp(1)%y_new  -  curbox % atoms(2, iAtom)
+      rzij = disp(1)%z_new  -  curbox % atoms(3, iAtom)
+      call curbox%Boundary(rxij, ryij, rzij)
+      rij = rxij*rxij + ryij*ryij + rzij*rzij
+      rij = sqrt(rij)
+
+
+      do kNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        kAtom = curbox%NeighList(1)%list(kNei, iAtom)
+        atmType3 = curbox % AtomType(kAtom)
+        rMaxSq = self%tersoffPair(atmType1, atmType3) % rMaxSq
+        rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
+        ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
+        rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
+        call curbox%Boundary(rxik, ryik, rzik)
+        rik = rxik*rxik + ryik*ryik + rzik*rzik
+        if(rik < rMaxSq) then
+          rik = sqrt(rik)
+          D2 = self%tersoffPair(atmType1, atmType3) % D
+          Req = self%tersoffPair(atmType1, atmType3) % Req
+          c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
+          d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
+          h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+          angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+          Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
+        endif
+
+      enddo
+      BetaPar = self%tersoffPair(atmType1, atmType2) % beta
+      n = self%tersoffPair(atmType1, atmType2) % n
+      if(Zeta /= 0E0_dp) then
+        b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
+      else
+        b1 = 1E0_dp
+      endif
+
+      A = self%tersoffPair(atmType1, atmType2) % A
+      B = self%tersoffPair(atmType1, atmType2) % B
+      lam1 = self%tersoffPair(atmType1, atmType2) % lam1
+      lam2 = self%tersoffPair(atmType1, atmType2) % lam2
+      Req = self%tersoffPair(atmType1, atmType2) % REq
+      D2 = self%tersoffPair(atmType1, atmType2) % D
+      V1 = 0.5E0_dp * self%Fc_Func(rij, Req, D2) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij)) 
+      curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
+      curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
+      E_Diff = E_Diff + V1
+    enddo
+ 
+
+    if(nRecalc == 0) then
+      return
+    endif
+    !Compute the new interactions between the particles already in the system
     do iNei = 1, nRecalc
       iAtom = recalcList(iNei)
       atmType1 = curbox % AtomType(iAtom)
-      atmType3 = curbox % AtomType(disp(1)%atmIndx)
-      rxik = disp(1)%x_new  -  curbox % atoms(1, iAtom)
-      ryik = disp(1)%y_new  -  curbox % atoms(2, iAtom)
-      rzik = disp(1)%z_new  -  curbox % atoms(3, iAtom)
-      call curbox%Boundary(rxik, ryik, rzik)
-      rik = rxik*rxik + ryik*ryik + rzik*rzik
-      if(rik < rMaxSq) then
-        D2 = self%tersoffPair(atmType1, atmType3) % D
-        Req = self%tersoffPair(atmType1, atmType3) % Req
-        c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
-        d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
-        h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
-        rik = sqrt(rik)
-        angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-        sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
-        Zeta = Zeta + sub
-      endif
-
-
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-        if(iAtom == jAtom) then
-          cycle
-        endif
         atmType2 = curbox % AtomType(jAtom)
-        rMaxSq = self%tersoffPair(atmType1, atmType2) % rMaxSq
         rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
         ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
         rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
         call curbox%Boundary(rxij, ryij, rzij)
 
+        rMaxSq = self%tersoffPair(atmType1, atmType2) % rMaxSq
         rij = rxij*rxij + ryij*ryij + rzij*rzij
         if(rij < rMaxSq) then
-          rij = sqrt(rij)
           Zeta = 0E0_dp  !Zeta is the angle term for the new config
           Zeta2 = 0E0_dp !Zeta is the angle term for the old config
+          rij = sqrt(rij)
           do kNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
             kAtom = curbox%NeighList(1)%list(kNei, iAtom)
-            if( (kAtom == iAtom) .or. (kAtom == jAtom) ) then
+            if(kAtom == jAtom) then
               cycle
             endif
             atmType3 = curbox % AtomType(kAtom)
@@ -827,35 +868,49 @@ module FF_Pair_Tersoff
               Zeta2 = Zeta2 + sub
             endif
           enddo
-        endif
 
-        BetaPar = self%tersoffPair(atmType1, atmType2) % beta
-        n = self%tersoffPair(atmType1, atmType2) % n
-        if(Zeta /= 0E0_dp) then
-          b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
-        else
-          b1 = 1E0_dp
+        !
+          atmType3 = curbox % AtomType(disp(1)%atmIndx)
+          rxik = disp(1)%x_New  -  curbox % atoms(1, iAtom)
+          ryik = disp(1)%y_New  -  curbox % atoms(2, iAtom)
+          rzik = disp(1)%z_New  -  curbox % atoms(3, iAtom)
+          call curbox%Boundary(rxik, ryik, rzik)
+          rik = rxik*rxik + ryik*ryik + rzik*rzik
+          rik = sqrt(rik)
+          D2 = self%tersoffPair(atmType1, atmType3) % D
+          Req = self%tersoffPair(atmType1, atmType3) % Req
+          c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
+          d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
+          h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+          angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+          sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+          Zeta = Zeta + sub
+
+          BetaPar = self%tersoffPair(atmType1, atmType2) % beta
+          n = self%tersoffPair(atmType1, atmType2) % n
+          if(Zeta /= 0E0_dp) then
+              b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
+          else
+              b1 = 1E0_dp
+          endif
+          if(Zeta2 /= 0E0_dp) then
+              b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
+          else
+              b2 = 1E0_dp
+          endif    
+
+          B = self%tersoffPair(atmType1, atmType2) % B
+          lam2 = self%tersoffPair(atmType1, atmType2) % lam2
+          D2 = self%tersoffPair(atmType1, atmType2) % D
+          Req = self%tersoffPair(atmType1, atmType2) % Req
+          V1 = 0.5E0_dp*self%Fc_Func(rij, Req, D2) * (B*exp(-lam2*rij))*(b2 - b1)
+          curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
+          curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
+          E_Diff = E_Diff + V1
         endif
-        if(Zeta2 /= 0E0_dp) then
-          b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
-        else
-          b2 = 1E0_dp
-        endif    
-   
-!        A = self%tersoffPair(atmType1, atmType2) % A
-        B = self%tersoffPair(atmType1, atmType2) % B
-!        lam1 = self%tersoffPair(atmType1, atmType2) % lam1
-        lam2 = self%tersoffPair(atmType1, atmType2) % lam2
-        D2 = self%tersoffPair(atmType1, atmType2) % D
-        Req = self%tersoffPair(atmType1, atmType2) % Req
-        V1 = 0.5E0_dp*self%Fc_Func(rij, Req, D2) * (B*exp(-lam2*rij))*(b2 - b1)
-!        write(*,*) "Recalc", iAtom, jAtom, V1
-        curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
-        curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
-        E_Diff = E_Diff + V1
       enddo
     enddo
- 
+
 !    write(*,*) E_Diff
   end subroutine  
 !====================================================================================== 
@@ -867,7 +922,7 @@ module FF_Pair_Tersoff
     real(dp), intent(inOut) :: E_Diff
     integer :: atmType1, atmType2, atmType3
     integer :: molStart, molEnd, iAtom, iMol, jNei, jAtom
-    integer :: kNei, iNei, kAtom
+    integer :: kNei, iNei, kAtom, nAtom
     real(dp) :: rMaxSq, rMinSq
     real(dp) :: rxij, ryij, rzij, rij
     real(dp) :: rxjk, ryjk, rzjk, rjk
@@ -889,43 +944,42 @@ module FF_Pair_Tersoff
     nRecalc = 0
     recalcList = 0
     call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
-
-
     E_Diff = 0E0_dp
 
-    do iAtom = molStart, molEnd
+
+      iAtom = molStart
       atmType1 = curbox % AtomType(iAtom)
-      !Computing the contribution from the old poisition. 
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
         atmType2 = curbox % AtomType(jAtom)
-        rMaxSq = self%tersoffPair(atmType1, atmType2) % rMaxSq
+
         rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
         ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
         rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
         call curbox%Boundary(rxij, ryij, rzij)
         rij = rxij*rxij + ryij*ryij + rzij*rzij
+        rMaxSq = self%tersoffPair(atmType1, atmType2) % rMaxSq
         if(rij < rMaxSq) then
-          rij = sqrt(rij)
-          if(all(recalcList /= jAtom)) then
+          if(all(recalcList(1:nRecalc) /= jAtom) ) then
             nRecalc = nRecalc + 1
             recalcList(nRecalc) = jAtom
           endif
-          Zeta = 0E0_dp !Zeta ij
-          Zeta2 = 0E0_dp !Zeta ji
-
-          !Compute the Old Tersoff U_ij component
+          rij = sqrt(rij)
+          Zeta = 0E0_dp
+          !Compute the Tersoff U_ij component
           do kNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
             kAtom = curbox%NeighList(1)%list(kNei, iAtom)
-            if((kAtom == iAtom) .or. (kAtom == jAtom)) then
+
+            if( kAtom == jAtom ) then
               cycle
             endif
+
             atmType3 = curbox % AtomType(kAtom)
+            rMaxSq = self%tersoffPair(atmType1, atmType3) % rMaxSq
             rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
             ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
             rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
             call curbox%Boundary(rxik, ryik, rzik)
-            rMaxSq = self%tersoffPair(atmType1, atmType3) % rMaxSq
             rik = rxik*rxik + ryik*ryik + rzik*rzik
             if(rik < rMaxSq) then
               rik = sqrt(rik)
@@ -938,165 +992,177 @@ module FF_Pair_Tersoff
               Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
             endif     
           enddo
-          !Compute the Old Tersoff U_ji component
-          do kNei = 1, curbox%NeighList(1)%nNeigh(jAtom)
-            kAtom = curbox%NeighList(1)%list(kNei, jAtom)
-            if((kAtom == iAtom) .or. (kAtom == jAtom)) then
-              cycle
-            endif
-            atmType3 = curbox % AtomType(kAtom)
-            rxjk = curbox % atoms(1, kAtom)  -  curbox % atoms(1, jAtom)
-            ryjk = curbox % atoms(2, kAtom)  -  curbox % atoms(2, jAtom)
-            rzjk = curbox % atoms(3, kAtom)  -  curbox % atoms(3, jAtom)
-            call curbox%Boundary(rxjk, ryjk, rzjk)
-            rMaxSq = self%tersoffPair(atmType2, atmType3) % rMaxSq
-            rjk = rxjk*rxjk + ryjk*ryjk + rzjk*rzjk
-            if(rjk < rMaxSq) then
-              rjk = sqrt(rjk)
-              D2 = self%tersoffPair(atmType2, atmType3) % D
-              Req = self%tersoffPair(atmType2, atmType3) % Req
-              c = self%tersoffAngle(atmType2, atmType1, atmType3) % c
-              d = self%tersoffAngle(atmType2, atmType1, atmType3) % d
-              h = self%tersoffAngle(atmType2, atmType1, atmType3) % h            
-
-              angijk = self%angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
-              Zeta2 = Zeta2 + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rjk, Req, D2)
-            endif     
-          enddo
           if(Zeta /= 0E0_dp) then
-            BetaPar = self%tersoffPair(atmType1, atmType2) % beta
-            n = self%tersoffPair(atmType1, atmType2) % n
+            BetaPar = self%tersoffPair(atmType1, atmType2)%beta
+            n =  self%tersoffPair(atmType1, atmType2)%n
             b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
             b1 = 1E0_dp
           endif
-          if(Zeta2 /= 0E0_dp) then
-            BetaPar = self%tersoffPair(atmType2, atmType1) % beta
-            n = self%tersoffPair(atmType2, atmType1) % n
-            b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
-          else
-            b2 = 1E0_dp
-          endif
 
-          if(self%symetric) then
-            A = self%tersoffPair(atmType1, atmType2) % A
-            B = self%tersoffPair(atmType1, atmType2) % B
-            lam1 = self%tersoffPair(atmType1, atmType2) % lam1
-            lam2 = self%tersoffPair(atmType1, atmType2) % lam2
-            Req = self%tersoffPair(atmType1, atmType2) % REq
-            D2 = self%tersoffPair(atmType1, atmType2) % D
-            V1 = 0.5E0_dp * self%Fc_Func(rij, Req, D2) * (2d0*A*exp(-lam1*rij) - (b1+b2)*B*exp(-lam2*rij)) 
-          else
-            A = self%tersoffPair(atmType1, atmType2) % A
-            B = self%tersoffPair(atmType1, atmType2) % B
-            lam1 = self%tersoffPair(atmType1, atmType2) % lam1
-            lam2 = self%tersoffPair(atmType1, atmType2) % lam2
-            Req = self%tersoffPair(atmType1, atmType2) % REq
-            D2 = self%tersoffPair(atmType1, atmType2) % D
-            V1 = 0.5E0_dp * self%Fc_Func(rij, Req, D2) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij)) 
 
-            A = self%tersoffPair(atmType2, atmType1) % A
-            B = self%tersoffPair(atmType2, atmType1) % B
-            lam1 = self%tersoffPair(atmType2, atmType1) % lam1
-            lam2 = self%tersoffPair(atmType2, atmType1) % lam2
-            Req = self%tersoffPair(atmType2, atmType1) % REq
-            D2 = self%tersoffPair(atmType2, atmType1) % D
-            V1 = V1 + 0.5E0_dp * self%Fc_Func(rij, Req, D2) * (A*exp(-lam1*rij) - b2*B*exp(-lam2*rij)) 
-          
-          endif
- 
-!          write(*,*) "Old:", iAtom, jAtom, -V1
+          A = self%tersoffPair(atmType1, atmType2) % A
+          B = self%tersoffPair(atmType1, atmType2) % B
+          lam1 = self%tersoffPair(atmType1, atmType2) % lam1
+          lam2 = self%tersoffPair(atmType1, atmType2) % lam2
+          Req = self%tersoffPair(atmType1, atmType2) % REq
+          D2 = self%tersoffPair(atmType1, atmType2) % D
+          V1 = 0.5E0_dp * self%Fc_Func(rij, Req, D2) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij)) 
           curbox%dETable(iAtom) = curbox%dETable(iAtom) - V1
-          curbox%dETable(jAtom) = curbox%dETable(iAtom) - V1
+          curbox%dETable(jAtom) = curbox%dETable(jAtom) - V1
           E_Diff = E_Diff - V1
+
         endif
       enddo
-    enddo
 
     !Since the Tersoff is a three body potential, moving a single particle can change the bonded 
     !interaction of particles that did not move.  These interactions must also be recomputed.
+
+    !Compute the remaining U_ji interaction
+    jAtom = molStart
+    atmType2 = curbox % AtomType(jAtom)
+    do iNei = 1, nRecalc
+      Zeta = 0E0_dp  !Zeta is the angle term for the new config
+      iAtom = recalcList(iNei)
+      atmType1 = curbox % AtomType(iAtom)
+      rxij = curbox % atoms(1, jAtom) - curbox % atoms(1, iAtom)
+      ryij = curbox % atoms(2, jAtom) - curbox % atoms(2, iAtom)
+      rzij = curbox % atoms(3, jAtom) - curbox % atoms(3, iAtom)
+      call curbox%Boundary(rxij, ryij, rzij)
+      rij = rxij*rxij + ryij*ryij + rzij*rzij
+      rij = sqrt(rij)
+
+
+      do kNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        kAtom = curbox%NeighList(1)%list(kNei, iAtom)
+        if( kAtom == jAtom ) then
+          cycle
+        endif
+
+
+        atmType3 = curbox % AtomType(kAtom)
+        rMaxSq = self%tersoffPair(atmType1, atmType3) % rMaxSq
+        rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
+        ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
+        rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
+        call curbox%Boundary(rxik, ryik, rzik)
+        rik = rxik*rxik + ryik*ryik + rzik*rzik
+        if(rik < rMaxSq) then
+          rik = sqrt(rik)
+          D2 = self%tersoffPair(atmType1, atmType3) % D
+          Req = self%tersoffPair(atmType1, atmType3) % Req
+          c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
+          d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
+          h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+          angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+          Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
+        endif
+
+      enddo
+      BetaPar = self%tersoffPair(atmType1, atmType2) % beta
+      n = self%tersoffPair(atmType1, atmType2) % n
+      if(Zeta /= 0E0_dp) then
+        b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
+      else
+        b1 = 1E0_dp
+      endif
+
+      A = self%tersoffPair(atmType1, atmType2) % A
+      B = self%tersoffPair(atmType1, atmType2) % B
+      lam1 = self%tersoffPair(atmType1, atmType2) % lam1
+      lam2 = self%tersoffPair(atmType1, atmType2) % lam2
+      Req = self%tersoffPair(atmType1, atmType2) % REq
+      D2 = self%tersoffPair(atmType1, atmType2) % D
+      V1 = 0.5E0_dp * self%Fc_Func(rij, Req, D2) * (A*exp(-lam1*rij) - b1*B*exp(-lam2*rij)) 
+      curbox%dETable(iAtom) = curbox%dETable(iAtom) - V1
+      curbox%dETable(jAtom) = curbox%dETable(jAtom) - V1
+      E_Diff = E_Diff - V1
+    enddo
+ 
+
+!    write(*,*) E_Diff, nRecalc
+    !Compute the new interactions between the particles already in the system
+    nAtom = molStart
     do iNei = 1, nRecalc
       iAtom = recalcList(iNei)
       atmType1 = curbox % AtomType(iAtom)
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        
+
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-        if(iAtom == jAtom) then
+        if(jAtom == nAtom) then
           cycle
         endif
-        if( molStart == jAtom ) then
-          cycle
-        endif
+
         atmType2 = curbox % AtomType(jAtom)
-        rMaxSq = self%tersoffPair(atmType1, atmType2) % rMaxSq
         rxij = curbox % atoms(1, jAtom)  -  curbox % atoms(1, iAtom)
         ryij = curbox % atoms(2, jAtom)  -  curbox % atoms(2, iAtom)
         rzij = curbox % atoms(3, jAtom)  -  curbox % atoms(3, iAtom)
         call curbox%Boundary(rxij, ryij, rzij)
 
+        rMaxSq = self%tersoffPair(atmType1, atmType2) % rMaxSq
         rij = rxij*rxij + ryij*ryij + rzij*rzij
         if(rij < rMaxSq) then
-          rij = sqrt(rij)
           Zeta = 0E0_dp  !Zeta is the angle term for the new config
           Zeta2 = 0E0_dp !Zeta is the angle term for the old config
+          rij = sqrt(rij)
           do kNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
             kAtom = curbox%NeighList(1)%list(kNei, iAtom)
-            if( (kAtom == iAtom) .or. (kAtom == jAtom) ) then
+            if(kAtom == jAtom) then
               cycle
             endif
             atmType3 = curbox % AtomType(kAtom)
             rMaxSq = self%tersoffPair(atmType1, atmType3) % rMaxSq
              ! If kAtom is the particle that moved old and new must
              ! be recomputed separately. Otherwise, old and new are the same.
-            if(kAtom /= molStart) then
-              rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
-              ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
-              rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
-              call curbox%Boundary(rxik, ryik, rzik)
-              rik = rxik*rxik + ryik*ryik + rzik*rzik
-              if(rik < rMaxSq) then
-                D2 = self%tersoffPair(atmType1, atmType3) % D
-                Req = self%tersoffPair(atmType1, atmType3) % Req
-                c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
-                d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
-                h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
-                rik = sqrt(rik)
+            rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
+            ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
+            rzik = curbox % atoms(3, kAtom)  -  curbox % atoms(3, iAtom)
+            call curbox%Boundary(rxik, ryik, rzik)
+            rik = rxik*rxik + ryik*ryik + rzik*rzik
+            if(rik < rMaxSq) then
+              D2 = self%tersoffPair(atmType1, atmType3) % D
+              Req = self%tersoffPair(atmType1, atmType3) % Req
+              c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
+              d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
+              h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+              rik = sqrt(rik)
 
-                angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-                sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+              angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
+              sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+              if(kAtom == nAtom) then
+                Zeta2 = Zeta2 + sub
+              else
                 Zeta = Zeta + sub
                 Zeta2 = Zeta2 + sub
               endif
             endif
           enddo
-        endif
 
-        BetaPar = self%tersoffPair(atmType1, atmType2) % beta
-        n = self%tersoffPair(atmType1, atmType2) % n
-        if(Zeta /= 0E0_dp) then
-          b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
-        else
-          b1 = 1E0_dp
+          BetaPar = self%tersoffPair(atmType1, atmType2) % beta
+          n = self%tersoffPair(atmType1, atmType2) % n
+          if(Zeta /= 0E0_dp) then
+              b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
+          else
+              b1 = 1E0_dp
+          endif
+          if(Zeta2 /= 0E0_dp) then
+              b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
+          else
+              b2 = 1E0_dp
+          endif    
+
+          B = self%tersoffPair(atmType1, atmType2) % B
+          lam2 = self%tersoffPair(atmType1, atmType2) % lam2
+          D2 = self%tersoffPair(atmType1, atmType2) % D
+          Req = self%tersoffPair(atmType1, atmType2) % Req
+          V1 = 0.5E0_dp*self%Fc_Func(rij, Req, D2) * (B*exp(-lam2*rij))*(b2 - b1)
+          curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
+          curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
+          E_Diff = E_Diff + V1
         endif
-        if(Zeta2 /= 0E0_dp) then
-          b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
-        else
-          b2 = 1E0_dp
-        endif    
-   
-!        A = self%tersoffPair(atmType1, atmType2) % A
-        B = self%tersoffPair(atmType1, atmType2) % B
-!        lam1 = self%tersoffPair(atmType1, atmType2) % lam1
-        lam2 = self%tersoffPair(atmType1, atmType2) % lam2
-        D2 = self%tersoffPair(atmType1, atmType2) % D
-        Req = self%tersoffPair(atmType1, atmType2) % Req
-        V1 = 0.5E0_dp*self%Fc_Func(rij, Req, D2) * (B*exp(-lam2*rij))*(b2 - b1)
-!        write(*,*) "Recalc", iAtom, jAtom, V1
-        curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
-        curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
-        E_Diff = E_Diff + V1
       enddo
     enddo
-
 
   end subroutine
   !=====================================================================
