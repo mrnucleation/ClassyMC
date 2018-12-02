@@ -35,6 +35,8 @@ DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug 
 #COMPFLAGS := $(DEBUGFLAGS) $(OPTIMIZE_FLAGS)
 
 
+PACKAGE_FLAGS := -DPARALLEL
+
 # ====================================
 #        Directory List
 # ====================================
@@ -170,30 +172,32 @@ OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN)
 # ====================================
 #        Compile Commands
 # ====================================
-default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
+default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
 default: COMPFLAGS += $(DEBUGFLAGS)
 default: startUP classyMC finale
 
-aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
+aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
 #aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET
 aenet: startUP classyMCAENet finale
 
-gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
+lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) 
+
+gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 gfortran: COMPFLAGS += $(DEBUGFLAGS)
 gfortran: startUP classyMC finale
 
-debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT)
+debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
 debug: startUP_debug classyMC_debug finale
 
 #debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
-debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT)
+debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
 debugaenet: COMPFLAGS += -DAENET
 debugaenet: startUP classyMCAENet finale
 
 
-debug_gfortran: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
+debug_gfortran: COMPFLAGS := $(DETAILEDDEBUG_GFORT) $(PACKAGE_FLAGS)
 debug_gfortran: startUP_debug classyMC_debug finale
 
 #neat: startUP classyMC removeObject finale
@@ -222,6 +226,13 @@ $(OBJ)/%.o: $(SRC)/%.f90
 $(OBJ)/%.o: $(TEMPLATE)/%.f90
 		@echo Creating $<
 		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
+
+
+libClassyMC.s90: $(OBJ_COMPLETE) 
+		@echo =============================================
+		@echo     Compiling and Linking Source Files
+		@echo =============================================	
+		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 
        
 classyMC: $(OBJ_COMPLETE) 

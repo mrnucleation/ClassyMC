@@ -76,8 +76,8 @@ module OrthoBoxDef
     do iType = 1, nMolTypes    
       self%nMolTotal = self%nMolTotal + self % NMol(iType)
     enddo
-    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Molecule Count: ", self % NMol
-    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
+    write(nout, "(1x,A,I2,A,8I10)") "Box ", self%boxID, " Molecule Count: ", self % NMol
+    write(nout, "(1x,A,I2,A,I10)") "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
 
 
 

@@ -697,7 +697,9 @@ module UmbrellaWHAMRule
 !     by collecting histogram data from across each thread. 
   subroutine UmbrellaWHAM_AdjustHist(self)
     use ParallelVar, only: myid, nout, ierror
+#ifdef PARALLEL
     use MPI
+#endif
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: arraySize, i, j, cnt, maxbin, maxbin2
@@ -705,17 +707,21 @@ module UmbrellaWHAMRule
     real(dp) :: F_Estimate(1:self%nWhamItter), F_Old(1:self%nWhamItter), fSum     
     real(dp) :: tol, refBias
 
+#ifdef PARALLEL
     write(nout,*) "Halting for WHAM"
     call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
+#endif
     
 !      This block condences the histogram data from all the different processors
 !      into one collective array on the root (myid = 0) processor.        
+#ifdef PARALLEL
     arraySize = size(self%UHist)     
     if(myid .eq. 0) then
       self%TempHist = 0E0
     endif
     call MPI_REDUCE(self%UHist, self%TempHist, arraySize, &
               MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)       
+#endif
 
     if(myid .eq. 0) then
 !        This block calculates the terms needed to 
@@ -819,11 +825,13 @@ module UmbrellaWHAMRule
     endif      !End of processor 0 only block
 
 
+#ifdef PARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
 !      Distribute the new free energy estimate to all threads so that they can continue the simulation
 !      with the new free energy. 
     arraySize = size(self%NewBias)      
     call MPI_BCast(self%NewBias, arraySize, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror) 
+#endif
 
     do i = 1, self%umbrellaLimit
       self%UBias(i) = self%NewBias(i)

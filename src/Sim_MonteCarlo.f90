@@ -6,7 +6,9 @@ contains
 !===========================================================================
   subroutine RunMonteCarlo
     use VarPrecision
+#ifdef PARALLEL
     use MPI
+#endif
 
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
@@ -98,7 +100,9 @@ contains
 
     call Epilogue(iCycle, iMove)
 
+#ifdef PARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
+#endif
 
     if( allocated(AnalysisArray) ) then
       do i = 1, size(AnalysisArray)
