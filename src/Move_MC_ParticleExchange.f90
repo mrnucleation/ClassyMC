@@ -205,11 +205,15 @@ use VarPrecision
 
 
     !Compute the Generation Probability
-    vol = box1 % GetThermo(3)
-    Prob = real(box1%nMolTotal-1, dp)/vol
 
-    vol = box2 % GetThermo(3)
-    Prob = Prob*vol/real(box2%nMolTotal+1, dp) 
+    !Forward Probability = 1/N_box1 * 1/vol_Box2 
+    !Reverse Probability = 1/(N_box2+1) * 1/vol_Box1
+    !Rev/For = N_box1 * vol_box2 / ( (N_box2+1) * vol_Box1 )
+    vol = box2 % GetThermo(5)
+    Prob = real(box1%nMolTotal, dp) * vol
+
+    vol = box1 % GetThermo(5)
+    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol)
 
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), box1)
     half = sampling % GetExtraTerms(self%newpart(1:nAtoms), box2)

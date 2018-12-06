@@ -29,6 +29,7 @@ module Traj_XSF
     use BoxData, only: BoxArray
     use SimpleSimBox, only: SimpleBox
     use CubicBoxDef, only: CubeBox 
+    use OrthoBoxDef, only: OrthoBox 
     use Common_MolInfo, only: AtomData
     implicit none
     class(trajXSF), intent(inout) :: self
@@ -82,6 +83,26 @@ module Traj_XSF
 
         write(self%fileUnit, *) "PRIMCOORD"
         write(self%fileUnit, *) box%nAtoms, 1
+
+      class is(OrthoBox)
+        write(self%fileUnit, *) "CRYSTAL"
+        write(self%fileUnit, *) "PRIMVEC"
+        call box%GetDimensions(dimensions(1:2, 1:3))
+        cm(1) = dimensions(1,1)
+        cm(2) = dimensions(1,2)
+        cm(3) = dimensions(1,3)
+        Lx = dimensions(2,1) - dimensions(1,1)
+        Ly = dimensions(2,2) - dimensions(1,2)
+        Lz = dimensions(2,3) - dimensions(1,3)
+
+        write(self%fileUnit, *) Lx, 0.0, 0.0
+        write(self%fileUnit, *) 0.0, Ly, 0.0
+        write(self%fileUnit, *) 0.0, 0.0, Lz
+        
+
+        write(self%fileUnit, *) "PRIMCOORD"
+        write(self%fileUnit, *) box%nAtoms, 1
+
 
       class default
         stop "Traj_XSF does not know how to handle this box type"

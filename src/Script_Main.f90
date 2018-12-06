@@ -154,9 +154,18 @@
           read(command, *) realValue  
           nMoves = nint(realValue, kind=8)
 
-!        case("screenecho")
-!          read(line,*) dummy, command, logicValue
-!          screenEcho = logicValue
+        case("screenecho")
+          call GetXCommand(line, command, 3, lineStat)
+          read(command, *) logicValue
+          if(logicValue) then
+            if(myid == 0) then
+              nout = 6
+            endif
+          else
+            if(myid == 0) then
+              nout = 100
+            endif
+          endif
 
         case("rng_seed")
           call GetXCommand(line, command2, 3, lineStat)

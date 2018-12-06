@@ -26,6 +26,7 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: GetNewList => RSqList_GetNewList
       procedure, pass :: AddMol => RSqList_AddMol
       procedure, pass :: GetNeighCount => RSqList_GetNeighCount
+      procedure, pass :: ProcessIO => RSqList_ProcessIO
 !      procedure, pass :: TransferList
       procedure, pass :: DeleteMol => RSqList_DeleteMol
       procedure, pass :: Prologue => RSqList_Prologue
@@ -44,7 +45,7 @@ use Template_NeighList, only: NeighListDef
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 0.7E0_dp  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 0.6E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box

@@ -535,9 +535,22 @@ module FF_Pair_Pedone_Cut
         read(command, *) rCut
         self % rCut = rCut
         self % rCutSq = rCut * rCut
+
       case("implicitsolvent")
         call GetXCommand(line, command, 2, lineStat)
         read(command, *) self%implicitSolvent
+
+      case("born")
+        if(.not. allocated(self%bornRad)) then
+          allocate(self%bornRad(1:nAtomTypes))
+        endif
+        call CountCommands(line, nPar)
+        
+        do jType = 1, nAtomTypes
+          call GetXCommand(line, command, jType+1, lineStat)
+          read(command, *) self%bornRad(jType)
+        enddo
+
 
       case default
         param = .true.

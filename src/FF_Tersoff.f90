@@ -19,6 +19,7 @@ module FF_Pair_Tersoff
     type(Tersoff2Body), allocatable :: tersoffPair(:,:)
     type(Tersoff3Body), allocatable :: tersoffAngle(:,:,:)
     real(dp), allocatable :: rMinTable(:,:)
+    real(dp) :: dimer = 1E0_dp
 !    real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Fc_Func
@@ -194,7 +195,8 @@ module FF_Pair_Tersoff
           n =  self%tersoffPair(atmType1, atmType2)%n
           b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
         else
-          b1 = 1E0_dp
+!          b1 = 1E0_dp
+          b1 = self%dimer
         endif      
    
         A = self%tersoffPair(atmType1, atmType2) % A
@@ -365,14 +367,16 @@ module FF_Pair_Tersoff
             n =  self%tersoffPair(atmType1, atmType2)%n
             b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
-            b1 = 1E0_dp
+!            b1 = 1E0_dp
+            b1 = self%dimer
           endif
           if(Zeta2 /= 0E0_dp) then
             BetaPar = self%tersoffPair(atmType2, atmType1)%beta
             n =  self%tersoffPair(atmType2, atmType1)%n
             b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
           else
-            b2 = 1E0_dp
+!            b2 = 1E0_dp
+            b2 = self%dimer
           endif
 
           if(self%symetric) then
@@ -481,14 +485,16 @@ module FF_Pair_Tersoff
             n = self%tersoffPair(atmType1, atmType2) % n
             b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
-            b1 = 1E0_dp
+!            b1 = 1E0_dp
+            b1 = self%dimer
           endif
           if(Zeta2 /= 0E0_dp) then
             BetaPar = self%tersoffPair(atmType2, atmType1) % beta
             n = self%tersoffPair(atmType2, atmType1) % n
             b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
           else
-            b2 = 1E0_dp
+!            b2 = 1E0_dp
+            b2 = self%dimer
           endif
 
           if(self%symetric) then
@@ -621,12 +627,14 @@ module FF_Pair_Tersoff
         if(Zeta /= 0E0_dp) then
           b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
         else
-          b1 = 1E0_dp
+!          b1 = 1E0_dp
+          b1 = self%dimer
         endif
         if(Zeta2 /= 0E0_dp) then
           b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
         else
-          b2 = 1E0_dp
+!          b2 = 1E0_dp
+          b2 = self%dimer
         endif    
    
 !        A = self%tersoffPair(atmType1, atmType2) % A
@@ -739,7 +747,8 @@ module FF_Pair_Tersoff
             n =  self%tersoffPair(atmType1, atmType2)%n
             b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
-            b1 = 1E0_dp
+!            b1 = 1E0_dp
+            b1 = self%dimer
           endif
 
 
@@ -802,7 +811,8 @@ module FF_Pair_Tersoff
       if(Zeta /= 0E0_dp) then
         b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
       else
-        b1 = 1E0_dp
+!        b1 = 1E0_dp
+        b1 = self%dimer
       endif
 
       A = self%tersoffPair(atmType1, atmType2) % A
@@ -891,12 +901,14 @@ module FF_Pair_Tersoff
           if(Zeta /= 0E0_dp) then
               b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
-              b1 = 1E0_dp
+!              b1 = 1E0_dp
+              b1 = self%dimer
           endif
           if(Zeta2 /= 0E0_dp) then
               b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
           else
-              b2 = 1E0_dp
+!              b2 = 1E0_dp
+              b2 = self%dimer
           endif    
 
           B = self%tersoffPair(atmType1, atmType2) % B
@@ -997,7 +1009,8 @@ module FF_Pair_Tersoff
             n =  self%tersoffPair(atmType1, atmType2)%n
             b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
-            b1 = 1E0_dp
+!             b1 = 1E0_dp
+             b1 = self%dimer
           endif
 
 
@@ -1064,7 +1077,8 @@ module FF_Pair_Tersoff
       if(Zeta /= 0E0_dp) then
         b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
       else
-        b1 = 1E0_dp
+!        b1 = 1E0_dp
+         b1 = self%dimer
       endif
 
       A = self%tersoffPair(atmType1, atmType2) % A
@@ -1144,12 +1158,14 @@ module FF_Pair_Tersoff
           if(Zeta /= 0E0_dp) then
               b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
           else
-              b1 = 1E0_dp
+!              b1 = 1E0_dp
+              b1 = self%dimer
           endif
           if(Zeta2 /= 0E0_dp) then
               b2 = (1E0_dp + (BetaPar*Zeta2)**n)**(-1E0_dp/(2E0_dp*n))
           else
-              b2 = 1E0_dp
+!              b2 = 1E0_dp
+              b2 = self%dimer
           endif    
 
           B = self%tersoffPair(atmType1, atmType2) % B
@@ -1264,7 +1280,8 @@ module FF_Pair_Tersoff
           n =  self%tersoffPair(atmType1, atmType2)%n
           b1 = (1E0_dp + (BetaPar*Zeta)**n)**(-1E0_dp/(2E0_dp*n))
         else
-          b1 = 1E0_dp
+!          b1 = 1E0_dp
+          b1 = self%dimer
         endif      
    
         A = self%tersoffPair(atmType1, atmType2) % A
@@ -1296,7 +1313,7 @@ module FF_Pair_Tersoff
     logical :: logicVal
     integer :: iPar, lineStat
     integer :: type1, type2, type3
-    real(dp) :: parList(1:8)
+    real(dp) :: parList(1:8), realVal
   
 
     call GetXCommand(line, command, 1, lineStat)
@@ -1306,6 +1323,12 @@ module FF_Pair_Tersoff
         call GetXCommand(line, command, 2, lineStat)
         read(command, *) logicVal
         self%symetric = logicVal
+
+      case("dimer")
+        call GetXCommand(line, command, 2, lineStat)
+        read(command, *) realVal
+        self%dimer = realVal
+
 
       case("pair")
         call GetXCommand(line, command, 2, lineStat)

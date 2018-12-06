@@ -8,11 +8,18 @@ use VarPrecision
   type, public, extends(MCMove) :: MolTranslate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
+
+    real(dp), allocatable :: boxatmps(:)
+    real(dp) , allocatable:: boxaccpt(:)
     logical :: proportional = .true.
     logical :: tuneMax = .true.
     real(dp) :: limit = 3.00E0_dp
     real(dp) :: targAccpt = 50E0_dp
     real(dp) :: max_dist = 0.05E0_dp
+    real(dp), allocatable :: boxlimit(:)
+    real(dp), allocatable :: boxtargAccpt(:)
+    real(dp), allocatable :: boxmax_dist(:)
+
     type(Displacement), allocatable :: disp(:)
 
 !    integer, allocatable :: tempNnei(:)
@@ -38,11 +45,23 @@ use VarPrecision
     class(MolTranslate), intent(inout) :: self
     integer :: iType, maxAtoms, nBoxes
 
+    nBoxes = size(boxArray)
     if(.not. allocated(self%boxProb)) then
-      nBoxes = size(boxArray)
       allocate( self%boxProb(1:nBoxes) )
       self%boxProb = 1E0_dp/real(nBoxes,dp)
     endif
+
+    allocate( self%boxatmps(1:nBoxes) )
+    self%boxatmps = 1e-50_dp
+    allocate( self%boxaccpt(1:nBoxes) )
+    self%boxaccpt = 0E0_dp
+
+    allocate( self%boxLimit(1:nBoxes) )
+    self%boxLimit = self%limit
+    allocate( self%boxmax_dist(1:nBoxes) )
+    self%boxmax_dist = self%max_dist
+    allocate( self%boxtargAccpt(1:nBoxes) )
+    self%boxtargAccpt = self%targAccpt
 
     maxAtoms = 0
     do iType = 1, nMolTypes
@@ -79,14 +98,16 @@ use VarPrecision
     class(MolTranslate), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
-    integer :: iAtom, nAtoms, atomIndx
+    integer :: boxID, iAtom, nAtoms, atomIndx
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex, molStart, molEnd, molType
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE
     real(dp), parameter :: Prob = 1E0_dp
 
+    boxID = trialBox % boxID
     self % atmps = self % atmps + 1E0_dp
+    self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.
 
     !Propose move
@@ -95,9 +116,9 @@ use VarPrecision
     call trialBox % GetMolData(nMove, molStart=molStart, molEnd=molEnd, &
                                molType=molType)
 
-    dx = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
-    dy = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
-    dz = self % max_dist * (2E0_dp * grnd() - 1E0_dp)
+    dx = self % boxmax_dist(boxID) * (2E0_dp * grnd() - 1E0_dp)
+    dy = self % boxmax_dist(boxID) * (2E0_dp * grnd() - 1E0_dp)
+    dz = self % boxmax_dist(boxID) * (2E0_dp * grnd() - 1E0_dp)
  
     nAtoms = MolData(molType)%nAtoms
     do iAtom = 1, nAtoms
@@ -149,6 +170,7 @@ use VarPrecision
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:nAtoms), inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
+      self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:nAtoms), self%tempList, self%tempNNei)
     endif
@@ -158,22 +180,27 @@ use VarPrecision
   subroutine MolTrans_Maintenance(self)
     implicit none
     class(MolTranslate), intent(inout) :: self
-!    real(dp), parameter :: limit = 3.0E0_dp
+    integer :: iBox
+    real(dp) :: accRate
+!    real(dp), parameter :: lowerlimit = 0.1E0_dp
       
     if(self%tuneMax) then
-      if(self%atmps .lt. 0.5E0_dp) then
-        return
-      endif
-
-      if(self%GetAcceptRate() > self%targAccpt) then
-        if(self%max_dist*1.01E0_dp .lt. self%limit) then
-          self%max_dist = self%max_dist * 1.01E0_dp
-        else 
-          self%max_dist = self%limit       
+      do iBox = 1, size(self%boxatmps)
+        if(self%boxatmps(iBox) < 0.5E0_dp) then
+          cycle
         endif
-      else
-        self%max_dist = self%max_dist * 0.99E0_dp
-      endif
+        accRate = 1e2_dp*self%boxaccpt(iBox)/self%boxatmps(iBox)
+
+        if(accRate > self%boxtargAccpt(iBox)) then
+          if(self%boxmax_dist(iBox)*1.01E0_dp < self%boxlimit(iBox)) then
+            self%boxmax_dist(iBox) = self%boxmax_dist(iBox) * 1.01E0_dp
+          else 
+            self%boxmax_dist(iBox) = self%boxlimit(iBox)
+          endif
+        else
+          self%boxmax_dist(iBox) = self%boxmax_dist(iBox) * 0.99E0_dp
+        endif
+      enddo
     endif
 
   end subroutine
@@ -203,7 +230,7 @@ use VarPrecision
     accptRate = self%GetAcceptRate()
     write(nout,"(1x,A,F15.8)") "Molecule Translation Acceptance Rate: ", accptRate
     if(self%tunemax) then
-      write(nout,"(1x,A,F15.8)") "Final Maximum Displacement: ", self%max_dist
+      write(nout,"(1x,A,100F15.8)") "Final Maximum Displacement: ", self%boxmax_dist(1:)
     endif
  
 
@@ -236,6 +263,7 @@ use VarPrecision
     integer, intent(out) :: lineStat
     character(len=30) :: command
     logical :: logicVal
+    integer :: intVal
     real(dp) :: realVal
 
     call GetXCommand(line, command, 4, lineStat)
@@ -264,6 +292,12 @@ use VarPrecision
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) logicVal
         self%proportional = logicVal
+
+
+      case("updatefreq")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self%maintFreq = intVal
 
       case default
         lineStat = -1

@@ -12,6 +12,7 @@ module OrthoBoxDef
     real(dp) :: boxLz, boxLz2
     contains
       procedure, pass :: Prologue => Ortho_Prologue
+      procedure, pass :: Epilogue => Ortho_Epilogue
       procedure, pass :: LoadDimension => Ortho_LoadDimension
       procedure, pass :: GetDimensions => Ortho_GetDimensions
       procedure, pass :: Boundary => Ortho_Boundary
@@ -97,6 +98,56 @@ module OrthoBoxDef
 
 
   end subroutine
+!==========================================================================================
+  subroutine Ortho_Epilogue(self)
+    use ParallelVar, only: nout
+    use Units, only: outEngUnit
+    implicit none
+    class(OrthoBox), intent(inout) :: self
+    integer :: iConstrain
+    real(dp) :: E_Culm
+
+    E_Culm = self%ETotal
+
+    write(nout,*) "--------Box", self%boxID , "Energy---------"
+    call self % ComputeEnergy
+    call self % NeighList(1) % BuildList
+
+    write(nout, *) "Final Energy:", self % ETotal/outEngUnit
+    if(self%ETotal /= 0) then
+      if( abs((E_Culm-self%ETotal)/self%ETotal) > 1E-7_dp ) then
+        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "Box: ", self%boxID
+        write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit
+        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit
+        write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit
+      endif
+    else
+      if( abs(E_Culm-self%ETotal) > 1E-7_dp ) then
+        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "Box: ", self%boxID
+        write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit
+        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit
+        write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit
+      endif
+    endif
+
+    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
+    write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
+    self%volume = self%boxLx * self%boxLy * self%boxLz
+    write(nout,*) "Box ", self%boxID, " Lengths: ", self%boxLx,  self%boxLy, self%boxLz
+    write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure
+    write(nout,*) "Box ", self%boxID, " Volume: ", self%volume
+    write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%volume
+    if( size(self%Constrain) > 0 ) then
+      do iConstrain = 1, size(self%Constrain)
+        call self%Constrain(iConstrain) % method % Epilogue
+      enddo
+    endif
+
+
+  end subroutine
+
 !==========================================================================================
   subroutine Ortho_LoadDimension(self, line, lineStat)
     use Input_Format, only: GetXCommand
@@ -227,6 +278,13 @@ module OrthoBoxDef
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         self % maintFreq = intVal
+      case("chempotential")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        call GetXCommand(line, command, 6, lineStat)
+        read(command, *) realVal
+        self % chempot(intVal) = realVal
+
 
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)

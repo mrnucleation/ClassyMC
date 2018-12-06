@@ -171,7 +171,7 @@ use VarPrecision
     endif
 
     !Compute the generation probability
-    vol = trialBox % GetThermo(3)
+    vol = trialBox % GetThermo(5)
     Prob = vol/real(trialBox%nMolTotal+1, dp) 
 !    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%ubVol, nCount, trialBox%nMolTotal+1
 
@@ -245,7 +245,7 @@ use VarPrecision
 
     call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
 
-    vol = trialBox % GetThermo(3)
+    vol = trialBox % GetThermo(5)
     Prob = real(trialBox%nMolTotal, dp)/vol
 !    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%ubVol, nNei, trialBox%nMolTotal-1
 
@@ -291,7 +291,7 @@ use VarPrecision
 !    write(*,*) self%ubVol
 
     allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(200,maxAtoms ) )
+    allocate( self%tempList(1000,maxAtoms ) )
     allocate( self%newPart(1:maxAtoms) )
   end subroutine
 !=========================================================================
