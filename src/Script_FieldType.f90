@@ -12,6 +12,7 @@ contains
     use FF_Einstein, only: Pair_Einstein
     use FF_HardSphere, only: Pair_HardSphere
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
+    use FF_Pair_LJ_Shift, only: Pair_LJ_Shift
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Q_Cut, only: Pair_LJ_Q_Cut
     use FF_Pair_Pedone_Cut, only: Pair_Pedone_Cut
@@ -42,6 +43,10 @@ contains
       case("lj_cut")
         allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
+
+      case("lj_shift")
+        allocate(Pair_LJ_Shift::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut/Shift style"
 
       case("lj_q_cut")
         allocate(Pair_LJ_Q_Cut::EnergyCalculator(FFNum) % Method)

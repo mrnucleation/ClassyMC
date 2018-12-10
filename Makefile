@@ -91,6 +91,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_VolExchange.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/MolSearch.f90\
+        		$(SRC)/Analysis_BlockAverage.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
         		$(SRC)/Analysis_DistPair.f90\
         		$(SRC)/Analysis_RDF.f90\
@@ -106,6 +107,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Einstein.f90\
         		$(SRC)/FF_HardSphere.f90\
         		$(SRC)/FF_LJ_Cut.f90\
+        		$(SRC)/FF_LJ_Shift.f90\
         		$(SRC)/FF_LJ_Ele_Cut.f90\
         		$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_Tersoff.f90\

@@ -260,6 +260,7 @@ module OrthoBoxDef
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     use ForcefieldData, only: EnergyCalculator
+    use Units, only: inPressUnit
     implicit none
 
     class(OrthoBox), intent(inout) :: self
@@ -307,7 +308,7 @@ module OrthoBoxDef
       case("pressure")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal
-        self % pressure = realVal
+        self % pressure = realVal*inPressUnit
 
       case("neighcut")
         call GetXCommand(line, command, 5, lineStat)

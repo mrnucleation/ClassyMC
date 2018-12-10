@@ -19,6 +19,7 @@ module FF_Pair_Tersoff
     type(Tersoff2Body), allocatable :: tersoffPair(:,:)
     type(Tersoff3Body), allocatable :: tersoffAngle(:,:,:)
     real(dp), allocatable :: rMinTable(:,:)
+    real(dp), allocatable :: rMin(:)
     real(dp) :: dimer = 1E0_dp
 !    real(dp) :: rCut, rCutSq
     contains
@@ -93,6 +94,7 @@ module FF_Pair_Tersoff
     class(Pair_Tersoff), intent(inout) :: self
     integer :: AllocateStat
 
+    allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%tersoffPair(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
     allocate(self%tersoffAngle(1:nAtomTypes,1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
@@ -1323,6 +1325,23 @@ module FF_Pair_Tersoff
         call GetXCommand(line, command, 2, lineStat)
         read(command, *) logicVal
         self%symetric = logicVal
+
+      case("rmin")
+        do iPar = 1, nAtomTypes
+          call GetXCommand(line, command, iPar+1, lineStat)
+          read(command, *) realVal
+          self%rMin(iPar) = realVal
+        enddo
+
+        do type1 = 1, nAtomTypes
+          do type2 = 1, nAtomTypes
+              self%rMinTable(type1, type2) = max(self%rMin(type1), &
+                                                 self%rMin(type2))**2
+
+              self%rMinTable(type2, type1) = max(self%rMin(type1), &
+                                                 self%rMin(type2))**2
+          enddo
+        enddo
 
       case("dimer")
         call GetXCommand(line, command, 2, lineStat)

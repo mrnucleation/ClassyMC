@@ -23,6 +23,7 @@ use VarPrecision
       procedure, pass :: WriteInfo => Thermo_WriteInfo
       procedure, pass :: GetResult => Thermo_GetResult
       procedure, pass :: GetSTDev => Thermo_GetSTDev
+      procedure, pass :: Epilogue => Thermo_Epilogue
       procedure, pass :: Finalize => Thermo_Finalize
       procedure, pass :: CastCommonType => Thermo_CastCommonType
   end type
@@ -97,11 +98,21 @@ use VarPrecision
     var = sqrt(var)
   end function
 !=========================================================================
+  subroutine Thermo_Epilogue(self)
+    use ParallelVar, only: myid
+    implicit none
+    integer :: ierror
+    class(ThermoAverage), intent(inout) :: self
+
+    call self % WriteInfo
+
+  end subroutine
+!=========================================================================
   subroutine Thermo_Finalize(self)
 #ifdef PARALLEL
     use MPI
 #endif
-    use ParallelVar, only: myid
+    use ParallelVar, only: myid, nout
     implicit none
     integer :: ierror
     class(ThermoAverage), intent(inout) :: self
@@ -119,11 +130,12 @@ use VarPrecision
     dummy = self%nSamp
     call MPI_REDUCE(self%nSamp, dummy, 1, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror) 
-#endif
 
     if(myid .eq. 0) then
-      call self % WriteInfo
+      write(nout, *) trim(adjustl(self%varName)), " Thread Average: ", self%GetResult(), "+\-", self%GetSTDev()
+!      call self % WriteInfo
     endif
+#endif
 
   end subroutine
 !=========================================================================

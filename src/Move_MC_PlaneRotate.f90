@@ -4,13 +4,16 @@ use CoordinateTypes, only: Displacement
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
+use ClassyConstants, only: pi
 
   type, public, extends(MCMove) :: PlaneRotate
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
+    logical :: proportional = .false.
     logical :: tuneMax = .true.
     real(dp) :: targAccpt = 50E0_dp
     real(dp) :: max_rot = 0.02E0_dp
+    real(dp) :: limit = pi
     type(Displacement), allocatable :: disp(:)
 !    real(dp), allocatable :: tempcoords(:,:)
 !    integer, allocatable :: tempNnei(:)
@@ -248,7 +251,7 @@ use VarPrecision
     use ClassyConstants, only: pi
     implicit none
     class(PlaneRotate), intent(inout) :: self
-    real(dp), parameter :: limit = pi
+!    real(dp), parameter :: limit = pi
       
     if(self%tunemax) then
       if(self%atmps < 0.5E0_dp) then
@@ -256,10 +259,10 @@ use VarPrecision
       endif
 
       if(self%GetAcceptRate() > self%targAccpt) then
-        if(self%max_rot*1.01E0_dp < limit) then
+        if(self%max_rot*1.01E0_dp < self%limit) then
           self%max_rot = self%max_rot * 1.01E0_dp
         else 
-          self%max_rot = limit       
+          self%max_rot = self%limit
         endif
       else
         self%max_rot = self%max_rot * 0.99E0_dp
@@ -303,14 +306,24 @@ use VarPrecision
     integer, intent(out) :: lineStat
     character(len=30) :: command
     logical :: logicVal
+    integer :: intVal
     real(dp) :: realVal
 
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
-      case("dynamicmax")
+      case("tunemax")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) logicVal
         self%tunemax = logicVal
+
+      case("dynamiclimit")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        if(realVal > pi) then
+          self%limit = realVal
+        else
+          self%limit = pi
+        endif
 
       case("dynamictarget")
         call GetXCommand(line, command, 5, lineStat)
@@ -320,8 +333,21 @@ use VarPrecision
       case("maxangle")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal
-        write(*,*) realVal
-        self%max_rot = realVal
+        if(realVal > pi) then
+          self%max_rot = realVal
+        else
+          self%max_rot = pi
+        endif
+
+      case("proportional")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self%proportional = logicVal
+
+      case("updatefreq")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self%maintFreq = intVal
 
       case default
         lineStat = -1

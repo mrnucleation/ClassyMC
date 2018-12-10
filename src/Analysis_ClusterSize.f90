@@ -95,6 +95,7 @@ use VarPrecision
     integer :: lineStat = 0
     integer :: intVal
 
+    !Format = (ClusterSize) (Box Number) (Mol Type)
     call GetXCommand(line, command, 2, lineStat)
     read(command, *) intVal
     self%boxNum = intVal

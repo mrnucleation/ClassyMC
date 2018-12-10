@@ -1,3 +1,4 @@
+#define __StdErr__ 0
 !===========================================================================
 module SimMonteCarlo
   use ParallelVar, only: myid, ierror, nout
@@ -284,21 +285,33 @@ contains
     integer :: i
 
     if(.not. allocated(MolData)) then
-      write(0,*) "*******************************************************************************"
-      write(0,*) "  CRITICAL ERROR! Molecular Topology Information has not been defined!"
-      write(0,*) "*******************************************************************************"
+      write(__StdErr__,*) "*******************************************************************************"
+      write(__StdErr__,*) "  CRITICAL ERROR! Molecular Topology Information has not been defined!"
+      write(__StdErr__,*) "*******************************************************************************"
       stop
     endif
     do i = 1, size(MolData)
       if(.not. allocated(MolData(i)%molConstruct)) then
-        write(0,*) "*******************************************************************************"
-        write(0,*) "  WARNING! Molecule reconstructor is not defined in the forcefield file!"
-        write(0,*) "  Swap moves and any move which generates a new configuration from scratch will not work!"
-        write(0,*) "*******************************************************************************"
+        write(__StdErr__,*) "*******************************************************************************"
+        write(__StdErr__,*) "  WARNING! Molecule reconstructor is not defined in the forcefield file!"
+        write(__StdErr__,*) "  Swap moves and any move which generates a new configuration from scratch will not work!"
+        write(__StdErr__,*) "*******************************************************************************"
+        write(nout,*) "*******************************************************************************"
+        write(nout,*) "  WARNING! Molecule reconstructor is not defined in the forcefield file!"
+        write(nout,*) "  Swap moves and any move which generates a new configuration from scratch will not work!"
+        write(nout,*) "*******************************************************************************"
+
       else
         call MolData(i) % molConstruct % SafetyCheck
       endif
     enddo
+
+    if(.not. allocated(Sampling) ) then
+      write(__StdErr__, *) "*******************************************************************************"
+      write(__StdErr__, *) "  CRITICAL ERROR! Sampling Rule has not been defined!"
+      write(__StdErr__, *) "*******************************************************************************"
+      stop
+    endif
 
     call Sampling % SafetyCheck
 
@@ -319,9 +332,9 @@ contains
         call BoxArray(i) % box % SafetyCheck
       enddo
     else
-      write(0,*) "*******************************************************************************"
-      write(0,*) "  CRITICAL ERROR! No Simulation Boxes have not been defined!"
-      write(0,*) "*******************************************************************************"
+      write(__StdErr__,*) "*******************************************************************************"
+      write(__StdErr__,*) "  CRITICAL ERROR! No Simulation Boxes have not been defined!"
+      write(__StdErr__,*) "*******************************************************************************"
       stop
     endif
 
@@ -330,10 +343,10 @@ contains
         call Moves(i) % move % SafetyCheck
       enddo
     else
-      write(0,*) "*******************************************************************************"
-      write(0,*) "  WARNING! No Monte Carlo Moves have been defined!"
-      write(0,*) "  Nothing will move! Are you ok with this?"
-      write(0,*) "*******************************************************************************"
+      write(__StdErr__,*) "*******************************************************************************"
+      write(__StdErr__,*) "  WARNING! No Monte Carlo Moves have been defined!"
+      write(__StdErr__,*) "  Nothing will move! Are you ok with this?"
+      write(__StdErr__,*) "*******************************************************************************"
     endif
 
   end subroutine

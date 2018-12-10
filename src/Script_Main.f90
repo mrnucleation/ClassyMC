@@ -127,8 +127,10 @@
       use ParallelVar
       use RandomGen, only: initSeed
       use SimControl, only: nMoves, nCycles, screenFreq
-      use Units, only: outEngUnit, outLenUnit, outAngUnit,  &
-                       FindEngUnit, FindLengthUnit, FindAngularUnit
+      use Units, only: outEngUnit, outLenUnit, outAngUnit,outPressUnit,  &
+                       inEngUnit, inLenUnit, inAngUnit,inPressUnit, &
+                       FindEngUnit, FindLengthUnit, FindAngularUnit,  &
+                       FindPressureUnit
       use VarPrecision
       implicit none
       character(len=maxLineLen), intent(in) :: line      
@@ -180,10 +182,14 @@
           call GetXCommand(line, command2, 3, lineStat)
           outLenUnit = FindLengthUnit(command2)
 
-
         case("energyunits")
           call GetXCommand(line, command2, 3, lineStat)
           outEngUnit = FindEngUnit(command2)
+
+        case("pressureunits")
+          call GetXCommand(line, command2, 3, lineStat)
+          inPressUnit = FindPressureUnit(command2)
+          outPressUnit = FindPressureUnit(command2)
 
         case("neighskin")
           call GetXCommand(line, command2, 3, lineStat)

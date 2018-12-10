@@ -61,7 +61,7 @@ module MCMove_VolExchange
     logical, intent(out) :: accept
     integer :: i, boxNum
     class(SimpleBox), pointer :: box1, box2
-    real(dp) :: dV
+    real(dp) :: dV, vTotal
     real(dp) :: Prob, Norm, extraTerms, half
     real(dp) :: E_Diff1, E_Diff2, scaleFactor
     real(dp) :: rescale(1:size(self%boxprob))
@@ -99,12 +99,14 @@ module MCMove_VolExchange
     !Randomly chose the amount of volume that will be exchanged.
     select case(self%style)
       case(1) !Log Scale
-        dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
-        dV = exp(dV) - 1E0_dp
-        self%disp1(1)%volNew = box1%volume + dV
+        vTotal = box2%volume + box1%volume
+        dV = log(box1%volume/box2%volume) 
+        dV = dV + self%maxDv*(grnd()-0.5E0_dp)
+        dV = vTotal*exp(dV)/(exp(dV)+1E0_dp)
+        self%disp1(1)%volNew = dV
         self%disp1(1)%volOld = box1%volume
 
-        self%disp2(1)%volNew = box2%volume - dV
+        self%disp2(1)%volNew = vTotal - dV
         self%disp2(1)%volOld = box2%volume
       case(2) !Linear Scale
         dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
@@ -307,6 +309,7 @@ module MCMove_VolExchange
     integer, intent(out) :: lineStat
     character(len=30) :: command
     logical :: logicVal
+    integer :: intVal
     real(dp) :: realVal
 
     call GetXCommand(line, command, 4, lineStat)
@@ -339,6 +342,12 @@ module MCMove_VolExchange
           case("linear")
             self%style = 2
         end select
+
+      case("updatefreq")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self%maintFreq = intVal
+
       case default
         lineStat = -1
         return

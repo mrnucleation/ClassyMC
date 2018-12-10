@@ -185,6 +185,7 @@ module CubicBoxDef
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
     use ForcefieldData, only: EnergyCalculator
     use ParallelVar, only: nout
+    use Units, only: inPressUnit
     implicit none
 
     class(CubeBox), intent(inout) :: self
@@ -240,7 +241,7 @@ module CubicBoxDef
       case("pressure")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal
-        self % pressure = realVal
+        self % pressure = realVal*inPressUnit
 
       case("temperature")
         call GetXCommand(line, command, 5, lineStat)

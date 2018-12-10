@@ -8,11 +8,14 @@ contains
     use Input_Format, only: GetXCommand
     use AnalysisData, only: AnalysisArray
     use ParallelVar, only: nout
+
+    use Anaylsis_BlockAverage, only: BlockAverage
     use Anaylsis_ClusterSize, only: ClusterSize
+    use Anaylsis_DistPair, only: DistPair
     use Analysis_RDF, only: rdf
     use Anaylsis_ThermoAverage, only: ThermoAverage
-    use Anaylsis_DistPair, only: DistPair
     use Anaylsis_ThermoIntegration, only: ThermoIntegration
+
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: AnaNum
@@ -26,6 +29,9 @@ contains
 
     !Safety check to ensure that the index number is within proper bounds
     select case(trim(adjustl(command)))
+      case("blockaverage")
+        allocate(blockAverage::AnalysisArray(AnaNum) % func)
+
       case("rdf")
         allocate(rdf::AnalysisArray(AnaNum) % func)
 

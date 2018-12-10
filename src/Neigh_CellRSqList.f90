@@ -1,14 +1,14 @@
 !===================================================================================
 ! This module contains a simple neighborlist
 !===================================================================================
-module RSqListDef
+module CellRSqListDef
 use VarPrecision
 use CoordinateTypes
 use Template_SimBox, only: SimBox
 use SimpleSimBox, only: SimpleBox
 use Template_NeighList, only: NeighListDef
 
-  type, public, extends(NeighListDef) :: RSqList
+  type, public, extends(NeighListDef) :: CellRSqList
 !      logical :: Sorted = .false.
 !      logical :: Strict = .false.
 !      integer, allocatable :: list(:,:)
@@ -18,31 +18,32 @@ use Template_NeighList, only: NeighListDef
 !      logical :: restrictType = .false.
 !      integer, allocatable :: allowed(:)
 !      integer :: safetyCheck = .false.
+      integer, allocatable :: cellID(:)
 
       class(SimpleBox), pointer :: parent => null()
     contains
-      procedure, pass :: Constructor => RSqList_Constructor 
-      procedure, pass :: BuildList => RSqList_BuildList 
-      procedure, pass :: GetNewList => RSqList_GetNewList
-      procedure, pass :: AddMol => RSqList_AddMol
-      procedure, pass :: GetNeighCount => RSqList_GetNeighCount
-      procedure, pass :: ProcessIO => RSqList_ProcessIO
+      procedure, pass :: Constructor => CellRSqList_Constructor 
+      procedure, pass :: BuildList => CellRSqList_BuildList 
+      procedure, pass :: GetNewList => CellRSqList_GetNewList
+      procedure, pass :: AddMol => CellRSqList_AddMol
+      procedure, pass :: GetNeighCount => CellRSqList_GetNeighCount
+      procedure, pass :: ProcessIO => CellRSqList_ProcessIO
 !      procedure, pass :: TransferList
-      procedure, pass :: DeleteMol => RSqList_DeleteMol
-      procedure, pass :: Prologue => RSqList_Prologue
-      procedure, pass :: Update => RSqList_Update
+      procedure, pass :: DeleteMol => CellRSqList_DeleteMol
+      procedure, pass :: Prologue => CellRSqList_Prologue
+      procedure, pass :: Update => CellRSqList_Update
   end type
 
 !===================================================================================
   contains
 !===================================================================================
-  subroutine RSqList_Constructor(self, parentID, rCut)
+  subroutine CellRSqList_Constructor(self, parentID, rCut)
     use BoxData, only: BoxArray
     use Common_NeighData, only: neighSkin
     use Common_MolInfo, only: nAtomTypes
     use ParallelVar, only: nout
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
     real(dp), parameter :: atomRadius = 0.65E0_dp  !Used to estimate an approximate volume of 
@@ -78,6 +79,7 @@ use Template_NeighList, only: NeighListDef
     endif
     write(nout,*) "Neighbor List Maximum Neighbors:", self%maxNei
 
+    allocate( self%cellID(1:self%parent%nMaxAtoms), stat=AllocateStatus )
     allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
     allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
 
@@ -93,33 +95,33 @@ use Template_NeighList, only: NeighListDef
     self%restrictType = .false.
   end subroutine
 !===================================================================================
-  subroutine RSqList_Prologue(self)
+  subroutine CellRSqList_Prologue(self)
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
 
 
 !    call self%DumpList(2)
   end subroutine
 !===================================================================================
-  subroutine RSqList_Update(self)
+  subroutine CellRSqList_Update(self)
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
 
 
 !    call self%DumpList(2)
   end subroutine
 !===================================================================================
-  subroutine RSqList_BuildList(self)
+  subroutine CellRSqList_BuildList(self)
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
 
 
     call Builder_RSq(self%parent)
   end subroutine
 !===================================================================================
-  function RSqList_GetNeighCount(self, nAtom, rCount) result(nCount)
+  function CellRSqList_GetNeighCount(self, nAtom, rCount) result(nCount)
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
     integer, intent(in) :: nAtom
     real(dp), intent(in) ,optional :: rCount
     integer :: iNei
@@ -150,9 +152,9 @@ use Template_NeighList, only: NeighListDef
 
   end function
 !===================================================================================
-  subroutine RSqList_AddMol(self, disp, tempList, tempNNei)
+  subroutine CellRSqList_AddMol(self, disp, tempList, tempNNei)
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
     class(Perturbation), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
 
@@ -164,11 +166,11 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
-  subroutine RSqList_DeleteMol(self, molIndx, topIndx)
+  subroutine CellRSqList_DeleteMol(self, molIndx, topIndx)
     use Common_MolInfo, only: nMolTypes, MolData
     use SearchSort, only: BinarySearch, SimpleSearch
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
     integer, intent(in) :: molIndx, topIndx
     integer :: iAtom, iNei, jNei, nType, j
     integer :: nStart, topStart
@@ -283,10 +285,10 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
-  subroutine RSqList_GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
+  subroutine CellRSqList_GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
     integer, intent(in) :: iDisp
     class(Perturbation), intent(inout) :: disp
     integer, intent(inout) :: tempList(:,:), tempNNei(:)
@@ -351,11 +353,11 @@ use Template_NeighList, only: NeighListDef
 !    write(2,"(A, 1000(I3))") "New",   templist(1:tempNNei(iDisp), iDisp)
   end subroutine
 !====================================================================
-  subroutine RSqList_ProcessIO(self, line, lineStat)
+  subroutine CellRSqList_ProcessIO(self, line, lineStat)
     use Input_Format, only: GetAllCommands, GetXCommand,maxLineLen
     use Common_MolInfo, only: nAtomTypes
     implicit none
-    class(RSqList), intent(inout) :: self
+    class(CellRSqList), intent(inout) :: self
     integer, intent(out) :: lineStat
     character(len=maxLineLen), intent(in) :: line   
 

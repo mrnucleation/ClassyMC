@@ -10,6 +10,7 @@ module MasterTemplate
        procedure, pass :: GetScreenData
        procedure, pass :: Maintenance
        procedure, pass :: ModifyIO
+       procedure, pass :: Report
        procedure, pass :: Update
  !      procedure, pass :: ProcessIO
        procedure, pass :: Prologue
@@ -53,6 +54,12 @@ module MasterTemplate
 !    character(len=*), intent(in) :: line   
 !
 !  end subroutine
+!====================================================================
+  subroutine Report(self)
+    implicit none
+    class(classyClass), intent(inout) :: self
+
+  end subroutine
 !====================================================================
   subroutine Update(self)
     implicit none

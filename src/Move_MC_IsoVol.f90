@@ -204,6 +204,7 @@ module MCMove_Isovol
     integer, intent(out) :: lineStat
     character(len=30) :: command
     logical :: logicVal
+    integer :: intVal
     real(dp) :: realVal
 
     call GetXCommand(line, command, 4, lineStat)
@@ -236,6 +237,13 @@ module MCMove_Isovol
           case("linear")
             self%style = 2
         end select
+
+      case("updatefreq")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self%maintFreq = intVal
+
+
       case default
         lineStat = -1
         return
