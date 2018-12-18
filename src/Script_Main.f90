@@ -385,9 +385,14 @@
            call BoxArray(intValue) % box % ProcessIO(line, lineStat)
 
         case("move")
-           call GetXCommand(line, command2, 3, lineStat)
-           read(command2, *) intValue
-           call Moves(intValue) % Move % ProcessIO(line, lineStat)
+             call GetXCommand(line, command2, 3, lineStat)
+             read(command2, *) intValue
+           if(allocated(Moves)) then
+             call Moves(intValue) % Move % ProcessIO(line, lineStat)
+           else
+             write(0,*) "Modify has been called on a move that is not not defined!"
+             stop
+           endif
 
         case("sampling")
            call Sampling % ProcessIO(line, lineStat)

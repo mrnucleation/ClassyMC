@@ -45,7 +45,7 @@ use Template_NeighList, only: NeighListDef
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 0.65E0_dp  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 0.85E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
 
     self%parent => BoxArray(parentID)%box

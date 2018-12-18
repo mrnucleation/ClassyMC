@@ -84,14 +84,14 @@ module Template_AcceptRule
      ! detailed balance condition. 
      ! Currently only coded for single molecule moves, need to generalize this
      ! in the future.
-        extraTerms = 0E0_dp
-        select type(disp)
-          class is(Addition)
-            extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
-          class is(Deletion)
-            extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
-          class is(VolChange)
-            extraTerms = extraTerms - (disp(1)%volNew-disp(1)%volOld) * trialBox%pressure*trialBox%beta
+     extraTerms = 0E0_dp
+     select type(disp)
+       class is(Addition)
+         extraTerms = extraTerms + trialBox%chempot(disp(1)%molType)
+       class is(Deletion)
+         extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
+       class is(VolChange)
+         extraTerms = extraTerms - (disp(1)%volNew-disp(1)%volOld) * trialBox%pressure*trialBox%beta
        end select
 
   end function

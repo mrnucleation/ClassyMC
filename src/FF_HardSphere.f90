@@ -14,6 +14,8 @@ module FF_HardSphere
       procedure, pass :: DiffECalc => DiffECalc_HardSphere
       procedure, pass :: ShiftECalc_Single => Shift_HardSphere_Single
       procedure, pass :: NewECalc => New_HardSphere
+      procedure, pass :: OrthoVolECalc => OrthoVol_HardSphere
+
       procedure, pass :: ProcessIO => ProcessIO_HardSphere
       procedure, pass :: Prologue => Prologue_HardSphere
       procedure, pass :: GetCutOff => GetCutOff_HardSphere
@@ -114,6 +116,9 @@ module FF_HardSphere
       class is(Deletion)
          return
 
+      class is(OrthoVolChange)
+        call self % OrthoVolECalc(curbox, disp, E_Diff, accept)
+
       class default
         write(*,*) "Unknown Perturbation Type."
     end select
@@ -134,11 +139,9 @@ module FF_HardSphere
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: ep, sig_sq
-    real(dp) :: LJ
     real(dp) :: rmin_ij      
 
     dispLen = size(disp)
-    E_Diff = 0E0_dp
     accept = .true.
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
@@ -254,6 +257,60 @@ module FF_HardSphere
         lineStat = -1
     end select
 
+  end subroutine
+  !===================================================================================
+  subroutine OrthoVol_HardSphere(self, curbox, disp, E_Diff, accept)
+    implicit none
+    class(Pair_HardSphere), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    type(OrthoVolChange), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    integer :: iType, jType, iAtom, jAtom
+    integer :: jNei
+    integer :: atmType1, atmType2
+    integer :: molIndx1, molIndx2
+    real(dp) :: dxi, dyi, dzi
+    real(dp) :: dxj, dyj, dzj
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: ep, sig_sq
+    real(dp) :: rmin_ij      
+
+    accept = .true.
+    do iAtom = 1, curbox%nMaxAtoms
+      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+        cycle
+      endif
+      atmType1 = curbox % AtomType(iAtom)
+      molIndx1 = curbox % MolIndx(iAtom)
+      dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
+      dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
+      dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
+      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        if(jAtom <= iAtom) then
+          cycle
+        endif
+        atmType2 = curbox % AtomType(jAtom)
+        molIndx2 = curbox % MolIndx(jAtom)
+        dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
+        dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
+        dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
+        rx = curbox % atoms(1, iAtom) + dxi -  curbox % atoms(1, jAtom) - dxj
+        ry = curbox % atoms(2, iAtom) + dyi -  curbox % atoms(2, jAtom) - dyj
+        rz = curbox % atoms(3, iAtom) + dzi -  curbox % atoms(3, jAtom) - dzj
+        call curbox%BoundaryNew(rx, ry, rz, disp)
+        rsq = rx*rx + ry*ry + rz*rz
+        rmin_ij = self % rMinTable(atmType2, atmType1)
+        if(rsq < rmin_ij) then
+          accept = .false.
+          return
+        endif
+      enddo
+    enddo
+  
+      
   end subroutine
   !=============================================================================+
   function GetCutOff_HardSphere(self) result(rCut)

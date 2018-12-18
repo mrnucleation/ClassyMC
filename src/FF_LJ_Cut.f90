@@ -377,51 +377,41 @@ module FF_Pair_LJ_Cut
         if(jAtom <= iAtom) then
           cycle
         endif
-        rx =  curbox % atoms(1, iAtom)- curbox % atoms(1, jAtom)
-        ry =  curbox % atoms(2, iAtom)- curbox % atoms(2, jAtom)
-        rz =  curbox % atoms(3, iAtom)- curbox % atoms(3, jAtom)
-
         molIndx2 = curbox % MolIndx(jAtom)
         dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
         dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
         dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
-        rx2 = rx + (dxi - dxj)
-        ry2 = ry + (dyi - dyj)
-        rz2 = rz + (dzi - dzj)
-        call curbox%Boundary(rx, ry, rz)
-        call curbox%BoundaryNew(rx2, ry2, rz2, disp)
+
+        rx =  curbox % atoms(1, iAtom) + dxi - curbox % atoms(1, jAtom) - dxj
+        ry =  curbox % atoms(2, iAtom) + dyi - curbox % atoms(2, jAtom) - dyj
+        rz =  curbox % atoms(3, iAtom) + dzi - curbox % atoms(3, jAtom) - dzj
+
+        call curbox%BoundaryNew(rx, ry, rz, disp)
         rsq = rx*rx + ry*ry + rz*rz
-        rsq2 = rx2*rx2 + ry2*ry2 + rz2*rz2
 
         atmType2 = curbox % AtomType(jAtom)
-        rmin_ij = self%rMinTable(atmType2, atmType1)          
-        ep = self%epsTable(atmType2, atmType1)
-        sig_sq = self%sigTable(atmType2, atmType1)          
-        if(rsq2 < self%rCutSq) then
-          if(rsq2 < rmin_ij) then
+        if(rsq < self%rCutSq) then
+          rmin_ij = self%rMinTable(atmType2, atmType1)          
+          if(rsq < rmin_ij) then
             accept = .false.
             return
           endif
-          LJ2 = (sig_sq/rsq2)
-          LJ2 = LJ2 * LJ2 * LJ2
-          LJ2 = ep * LJ2 * (LJ2-1E0_dp)
-        else
-          LJ2 = 0E0_dp
-        endif
-
-        if(rsq < self%rCutSq) then
+          ep = self%epsTable(atmType2, atmType1)
+          sig_sq = self%sigTable(atmType2, atmType1)          
           LJ = (sig_sq/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
-        else
-          LJ = 0E0_dp
+          E_Diff = E_Diff + LJ
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
         endif
 
-        E_Diff = E_Diff + LJ2 - LJ
-        curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ2 - LJ
-        curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ2 - LJ
+
       enddo
     enddo
+
+    E_Diff = E_Diff - curbox%ETotal
+    curbox % dETable = curbox%dETable - curbox % ETable
 
   end subroutine
   !=====================================================================

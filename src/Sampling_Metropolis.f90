@@ -56,7 +56,7 @@ module MetropolisRule
     endif
 
     biasE = -trialBox%beta * E_Diff + probTerm + extraTerms
-    if(biasE > 0.0E0_dp) then
+    if(biasE >= 0.0E0_dp) then
       accept = .true.
     elseif( biasE > log(grnd()) ) then
       accept = .true.

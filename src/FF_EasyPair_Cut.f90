@@ -172,13 +172,13 @@ module FF_Pair_EasyPairCut
 !      write(*,*) iAtom, curbox%NeighList(1)%list(:, iAtom)
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        atmType2 = curbox % AtomType(jAtom)
 
         rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
         ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
         rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-        atmType2 = curbox % AtomType(jAtom)
         if(rsq < self%rCutSq) then
           rmin_ij = self % rMinTable(atmType2, atmType1)          
           if(rsq < rmin_ij) then

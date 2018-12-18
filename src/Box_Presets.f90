@@ -20,7 +20,7 @@ contains
     call GetXCommand(lineStore(iLine), command, 2, lineStat)
 
     select case(trim(adjustl(command)))
-      case("fcc")
+      case("fcc")  !Format = fcc (boxnum) (lat const) (replication number)
         call GetXCommand(lineStore(iLine), command, 3, lineStat)
         read(command, *) realVal
         call GetXCommand(lineStore(iLine), command, 4, lineStat)

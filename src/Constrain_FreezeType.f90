@@ -60,8 +60,6 @@ module Constrain_FreezeType
     integer :: iDisp
 
 
-
-
     !This section creates the topology list of the new state using information
     !based on the what kind of perturbation was performed.
     select type(disp)
@@ -93,7 +91,7 @@ module Constrain_FreezeType
 
        !----------------------------------------------------------------------------
       class default
-        stop "Distance criteria is not compatiable with this perturbation type."
+        stop "Freeze Type is not compatiable with this perturbation type."
        !----------------------------------------------------------------------------
     end select
     accept = .true.

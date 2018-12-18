@@ -5,6 +5,7 @@ module Input_Moves
   use MCMoveData, only: Moves, MoveProb
 
 !  use Move_AtomExchange, only: AtomExchange
+  use MCMove_AnisoVol, only: AnisoVol
   use MCMove_AtomTranslation, only: AtomTranslate
   use MCMove_ParticleExchange, only: ParticleExchange
   use MCMove_Basic_Swap, only: Basic_Swap
@@ -37,6 +38,9 @@ module Input_Moves
     MoveProb(moveNum) = realValue
 
     select case(trim(adjustl(command)))
+      case("anisovol")
+        allocate(AnisoVol::Moves(moveNum)%move)
+
       case("atomtranslation")
         allocate(AtomTranslate::Moves(moveNum)%move)
 
