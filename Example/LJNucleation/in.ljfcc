@@ -28,7 +28,8 @@
 
   Create Moves
     AtomTranslation 2.0
-    UBSwap 1.0
+#    UBSwap 1.0
+    AVBMC 1.0
   End_Create
 
   Create constraint 1
