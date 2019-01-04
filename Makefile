@@ -75,6 +75,7 @@ SRC_MAIN := $(SRC)/Common.f90\
          		$(SRC)/Constrain_HardWall.f90\
 	        	$(SRC)/SearchSort.f90\
         		$(SRC)/Sampling_AcceptAll.f90\
+        		$(SRC)/Sampling_AcceptNone.f90\
         		$(SRC)/Sampling_Metropolis.f90\
         		$(SRC)/Sampling_MinMetrop.f90\
         		$(SRC)/Sampling_Umbrella.f90\

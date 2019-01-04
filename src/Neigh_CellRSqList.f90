@@ -19,6 +19,7 @@ use Template_NeighList, only: NeighListDef
 !      integer, allocatable :: allowed(:)
 !      integer :: safetyCheck = .false.
       integer, allocatable :: cellID(:)
+      integer, allocatable :: cellList(:)
 
       class(SimpleBox), pointer :: parent => null()
     contains
@@ -115,8 +116,13 @@ use Template_NeighList, only: NeighListDef
     implicit none
     class(CellRSqList), intent(inout) :: self
 
+    real(dp) :: boxdim(1:9)
 
-    call Builder_RSq(self%parent)
+
+    self%parent%GetDimensions(boxdim)
+
+
+!    call Builder_RSq(self%parent)
   end subroutine
 !===================================================================================
   function CellRSqList_GetNeighCount(self, nAtom, rCount) result(nCount)
@@ -396,92 +402,6 @@ use Template_NeighList, only: NeighListDef
   end subroutine
 !===================================================================================
 ! End Type Bound
-!===================================================================================
-  subroutine Builder_RSq(trialBox)
-    use Common_MolInfo, only: nMolTypes, MolData
-    use Common_NeighData, only: neighSkin
-    use ParallelVar, only: nout
-    implicit none
-    class(SimpleBox), intent(inout) :: trialBox
-    integer :: iList
-    integer :: iType, jType, iAtom, jAtom, j
-    integer :: iUp, iLow, jUp, jLow, molStart, jMolStart, jMolEnd, atmType
-    integer :: nNeigh
-!    integer, allocatable :: oldlist(:)
-    real(dp) :: rx, ry, rz, rsq
-
-!    if(trialBox%NeighList(1)%safetyCheck) then
-!      allocate(oldlist(1:trialBix%NeighList(1)%maxNei)
-!    endif
-
-!    write(*,*) "Building"
-    do iList = 1, size(trialBox%NeighList)
-      trialBox%NeighList(iList)%nNeigh = 0
-      trialBox%NeighList(iList)%list = 0
-    enddo
-
-    do iAtom = 1, trialBox%nMaxAtoms-1
-      if( trialBox%MolSubIndx(iAtom) > trialBox%NMol(trialBox%MolType(iAtom)) ) then
-        cycle
-      endif
-      do jAtom = iAtom+1, trialBox%nMaxAtoms
-        if( trialBox%MolSubIndx(jAtom) > trialBox%NMol(trialBox%MolType(jAtom)) ) then
-          cycle
-        endif
-
-        if( trialBox%MolIndx(iAtom) == trialBox%MolIndx(jAtom)) then
-          cycle
-        endif
-
-        rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
-        ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
-        rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
-        call trialBox%Boundary(rx, ry, rz)
-        rsq = rx*rx + ry*ry + rz*rz
-        do iList = 1, size(trialBox%NeighList)
-          if( trialBox % NeighList(iList) % restrictType ) then
-            atmType = trialBox % atomType(iAtom)
-            if( trialBox%NeighList(iList)%allowed(atmType)  ) then
-              cycle
-            endif
-
-            atmType = trialBox % atomType(jAtom)
-            if( trialBox%NeighList(iList)%allowed(atmType)  ) then
-              cycle
-            endif
-          endif
-          if( rsq <= trialBox%NeighList(iList)%rCutSq ) then 
-
-            trialBox%NeighList(iList)%nNeigh(iAtom) = trialBox%NeighList(iList)%nNeigh(iAtom) + 1
-            if(trialBox%NeighList(iList)%nNeigh(iAtom) > trialBox%NeighList(iList)%maxNei) then
-              write(nout, *) "Neighborlist overflow!"
-            endif
-            trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(iAtom), iAtom ) = jAtom
-
-            trialBox%NeighList(iList)%nNeigh(jAtom) = trialBox%NeighList(iList)%nNeigh(jAtom) + 1
-            if(trialBox%NeighList(iList)%nNeigh(jAtom) > trialBox%NeighList(iList)%maxNei) then
-              write(nout, *) "Neighborlist overflow!"
-            endif
-            trialBox%NeighList(iList)%list( trialBox%NeighList(iList)%nNeigh(jAtom), jAtom ) = iAtom
-          endif
-        enddo
-      enddo  
-    enddo
-
-!    write(2,*) "----------------------------"
-!    do iAtom = 1, trialBox%nMaxAtoms
-!      if( trialBox%MolSubIndx(iAtom) > trialBox%NMol(trialBox%MolType(iAtom)) ) then
-!        cycle
-!      endif
-!      nNeigh = trialBox%NeighList(1)%nNeigh(iAtom)
-!      write(2,*) iAtom, "|", trialBox%NeighList(1)%list(1:nNeigh, iAtom)
-!    enddo
-
-
-    do iList = 1, size(trialBox%NeighList)
-      trialBox%NeighList(iList)%sorted = .true.
-    enddo
-  end subroutine
 !===================================================================================
   subroutine UpdateList_AddMol_RSq(trialBox, disp, tempList, tempNNei)
     use Common_MolInfo, only: nMolTypes, MolData

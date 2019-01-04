@@ -8,6 +8,7 @@ module Input_Sampling
 !================================================================================
   subroutine Script_SamplingType(iLine, lineStore, lineStat)
     use AcceptAllRule, only: AcceptAll
+    use AcceptNoneRule, only: AcceptNone
     use MetropolisRule, only: Metropolis
     use MinMetroRule, only: MinMetro
     use UmbrellaRule, only: Umbrella
@@ -31,6 +32,9 @@ module Input_Sampling
     select case(trim(adjustl(command)))
       case("acceptall")
         allocate(acceptall::sampling)
+
+      case("acceptnone")
+        allocate(acceptnone::sampling)
 
       case("metropolis")
         allocate(metropolis::sampling)
