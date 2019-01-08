@@ -285,6 +285,7 @@
                    call Script_BoxType(linestore(curLine), i, lineStat)
                endif
                BoxArray(i)%box%boxID = i 
+               BoxArray(i)%box%screenIO = .true.
              enddo             
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"

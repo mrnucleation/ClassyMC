@@ -58,13 +58,17 @@ module SimpleSimBox
       procedure, pass :: ComputeCM => SimpleBox_ComputeCM
 
 
+      !IO Functions
       procedure, pass :: ProcessIO => SimpleBox_ProcessIO
+      procedure, pass :: ScreenOut => SimpleBox_ScreenOut
 !      procedure, pass :: ProcessIOCommon => SimpleBox_ProcessIOCommon
+
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: CheckPostEnergy => SimpleBox_CheckPostEnergy
       procedure, pass :: DumpData => SimpleBox_DumpData
 
       !Coordinate Processing Functions
+!      procedure, pass :: GetAtomsPositions => Simplebox_GetAtomsPositions
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
@@ -773,6 +777,37 @@ module SimpleSimBox
 
     realCoords = 0E0_dp
     stop "GetReducedCoords routine has been called on a system where no box is defined."
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_ScreenOut(self)
+    use Common_MolInfo, only: nMolTypes
+    use ParallelVar, only: nout
+    use Input_Format, only: ReplaceText
+    use Units, only: outEngUnit
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    logical :: accept
+    integer :: iConstrain, iMol
+    integer :: iType, molStart
+    character(len=200) :: tempStr
+    character(len=80) :: tempStr2
+
+    write(tempStr, "(A)") "      ************************ Box %s ************************ "
+    write(tempStr2, "(I50)") self%boxID
+    tempStr = ReplaceText(tempStr, "%s", trim(adjustl(tempStr2)))
+    write(nout, "(A)") trim(tempStr)
+
+    write(tempStr, "(A)") "        Total Energy: %s1   Number of Molecules: %s2"
+    write(tempStr2, "(F40.8)") self%ETotal/outEngUnit
+    tempStr = ReplaceText(tempStr, "%s1", trim(adjustl(tempStr2)))
+    write(tempStr2, "(I40)") self%nMolTotal
+    tempStr = ReplaceText(tempStr, "%s2", trim(adjustl(tempStr2)))
+    write(nout, "(A)") trim(tempStr)
+
+
+
+
+
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_Prologue(self)

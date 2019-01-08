@@ -3,14 +3,15 @@ module MasterTemplate
   use VarPrecision
 
   type, public, abstract :: classyClass
+    logical :: screenIO = .false.
     integer :: maintFreq = 10
     contains
        procedure, pass :: Epilogue
        procedure, pass :: SafetyCheck
-       procedure, pass :: GetScreenData
+       procedure, pass :: ScreenOut
        procedure, pass :: Maintenance
        procedure, pass :: ModifyIO
-       procedure, pass :: Report
+!       procedure, pass :: Report
        procedure, pass :: Update
  !      procedure, pass :: ProcessIO
        procedure, pass :: Prologue
@@ -40,10 +41,9 @@ module MasterTemplate
 
   end subroutine
 !====================================================================
-  subroutine GetScreenData(self, val)
+  subroutine ScreenOut(self)
     implicit none
     class(classyClass), intent(inout) :: self
-    class(*), intent(inout) :: val
 
   end subroutine
 !====================================================================
@@ -55,11 +55,11 @@ module MasterTemplate
 !
 !  end subroutine
 !====================================================================
-  subroutine Report(self)
-    implicit none
-    class(classyClass), intent(inout) :: self
-
-  end subroutine
+!  subroutine Report(self)
+!    implicit none
+!    class(classyClass), intent(inout) :: self
+!
+!  end subroutine
 !====================================================================
   subroutine Update(self)
     implicit none

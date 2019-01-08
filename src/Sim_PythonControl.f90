@@ -1,11 +1,11 @@
 #define __StdErr__ 0
 !===========================================================================
-module SimMonteCarlo
+module SimPythonControl
   use ParallelVar, only: myid, ierror, nout
 !===========================================================================
 contains
 !===========================================================================
-  subroutine RunMonteCarlo
+  subroutine Python_InitControl
     use VarPrecision
 #ifdef PARALLEL
     use MPI
@@ -48,7 +48,7 @@ contains
     call Analyze(iCycle, iMove, accept, .false.)
     !-------Main Monte Carlo Simulation Loop-------
     write(nout, *) "============================================"
-    write(nout, *) "       Simulation Start!"
+    write(nout, *) "       Classy is Waiting for Python!"
     write(nout, *) "============================================"
 
     flush(nout)
@@ -57,36 +57,10 @@ contains
 
       !-----Start Move Loop
       do iMove = 1, nMoves
-        moveNum = ListRNG(MoveProb)
-        
-        select type( curMove => Moves(moveNum) % Move )
-          class is (MCMultiBoxMove)
-            call curMove % MultiBox (accept)
- 
-          class is (MCMove)
-
-            if(nBoxes > 1) then
-!              boxNum = floor(grnd()*nBoxes + 1E0_dp)
-              call curMove % GetBoxProb(boxProb)
-              boxNum = ListRNG(boxProb)
-            else
-              boxNum = 1
-            endif
-            call curMove % FullMove(BoxArray(boxNum)%box, accept)
-
-        end select
-        call Sampling%UpdateStatistics(accept)
-
-        if(accept) then
-          call Update(iCycle, iMove, accept)
-        endif
-
-        call Analyze(iCycle, iMove, accept, .true.)
       enddo 
       !------End Move Loop
       if(mod(iCycle, int(screenfreq,8)) == 0) then
-!        write(nout, *) iCycle, BoxArray(1)%box%ETotal,  BoxArray(1)%box%NMol,(Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
-        call ScreenOut(iCycle, iMove)
+        write(nout, *) iCycle, BoxArray(1)%box%ETotal,  BoxArray(1)%box%NMol,(Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
         flush(nout)
       endif
 
@@ -115,6 +89,45 @@ contains
     call Output_DumpData
       
   end subroutine
+
+!===========================================================================
+  subroutine Python_PerformMove
+    use AnalysisData, only: AnalysisArray
+    use BoxData, only: BoxArray
+    use CommonSampling, only: Sampling
+    use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
+    use Debug, only: Debug_DumpNeiList
+    use ForcefieldData, only: EnergyCalculator
+    use MCMoveData, only: Moves, MoveProb
+    use MoveClassDef, only: MCMove
+    use MultiBoxMoveDef, only: MCMultiBoxMove
+    use Output_DumpCoords, only: Output_DumpData
+    use RandomGen, only: sgrnd, grnd, ListRNG
+    use SimControl, only: nMoves, nCycles, screenfreq
+    implicit none
+
+    moveNum = ListRNG(MoveProb)
+    select type( curMove => Moves(moveNum) % Move )
+      class is (MCMultiBoxMove)
+        call curMove % MultiBox (accept)
+      class is (MCMove)
+          if(nBoxes > 1) then
+!              boxNum = floor(grnd()*nBoxes + 1E0_dp)
+            call curMove % GetBoxProb(boxProb)
+            boxNum = ListRNG(boxProb)
+          else
+            boxNum = 1
+          endif
+          call curMove % FullMove(BoxArray(boxNum)%box, accept)
+
+    end select
+    call Sampling%UpdateStatistics(accept)
+    if(accept) then
+      call Update(iCycle, iMove, accept)
+    endif
+    call Analyze(iCycle, iMove, accept, .true.)
+
+  end subroutine
 !===========================================================================
   subroutine Analyze(iCycle, iMove, accept, moveloop)
     use AnalysisData, only: AnalysisArray
@@ -140,49 +153,30 @@ contains
   subroutine ScreenOut(iCycle, iMove)
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
-    use ForcefieldData, only: EnergyCalculator
     use MCMoveData, only: Moves, MoveProb
-    use Input_Format, only: ReplaceText
-    use CommonSampling, only: Sampling
     use TrajData, only: TrajArray
+    use CommonSampling, only: Sampling
+    use SimControl, only: printBox, printAcc
     implicit none
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
-    character(len=80) :: tempStr, tempStr2
 
-    write(tempStr, "(A)") "    ----------------- Cycle Number: %s ----------------------"
-    write(tempStr2, "(I60)") iCycle
-    tempStr = ReplaceText(tempStr, "%s", trim(adjustl(tempStr2)))
-    write(nout, "(A)") tempStr
+!    if(printBox) then
+      do i = 1, size(BoxArray)
+        if(mod(iCycle, int(BoxArray(i)%box%maintFreq,8)) == 0) then
+          call BoxArray(i) % box % Maintenance
+        endif
+      enddo
+!    endif
 
-    call Sampling % ScreenOut
 
-    if( allocated(AnalysisArray) ) then
-      do i = 1, size(AnalysisArray)
-        call AnalysisArray(i) % func % ScreenOut
+    if(printAcc) then
+      do i = 1, size(Moves)
+        if(mod(iCycle, int(Moves(i)%move%maintFreq,8)) == 0) then
+          call Moves(i) % move % Maintenance
+        endif
       enddo
     endif
-
-    if( allocated(TrajArray) ) then
-      do i = 1, size(TrajArray)
-        call TrajArray(i) % traj % ScreenOut
-      enddo
-    endif
-
-    do i = 1, size(EnergyCalculator)
-      call EnergyCalculator(i)%method%ScreenOut
-    enddo
-
-
-    do i = 1, size(BoxArray)
-      call BoxArray(i) % box % ScreenOut
-    enddo
-
-    do i = 1, size(Moves)
-      call Moves(i) % move % ScreenOut
-    enddo
-
-    write(nout, *) 
 
   end subroutine
 !===========================================================================
