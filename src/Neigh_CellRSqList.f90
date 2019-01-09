@@ -18,9 +18,13 @@ use Template_NeighList, only: NeighListDef
 !      logical :: restrictType = .false.
 !      integer, allocatable :: allowed(:)
 !      integer :: safetyCheck = .false.
+      integer :: nCells = 0
       integer, allocatable :: cellID(:)
-      integer, allocatable :: cellList(:)
+      integer, allocatable :: nCellAtoms(:)
+      integer, allocatable :: cellList(:, :)
 
+      integer :: nX, nY, nZ
+      real(dp) :: dX, dY, dZ
       class(SimpleBox), pointer :: parent => null()
     contains
       procedure, pass :: Constructor => CellRSqList_Constructor 
@@ -28,6 +32,8 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: GetNewList => CellRSqList_GetNewList
       procedure, pass :: AddMol => CellRSqList_AddMol
       procedure, pass :: GetNeighCount => CellRSqList_GetNeighCount
+      procedure, pass :: GetCellIndex => CellRSqList_GetCellIndex
+      procedure, pass :: GetCellBins => CellRSqList_GetCellBins
       procedure, pass :: ProcessIO => CellRSqList_ProcessIO
 !      procedure, pass :: TransferList
       procedure, pass :: DeleteMol => CellRSqList_DeleteMol
@@ -61,18 +67,15 @@ use Template_NeighList, only: NeighListDef
     if( present(rCut) ) then
       self % rCut = rCut
       self % rCutSq = rCut * rCut
-      self % maxNei = ceiling(rCut**3/atomRadius**3)
     else
       if(self%rCut > 0E0_dp) then
         self % rCutSq = (self%rCut)**2
-        self % maxNei = ceiling(self%rCut**3/atomRadius**3)
-
       else
         self % rCut = self % parent % EFunc % Method % GetCutOff() + neighSkin
         self % rCutSq = (self%rCut)**2
-        self % maxNei = ceiling(self%rCut**3/atomRadius**3)
       endif
     endif
+    self % maxNei = ceiling(self%rCut**3/atomRadius**3)
  
     write(nout,*) "Neighbor List CutOff:", self%rCut
     if(self%maxNei > self%parent%nMaxAtoms) then
@@ -112,17 +115,74 @@ use Template_NeighList, only: NeighListDef
 !    call self%DumpList(2)
   end subroutine
 !===================================================================================
+  function CellRSqList_GetCellIndex(self) result(cellIndx)
+    implicit none
+    class(CellRSqList), intent(inout) :: self
+    integer :: cellIndx
+
+
+  end function
+!===================================================================================
   subroutine CellRSqList_BuildList(self)
     implicit none
     class(CellRSqList), intent(inout) :: self
 
-    real(dp) :: boxdim(1:9)
+    integer :: iAtom
+    integer :: maxAtoms
+    integer :: binx, biny, binz
+    integer :: cellIndx
+
+    real(dp) :: boxdim(1:2, 1:3)
+    real(dp) :: Lx, Ly, Lz
 
 
-    self%parent%GetDimensions(boxdim)
+    !Compute the total number of cells and the size of each cell
+    call self%parent%GetDimensions(boxdim)
+    maxAtoms = self%parent%nMaxAtoms
+    Lx = dimensions(2,1) - dimensions(1,1)
+    Ly = dimensions(2,2) - dimensions(1,2)
+    Lz = dimensions(2,3) - dimensions(1,3)
+    nx = floor(Lx/self%rCut)
+    ny = floor(Ly/self%rCut)
+    nz = floor(Lz/self%rCut)
+    if(nx < 1) nx = 1
+    if(ny < 1) ny = 1
+    if(nz < 1) nz = 1
+    dx = Lx/real(ny, dp)
+    dy = Ly/real(ny, dp)
+    dz = Lz/real(nz, dp)
+    self % nCells = nx * ny * nz
 
 
-!    call Builder_RSq(self%parent)
+    !Check to see if the cell list is allocated and is large enough to accomodate
+    !the number of cells in the system
+    if(allocated(self%cellID)) then
+      if(ubound(self%cellList, 1) < self %nCells) then
+        deallocate(self%cellList)
+        allocate(self%cellList(1:self%nCells, 1:self%maxNei))
+      endif
+    else
+      allocate(self%cellID(1:maxAtoms))
+      allocate(self%nCellAtoms(1:nCells))
+      allocate(self%cellList(1:self%maxNei, 1:self%nCells))
+      self%cellList = 0
+      self%cellID = 0
+    endif
+
+    !Assign atoms to their respective cell
+    self%nCellAtoms = 0
+    do iAtom = 1, maxAtoms
+      binx = floor((self%parent%atoms(1, iAtom) - dimensions(1,1))/dx)
+      biny = floor((self%parent%atoms(2, iAtom) - dimensions(1,2))/dy)
+      binz = floor((self%parent%atoms(3, iAtom) - dimensions(1,3))/dz)
+      cellIndx = self % GetCellIndex(binx, biny, binz)
+      self % cellID(iAtom) = cellIndx
+      self % nCellAtoms(cellIndx) = self % nCellAtoms(cellIndx) + 1
+      self % cellList(self%nCellAtoms(cellIndx), cellIndx) = iAtom
+    enddo
+
+
+
   end subroutine
 !===================================================================================
   function CellRSqList_GetNeighCount(self, nAtom, rCount) result(nCount)
