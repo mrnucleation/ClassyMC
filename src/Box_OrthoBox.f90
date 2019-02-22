@@ -82,8 +82,9 @@ module OrthoBoxDef
 
 
 
-    self%volume = self%boxLx * self%boxLy * self%boxLx
+    self%volume = self%boxLx * self%boxLy * self%boxLz
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Pressure: ", self%pressure
+    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Dimensions: ", self%volume
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Volume: ", self%volume
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%volume
 
@@ -151,6 +152,7 @@ module OrthoBoxDef
 !==========================================================================================
   subroutine Ortho_LoadDimension(self, line, lineStat)
     use Input_Format, only: GetXCommand
+    use ParallelVar, only: nout
     implicit none
     class(OrthoBox), intent(inout) :: self
     character(len=*), intent(in) :: line
@@ -162,6 +164,7 @@ module OrthoBoxDef
     lineStat = 0
 
     read(line, *) dummy, boxLx, boxLy, boxLz
+    write(nout,*) dummy, boxLx, boxLy, boxLz
     self%boxLx = boxLx
     self%boxLy = boxLy
     self%boxLz = boxLz

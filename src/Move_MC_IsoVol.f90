@@ -77,6 +77,7 @@ module MCMove_Isovol
         stop
 
     end select
+
     if(self%disp(1)%volNew < 0E0_dp) then
       return
     endif

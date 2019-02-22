@@ -1,7 +1,7 @@
 !=========================================================================
 module Anaylsis_BlockAverage
-use AnaylsisClassDef, only: Analysis
-use VarPrecision
+  use AnaylsisClassDef, only: Analysis
+  use VarPrecision
 
   type, public, extends(Analysis):: BlockAverage
 !    logical :: perMove = .false.
@@ -53,7 +53,7 @@ use VarPrecision
   subroutine BlockAvg_ProcessIO(self, line)
     use BoxData, only: BoxArray
     use Input_Format, only: maxLineLen, GetXCommand, ReplaceText
-    use ParallelVar, only: myid
+    use ParallelVar, only: myid, nout
     implicit none
     class(BlockAverage), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
@@ -72,6 +72,7 @@ use VarPrecision
     call GetXCommand(line, command, 3, lineStat)
     self%thermNum = BoxArray(self%boxNum) % box % ThermoLookUp(command)
     self%varName = command
+    write(nout,*) command
  
     call GetXCommand(line, command, 4, lineStat)
     read(command, *) intVal
@@ -143,7 +144,7 @@ use VarPrecision
     endif
     write(self%fileunit, *) self%writeNum*self%maintFreq, self%varSum/self%nSamp
     self%varSum = 0E0_dp
-     self%nSamp = 1E-40_dp
+    self%nSamp = 1E-40_dp
   end subroutine
 !=========================================================================
 !  subroutine BlockAvg_WriteInfo(self)

@@ -175,21 +175,21 @@ module Template_SimBox
 
     select case(thermInt)
       case(1) !Energy
-        thermVal = self % ETotal
+        thermVal = self%ETotal
       case(2) !Ethalpy
-        thermVal = self % ETotal + self%Pressure*self%Volume
+        thermVal = self%ETotal + self%Pressure*self%Volume
       case(3) !Energy/Mol
-        thermVal = self % ETotal/self%nMolTotal
+        thermVal = self%ETotal / self%nMolTotal
       case(4) !Enthalpy/Mol
-        thermVal = (self % ETotal + self%Pressure*self%Volume)/self%nMolTotal
+        thermVal = (self%ETotal + self%Pressure*self%Volume)/self%nMolTotal
       case(5) !Volume
-        thermVal = self % volume
+        thermVal = self%volume
       case(6) !Temperature
-        thermVal = self % temperature
+        thermVal = self%temperature
       case(7) !Pressure
-        thermVal = self % pressure
+        thermVal = self%pressure
       case(8) !Density
-        thermVal = self % nMolTotal/self%volume
+        thermVal = self%nMolTotal / self%volume
 
     end select
 
@@ -206,6 +206,7 @@ module Template_SimBox
     select case(trim(adjustl(thermoStr)))
       case("energy") !Energy
         thermInt = 1
+
       case("enthalpy") !Ethalpy
         thermInt = 2
 
@@ -220,10 +221,13 @@ module Template_SimBox
 
       case("temperature") !Temperature
         thermInt = 6
+
       case("pressure") !Pressure
         thermInt = 7
+
       case("density") !Density
         thermInt = 8
+
     end select
 
   end function

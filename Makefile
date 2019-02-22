@@ -233,7 +233,7 @@ $(OBJ)/%.o: $(TEMPLATE)/%.f90
 		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
 
-libClassyMC.s90: $(OBJ_COMPLETE) 
+libClassyMC.so: $(OBJ_COMPLETE) 
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
