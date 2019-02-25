@@ -7,24 +7,39 @@ module Input_LoadCoords
     use BoxData, only: BoxArray
     use Common_MolInfo, only: nMolTypes
     use ForcefieldData, only: nForceFields
-    use Input_Format, only: maxLineLen, LoadFile, GetXCommand
+    use Input_Format, only: maxLineLen, LoadFile, GetXCommand, ReplaceText
     use Input_SimBoxes, only: Script_BoxType
-    use ParallelVar, only: nout
+    use ParallelVar, only: nout, myid
     implicit none
-    character(len=50), intent(in) :: fileName      
+    character(len=50), intent(inout) :: fileName      
     integer, intent(in) :: boxNum
     integer, intent(out) :: lineStat
 
+    integer :: iCharacter
     integer :: i, j, nLines,AllocateStat, iLine, lineBuffer
     integer, allocatable :: lineNumber(:)
     character(len=maxLineLen), allocatable :: lineStore(:)
 
     character(len=30) :: dummy, command, val
     character(len=maxLineLen) :: newline
+    character(len=30) :: idString
     integer :: nAtoms
+
+
 
     lineStat  = 0
     AllocateStat = 0
+
+    !Replace the & character with the thread ID in the file name
+    do iCharacter = 1, len(filename)
+      if(filename(iCharacter:iCharacter) == "&") then
+        write(idString, *) myid
+        filename = ReplaceText(filename, "&", trim(adjustl(idString)))
+        exit
+      endif
+    enddo
+
+
     write(nout,*) "Loading file ", trim(adjustl(fileName))
     call LoadFile(lineStore, nLines, lineNumber, fileName)
     lineBuffer = 0
