@@ -4,7 +4,7 @@ This is a short list kept by the developer to keep track of features that are st
 1. Finish the Intra Molecular Interaction Framework
 2. Finish Rosenbluth Sampling Modules
 3. Start work on allowing the user to select different parallelization schemes.
-4. Impliment Energy Biased AVBMC and Vanilla AVBMC
+4. Impliment Energy Biased AVBMC
 5. Screen Output Module needs work.
 6. CBMC and support for larger molecules is needed.
 7. Long Range Solver for bulk systems required.
@@ -12,9 +12,8 @@ This is a short list kept by the developer to keep track of features that are st
 9. Python Scripts for converting Classy formats to/from LAMMPS and other common formats.
 10. Implimentation of the Stil-Web Potential
 11. Pressure Computations for Gibbs and Iso-volumetric Ensembles
-12. Cell Based Verlet Neighborlist for larger periodic systems.
-13. Addition of Analysis modules for RDF and other important calculations.
-14. Finish the EasyPair FF style.
+12. Addition of Analysis modules for RDF and other important calculations.
+13. Finish the EasyPair FF style.
 
 Nice things to think about doing in the future:
 
