@@ -22,7 +22,7 @@ contains
   endif
 
   do iBox = 1, size(BoxArray)
-    write(fileName, format_string) "Out_", myid,"_", iBox, ".clssy"
+    write(fileName, format_string) "Config_", myid,"_", iBox, ".clssy"
     call BoxArray(iBox) % box % DumpData(filename)
   enddo
   

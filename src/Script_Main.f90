@@ -23,6 +23,7 @@
       integer :: nLines, nForceLines, lineBuffer
       integer, allocatable :: lineNumber(:)
 
+
       character(len=maxLineLen), allocatable :: lineStore(:)
       character(len=30) :: command, command2, dummy
       character(len=50) :: fileName

@@ -3,6 +3,7 @@
 module Input_NeighType
 use Input_Format, only: GetXCommand
 use Template_NeighList, only: NeighListDef
+
 use VarPrecision
 !================================================================================
 contains
@@ -10,6 +11,7 @@ contains
   subroutine Script_NeighType(line, lineStat)
     use BoxData, only: BoxArray
     use RSqListDef, only: RSqList
+    use CellRSqListDef, only: CellRSqList
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(out) :: lineStat
@@ -32,12 +34,16 @@ contains
         call GetXCommand(line, command, 4, lineStat)
         read(command,*) intVal
         allocate( RSqList::BoxArray(boxNum)%box%NeighList(1:intVal) )
-!        do i =1, intVal
-!          call BoxArray(boxNum)%box%NeighList(i)%Constructor(boxNum)
-!        enddo
+
+      case("cellrsqlist")
+        call GetXCommand(line, command, 4, lineStat)
+        read(command,*) intVal
+        allocate( CellRSqList::BoxArray(boxNum)%box%NeighList(1:intVal) )
+
       case default
         lineStat = -1
         return
+
     end select
 
 

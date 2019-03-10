@@ -68,7 +68,6 @@ module SimpleSimBox
       procedure, pass :: DumpData => SimpleBox_DumpData
 
       !Coordinate Processing Functions
-!      procedure, pass :: GetAtomsPositions => Simplebox_GetAtomsPositions
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms

@@ -94,6 +94,11 @@ use VarPrecision
     class(ThermoAverage), intent(in) :: self
     real(dp) :: var
 
+    if(self%nSamp < 1E0_dp) then
+      var = 0.0E0_dp
+      return
+    endif
+
     var = self%varSumSq/self%nSamp - (self%varSum/self%nSamp)**2
     var = sqrt(var)
   end function

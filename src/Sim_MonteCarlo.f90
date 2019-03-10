@@ -2,11 +2,11 @@
 !===========================================================================
 module SimMonteCarlo
   use ParallelVar, only: myid, ierror, nout
+use VarPrecision
 !===========================================================================
 contains
 !===========================================================================
   subroutine RunMonteCarlo
-    use VarPrecision
 #ifdef PARALLEL
     use MPI
 #endif
@@ -22,7 +22,7 @@ contains
     use MultiBoxMoveDef, only: MCMultiBoxMove
     use Output_DumpCoords, only: Output_DumpData
     use RandomGen, only: sgrnd, grnd, ListRNG
-    use SimControl, only: nMoves, nCycles, screenfreq
+    use SimControl, only: nMoves, nCycles, screenfreq, configfreq
     use Units, only: outEngUnit
 
     implicit none
@@ -57,23 +57,18 @@ contains
 
       !-----Start Move Loop
       do iMove = 1, nMoves
-        moveNum = ListRNG(MoveProb)
-        
+        moveNum = ListRNG(MoveProb) !Randomly select a move to perform
         select type( curMove => Moves(moveNum) % Move )
-          class is (MCMultiBoxMove)
+          class is (MCMultiBoxMove) ! Mutli Box Move
             call curMove % MultiBox (accept)
- 
-          class is (MCMove)
-
+          class is (MCMove) ! Single Box Move
             if(nBoxes > 1) then
-!              boxNum = floor(grnd()*nBoxes + 1E0_dp)
               call curMove % GetBoxProb(boxProb)
               boxNum = ListRNG(boxProb)
             else
               boxNum = 1
             endif
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
-
         end select
         call Sampling%UpdateStatistics(accept)
 
@@ -81,16 +76,19 @@ contains
           call Update(iCycle, iMove, accept)
         endif
 
-        call Analyze(iCycle, iMove, accept, .true.)
+        call Analyze(iCycle, iMove, accept, .true.) !Per Move Analysis
       enddo 
       !------End Move Loop
       if(mod(iCycle, int(screenfreq,8)) == 0) then
-!        write(nout, *) iCycle, BoxArray(1)%box%ETotal,  BoxArray(1)%box%NMol,(Moves(j)%Move%GetAcceptRate(), j=1, size(Moves))
         call ScreenOut(iCycle, iMove)
         flush(nout)
       endif
 
-      call Analyze(iCycle, iMove, accept, .false.)
+      if( mod(iCycle, int(configfreq, 8) ) == 0) then
+        call Output_DumpData
+      endif
+
+      call Analyze(iCycle, iMove, accept, .false.) !Per Cycle Analysis
       call Maintenance(iCycle, iMove)
       call Trajectory(iCycle, iMove)
     enddo
@@ -140,18 +138,27 @@ contains
   subroutine ScreenOut(iCycle, iMove)
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
-    use ForcefieldData, only: EnergyCalculator
-    use MCMoveData, only: Moves, MoveProb
-    use Input_Format, only: ReplaceText
     use CommonSampling, only: Sampling
+    use ForcefieldData, only: EnergyCalculator
+    use Input_Format, only: ReplaceText
+    use MCMoveData, only: Moves, MoveProb
+    use SimControl, only: TimeStart
     use TrajData, only: TrajArray
     implicit none
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
     character(len=80) :: tempStr, tempStr2
+    real(dp) :: CurrentTime
 
     write(tempStr, "(A)") "    ----------------- Cycle Number: %s ----------------------"
     write(tempStr2, "(I60)") iCycle
+    tempStr = ReplaceText(tempStr, "%s", trim(adjustl(tempStr2)))
+    write(nout, "(A)") tempStr
+
+    call CPU_TIME(CurrentTime)
+
+    write(tempStr, "(A)") "   Simulation Time: %s sec "
+    write(tempStr2, "(F60.3)") CurrentTime - TimeStart
     tempStr = ReplaceText(tempStr, "%s", trim(adjustl(tempStr2)))
     write(nout, "(A)") tempStr
 

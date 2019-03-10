@@ -29,7 +29,7 @@ contains
 
     listSize = size(list)
     if(listSize < 1) then
-      stop "Critical Error! A list size of 0 has beeen passed to the sort function!"
+      stop "Critical Error! A list size of 0 has been passed to the sort function!"
     endif
 
 !    write(*,*) curIndx, list(curIndx)

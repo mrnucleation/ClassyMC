@@ -466,14 +466,14 @@ use Template_NeighList, only: NeighListDef
       enddo  
     enddo
 
-!    write(2,*) "----------------------------"
-!    do iAtom = 1, trialBox%nMaxAtoms
-!      if( trialBox%MolSubIndx(iAtom) > trialBox%NMol(trialBox%MolType(iAtom)) ) then
-!        cycle
-!      endif
-!      nNeigh = trialBox%NeighList(1)%nNeigh(iAtom)
-!      write(2,*) iAtom, "|", trialBox%NeighList(1)%list(1:nNeigh, iAtom)
-!    enddo
+    write(2,*) "----------------------------"
+    do iAtom = 1, trialBox%nMaxAtoms
+      if( trialBox%MolSubIndx(iAtom) > trialBox%NMol(trialBox%MolType(iAtom)) ) then
+        cycle
+      endif
+      nNeigh = trialBox%NeighList(1)%nNeigh(iAtom)
+      write(2,"(I6,A,999(I4))") iAtom, "|", trialBox%NeighList(1)%list(1:nNeigh, iAtom)
+    enddo
 
 
     do iList = 1, size(trialBox%NeighList)

@@ -20,6 +20,7 @@ module Template_NeighList
     contains
       procedure, pass :: Constructor
       procedure, pass :: BuildList
+!      procedure, pass :: GetListArray
       procedure, pass :: GetNewList
       procedure, pass :: GetNeighCount
       procedure, pass :: AddMol
@@ -45,6 +46,13 @@ module Template_NeighList
     class(NeighListDef), intent(inout) :: self
 
   end subroutine
+!===================================================================================
+!  subroutine GetListArray(self, list)
+!    implicit none
+!    class(NeighListDef), intent(inout), target :: self
+!    integer, intent(inout) :: tempList(:,:)
+! 
+!  end subroutine
 !===================================================================================
   subroutine GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
     implicit none

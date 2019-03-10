@@ -49,11 +49,11 @@ module UmbrellaWHAMRule
        procedure, pass :: UpdateStatistics => UmbrellaWHAM_UpdateStatistics
 
        procedure, pass :: GetBiasIndex => UmbrellaWHAM_GetBiasIndex
-       procedure, pass :: GetNewBiasIndex => UmbrellaWHAM_GetNewBiasIndex
-       procedure, pass :: ReadInitialBias => UmbrellaWHAM_ReadInitialBias
-       procedure, pass :: GetUIndexArray => UmbrellaWHAM_GetUIndexArray
+       procedure, pass, private :: GetNewBiasIndex => UmbrellaWHAM_GetNewBiasIndex
+       procedure, pass, private :: ReadInitialBias => UmbrellaWHAM_ReadInitialBias
+       procedure, pass, private :: GetUIndexArray => UmbrellaWHAM_GetUIndexArray
+       procedure, pass, private :: FindVarValues => UmbrellaWHAM_FindVarValues
        procedure, pass :: OutputUmbrellaHist => UmbrellaWHAM_OutputUmbrellaHist
-       procedure, pass :: FindVarValues => UmbrellaWHAM_FindVarValues
        procedure, pass :: AdjustHist => UmbrellaWHAM_AdjustHist
        procedure, pass :: WHAMSimOutput => UmbrellaWHAM_WHAMSimOutput
        procedure, pass :: Maintenance => UmbrellaWHAM_Maintenance
@@ -138,13 +138,11 @@ module UmbrellaWHAMRule
     do i = 2, self%nBiasVar 
       self%indexCoeff(i) = 1
       do j = 1, i-1
-!        self%indexCoeff(i) = self%indexCoeff(i) + self%indexCoeff(j) * (self%binMax(j) - self%binMin(j))
         self%indexCoeff(i) = self%indexCoeff(i) + self%indexCoeff(j) * self%nBins(j) 
       enddo
     enddo      
     self%umbrellaLimit = 1
     do i = 1, self%nBiasVar 
-!      self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * (self%binMax(i) - self%binMin(i))
       self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * self%nBins(i)
     enddo
 
@@ -474,7 +472,6 @@ module UmbrellaWHAMRule
 
     biasIndx = 1
     do iBias = 1, self%nBiasVar
-!      biasIndx = biasIndx + self%indexCoeff(iBias) * ( self%binIndx(iBias) - self%binMin(iBias) )
       biasIndx = biasIndx + self%indexCoeff(iBias) * self%binIndx(iBias) 
     enddo
 
@@ -512,7 +509,6 @@ module UmbrellaWHAMRule
 ! array. 
 ! Math Problem: Given a value U find the values for (n1,n2,..nm) such that.
 ! U - U0 = a1*n1 + a1*n2 + ... am*nm
-! Method: The code peels off
 !
   subroutine UmbrellaWHAM_FindVarValues(self, UIndx, UArray) 
     implicit none 

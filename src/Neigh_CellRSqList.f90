@@ -1,5 +1,5 @@
 !===================================================================================
-! This module contains a simple neighborlist
+! This module contains a Cell based Verlet List. 
 !===================================================================================
 module CellRSqListDef
 use VarPrecision
@@ -22,8 +22,10 @@ use Template_NeighList, only: NeighListDef
       integer, allocatable :: cellID(:)
       integer, allocatable :: nCellAtoms(:)
       integer, allocatable :: cellList(:, :)
+      integer, allocatable :: atomList(:)
 
       integer :: nX, nY, nZ
+      integer :: coeffX, coeffY, coeffZ
       real(dp) :: dX, dY, dZ
       class(SimpleBox), pointer :: parent => null()
     contains
@@ -33,7 +35,8 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: AddMol => CellRSqList_AddMol
       procedure, pass :: GetNeighCount => CellRSqList_GetNeighCount
       procedure, pass :: GetCellIndex => CellRSqList_GetCellIndex
-      procedure, pass :: GetCellBins => CellRSqList_GetCellBins
+      procedure, pass :: GetBins => CellRSqList_GetBins
+      procedure, pass :: GetCellAtoms => CellRSqList_GetCellAtoms
       procedure, pass :: ProcessIO => CellRSqList_ProcessIO
 !      procedure, pass :: TransferList
       procedure, pass :: DeleteMol => CellRSqList_DeleteMol
@@ -55,12 +58,10 @@ use Template_NeighList, only: NeighListDef
     real(dp), intent(in), optional :: rCut
     real(dp), parameter :: atomRadius = 0.65E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
+    real(dp), pointer :: coords(:,:)
 
     self%parent => BoxArray(parentID)%box
-    if(.not. allocated(self%parent%atoms) ) then
-      stop
-    endif
-
+    call self%parent%GetCoordinates(coords)
 !     If no rCut value is given by the subroutine call attempt to pull
 !     the rSq value from the parent box's energy function. The assumption being
 !     that the neighborlist is used for the energy calculation routines.
@@ -86,6 +87,7 @@ use Template_NeighList, only: NeighListDef
     allocate( self%cellID(1:self%parent%nMaxAtoms), stat=AllocateStatus )
     allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
     allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
+    allocate( self%atomList(1:self%parent%nMaxAtoms), stat=AllocateStatus )
 
     if(.not. allocated(self%allowed) ) then
       allocate(self%allowed(1:nAtomTypes), stat=AllocateStatus )
@@ -115,71 +117,320 @@ use Template_NeighList, only: NeighListDef
 !    call self%DumpList(2)
   end subroutine
 !===================================================================================
-  function CellRSqList_GetCellIndex(self) result(cellIndx)
+  function CellRSqList_GetCellIndex(self, binx, biny, binz) result(cellIndx)
     implicit none
     class(CellRSqList), intent(inout) :: self
+    integer, intent(in) :: binx, biny, binz
     integer :: cellIndx
 
+    integer :: wrapX, wrapY, wrapZ
+
+    !In the event the next cell over is across the boundary, wrap it back to the
+    !other side of the box.
+    wrapx = binx
+    wrapy = biny
+    wrapz = binz
+    do while(wrapx < 0) 
+      wrapx = wrapx + self%nx
+    enddo
+    do while(wrapy < 0) 
+      wrapy = wrapy + self%ny
+    enddo
+    do while(wrapz < 0)
+      wrapz = wrapz + self%nz
+    enddo
+
+    wrapx = mod(wrapx, self%nx) 
+    wrapy = mod(wrapy, self%ny) 
+    wrapz = mod(wrapz, self%nz) 
+
+
+
+    cellIndx = 1
+    cellIndx = cellIndx + self%coeffX * wrapx
+    cellIndx = cellIndx + self%coeffY * wrapy
+    cellIndx = cellIndx + self%coeffZ * wrapz
 
   end function
 !===================================================================================
+  subroutine CellRSqList_GetBins(self, cellIndx, binx, biny, binz) 
+    implicit none
+    class(CellRSqList), intent(inout) :: self
+    integer, intent(in) :: cellIndx
+    integer, intent(out) :: binx, biny, binz
+
+    integer :: remainder, curVal
+
+    remainder = cellIndx - 1 
+
+    curVal = int( real(remainder, dp)/real(self%coeffZ,dp) ) 
+    binz = curVal 
+    remainder = remainder - curVal * self%coeffZ
+
+    curVal = int( real(remainder, dp)/real(self%coeffY,dp) ) 
+    biny = curVal 
+    remainder = remainder - curVal * self%coeffY
+
+    curVal = int( real(remainder, dp)/real(self%coeffX,dp) ) 
+    binx = curVal 
+    remainder = remainder - curVal * self%coeffX
+
+  end subroutine
+!===================================================================================
   subroutine CellRSqList_BuildList(self)
+    use SearchSort, only: QSort
     implicit none
     class(CellRSqList), intent(inout) :: self
 
-    integer :: iAtom
+    integer :: iAtom, jNei, jAtom
     integer :: maxAtoms
+    integer :: nCells
     integer :: binx, biny, binz
     integer :: cellIndx
+    integer :: nCellAtoms
+    integer :: nx, ny, nz
+    integer :: i,j,k, nNeigh
 
     real(dp) :: boxdim(1:2, 1:3)
+    real(dp), pointer :: coords(:,:)
     real(dp) :: Lx, Ly, Lz
+    real(dp) :: dx, dy, dz
+    real(dp) :: rx, ry, rz, rsq
 
 
     !Compute the total number of cells and the size of each cell
     call self%parent%GetDimensions(boxdim)
+    call self%parent%GetCoordinates(coords)
     maxAtoms = self%parent%nMaxAtoms
-    Lx = dimensions(2,1) - dimensions(1,1)
-    Ly = dimensions(2,2) - dimensions(1,2)
-    Lz = dimensions(2,3) - dimensions(1,3)
+    Lx = boxdim(2,1) - boxdim(1,1)
+    Ly = boxdim(2,2) - boxdim(1,2)
+    Lz = boxdim(2,3) - boxdim(1,3)
     nx = floor(Lx/self%rCut)
     ny = floor(Ly/self%rCut)
     nz = floor(Lz/self%rCut)
+    ! If nx < 1 then the box is small and there is only one cell
     if(nx < 1) nx = 1
     if(ny < 1) ny = 1
     if(nz < 1) nz = 1
-    dx = Lx/real(ny, dp)
+    dx = Lx/real(nx, dp)
     dy = Ly/real(ny, dp)
     dz = Lz/real(nz, dp)
-    self % nCells = nx * ny * nz
+    nCells = nx * ny * nz
+    self%nCells = nCells
+
+    self%coeffX = 1
+    self%coeffY = 1 + self%coeffX * (nx-1)
+    self%coeffZ = 1 + self%coeffX * (nx-1)
+    self%coeffZ = self%coeffZ + self%coeffY * (ny-1)
+
+    self%dx = dx
+    self%dy = dy
+    self%dz = dz
+
+    self%nx = nx
+    self%ny = ny
+    self%nz = nz
 
 
     !Check to see if the cell list is allocated and is large enough to accomodate
     !the number of cells in the system
-    if(allocated(self%cellID)) then
-      if(ubound(self%cellList, 1) < self %nCells) then
+    if(allocated(self%celllist)) then
+      if(ubound(self%cellList, 2) < self %nCells) then
         deallocate(self%cellList)
-        allocate(self%cellList(1:self%nCells, 1:self%maxNei))
+        allocate(self%cellList(1:self%maxNei, 1:self%nCells))
+        if(allocated(self%nCellAtoms)) then
+          deallocate(self%nCellAtoms)
+        endif
+        allocate(self%nCellAtoms(1:nCells))
       endif
     else
-      allocate(self%cellID(1:maxAtoms))
+!      allocate(self%cellID(1:maxAtoms))
       allocate(self%nCellAtoms(1:nCells))
       allocate(self%cellList(1:self%maxNei, 1:self%nCells))
-      self%cellList = 0
-      self%cellID = 0
     endif
 
     !Assign atoms to their respective cell
+    self%cellID = 0
     self%nCellAtoms = 0
+    self%cellList = 0
     do iAtom = 1, maxAtoms
-      binx = floor((self%parent%atoms(1, iAtom) - dimensions(1,1))/dx)
-      biny = floor((self%parent%atoms(2, iAtom) - dimensions(1,2))/dy)
-      binz = floor((self%parent%atoms(3, iAtom) - dimensions(1,3))/dz)
+      if( self%parent%MolSubIndx(iAtom) > self%parent%NMol(self%parent%MolType(iAtom)) ) then
+        cycle
+      endif
+
+      binx = floor((coords(1, iAtom) - boxdim(1,1))/dx)
+      biny = floor((coords(2, iAtom) - boxdim(1,2))/dy)
+      binz = floor((coords(3, iAtom) - boxdim(1,3))/dz)
       cellIndx = self % GetCellIndex(binx, biny, binz)
       self % cellID(iAtom) = cellIndx
       self % nCellAtoms(cellIndx) = self % nCellAtoms(cellIndx) + 1
       self % cellList(self%nCellAtoms(cellIndx), cellIndx) = iAtom
     enddo
+    self%nNeigh = 0
+    self%list = 0
+    do iAtom = 1, maxAtoms
+      if( self%parent%MolSubIndx(iAtom) > self%parent%NMol(self%parent%MolType(iAtom)) ) then
+        cycle
+      endif
+      call self%GetCellAtoms(nCellAtoms, self%atomlist, atmIndx=iAtom)
+      do jNei = 1, nCellAtoms
+        jAtom = self%atomlist(jNei)
+        if(jAtom <= iAtom) cycle
+        rx = coords(1, iAtom) - coords(1, jAtom)
+        ry = coords(2, iAtom) - coords(2, jAtom)
+        rz = coords(3, iAtom) - coords(3, jAtom)
+        call self%parent%Boundary(rx,ry,rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%rCutSq) then
+          self%nNeigh(iAtom) = self%nNeigh(iAtom) + 1
+          self%list( self%nNeigh(iAtom), iAtom ) = jAtom
+
+          self%nNeigh(jAtom) = self%nNeigh(jAtom) + 1
+          self%list( self%nNeigh(jAtom), jAtom ) = iAtom
+        endif
+      enddo
+    enddo
+
+    do iAtom = 1, self%parent%nMaxAtoms
+      if( self%parent%MolSubIndx(iAtom) > self%parent%NMol(self%parent%MolType(iAtom)) ) then
+        cycle
+      endif
+      nNeigh = self%nNeigh(iAtom)
+      call QSort(self%list(1:nNeigh, iAtom))
+    enddo
+
+    self%sorted = .false.
+
+  end subroutine
+!===================================================================================
+! NEEDS FIXING FOR NEW CELL LIST!
+  subroutine CellRSqList_GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
+    use Common_MolInfo, only: nMolTypes
+    implicit none
+    class(CellRSqList), intent(inout) :: self
+    integer, intent(in) :: iDisp
+    class(Perturbation), intent(inout) :: disp
+    integer, intent(inout) :: tempList(:,:), tempNNei(:)
+    integer, optional :: nCount
+    real(dp), optional :: rCount
+    integer :: jType, jAtom, j, iAtom, jNei
+    integer :: jUp, jLow, molIndx, jMol
+    integer :: binx, biny, binz, cellindx, nCellAtoms
+    real(dp) :: xn, yn, zn
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: boxdim(1:2, 1:3)
+    real(dp), pointer :: coords(:,:)
+
+    if(present(nCount)) then
+      nCount = 0
+    endif
+    select type(disp)
+      class is (Addition)
+!        disp % newlist = .true.
+        disp % listIndex = iDisp
+        iAtom = disp%atmIndx
+        molIndx = self%parent%MolIndx(iAtom)
+        xn = disp%x_new
+        yn = disp%y_new
+        zn = disp%z_new
+      class is (Displacement)
+        disp % newlist = .true.
+        disp % listIndex = iDisp
+        iAtom = disp%atmIndx
+        molIndx = self%parent%MolIndx(iAtom)
+        xn = disp%x_new
+        yn = disp%y_new
+        zn = disp%z_new
+    end select
+
+    !Get relevant box information from the parent.
+    call self%parent%GetCoordinates(coords)
+    call self%parent%GetDimensions(boxdim)
+
+    binx = floor((xn - boxdim(1,1))/self%dx)
+    biny = floor((yn - boxdim(1,2))/self%dy)
+    binz = floor((zn - boxdim(1,3))/self%dz)
+    cellIndx = self % GetCellIndex(binx, biny, binz)
+
+    templist(:, iDisp) = 0
+    tempNNei(iDisp) = 0
+
+    call self%GetCellAtoms(nCellAtoms, self%atomlist, cellIndx=cellIndx)
+    do jNei = 1, nCellAtoms
+        jAtom = self%atomlist(jNei)
+        if( self%parent%MolSubIndx(jAtom) == molIndx ) then
+          cycle
+        endif
+        rx = xn - coords(1, jAtom)
+        ry = yn - coords(2, jAtom)
+        rz = zn - coords(3, jAtom)
+        call self%parent%Boundary(rx,ry,rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%rCutSq) then
+          tempNNei(iDisp) = tempNNei(iDisp) + 1
+          templist(tempNNei(iDisp), iDisp) = jAtom
+        endif
+        if(present(rCount)) then
+          if(rsq < rCount*rCount) then
+            nCount = nCount + 1
+          endif
+        endif
+      enddo
+!      molStart = molStart + self%parent%NMolMax(jType)
+!    enddo
+!    write(2,"(A, 1000(I3))") "New",   templist(1:tempNNei(iDisp), iDisp)
+  end subroutine
+!===================================================================================
+  subroutine CellRSqList_GetCellAtoms(self, nAtoms, atomlist, atmindx, cellIndx) 
+    use SearchSort, only: QSort
+    implicit none
+    class(CellRSqList), intent(inout) :: self
+    integer, intent(in), optional :: atmindx
+    integer, intent(in) , optional:: cellindx
+    integer, intent(out) :: nAtoms
+    integer, intent(inout) :: atomlist(:)
+
+    integer :: startCell, curCell
+    integer :: jAtom
+    integer :: i, j, k
+    integer :: binx, biny, binz
+
+    integer :: nVisits 
+    integer :: visitedcells(1:30)
+    
+
+    if(present(atmindx)) then
+        startCell = self%cellID(atmindx)
+    elseif(present(cellindx)) then
+        startCell = cellIndx
+    endif
+    call self%GetBins(startCell, binx, biny, binz)
+
+
+    visitedCells = 0
+    nVisits = 0
+
+    atomlist = 0
+    nAtoms = 0
+    do i = -1, 1
+      do j = -1, 1
+        do k = -1, 1
+          curCell = self%GetCellIndex(binx+i, biny+j, binz+k)
+          if( any( visitedCells(1:nVisits) == curCell) ) then
+            cycle
+          endif
+          nVisits = nVisits + 1
+          visitedCells(nVisits) = curCell
+          do jAtom = 1, self%nCellAtoms(curCell)
+            nAtoms = nAtoms + 1
+            atomlist(nAtoms) = self%cellList(jAtom, curcell)
+          enddo
+        enddo
+      enddo
+    enddo
+
+    call QSort(atomlist(1:nAtoms))
+
 
 
 
@@ -194,6 +445,7 @@ use Template_NeighList, only: NeighListDef
     real(dp) :: rCut, rCutSq
     real(dp) :: rx, ry, rz, rsq
     integer :: nCount, jAtom
+    real(dp), pointer :: coords(:,:)
 
     if(present(rCount)) then
       rCut = rCount
@@ -206,9 +458,9 @@ use Template_NeighList, only: NeighListDef
     nCount = 0
     do iNei = 1, self % nNeigh(nAtom)
       jAtom = self%list(iNei, nAtom) 
-      rx = self%parent%atoms(1, nAtom) - self%parent%atoms(1, jAtom)
-      ry = self%parent%atoms(2, nAtom) - self%parent%atoms(2, jAtom)
-      rz = self%parent%atoms(3, nAtom) - self%parent%atoms(3, jAtom)
+      rx = coords(1, nAtom) - coords(1, jAtom)
+      ry = coords(2, nAtom) - coords(2, jAtom)
+      rz = coords(3, nAtom) - coords(3, jAtom)
       call self%parent%Boundary(rx,ry,rz)
       rsq = rx*rx + ry*ry + rz*rz
       if(rsq < rCutSq) then
@@ -217,30 +469,73 @@ use Template_NeighList, only: NeighListDef
     enddo
 
   end function
+
 !===================================================================================
   subroutine CellRSqList_AddMol(self, disp, tempList, tempNNei)
+    use Common_MolInfo, only: nMolTypes, MolData
     implicit none
     class(CellRSqList), intent(inout) :: self
     class(Perturbation), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
+    integer :: iDisp, iAtom, iNei, nNei, neiIndx, j
+    integer :: binX, binY, binZ, cellIndx
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: boxdim(1:2, 1:3)
+
 
     select type(disp)
-
       class is(Addition)
-        call UpdateList_AddMol_RSq(self%parent, disp, tempList, tempNNei)
-    end select
+
+!        write(2,*) "----------------------------"
+!        write(2,*) "Add"
+!        do iAtom = 1, trialBox%nMaxatoms
+!          write(2,"(I3,A,1000(I3))") iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
+!1        enddo
+!        write(2,*)
+
+    call self%parent%GetDimensions(boxdim)
+    do iDisp = 1, size(disp)
+!          write(2,"(A,A,1000(I3))") "NewList","|", (tempList(j, iDisp) ,j=1,tempNNei(iDisp))
+      iAtom = disp(iDisp)%atmIndx
+      binx = floor((disp(iDisp)%x_new - boxdim(1,1))/self%dx)
+      biny = floor((disp(iDisp)%y_new - boxdim(1,2))/self%dy)
+      binz = floor((disp(iDisp)%z_new - boxdim(1,3))/self%dz)
+      cellIndx = self % GetCellIndex(binx, biny, binz)
+      self % cellID(iAtom) = cellIndx
+      self % nCellAtoms(cellIndx) = self % nCellAtoms(cellIndx) + 1
+      self % cellList(self%nCellAtoms(cellIndx), cellIndx) = iAtom
+
+      self%nNeigh(iAtom) = tempNNei(iDisp)
+      do iNei = 1, tempNNei(iDisp)
+        neiIndx = tempList(iNei, iDisp)
+        self % list(iNei, iAtom) =  neiIndx
+        self % list( self%nNeigh(neiIndx)+1, neiIndx ) = iAtom
+        self%nNeigh(neiIndx)= self%nNeigh(neiIndx) + 1
+      enddo
+    enddo
+   end select
+!        do iAtom = 1, trialBox%nMaxatoms
+!          write(2,"(I3,A,1000(I3))") iAtom,"|", (trialBox % NeighList(iList)%list(j, iAtom) ,j=1,trialBox % NeighList(iList)%nNeigh(iAtom))
+!        enddo
+!        write(2,*)
+!      write(2,*) "N", trialBox%NeighList(iList)%nNeigh(:)     
+
+
 
   end subroutine
 !===================================================================================
+! NEEDS FIXING FOR NEW CELL LIST!
   subroutine CellRSqList_DeleteMol(self, molIndx, topIndx)
     use Common_MolInfo, only: nMolTypes, MolData
     use SearchSort, only: BinarySearch, SimpleSearch
     implicit none
     class(CellRSqList), intent(inout) :: self
     integer, intent(in) :: molIndx, topIndx
+    integer :: nStart, nEnd
     integer :: iAtom, iNei, jNei, nType, j
-    integer :: nStart, topStart
-    integer :: nEnd, topEnd
+    integer :: topStart
+    integer :: topEnd
+    integer :: cellIndx
     integer :: atmIndx, topAtom
     integer :: curNei, curIndx, nNei
 
@@ -280,7 +575,6 @@ use Template_NeighList, only: NeighListDef
         else
           curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
         endif
-
 !        if(nNei <= 1) then
 !          self%nNeigh(curNei) = 0
 !          self%list(:, curNei) = 0
@@ -339,6 +633,27 @@ use Template_NeighList, only: NeighListDef
 !      do iNei = 1, self%parent%nMaxatoms
 !        write(2,"(I3,A,1000(I3))") iNei,"|", (self%list(j, iNei) ,j=1,self%nNeigh(iNei))
 !      enddo
+
+
+      !Delete atom's the entry from the cell list.
+      cellIndx = self%cellID(atmIndx)
+      nNei = self%nCellAtoms(cellIndx)
+      curIndx = SimpleSearch( atmIndx, self%celllist(1:nNei, cellIndx) )
+      self%celllist(1:nNei, cellIndx ) = [self%celllist(1:curIndx-1, cellIndx), &
+                                          self%celllist(curIndx+1:nNei, cellIndx) ]
+      self%nCellAtoms(cellIndx) = self%nCellAtoms(cellIndx) - 1
+
+      !Re-index the top to the old from the cell list.
+      cellIndx = self%cellID(topAtom)
+      nNei = self%nCellAtoms(cellIndx)
+      if(nNei > 0) then
+        curIndx = SimpleSearch( topAtom, self%celllist(1:nNei, cellIndx) )
+        self%cellList(curIndx, cellIndx) = atmIndx
+        self%cellID(atmIndx) = self%cellID(topAtom)
+      endif
+
+
+
     enddo
 
 !    do iAtom = 1, self%parent%nMaxatoms
@@ -349,75 +664,9 @@ use Template_NeighList, only: NeighListDef
 
     self % sorted = .false.
 
+
   end subroutine
-!===================================================================================
-  subroutine CellRSqList_GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
-    use Common_MolInfo, only: nMolTypes
-    implicit none
-    class(CellRSqList), intent(inout) :: self
-    integer, intent(in) :: iDisp
-    class(Perturbation), intent(inout) :: disp
-    integer, intent(inout) :: tempList(:,:), tempNNei(:)
-    integer, optional :: nCount
-    real(dp), optional :: rCount
-    integer :: jType, jAtom, j, iAtom
-    integer :: jUp, jLow, molIndx, jMol
-    real(dp) :: xn, yn, zn
-    real(dp) :: rx, ry, rz, rsq
 
-    if(present(nCount)) then
-      nCount = 0
-    endif
-    select type(disp)
-      class is (Addition)
-!        disp % newlist = .true.
-        disp % listIndex = iDisp
-        iAtom = disp%atmIndx
-        molIndx = self%parent%MolIndx(iAtom)
-        xn = disp%x_new
-        yn = disp%y_new
-        zn = disp%z_new
-      class is (Displacement)
-        disp % newlist = .true.
-        disp % listIndex = iDisp
-        iAtom = disp%atmIndx
-        molIndx = self%parent%MolIndx(iAtom)
-        xn = disp%x_new
-        yn = disp%y_new
-        zn = disp%z_new
-    end select
-
-    templist(:, iDisp) = 0
-    tempNNei(iDisp) = 0
-
-!    molStart = 1
-!    do jType = 1, nMolTypes
-      do jAtom = 1, self%parent%nMaxAtoms
-        if( self%parent%MolSubIndx(jAtom) == molIndx ) then
-          cycle
-        endif
-        if( self%parent%MolSubIndx(jAtom) > self%parent%NMol(self%parent%MolType(jAtom)) ) then
-          cycle
-        endif
-        rx = xn - self%parent%atoms(1, jAtom)
-        ry = yn - self%parent%atoms(2, jAtom)
-        rz = zn - self%parent%atoms(3, jAtom)
-        call self%parent%Boundary(rx,ry,rz)
-        rsq = rx*rx + ry*ry + rz*rz
-        if(rsq < self%rCutSq) then
-          tempNNei(iDisp) = tempNNei(iDisp) + 1
-          templist(tempNNei(iDisp), iDisp) = jAtom
-        endif
-        if(present(rCount)) then
-          if(rsq < rCount*rCount) then
-            nCount = nCount + 1
-          endif
-        endif
-      enddo
-!      molStart = molStart + self%parent%NMolMax(jType)
-!    enddo
-!    write(2,"(A, 1000(I3))") "New",   templist(1:tempNNei(iDisp), iDisp)
-  end subroutine
 !====================================================================
   subroutine CellRSqList_ProcessIO(self, line, lineStat)
     use Input_Format, only: GetAllCommands, GetXCommand,maxLineLen
@@ -472,9 +721,6 @@ use Template_NeighList, only: NeighListDef
     integer :: iList, iDisp, iAtom, iNei, nNei, neiIndx, j
     real(dp) :: rx, ry, rz, rsq
 
-
-
-
     do iList = 1, size(trialBox%NeighList)
       if(iList == 1) then
 !        write(2,*) "----------------------------"
@@ -501,8 +747,6 @@ use Template_NeighList, only: NeighListDef
       endif
 !      write(2,*) "N", trialBox%NeighList(iList)%nNeigh(:)     
     enddo
-
-
 
   end subroutine
 !===================================================================================
