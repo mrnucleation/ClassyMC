@@ -77,7 +77,7 @@ module SimControl
   integer(kind=8) :: nMoves = 0
 
   integer :: screenFreq = 1000
-  integer :: configFreq = 1000
+  integer :: configFreq = 100
   logical :: printBox = .true.
   logical :: printAcc = .true.
 

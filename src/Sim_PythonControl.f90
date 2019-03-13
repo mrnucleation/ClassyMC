@@ -91,7 +91,7 @@ contains
   end subroutine
 
 !===========================================================================
-  subroutine Python_PerformMove
+  subroutine Python_PerformMove(iCycle, iMove) bind(C, name="python_performmove")
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
     use CommonSampling, only: Sampling
@@ -112,7 +112,6 @@ contains
         call curMove % MultiBox (accept)
       class is (MCMove)
           if(nBoxes > 1) then
-!              boxNum = floor(grnd()*nBoxes + 1E0_dp)
             call curMove % GetBoxProb(boxProb)
             boxNum = ListRNG(boxProb)
           else
@@ -352,7 +351,7 @@ contains
       stop
     endif
 
-    if( allocated(BoxArray) ) then
+    if( allocated(Moves) ) then
       do i = 1, size(Moves)
         call Moves(i) % move % SafetyCheck
       enddo
