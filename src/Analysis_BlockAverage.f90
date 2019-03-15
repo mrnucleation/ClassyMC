@@ -22,6 +22,7 @@ module Anaylsis_BlockAverage
     character(len=80) :: fileName = ""
 
     real(dp) :: varSum = 0E0_dp
+    real(dp) :: varSumSq = 0E0_dp
     real(dp) :: nSamp = 1E-40_dp
     contains
 !      procedure, pass :: Initialize
@@ -46,6 +47,7 @@ module Anaylsis_BlockAverage
     thermVal = BoxArray(self%boxNum) % box % GetThermo(self%thermNum)
 
     self%varSum = self%varSum + thermVal
+    self%varSumSq = self%varSumSq + thermVal**2
     self%nSamp = self%nSamp + 1E0_dp
 
   end subroutine
@@ -128,6 +130,10 @@ module Anaylsis_BlockAverage
         call MPI_REDUCE(self%varSum, dummy, 1, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror) 
 
+        dummy = self%varSumSq
+        call MPI_REDUCE(self%varSumSq, dummy, 1, &
+                    MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror) 
+
         dummy = self%nSamp
         call MPI_REDUCE(self%nSamp, dummy, 1, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror) 
@@ -138,12 +144,14 @@ module Anaylsis_BlockAverage
     if(self%parallel) then
       if(myid /= 0 ) then
         self%varSum = 0E0_dp
+        self%varSumSq = 0E0_dp
         self%nSamp = 1E-40_dp
         return
       endif
     endif
-    write(self%fileunit, *) self%writeNum*self%maintFreq, self%varSum/self%nSamp
+    write(self%fileunit, *) self%writeNum*self%maintFreq, self%varSum/self%nSamp, self%varSumSq/self%nSamp
     self%varSum = 0E0_dp
+    self%varSumSq = 0E0_dp
     self%nSamp = 1E-40_dp
   end subroutine
 !=========================================================================

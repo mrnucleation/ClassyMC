@@ -31,7 +31,7 @@ module OrthoBoxDef
   subroutine Ortho_Prologue(self)
     use Common_MolInfo, only: nMolTypes, MolData
     use ParallelVar, only: nout
-    use Units, only: outEngUnit
+    use Units, only: outEngUnit, engStr
     implicit none
     class(OrthoBox), intent(inout) :: self
     logical :: accept
@@ -88,8 +88,9 @@ module OrthoBoxDef
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Volume: ", self%volume
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%volume
 
-    write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal
 
+    write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit, engStr
+    write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Initial Energy (Per Mol): ", self % ETotal/(outEngUnit*self%nMolTotal), engStr
     do iMol = 1, self%maxMol
       call self%GetMolData(iMol, molStart=molStart)
       if( self%MolSubIndx(molStart) <= self%NMol(self%MolType(molStart)) ) then
@@ -102,7 +103,7 @@ module OrthoBoxDef
 !==========================================================================================
   subroutine Ortho_Epilogue(self)
     use ParallelVar, only: nout
-    use Units, only: outEngUnit
+    use Units, only: outEngUnit, engStr
     implicit none
     class(OrthoBox), intent(inout) :: self
     integer :: iConstrain
@@ -114,22 +115,23 @@ module OrthoBoxDef
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
 
-    write(nout, *) "Final Energy:", self % ETotal/outEngUnit
+    write(nout, *) "Final Energy:", self % ETotal/outEngUnit, engStr
+    write(nout, *) "Final Energy (Per Mol):", self % ETotal/(self%nMolTotal*outEngUnit), engStr
     if(self%ETotal /= 0) then
       if( abs((E_Culm-self%ETotal)/self%ETotal) > 1E-7_dp ) then
         write(nout, *) "ERROR! Large energy drift detected!"
         write(nout, *) "Box: ", self%boxID
-        write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit
-        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit
-        write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit
+        write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit, engStr
+        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
+        write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit, engStr
       endif
     else
       if( abs(E_Culm-self%ETotal) > 1E-7_dp ) then
         write(nout, *) "ERROR! Large energy drift detected!"
         write(nout, *) "Box: ", self%boxID
-        write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit
-        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit
-        write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit
+        write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit, engStr
+        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
+        write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit, engStr
       endif
     endif
 

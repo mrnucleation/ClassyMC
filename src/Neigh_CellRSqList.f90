@@ -303,7 +303,6 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
-! NEEDS FIXING FOR NEW CELL LIST!
   subroutine CellRSqList_GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
     use Common_MolInfo, only: nMolTypes
     implicit none
@@ -524,7 +523,6 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
-! NEEDS FIXING FOR NEW CELL LIST!
   subroutine CellRSqList_DeleteMol(self, molIndx, topIndx)
     use Common_MolInfo, only: nMolTypes, MolData
     use SearchSort, only: BinarySearch, SimpleSearch
@@ -644,13 +642,17 @@ use Template_NeighList, only: NeighListDef
       self%nCellAtoms(cellIndx) = self%nCellAtoms(cellIndx) - 1
 
       !Re-index the top to the old from the cell list.
-      cellIndx = self%cellID(topAtom)
-      nNei = self%nCellAtoms(cellIndx)
-      if(nNei > 0) then
-        curIndx = SimpleSearch( topAtom, self%celllist(1:nNei, cellIndx) )
-        self%cellList(curIndx, cellIndx) = atmIndx
-        self%cellID(atmIndx) = self%cellID(topAtom)
-      endif
+      if(atmIndx /= topAtom) then
+          cellIndx = self%cellID(topAtom)
+          nNei = self%nCellAtoms(cellIndx)
+          if(nNei > 0) then
+            curIndx = SimpleSearch( topAtom, self%celllist(1:nNei, cellIndx) )
+            if(curIndx /= 0) then
+              self%cellList(curIndx, cellIndx) = atmIndx
+            endif
+            self%cellID(atmIndx) = self%cellID(topAtom)
+          endif
+        endif
 
 
 

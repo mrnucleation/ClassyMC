@@ -13,6 +13,8 @@
 ! Using this convension it is also possible to work in reduced
 ! units such as the Lennard-Jones units.
 !==============================================================
+#define __StdErr__ 0
+!==============================================================
 module ClassyConstants
   use VarPrecision
   real(dp), parameter :: pi=4E0_dp*datan(1E0_dp) 
@@ -53,7 +55,6 @@ module Units
      real(dp) :: units
         
      write(nout, *) "Setting Energy Units to: ", trim(adjustl(unitName))
-!     engStr = 
      select case(trim(adjustl(unitName)))
        case("j-mol")
          units = 1E0_dp/8.3144621E0_dp
@@ -68,8 +69,8 @@ module Units
        case("kb")
          units = 1E0_dp
        case default
-         write(*,*) "Error! Invalid Energy Unit Type!"
-         write(*,*) unitName
+         write(__StdErr__, *) "Error! Invalid Energy Unit Type!"
+         write(__StdErr__, *) unitName
          stop
        end select
         
@@ -90,8 +91,8 @@ module Units
        case("sigma")
          units = 1E0_dp                  
        case default
-         write(*,*) "Error! Invalid Length Unit Type!"
-         write(*,*) unitName
+         write(__StdErr__, *) "Error! Invalid Length Unit Type!"
+         write(__StdErr__, *) unitName
          stop
       end select
 
@@ -118,8 +119,8 @@ module Units
       case("radians")
         units = 1E0_dp                 
       case default
-        write(*,*) "Error! Invalid Angular Unit Type!"
-        write(*,*) unitName
+        write(__StdErr__, *) "Error! Invalid Angular Unit Type!"
+        write(__StdErr__, *) unitName
         stop
       end select
    
@@ -148,8 +149,8 @@ module Units
          units = 1E0_dp
 
        case default
-         write(*,*) "Error! Invalid Pressure Unit Type!"
-         write(*,*) unitName
+         write(__StdErr__,*) "Error! Invalid Pressure Unit Type!"
+         write(__StdErr__,*) unitName
          stop
       end select
 

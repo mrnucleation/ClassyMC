@@ -284,7 +284,6 @@ module FF_AENet
                 accept = .false.
                 return
             endif 
-!            write(*,*) iAtom, jAtom, rsq, self%rCutSq
             if(rsq < self%rCutSq) then
               nRecalc = nRecalc + 1
               recalclist(nRecalc) = jAtom
@@ -298,7 +297,6 @@ module FF_AENet
             rz = atoms(3, iAtom)  -  atoms(3, jAtom)
             call curbox%Boundary(rx, ry, rz)
             rsq = rx*rx + ry*ry + rz*rz
-!            write(*,*) iAtom, jAtom, rsq, self%rCutSq
             if(rsq < self%rCutSq) then
               nRecalc = nRecalc + 1
               recalclist(nRecalc) = jAtom
@@ -310,7 +308,7 @@ module FF_AENet
         do iDisp = 1, size(disp)
           iAtom = disp(iDisp)%atmIndx
           atmType1 = curbox % AtomType(iAtom)
-          do jNei = 1, tempNNei(iAtom)
+          do jNei = 1, tempNNei(iDisp)
             jAtom = templist(jNei, iDisp)
             atmType2 = curbox % AtomType(jAtom)
             rmin_ij = self % rMinTable(atmType2, atmType1)          
@@ -352,16 +350,6 @@ module FF_AENet
 
     end select
 
-!    do iRecalc = 1, nRecalc
-!      write(*,*) iRecalc, recalclist(iRecalc)
-!    enddo
-
-
-
-!     self%boxrecp = 0E0_dp
-!     self%boxrecp(:,:) = geo_recip_lattice(self%box)
-!     self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
-
 
      !Compute the old position's energy for the neighboring atoms contained within the recalc list.
      E_Old = 0E0_dp
@@ -385,11 +373,9 @@ module FF_AENet
             self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
           endif
         enddo
-        if(nCurAtoms > 0) then
-          call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
+        call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
                                 E_Atom, stat) 
-          E_Old = E_Old + E_Atom
-        endif
+        E_Old = E_Old + E_Atom
 
      enddo
 
@@ -438,7 +424,6 @@ module FF_AENet
             self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
           endif
         enddo
-
         select type(disp)
           class is(Addition)
             do iDisp = 1, size(disp)
@@ -451,20 +436,20 @@ module FF_AENet
               call curbox % Boundary(rx, ry, rz)
               rsq = rx*rx + ry*ry + rz*rz
               if(rsq < self%rCutSq) then
-                  atmType2 = curbox % AtomType(jAtom)
-                  nCurAtoms = nCurAtoms + 1
-                  self%atomTypes(nCurAtoms) = atmType2
-                  self%tempcoords(1, nCurAtoms) = rx + atoms(1, iAtom)
-                  self%tempcoords(2, nCurAtoms) = ry + atoms(2, iAtom)
-                  self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
+                jAtom = disp(iDisp)%atmindx
+                atmType2 = curbox % AtomType(jAtom)
+                nCurAtoms = nCurAtoms + 1
+                self%atomTypes(nCurAtoms) = atmType2
+                self%tempcoords(1, nCurAtoms) = rx + atoms(1, iAtom)
+                self%tempcoords(2, nCurAtoms) = ry + atoms(2, iAtom)
+                self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
               endif
             enddo
+
         end select
-        if(nCurAtoms > 0) then
-          call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
+        call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
                                 E_Atom, stat) 
-          E_New = E_New + E_Atom
-        endif
+        E_New = E_New + E_Atom
      enddo
 
      !Now calculate the contribution of the atoms that were moved during this move.
@@ -530,8 +515,8 @@ module FF_AENet
           nCurAtoms = 0
           iAtom = disp(iDisp)%atmIndx
           atmType1 = curbox % AtomType(iAtom)
-          do jNei = 1, nNeigh(iAtom)
-            jAtom = neighlist(jNei, iAtom)
+          do jNei = 1, tempNNei(iDisp)
+            jAtom = templist(jNei, iDisp)
             atmType2 = curbox % AtomType(jAtom)
 
             rx = atoms(1, jAtom) - disp(iDisp)%x_new

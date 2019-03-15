@@ -131,7 +131,7 @@
       use Units, only: outEngUnit, outLenUnit, outAngUnit,outPressUnit,  &
                        inEngUnit, inLenUnit, inAngUnit,inPressUnit, &
                        FindEngUnit, FindLengthUnit, FindAngularUnit,  &
-                       FindPressureUnit
+                       FindPressureUnit, engStr
       use VarPrecision
       implicit none
       character(len=maxLineLen), intent(in) :: line      
@@ -186,6 +186,7 @@
         case("energyunits")
           call GetXCommand(line, command2, 3, lineStat)
           outEngUnit = FindEngUnit(command2)
+          engStr = trim(adjustl(command2))
 
         case("pressureunits")
           call GetXCommand(line, command2, 3, lineStat)

@@ -16,6 +16,9 @@
     call MPI_INIT(ierror)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, p_size, ierror)
     call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierror)  
+#else
+    myid = 0
+    p_size = 1
 #endif
 
 
