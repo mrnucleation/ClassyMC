@@ -71,7 +71,7 @@ module SimpleSimBox
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
-      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
+!      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
 
       !Property Gathering Functions
       procedure, pass :: GetNewEnergy => Simplebox_GetNewEnergy
@@ -590,14 +590,15 @@ module SimpleSimBox
 
   end function
 !==========================================================================================
-  subroutine SimpleBox_GetCoordinates(self, atoms)
-    implicit none
-    class(SimpleBox), intent(inout), target :: self
-    real(dp), pointer :: atoms(:,:)
-
-    atoms => self%atoms
-
-  end subroutine
+!  subroutine SimpleBox_GetCoordinates(self, atoms)
+!    implicit none
+!    class(SimpleBox), intent(inout), target :: self
+!    real(dp), pointer :: atoms(:,:)
+!
+!
+!    atoms => self%atoms
+!
+!  end subroutine
 !==========================================================================================
   subroutine SimpleBox_GetEnergyTable(self, etable)
     implicit none

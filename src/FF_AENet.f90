@@ -15,7 +15,7 @@ module FF_AENet
   !AENet Library functions
 #ifdef AENET
   use predict_lib, only: initialize_lib, get_energy_lib
-!  use aenet, only: aenet_init, aenet_atomic_energy, &
+  use aenet, only: aenet_atomic_energy
 !                   aenet_Rc_min, aenet_Rc_max,
   use geometry, only: geo_recip_lattice
   use input, only: InputData
@@ -40,6 +40,7 @@ module FF_AENet
       procedure, pass :: Constructor => Constructor_AENet
       procedure, pass :: DetailedECalc => DetailedECalc_AENet
       procedure, pass :: DiffECalc => DiffECalc_AENet
+      procedure, pass :: VolECalc => VolECalc_AENet
 #endif
       procedure, pass :: ProcessIO => ProcessIO_AENet
       procedure, pass :: Prologue => Prologue_AENet
@@ -222,6 +223,386 @@ module FF_AENet
     logical, intent(out) :: accept
     logical :: pbc=.false.
     integer :: nCurAtoms = 0
+    integer :: iAtom, jAtom, jNei, j, stat
+    integer :: atmType1, atmType2, molIndx1, molIndx2, nTotalMol
+    integer :: iDisp, iRecalc, molStart, molEnd
+
+    integer :: nRecalc
+    integer :: recalcList(1:300)
+    real(dp) :: E_T, ecoh
+    real(dp) :: E_New, E_Old, E_Atom
+    real(dp) :: rmin_ij
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: xoffset, yoffset, zoffset
+    real(dp) :: xi, yi, zi
+    real(dp) :: xj, yj, zj
+    real(dp) :: xmax, ymax, zmax
+    real(dp) :: tempdim(1:3,1:3)
+    real(dp) :: tempatom(1:3)
+
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+
+
+    call curbox%Neighlist(1)%GetListArray(nNeigh, neighlist)
+    call curbox%GetCoordinates(atoms)
+    accept = .true.
+    E_Diff = 0E0_dp
+
+    recalcList = 0
+    nRecalc = 0
+
+
+    nTotalMol = curbox%nMolTotal
+    select type(disp)
+      class is(OrthoVolChange)
+        call self%VolECalc(curbox, disp, E_Diff, accept)
+        return
+    end select
+
+    !Check the rMin criteria first to ensure there is no overlap prior to
+    !passing the configuration to AENet. In addition create a list of atoms
+    !whose interactions will need to be recomputed. 
+    select type(disp)
+      !-----------------------------------------------------
+      class is(Displacement)
+        do iDisp = 1, size(disp)
+          iAtom = disp(iDisp)%atmIndx
+          atmType1 = curbox % AtomType(iAtom)
+          do jNei = 1, nNeigh(iAtom)
+            jAtom = neighlist(jNei, iAtom)
+            atmType2 = curbox % AtomType(jAtom)
+            rmin_ij = self % rMinTable(atmType2, atmType1)          
+
+            rx = disp(iDisp)%x_new  -  atoms(1, jAtom)
+            ry = disp(iDisp)%y_new  -  atoms(2, jAtom)
+            rz = disp(iDisp)%z_new  -  atoms(3, jAtom)
+            call curbox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < rmin_ij) then
+                accept = .false.
+                return
+            endif 
+!            write(*,*) iAtom, jAtom, rsq, self%rCutSq
+            if(rsq < self%rCutSq) then
+              nRecalc = nRecalc + 1
+              recalclist(nRecalc) = jAtom
+              cycle
+            endif
+
+            !If the neighboring atom is not near the new position, check the old
+            !one as well.  
+            rx = atoms(1, iAtom)  -  atoms(1, jAtom)
+            ry = atoms(2, iAtom)  -  atoms(2, jAtom)
+            rz = atoms(3, iAtom)  -  atoms(3, jAtom)
+            call curbox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+!            write(*,*) iAtom, jAtom, rsq, self%rCutSq
+            if(rsq < self%rCutSq) then
+              nRecalc = nRecalc + 1
+              recalclist(nRecalc) = jAtom
+            endif
+          enddo
+        enddo
+      !-----------------------------------------------------
+      class is(Addition)
+        do iDisp = 1, size(disp)
+          iAtom = disp(iDisp)%atmIndx
+          atmType1 = curbox % AtomType(iAtom)
+          do jNei = 1, tempNNei(iAtom)
+            jAtom = templist(jNei, iDisp)
+            atmType2 = curbox % AtomType(jAtom)
+            rmin_ij = self % rMinTable(atmType2, atmType1)          
+
+            rx = disp(iDisp)%x_new  -  atoms(1, jAtom)
+            ry = disp(iDisp)%y_new  -  atoms(2, jAtom)
+            rz = disp(iDisp)%z_new  -  atoms(3, jAtom)
+            call curbox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < rmin_ij) then
+                accept = .false.
+                return
+            endif 
+            if(rsq < self%rCutSq) then
+              nRecalc = nRecalc + 1
+              recalclist(nRecalc) = jAtom
+            endif
+          enddo
+        enddo
+      !-----------------------------------------------------
+      class is(Deletion)
+        call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
+        do iAtom = molStart, molEnd
+          atmType1 = curbox % AtomType(iAtom)
+          do jNei = 1, nNeigh(iAtom)
+            jAtom = neighlist(jNei, iAtom)
+            atmType2 = curbox % AtomType(jAtom)
+            rx = atoms(1, iAtom)  -  atoms(1, jAtom)
+            ry = atoms(2, iAtom)  -  atoms(2, jAtom)
+            rz = atoms(3, iAtom)  -  atoms(3, jAtom)
+            call curbox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < self%rCutSq) then
+              nRecalc = nRecalc + 1
+              recalclist(nRecalc) = jAtom
+            endif
+          enddo
+        enddo
+
+    end select
+
+!    do iRecalc = 1, nRecalc
+!      write(*,*) iRecalc, recalclist(iRecalc)
+!    enddo
+
+
+
+!     self%boxrecp = 0E0_dp
+!     self%boxrecp(:,:) = geo_recip_lattice(self%box)
+!     self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
+
+
+     !Compute the old position's energy for the neighboring atoms contained within the recalc list.
+     E_Old = 0E0_dp
+     do iRecalc = 1, nRecalc
+        nCurAtoms = 0
+        iAtom = recalcList(iRecalc)
+        atmType1 = curbox % AtomType(iAtom)
+        do jNei = 1, nNeigh(iAtom)
+          jAtom = neighlist(jNei, iAtom)
+          rx = atoms(1, jAtom) - atoms(1, iAtom) 
+          ry = atoms(2, jAtom) - atoms(2, iAtom) 
+          rz = atoms(3, jAtom) - atoms(3, iAtom) 
+          call curbox % Boundary(rx, ry, rz)
+          rsq = rx*rx + ry*ry + rz*rz
+          if(rsq < self%rCutSq) then
+            atmType2 = curbox % AtomType(jAtom)
+            nCurAtoms = nCurAtoms + 1
+            self%atomTypes(nCurAtoms) = atmType2
+            self%tempcoords(1, nCurAtoms) = rx + atoms(1, iAtom) 
+            self%tempcoords(2, nCurAtoms) = ry + atoms(2, iAtom) 
+            self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
+          endif
+        enddo
+        if(nCurAtoms > 0) then
+          call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
+                                E_Atom, stat) 
+          E_Old = E_Old + E_Atom
+        endif
+
+     enddo
+
+
+     !Compute the new position's energy for the neighboring atoms contained within the recalc list.
+     E_New = 0E0_dp
+     do iRecalc = 1, nRecalc
+        nCurAtoms = 0
+        iAtom = recalcList(iReCalc)
+        atmType1 = curbox % AtomType(iAtom)
+        do jNei = 1, nNeigh(iAtom)
+          jAtom = neighlist(jNei, iAtom)
+          xj = atoms(1, jAtom)
+          yj = atoms(2, jAtom)
+          zj = atoms(3, jAtom)
+          select type(disp)
+            class is(Displacement)
+              do iDisp = 1, size(disp)
+                if(jAtom == disp(iDisp)%atmIndx) then
+                  xj = disp(iDisp)%x_new
+                  yj = disp(iDisp)%y_new
+                  zj = disp(iDisp)%z_new
+                  exit
+                endif
+              enddo
+
+            class is(Deletion)
+              molIndx2 = curbox%molIndx(jAtom)
+              if(disp(1)%molIndx == molIndx2) then
+                cycle
+              endif
+
+          end select
+          rx = xj - atoms(1, iAtom)
+          ry = yj - atoms(2, iAtom)
+          rz = zj - atoms(3, iAtom)
+          call curbox % Boundary(rx, ry, rz)
+          rsq = rx*rx + ry*ry + rz*rz
+          if(rsq < self%rCutSq) then
+            atmType2 = curbox % AtomType(jAtom)
+            nCurAtoms = nCurAtoms + 1
+            self%atomTypes(nCurAtoms) = atmType2
+            !Storing atom positions as the nearest image to atom_i.
+            self%tempcoords(1, nCurAtoms) = rx + atoms(1, iAtom)
+            self%tempcoords(2, nCurAtoms) = ry + atoms(2, iAtom)
+            self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
+          endif
+        enddo
+
+        select type(disp)
+          class is(Addition)
+            do iDisp = 1, size(disp)
+              xj = disp(iDisp)%x_new
+              yj = disp(iDisp)%y_new
+              zj = disp(iDisp)%z_new
+              rx = xj - atoms(1, iAtom)
+              ry = yj - atoms(2, iAtom)
+              rz = zj - atoms(3, iAtom)
+              call curbox % Boundary(rx, ry, rz)
+              rsq = rx*rx + ry*ry + rz*rz
+              if(rsq < self%rCutSq) then
+                  atmType2 = curbox % AtomType(jAtom)
+                  nCurAtoms = nCurAtoms + 1
+                  self%atomTypes(nCurAtoms) = atmType2
+                  self%tempcoords(1, nCurAtoms) = rx + atoms(1, iAtom)
+                  self%tempcoords(2, nCurAtoms) = ry + atoms(2, iAtom)
+                  self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
+              endif
+            enddo
+        end select
+        if(nCurAtoms > 0) then
+          call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
+                                E_Atom, stat) 
+          E_New = E_New + E_Atom
+        endif
+     enddo
+
+     !Now calculate the contribution of the atoms that were moved during this move.
+     select type(disp)
+      !-----------------------------------------------------
+      class is(Displacement)
+        do iDisp = 1, size(disp)
+          nCurAtoms = 0
+          iAtom = disp(iDisp)%atmIndx
+          atmType1 = curbox % AtomType(iAtom)
+          do jNei = 1, nNeigh(iAtom)
+            jAtom = neighlist(jNei, iAtom)
+            atmType2 = curbox % AtomType(jAtom)
+
+            rx = atoms(1, jAtom) - disp(iDisp)%x_new
+            ry = atoms(2, jAtom) - disp(iDisp)%y_new
+            rz = atoms(3, jAtom) - disp(iDisp)%z_new
+            call curbox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < self%rCutSq) then
+              atmType2 = curbox % AtomType(jAtom)
+              nCurAtoms = nCurAtoms + 1
+              self%atomTypes(nCurAtoms) = atmType2
+              self%tempcoords(1, nCurAtoms) = rx + disp(iDisp)%x_new
+              self%tempcoords(2, nCurAtoms) = ry + disp(iDisp)%y_new
+              self%tempcoords(3, nCurAtoms) = rz + disp(iDisp)%z_new
+            endif
+
+          enddo
+          tempatom(1) = disp(iDisp)%x_new
+          tempatom(2) = disp(iDisp)%y_new
+          tempatom(3) = disp(iDisp)%z_new
+          call aenet_atomic_energy(tempatom(1:3), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
+                                E_Atom, stat) 
+          E_New = E_New + E_Atom
+
+
+          nCurAtoms = 0
+          do jNei = 1, nNeigh(iAtom)
+            jAtom = neighlist(jNei, iAtom)
+            atmType2 = curbox % AtomType(jAtom)
+            rx = atoms(1, jAtom)  -  atoms(1, iAtom)
+            ry = atoms(2, jAtom)  -  atoms(2, iAtom)
+            rz = atoms(3, jAtom)  -  atoms(3, iAtom)
+            call curbox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < self%rCutSq) then
+              atmType2 = curbox % AtomType(jAtom)
+              nCurAtoms = nCurAtoms + 1
+              self%atomTypes(nCurAtoms) = atmType2
+              self%tempcoords(1, nCurAtoms) = rx + atoms(1, iAtom)
+              self%tempcoords(2, nCurAtoms) = ry + atoms(2, iAtom)
+              self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
+            endif
+          enddo
+          call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
+                                E_Atom, stat) 
+          E_Old = E_Old + E_Atom
+        enddo
+      !-----------------------------------------------------
+      class is(Addition)
+        do iDisp = 1, size(disp)
+          nCurAtoms = 0
+          iAtom = disp(iDisp)%atmIndx
+          atmType1 = curbox % AtomType(iAtom)
+          do jNei = 1, nNeigh(iAtom)
+            jAtom = neighlist(jNei, iAtom)
+            atmType2 = curbox % AtomType(jAtom)
+
+            rx = atoms(1, jAtom) - disp(iDisp)%x_new
+            ry = atoms(2, jAtom) - disp(iDisp)%y_new
+            rz = atoms(3, jAtom) - disp(iDisp)%z_new
+            call curbox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < self%rCutSq) then
+              atmType2 = curbox % AtomType(jAtom)
+              nCurAtoms = nCurAtoms + 1
+              self%atomTypes(nCurAtoms) = atmType2
+              self%tempcoords(1, nCurAtoms) = rx + disp(iDisp)%x_new
+              self%tempcoords(2, nCurAtoms) = ry + disp(iDisp)%y_new
+              self%tempcoords(3, nCurAtoms) = rz + disp(iDisp)%z_new
+            endif
+
+          enddo
+          tempatom(1) = disp(iDisp)%x_new
+          tempatom(2) = disp(iDisp)%y_new
+          tempatom(3) = disp(iDisp)%z_new
+          call aenet_atomic_energy(tempatom(1:3), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
+                                E_Atom, stat) 
+          E_New = E_New + E_Atom
+        enddo
+      !-----------------------------------------------------
+      class is(Deletion)
+        call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
+        do iAtom = molStart, molEnd
+          atmType1 = curbox % AtomType(iAtom)
+          nCurAtoms = 0
+          do jNei = 1, nNeigh(iAtom)
+            jAtom = neighlist(jNei, iAtom)
+            atmType2 = curbox % AtomType(jAtom)
+            rx = atoms(1, jAtom)  -  atoms(1, iAtom)
+            ry = atoms(2, jAtom)  -  atoms(2, iAtom)
+            rz = atoms(3, jAtom)  -  atoms(3, iAtom)
+            call curbox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < self%rCutSq) then
+              atmType2 = curbox % AtomType(jAtom)
+              nCurAtoms = nCurAtoms + 1
+              self%atomTypes(nCurAtoms) = atmType2
+              self%tempcoords(1, nCurAtoms) = rx + atoms(1, iAtom)
+              self%tempcoords(2, nCurAtoms) = ry + atoms(2, iAtom)
+              self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
+            endif
+          enddo
+          call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
+                                E_Atom, stat) 
+          E_Old = E_Old + E_Atom
+
+        enddo
+
+    end select
+    E_Diff = (E_New - E_Old)/boltz
+
+
+  end subroutine
+!============================================================================
+  subroutine VolECalc_AENet(self, curbox, disp, E_Diff, accept)
+    use ClassyConstants, only: pi
+    implicit none
+    class(AENet), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+!    class(displacement), intent(in) :: disp(:)
+    class(OrthoVolChange), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    logical :: pbc=.false.
+    integer :: nCurAtoms = 0
     integer :: iAtom, jAtom, jNei, j
     integer :: atmType1, atmType2, molIndx1, molIndx2
     integer :: iDisp, nTotalMol
@@ -234,9 +615,12 @@ module FF_AENet
     real(dp) :: xscale, yscale, zscale
     real(dp) :: xmax, ymax, zmax
     real(dp) :: tempdim(1:3,1:3)
+    real(dp), pointer :: atoms(:,:) => null()
 
     accept = .true.
     E_Diff = 0E0_dp
+
+    call curbox%GetCoordinates(atoms)
 
     nTotalMol = curbox%nMolTotal
     select type(disp)
@@ -245,10 +629,6 @@ module FF_AENet
         yscale = disp(1)%yScale
         zscale = disp(1)%zScale
 
-      class default
-        xscale = 1E0_dp
-        yscale = 1E0_dp
-        zscale = 1E0_dp
 
     end select
 
@@ -256,47 +636,6 @@ module FF_AENet
     !passing the configuration to AENet
     select type(disp)
       !-----------------------------------------------------
-      class is(Displacement)
-        do iDisp = 1, size(disp)
-          iAtom = disp(iDisp)%atmIndx
-          atmType1 = curbox % AtomType(iAtom)
-          do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-            jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-            atmType2 = curbox % AtomType(jAtom)
-            rmin_ij = self % rMinTable(atmType2, atmType1)          
-
-            rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
-            ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
-            rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
-            call curbox%Boundary(rx, ry, rz)
-            rsq = rx*rx + ry*ry + rz*rz
-            if(rsq < rmin_ij) then
-                accept = .false.
-                return
-            endif 
-          enddo
-        enddo
-      !-----------------------------------------------------
-      class is(Addition)
-        do iDisp = 1, size(disp)
-          iAtom = disp(iDisp)%atmIndx
-          atmType1 = curbox % AtomType(iAtom)
-          do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-            jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-            atmType2 = curbox % AtomType(jAtom)
-            rmin_ij = self % rMinTable(atmType2, atmType1)          
-
-            rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
-            ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
-            rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
-            call curbox%Boundary(rx, ry, rz)
-            rsq = rx*rx + ry*ry + rz*rz
-            if(rsq < rmin_ij) then
-                accept = .false.
-                return
-            endif 
-          enddo
-        enddo
       class is(OrthoVolChange)
         do iAtom = 1, curBox%nMaxAtoms
           if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
@@ -314,9 +653,9 @@ module FF_AENet
             dxj = curbox % centerMass(1, molIndx2) * (xScale-1E0_dp)
             dyj = curbox % centerMass(2, molIndx2) * (yScale-1E0_dp)
             dzj = curbox % centerMass(3, molIndx2) * (zScale-1E0_dp)
-            rx = curbox %atoms(1, iAtom) + dx  -  curbox % atoms(1, jAtom) - dxj
-            ry = curbox %atoms(2, iAtom) + dy  -  curbox % atoms(2, jAtom) - dyj
-            rz = curbox %atoms(3, iAtom) + dz  -  curbox % atoms(3, jAtom) - dzj
+            rx = atoms(1, iAtom) + dx  -  atoms(1, jAtom) - dxj
+            ry = atoms(2, iAtom) + dy  -  atoms(2, jAtom) - dyj
+            rz = atoms(3, iAtom) + dz  -  atoms(3, jAtom) - dzj
             rsq = rx*rx + ry*ry + rz*rz
             rmin_ij = self % rMinTable(atmType2, atmType1)      
             if(rsq < rmin_ij) then
@@ -325,8 +664,6 @@ module FF_AENet
             endif 
           enddo
         enddo
-
-
     end select
 
     ! Convert the Classy Array into an Array that AENet can read.
@@ -334,74 +671,6 @@ module FF_AENet
     self%tempcoords = 0E0_dp
     self%atomTypes = 1
     select type(disp)
-!       -----------------------------------------------------
-      class is(Displacement)
-        do iAtom = 1, curbox%nMaxAtoms
-          if(curbox%MolIndx(iAtom) == disp(1)%molIndx) then
-            do iDisp = 1, size(disp)
-              if(disp(iDisp)%atmIndx == iAtom) then
-                nCurAtoms = nCurAtoms + 1
-                self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
-                self%tempcoords(1, nCurAtoms) = disp(iDisp)%x_new
-                self%tempcoords(2, nCurAtoms) = disp(iDisp)%y_new
-                self%tempcoords(3, nCurAtoms) = disp(iDisp)%z_new
-                exit
-              endif
-            enddo
-
-          elseif( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
-            cycle
-          else
-            nCurAtoms = nCurAtoms + 1
-            self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
-            self%tempcoords(1, nCurAtoms) = curBox%atoms(1, iAtom)
-            self%tempcoords(2, nCurAtoms) = curBox%atoms(2, iAtom)
-            self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom)
-          endif
-        enddo
-!       -----------------------------------------------------
-      class is(Addition)
-        nTotalMol = nTotalMol + 1
-        do iAtom = 1, curbox%nMaxAtoms
-          if(curbox%MolIndx(iAtom) == disp(1)%molIndx) then
-            do iDisp = 1, size(disp)
-              if(disp(iDisp)%atmIndx == iAtom) then
-                nCurAtoms = nCurAtoms + 1
-                self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
-                self%tempcoords(1, nCurAtoms) = disp(iDisp)%x_new
-                self%tempcoords(2, nCurAtoms) = disp(iDisp)%y_new
-                self%tempcoords(3, nCurAtoms) = disp(iDisp)%z_new
-                exit
-              endif
-            enddo
-
-          else if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
-            cycle
-          else
-            nCurAtoms = nCurAtoms + 1
-            self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
-            self%tempcoords(1, nCurAtoms) = curBox%atoms(1, iAtom)
-            self%tempcoords(2, nCurAtoms) = curBox%atoms(2, iAtom)
-            self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom)
-          endif
-        enddo
-!       -----------------------------------------------------
-      class is(Deletion)
-        nTotalMol = nTotalMol - 1
-        do iAtom = 1, curbox%nMaxAtoms
-          if(curbox%MolIndx(iAtom) == disp(1)%molIndx) then
-            cycle
-          else if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
-            cycle
-          else
-            nCurAtoms = nCurAtoms + 1
-            self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
-            self%tempcoords(1, nCurAtoms) = curBox%atoms(1, iAtom)
-            self%tempcoords(2, nCurAtoms) = curBox%atoms(2, iAtom)
-            self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom)
-          endif
-        enddo
-!       -----------------------------------------------------
       class is(OrthoVolChange)
         do iAtom = 1, curbox%nMaxAtoms
           if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
@@ -413,11 +682,10 @@ module FF_AENet
           dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
           nCurAtoms = nCurAtoms + 1
           self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
-          self%tempcoords(1, nCurAtoms) = curBox%atoms(1, iAtom) + dx
-          self%tempcoords(2, nCurAtoms) = curBox%atoms(2, iAtom) + dy
-          self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom) + dz
+          self%tempcoords(1, nCurAtoms) = atoms(1, iAtom) + dx
+          self%tempcoords(2, nCurAtoms) = atoms(2, iAtom) + dy
+          self%tempcoords(3, nCurAtoms) = atoms(3, iAtom) + dz
         enddo
-!       -----------------------------------------------------
     end select
 
     accept = .true.
@@ -503,37 +771,13 @@ module FF_AENet
 !         enddo
      end select
 
-     if(nCurAtoms == 0) then
-       E_Diff = -curbox%Etotal
-       return
-     endif
 
      self%boxrecp = 0E0_dp
      self%boxrecp(:,:) = geo_recip_lattice(self%box)
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
-!     do iAtom = 1, 3
-!       write(*,*) self%box(1:3, iAtom)
-!     enddo
-!     do iAtom = 1, nCurAtoms
-!       write(*,*) self%tempcoords(1:3, iAtom)
-!     enddo
-!     do iAtom = 1, nCurAtoms
-!       self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom)/self%box(1,1)
-!       self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom)/self%box(2,1)
-!       self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom)/self%box(3,1)
-!     enddo
      call get_energy_lib(self%box(1:3,1:3), nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
-!     call get_energy_lib(self%box, nCurAtoms, &
-!                         self%tempcoords, &
-!                         self%atomTypes, pbc, &
-!                         Ecoh, E_T)
-
-
-!     E_T = E_T * nTotalMol / boltz
      E_T = E_T / boltz
-!     E_T = Ecoh * nTotalMol / boltz
      E_Diff = E_T - curbox%ETotal
-
 
   end subroutine
 !=============================================================================+

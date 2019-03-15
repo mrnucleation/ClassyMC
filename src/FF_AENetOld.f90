@@ -40,7 +40,6 @@ module FF_AENet
       procedure, pass :: Constructor => Constructor_AENet
       procedure, pass :: DetailedECalc => DetailedECalc_AENet
       procedure, pass :: DiffECalc => DiffECalc_AENet
-      procedure, pass :: VolECalc => VolECalc_AENet
 #endif
       procedure, pass :: ProcessIO => ProcessIO_AENet
       procedure, pass :: Prologue => Prologue_AENet
@@ -226,28 +225,31 @@ module FF_AENet
     integer :: iAtom, jAtom, jNei, j
     integer :: atmType1, atmType2, molIndx1, molIndx2
     integer :: iDisp, nTotalMol
-
-    integer :: nRecalc
-    integer :: recalcList(1:100)
     real(dp) :: E_T, ecoh
     real(dp) :: rmin_ij
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: xoffset, yoffset, zoffset
     real(dp) :: dx, dy, dz
     real(dp) :: dxj, dyj, dzj
+    real(dp) :: xscale, yscale, zscale
     real(dp) :: xmax, ymax, zmax
     real(dp) :: tempdim(1:3,1:3)
 
     accept = .true.
     E_Diff = 0E0_dp
 
-    nRecalc = 0
-
     nTotalMol = curbox%nMolTotal
     select type(disp)
       class is(OrthoVolChange)
-        call self%VolECalc(curbox, disp, E_Diff, accept)
-        return
+        xscale = disp(1)%xScale
+        yscale = disp(1)%yScale
+        zscale = disp(1)%zScale
+
+      class default
+        xscale = 1E0_dp
+        yscale = 1E0_dp
+        zscale = 1E0_dp
+
     end select
 
     !Check the rMin criteria first to ensure there is no overlap prior to
@@ -272,10 +274,6 @@ module FF_AENet
                 accept = .false.
                 return
             endif 
-            if(rsq < self%rCutSq) then
-              nRecalc = nRecalc + 1
-              recalclist(nRecalc) = jAtom
-            endif
           enddo
         enddo
       !-----------------------------------------------------
@@ -297,12 +295,38 @@ module FF_AENet
                 accept = .false.
                 return
             endif 
-            if(rsq < self%rCutSq) then
-              nRecalc = nRecalc + 1
-              recalclist(nRecalc) = jAtom
-            endif
           enddo
         enddo
+      class is(OrthoVolChange)
+        do iAtom = 1, curBox%nMaxAtoms
+          if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+            cycle
+          endif
+          atmType1 = curbox % AtomType(iAtom)
+          molIndx1 = curbox % MolIndx(iAtom)
+          dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
+          dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
+          dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
+          do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+            jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+            molIndx2 = curbox % MolIndx(jAtom)
+            atmType2 = curbox % AtomType(jAtom)
+            dxj = curbox % centerMass(1, molIndx2) * (xScale-1E0_dp)
+            dyj = curbox % centerMass(2, molIndx2) * (yScale-1E0_dp)
+            dzj = curbox % centerMass(3, molIndx2) * (zScale-1E0_dp)
+            rx = curbox %atoms(1, iAtom) + dx  -  curbox % atoms(1, jAtom) - dxj
+            ry = curbox %atoms(2, iAtom) + dy  -  curbox % atoms(2, jAtom) - dyj
+            rz = curbox %atoms(3, iAtom) + dz  -  curbox % atoms(3, jAtom) - dzj
+            rsq = rx*rx + ry*ry + rz*rz
+            rmin_ij = self % rMinTable(atmType2, atmType1)      
+            if(rsq < rmin_ij) then
+              accept = .false.
+              return
+            endif 
+          enddo
+        enddo
+
+
     end select
 
     ! Convert the Classy Array into an Array that AENet can read.
@@ -378,6 +402,22 @@ module FF_AENet
           endif
         enddo
 !       -----------------------------------------------------
+      class is(OrthoVolChange)
+        do iAtom = 1, curbox%nMaxAtoms
+          if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+            cycle
+          endif
+          molIndx1 = curbox % MolIndx(iAtom)
+          dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
+          dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
+          dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
+          nCurAtoms = nCurAtoms + 1
+          self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
+          self%tempcoords(1, nCurAtoms) = curBox%atoms(1, iAtom) + dx
+          self%tempcoords(2, nCurAtoms) = curBox%atoms(2, iAtom) + dy
+          self%tempcoords(3, nCurAtoms) = curBox%atoms(3, iAtom) + dz
+        enddo
+!       -----------------------------------------------------
     end select
 
     accept = .true.
@@ -411,24 +451,24 @@ module FF_AENet
          call curbox%GetDimensions(tempdim)
          ! self%box dimensions given back as xlow, xhigh, ylow, yhigh, etc.  
          ! Need to be converted to AENet format
-         xoffset = tempdim(1, 1)
-         yoffset = tempdim(1, 2)
-         zoffset = tempdim(1, 3)
-         self%box(1,1) = tempdim(2, 1) - tempdim(1, 1)
-         self%box(2,2) = tempdim(2, 2) - tempdim(1, 2)
-         self%box(3,3) = tempdim(2, 3) - tempdim(1, 3)
+         xoffset = tempdim(1, 1)*xScale
+         yoffset = tempdim(1, 2)*yScale
+         zoffset = tempdim(1, 3)*zScale
+         self%box(1,1) = (tempdim(2, 1) - tempdim(1, 1))*xScale
+         self%box(2,2) = (tempdim(2, 2) - tempdim(1, 2))*yScale
+         self%box(3,3) = (tempdim(2, 3) - tempdim(1, 3))*zScale
 
        class is(OrthoBox)
          pbc = .true.
          call curbox%GetDimensions(tempdim)
          ! self%box dimensions given back as xlow, xhigh, ylow, yhigh, etc.  
          ! Need to be converted to AENet format
-         xoffset = tempdim(1, 1)
-         yoffset = tempdim(1, 2)
-         zoffset = tempdim(1, 3)
-         self%box(1,1) = tempdim(2, 1) - tempdim(1, 1)
-         self%box(2,2) = tempdim(2, 2) - tempdim(1, 2)
-         self%box(3,3) = tempdim(2, 3) - tempdim(1, 3)
+         xoffset = tempdim(1, 1)*xScale
+         yoffset = tempdim(1, 2)*yScale
+         zoffset = tempdim(1, 3)*zScale
+         self%box(1,1) = (tempdim(2, 1) - tempdim(1, 1))*xScale
+         self%box(2,2) = (tempdim(2, 2) - tempdim(1, 2))*yScale
+         self%box(3,3) = (tempdim(2, 3) - tempdim(1, 3))*zScale
 
      end select
 
@@ -471,201 +511,29 @@ module FF_AENet
      self%boxrecp = 0E0_dp
      self%boxrecp(:,:) = geo_recip_lattice(self%box)
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
+!     do iAtom = 1, 3
+!       write(*,*) self%box(1:3, iAtom)
+!     enddo
+!     do iAtom = 1, nCurAtoms
+!       write(*,*) self%tempcoords(1:3, iAtom)
+!     enddo
+!     do iAtom = 1, nCurAtoms
+!       self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom)/self%box(1,1)
+!       self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom)/self%box(2,1)
+!       self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom)/self%box(3,1)
+!     enddo
      call get_energy_lib(self%box(1:3,1:3), nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
-     call aenet_atomic_energy(...)
+!     call get_energy_lib(self%box, nCurAtoms, &
+!                         self%tempcoords, &
+!                         self%atomTypes, pbc, &
+!                         Ecoh, E_T)
+
+
+!     E_T = E_T * nTotalMol / boltz
      E_T = E_T / boltz
+!     E_T = Ecoh * nTotalMol / boltz
      E_Diff = E_T - curbox%ETotal
 
-
-  end subroutine
-!============================================================================
-  subroutine VolECalc_AENet(self, curbox, disp, E_Diff, accept)
-    use ClassyConstants, only: pi
-    implicit none
-    class(AENet), intent(inout) :: self
-    class(simBox), intent(inout) :: curbox
-!    class(displacement), intent(in) :: disp(:)
-    class(OrthoVolChange), intent(in) :: disp(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
-
-    logical :: pbc=.false.
-    integer :: nCurAtoms = 0
-    integer :: iAtom, jAtom, jNei, j
-    integer :: atmType1, atmType2, molIndx1, molIndx2
-    integer :: iDisp, nTotalMol
-    real(dp) :: E_T, ecoh
-    real(dp) :: rmin_ij
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: xoffset, yoffset, zoffset
-    real(dp) :: dx, dy, dz
-    real(dp) :: dxj, dyj, dzj
-    real(dp) :: xscale, yscale, zscale
-    real(dp) :: xmax, ymax, zmax
-    real(dp) :: tempdim(1:3,1:3)
-    real(dp), pointer :: atoms(:,:)
-
-    accept = .true.
-    E_Diff = 0E0_dp
-
-    call curbox%GetCoordinates(atoms)
-
-    nTotalMol = curbox%nMolTotal
-    select type(disp)
-      class is(OrthoVolChange)
-        xscale = disp(1)%xScale
-        yscale = disp(1)%yScale
-        zscale = disp(1)%zScale
-
-
-    end select
-
-    !Check the rMin criteria first to ensure there is no overlap prior to
-    !passing the configuration to AENet
-    select type(disp)
-      !-----------------------------------------------------
-      class is(OrthoVolChange)
-        do iAtom = 1, curBox%nMaxAtoms
-          if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
-            cycle
-          endif
-          atmType1 = curbox % AtomType(iAtom)
-          molIndx1 = curbox % MolIndx(iAtom)
-          dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
-          dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
-          dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
-          do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-            jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-            molIndx2 = curbox % MolIndx(jAtom)
-            atmType2 = curbox % AtomType(jAtom)
-            dxj = curbox % centerMass(1, molIndx2) * (xScale-1E0_dp)
-            dyj = curbox % centerMass(2, molIndx2) * (yScale-1E0_dp)
-            dzj = curbox % centerMass(3, molIndx2) * (zScale-1E0_dp)
-            rx = atoms(1, iAtom) + dx  -  atoms(1, jAtom) - dxj
-            ry = atoms(2, iAtom) + dy  -  atoms(2, jAtom) - dyj
-            rz = atoms(3, iAtom) + dz  -  atoms(3, jAtom) - dzj
-            rsq = rx*rx + ry*ry + rz*rz
-            rmin_ij = self % rMinTable(atmType2, atmType1)      
-            if(rsq < rmin_ij) then
-              accept = .false.
-              return
-            endif 
-          enddo
-        enddo
-    end select
-
-    ! Convert the Classy Array into an Array that AENet can read.
-    nCurAtoms = 0
-    self%tempcoords = 0E0_dp
-    self%atomTypes = 1
-    select type(disp)
-      class is(OrthoVolChange)
-        do iAtom = 1, curbox%nMaxAtoms
-          if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
-            cycle
-          endif
-          molIndx1 = curbox % MolIndx(iAtom)
-          dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
-          dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
-          dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
-          nCurAtoms = nCurAtoms + 1
-          self%atomTypes(nCurAtoms) = curbox % AtomType(iAtom)
-          self%tempcoords(1, nCurAtoms) = atoms(1, iAtom) + dx
-          self%tempcoords(2, nCurAtoms) = atoms(2, iAtom) + dy
-          self%tempcoords(3, nCurAtoms) = atoms(3, iAtom) + dz
-        enddo
-    end select
-
-    accept = .true.
-    xoffset = 0E0_dp
-    yoffset = 0E0_dp
-    zoffset = 0E0_dp
-    select type(curbox)
-      type is(SimpleBox)
-        do iAtom = 1, nCurAtoms
-          if(xoffset > self%tempcoords(1, iAtom)) then
-            xoffset = self%tempcoords(1, iAtom)
-          endif
-          if(yoffset > self%tempcoords(2, iAtom)) then
-            yoffset = self%tempcoords(2, iAtom)
-          endif
-          if(zoffset > self%tempcoords(3, iAtom)) then
-            zoffset = self%tempcoords(3, iAtom)
-          endif
-      enddo 
-    end select
-    self%box = 0E0_dp
-
-    xmax = 0E0_dp
-    ymax = 0E0_dp
-    zmax = 0E0_dp
-
-     !Collect the self%box dimensions and determine the offset. 
-     select type(curbox)
-       class is(CubeBox)
-         pbc = .true.
-         call curbox%GetDimensions(tempdim)
-         ! self%box dimensions given back as xlow, xhigh, ylow, yhigh, etc.  
-         ! Need to be converted to AENet format
-         xoffset = tempdim(1, 1)*xScale
-         yoffset = tempdim(1, 2)*yScale
-         zoffset = tempdim(1, 3)*zScale
-         self%box(1,1) = (tempdim(2, 1) - tempdim(1, 1))*xScale
-         self%box(2,2) = (tempdim(2, 2) - tempdim(1, 2))*yScale
-         self%box(3,3) = (tempdim(2, 3) - tempdim(1, 3))*zScale
-
-       class is(OrthoBox)
-         pbc = .true.
-         call curbox%GetDimensions(tempdim)
-         ! self%box dimensions given back as xlow, xhigh, ylow, yhigh, etc.  
-         ! Need to be converted to AENet format
-         xoffset = tempdim(1, 1)*xScale
-         yoffset = tempdim(1, 2)*yScale
-         zoffset = tempdim(1, 3)*zScale
-         self%box(1,1) = (tempdim(2, 1) - tempdim(1, 1))*xScale
-         self%box(2,2) = (tempdim(2, 2) - tempdim(1, 2))*yScale
-         self%box(3,3) = (tempdim(2, 3) - tempdim(1, 3))*zScale
-
-     end select
-
-     do iAtom = 1, nCurAtoms
-       self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom) - xoffset
-       self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom) - yoffset
-       self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom) - zoffset
-       select type(curbox)
-         type is(SimpleBox)
-           if(xmax < self%tempcoords(1, iAtom)) then
-             xmax = self%tempcoords(1, iAtom)
-           endif
-           if(ymax < self%tempcoords(2, iAtom)) then
-             ymax = self%tempcoords(2, iAtom)
-           endif
-           if(zmax < self%tempcoords(3, iAtom)) then
-             zmax = self%tempcoords(3, iAtom)
-           endif
-       end select
-     enddo
-
-     select type(curbox)
-       type is(SimpleBox)
-         self%box(1,1) = xmax + 1e-2
-         self%box(2,2) = ymax + 1e-2
-         self%box(3,3) = zmax + 1e-2
-!       class default
-!         do iAtom = 1, nCurAtoms
-!           self%tempcoords(1, iAtom) = self%tempcoords(1, iAtom)/self%box(1,1)
-!           self%tempcoords(2, iAtom) = self%tempcoords(2, iAtom)/self%box(2,2)
-!           self%tempcoords(3, iAtom) = self%tempcoords(3, iAtom)/self%box(3,3)
-!         enddo
-     end select
-
-
-     self%boxrecp = 0E0_dp
-     self%boxrecp(:,:) = geo_recip_lattice(self%box)
-     self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
-     call get_energy_lib(self%box(1:3,1:3), nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
-     E_T = E_T / boltz
-     E_Diff = E_T - curbox%ETotal
 
   end subroutine
 !=============================================================================+

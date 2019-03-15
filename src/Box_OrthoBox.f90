@@ -57,7 +57,7 @@ module OrthoBoxDef
           arrayIndx = self%MolStartIndx(subIndx)
           arrayIndx = arrayIndx + iAtom - 1
 
-          call self%boundary(self%atoms(1,arrayIndx), self%atoms(2,arrayIndx), self%atoms(3,arrayIndx))
+          call self%Boundary(self%atoms(1,arrayIndx), self%atoms(2,arrayIndx), self%atoms(3,arrayIndx))
         enddo
       enddo
     enddo

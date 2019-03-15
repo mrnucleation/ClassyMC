@@ -4,12 +4,13 @@ module CoordinateTypes
  
   !Base Perturbation Class
   type :: Perturbation
-    
+!     integer(kind=atomIntType) :: molIndx, atmIndx   
   end type
 
   !Move type where a single particle's position is changed.
   type, extends(Perturbation) :: Displacement
-    integer(kind=atomIntType) :: molType, atmIndx, molIndx, atmSubIndx
+    integer(kind=atomIntType) :: molType, atmSubIndx
+     integer(kind=atomIntType) :: molIndx, atmIndx   
     real(dp) :: x_new, y_new, z_new
     logical :: newList = .false.
     integer :: listIndex = -1
@@ -27,12 +28,14 @@ module CoordinateTypes
 
   !Move type where one particle is removed 
   type, extends(Perturbation) :: Deletion
-    integer(kind=atomIntType) :: molType, molIndx
+    integer(kind=atomIntType) :: molType
+    integer(kind=atomIntType) :: molIndx, atmIndx   
   end type
   
   !Move type where one particle is created
   type, extends(Perturbation) :: Addition
-    integer(kind=atomIntType) :: molType, atmIndx, molIndx
+    integer(kind=atomIntType) :: molType
+     integer(kind=atomIntType) :: molIndx, atmIndx   
     real(dp) :: x_new, y_new, z_new
     integer :: listIndex = -1
   end type

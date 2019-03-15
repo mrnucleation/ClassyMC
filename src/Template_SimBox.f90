@@ -46,6 +46,7 @@ module Template_SimBox
       procedure, public, pass :: Constructor
       procedure, public, pass :: LoadAtomCoord
       procedure, public, pass :: LoadDimension
+      procedure, public, pass :: GetCoordinates
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
       procedure, public, pass :: BoundaryNew
@@ -76,6 +77,17 @@ module Template_SimBox
     integer, intent(out) :: lineStat
     lineStat = 0
   end subroutine
+!==========================================================================================
+  subroutine GetCoordinates(self, atoms)
+    implicit none
+    class(SimBox), intent(inout), target :: self
+    real(dp), pointer :: atoms(:,:)
+
+
+    atoms => self%atoms
+
+  end subroutine
+
 !==========================================================================================
   subroutine LoadDimension(self, line, lineStat)
     implicit none
