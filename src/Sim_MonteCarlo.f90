@@ -390,6 +390,11 @@ contains
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
 
+    do i = 1, size(BoxArray)
+      call BoxArray(i) % box % Epilogue
+    enddo
+    write(nout, *) "-----------------------"
+
     call Sampling % Epilogue
     
     do i = 1, size(MolData)
@@ -410,10 +415,6 @@ contains
       enddo
     endif
 
-    do i = 1, size(BoxArray)
-      call BoxArray(i) % box % Epilogue
-    enddo
-    write(nout, *) "-----------------------"
 
     do i = 1, size(Moves)
       call Moves(i) % move % Epilogue

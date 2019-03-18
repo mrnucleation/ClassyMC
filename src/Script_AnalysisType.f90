@@ -11,6 +11,7 @@ contains
 
     use Anaylsis_BlockAverage, only: BlockAverage
     use Anaylsis_ClusterSize, only: ClusterSize
+    use Anaylsis_DensityOfStates, only: DensityOfStates
     use Anaylsis_DistPair, only: DistPair
     use Analysis_RDF, only: rdf
     use Anaylsis_ThermoAverage, only: ThermoAverage
@@ -31,6 +32,9 @@ contains
     select case(trim(adjustl(command)))
       case("blockaverage")
         allocate(blockAverage::AnalysisArray(AnaNum) % func)
+
+      case("densityofstates")
+        allocate(DensityOfStates::AnalysisArray(AnaNum) % func)
 
       case("rdf")
         allocate(rdf::AnalysisArray(AnaNum) % func)

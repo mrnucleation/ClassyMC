@@ -9,6 +9,7 @@ module Constrain_EnergyCeiling
   use SimpleSimBox, only: SimpleBox
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
+  use Units, only: outEngUnit
 
   type, public, extends(constraint) :: EnergyCeiling
     integer :: boxID = -1
@@ -62,6 +63,7 @@ module Constrain_EnergyCeiling
     select type(trialBox)
       class is(SimpleBox)
         E_New = trialBox % GetNewEnergy(E_Diff)
+        write(*,*) E_New
         select case(self%eStyle)
 !          case(0) ! Absolute
           case(1) ! Per Mol
@@ -70,6 +72,8 @@ module Constrain_EnergyCeiling
 !          case(2) ! Per Atom
         end select
     end select
+
+    write(*,*) E_New, self%E_Max
 
     if(E_New > self%E_Max) then
       accept = .false.
@@ -91,6 +95,7 @@ module Constrain_EnergyCeiling
     real(dp) :: realVal
     character(len=30) :: command, val
 
+    ! energyfloor (style) (value)
     lineStat = 0
     call GetXCommand(line, command, 2, lineStat)
     select case(trim(adjustl(command)))
@@ -105,7 +110,7 @@ module Constrain_EnergyCeiling
 
     call GetXCommand(line, command, 3, lineStat)
     read(command, *) realVal
-    self%E_Max = realVal
+    self%E_Max = realVal*outEngUnit
 
   end subroutine
 !====================================================================

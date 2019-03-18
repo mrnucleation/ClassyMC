@@ -9,6 +9,7 @@ module Constrain_EnergyFloor
   use SimpleSimBox, only: SimpleBox
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
+  use Units, only: outEngUnit
 
   type, public, extends(constraint) :: EnergyFloor
     integer :: boxID = -1
@@ -105,7 +106,7 @@ module Constrain_EnergyFloor
 
     call GetXCommand(line, command, 3, lineStat)
     read(command, *) realVal
-    self%E_Min = realVal
+    self%E_Min = realVal*outEngUnit
 
   end subroutine
 !====================================================================
