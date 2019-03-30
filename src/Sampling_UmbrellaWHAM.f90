@@ -656,7 +656,7 @@ module UmbrellaWHAMRule
 !        This block exports the histogram 
     rewind(96)
     do i = 1, self%umbrellaLimit
-      if(self%HistStorage(i) /= 0E0 ) then
+      if(self%HistStorage(i) /= 0E0_dp ) then
         call self%FindVarValues(i, self%UArray)
         write(96, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j), j=1,self%nBiasVar), self%HistStorage(i)
       endif
@@ -677,7 +677,7 @@ module UmbrellaWHAMRule
 !        This block exports the calculated free energy to a file
     rewind(98)
     do i = 1, self%umbrellaLimit
-      if(self%ProbArray(i) /= 0E0 ) then
+      if(self%ProbArray(i) /= 0E0_dp ) then
         call self%FindVarValues(i, self%UArray)
         write(98, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j) ,j=1,self%nBiasVar), self%FreeEnergyEst(i)
       endif
@@ -713,7 +713,7 @@ module UmbrellaWHAMRule
 #ifdef PARALLEL
     arraySize = size(self%UHist)     
     if(myid .eq. 0) then
-      self%TempHist = 0E0
+      self%TempHist = 0E0_dp
     endif
     call MPI_REDUCE(self%UHist, self%TempHist, arraySize, &
               MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)       
@@ -733,9 +733,9 @@ module UmbrellaWHAMRule
 
 !        This block solves for the free energy terms required by WHAM.  This is done
 !        self-consistently.
-      self%ProbArray = 0E0
-      F_Estimate = 0E0
-      tol = self%tolLimit + 1E0
+      self%ProbArray = 0E0_dp
+      F_Estimate = 0E0_dp
+      tol = self%tolLimit + 1E0_dp
       cnt = 0
       do while(tol > self%tolLimit)
         cnt = cnt + 1
@@ -744,25 +744,25 @@ module UmbrellaWHAMRule
           exit
         endif
 
-        self%ProbArray = 0E0
+        self%ProbArray = 0E0_dp
         do j = 1, self%nCurWhamItter
           F_Old(j) = F_Estimate(j)
         enddo
 !            If bin #i has been sampled at any point in the simulation, estimate the unbiased probability
 !            based on the current guess value for F
         do i = 1, self%umbrellaLimit
-          if(self%WHAM_Numerator(i) /= 0E0) then
-            denomSum = 0E0
+          if(self%WHAM_Numerator(i) /= 0E0_dp) then
+            denomSum = 0E0_dp
             do j = 1, self%nCurWhamItter
-              if(self%WHAM_Denominator(i,j) > 0E0) then
+              if(self%WHAM_Denominator(i,j) > 0E0_dp) then
                 denomSum = denomSum + self%WHAM_Denominator(i,j)*exp(-F_Estimate(j))
               endif
             enddo
-            if(denomSum /= 0E0) then
+            if(denomSum /= 0E0_dp) then
               self%ProbArray(i) = self%WHAM_Numerator(i)/denomSum
             endif
           else
-            self%ProbArray(i) = 0E0
+            self%ProbArray(i) = 0E0_dp
           endif
         enddo 
 
@@ -773,18 +773,18 @@ module UmbrellaWHAMRule
 !          Once all the unbiased probabilities have been estimated, use these unbiased estimates
 !          to calculate a new estimate for F
         do j = 1, self%nCurWhamItter
-          fSum = 0E0
+          fSum = 0E0_dp
           do i = 1, self%umbrellaLimit
-            if(self%ProbArray(i) .ne. 0E0) then
+            if(self%ProbArray(i) /= 0E0_dp) then
               fSum = fSum + self%ProbArray(i)*exp(self%BiasStorage(i,j))
             endif
           enddo
           F_Estimate(j) = log(fSum)
-          F_Estimate(j) = (F_Estimate(j) + F_Old(j))*0.5E0
+          F_Estimate(j) = (F_Estimate(j) + F_Old(j))*0.5E0_dp
        enddo 
 !         Calculate the average change in F from the previous estimate and determine 
 !         if there has been a significant change to the F values.
-       tol = 0E0
+       tol = 0E0_dp
        do j = 1, self%nCurWhamItter
          tol = tol + abs(F_Estimate(j) - F_Old(j))
        enddo
@@ -795,14 +795,20 @@ module UmbrellaWHAMRule
       self%NewBias = 0E0_dp
       maxbin = maxloc(self%HistStorage,1)
       maxbin2 = maxloc(self%TempHist,1)
-      do i = 1, self%umbrellaLimit
-        if(self%ProbArray(i) > 0E0_dp) then
-          self%FreeEnergyEst(i) = -log(self%ProbArray(i)/self%ProbArray(maxbin))
-        endif
-        if(self%TempHist(i) >= 1E0_dp) then
-          self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) - log(self%TempHist(i)/self%TempHist(maxbin2))
-        endif
-      enddo
+      write(*,*) "Largest Bin", maxbin, maxbin2
+      write(*,*) "Largest Value", self%ProbArray(maxbin)
+      if(self%ProbArray(maxbin) > 1E-200_dp) then
+          do i = 1, self%umbrellaLimit
+            if(self%ProbArray(i) > 0E0_dp) then
+              self%FreeEnergyEst(i) = -log(self%ProbArray(i)/self%ProbArray(maxbin))
+            endif
+            if(self%TempHist(i) >= 1E0_dp) then
+              self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) - log(self%TempHist(i)/self%TempHist(maxbin2))
+            endif
+          enddo
+      else
+          self%FreeEnergyEst = 0E0_dp
+      endif
       do i = 1, self%umbrellaLimit
         if(self%TempHist(i) < 1E0_dp) then
           self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) + log(self%TempHist(maxbin2))
@@ -831,7 +837,7 @@ module UmbrellaWHAMRule
 
     do i = 1, self%umbrellaLimit
       self%UBias(i) = self%NewBias(i)
-      self%UHist(i) = 0E0
+      self%UHist(i) = 0E0_dp
     enddo 
     if(myid .eq. 0) then
       call self%WHAMSimOutput

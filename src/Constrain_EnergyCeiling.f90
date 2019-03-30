@@ -63,9 +63,8 @@ module Constrain_EnergyCeiling
     select type(trialBox)
       class is(SimpleBox)
         E_New = trialBox % GetNewEnergy(E_Diff)
-        write(*,*) E_New
         select case(self%eStyle)
-!          case(0) ! Absolute
+!          case(0) ! Total Energy
           case(1) ! Per Mol
               nNew = trialBox % GetNewMolCount(disp)
               E_New = E_New/real(nNew, dp)
@@ -73,7 +72,6 @@ module Constrain_EnergyCeiling
         end select
     end select
 
-    write(*,*) E_New, self%E_Max
 
     if(E_New > self%E_Max) then
       accept = .false.
@@ -99,7 +97,7 @@ module Constrain_EnergyCeiling
     lineStat = 0
     call GetXCommand(line, command, 2, lineStat)
     select case(trim(adjustl(command)))
-      case("abs") ! Absolute
+      case("total") ! Total Energy
           self%eStyle = 0
       case("mol") ! Per Mol
           self%eStyle = 1
@@ -122,12 +120,13 @@ module Constrain_EnergyCeiling
 !====================================================================
   subroutine EnergyCeiling_Prologue(self)
     use ParallelVar, only: nout
+    use Units, only: outEngUnit
     implicit none
     class(EnergyCeiling), intent(inout) :: self
     logical :: accept
 
 
-    write(nout, *) "Applying an Energy Ceiling:", self%E_Max
+    write(nout, *) "Applying an Energy Ceiling:", self%E_Max/outEngUnit
 
 
   end subroutine

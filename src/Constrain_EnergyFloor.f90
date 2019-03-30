@@ -64,7 +64,7 @@ module Constrain_EnergyFloor
       class is(SimpleBox)
         E_New = trialBox % GetNewEnergy(E_Diff)
         select case(self%eStyle)
-!          case(0) ! Absolute
+!          case(0) ! Total
           case(1) ! Per Mol
               nNew = trialBox % GetNewMolCount(disp)
               E_New = E_New/real(nNew, dp)
@@ -95,7 +95,7 @@ module Constrain_EnergyFloor
     lineStat = 0
     call GetXCommand(line, command, 2, lineStat)
     select case(trim(adjustl(command)))
-      case("abs") ! Absolute
+      case("total") ! Total
           self%eStyle = 0
       case("mol") ! Per Mol
           self%eStyle = 1
@@ -118,12 +118,13 @@ module Constrain_EnergyFloor
 !====================================================================
   subroutine EnergyFloor_Prologue(self)
     use ParallelVar, only: nout
+    use Units, only: outEngUnit
     implicit none
     class(EnergyFloor), intent(inout) :: self
     logical :: accept
 
 
-    write(nout, *) "Applying an Energy Floor:", self%E_Min
+    write(nout, *) "Applying an Energy Floor:", self%E_Min/outEngUnit
 
 
   end subroutine

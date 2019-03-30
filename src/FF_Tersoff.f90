@@ -118,7 +118,7 @@ module FF_Pair_Tersoff
     integer :: atmType1, atmType2, atmType3
     real(dp) :: A, B, c, d, Reqij, Reqik, Dij, Dik
     real(dp) :: E_Tersoff
-    real(dp) :: lam1, lam2
+    real(dp) :: lam1, lam2, lam3, gam
     real(dp) :: Zeta
     real(dp) :: BetaPar, n, h
     real(dp) :: b1, b2, V1
@@ -187,8 +187,10 @@ module FF_Pair_Tersoff
             c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
             d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
             h = self%tersoffAngle(atmType1, atmType2, atmType3) % h
+            lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+            gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
             angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-            Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Reqik, Dik)
+            Zeta = Zeta + exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Reqik, Dik)
           endif
         enddo
 
@@ -270,7 +272,7 @@ module FF_Pair_Tersoff
     real(dp) :: sub
     real(dp) :: rmin_ij
     real(dp) :: A, B, c, d, Req, D2 
-    real(dp) :: lam1, lam2
+    real(dp) :: lam1, lam2, lam3, gam
     real(dp) :: Zeta, Zeta2
     real(dp) :: BetaPar, n, h
     real(dp) :: b1, b2, V1, V2
@@ -335,8 +337,10 @@ module FF_Pair_Tersoff
               c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
               d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
               h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+              lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+              gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-              Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
+              Zeta = Zeta + exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
             endif     
           enddo
           !Compute the Tersoff U_ji component
@@ -359,9 +363,11 @@ module FF_Pair_Tersoff
               c = self%tersoffAngle(atmType2, atmType1, atmType3) % c
               d = self%tersoffAngle(atmType2, atmType1, atmType3) % d
               h = self%tersoffAngle(atmType2, atmType1, atmType3) % h            
+              lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+              gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
               rjk = sqrt(rjk)
               angijk = self%angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
-              Zeta2 = Zeta2 + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rjk, Req, D2)
+              Zeta2 = Zeta2 + exp(lam3*(rij-rjk))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rjk, Req, D2)
             endif     
           enddo
           if(Zeta /= 0E0_dp) then
@@ -453,8 +459,10 @@ module FF_Pair_Tersoff
               c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
               d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
               h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+              lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+              gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-              Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
+              Zeta = Zeta + exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
             endif     
           enddo
           !Compute the Old Tersoff U_ji component
@@ -477,9 +485,11 @@ module FF_Pair_Tersoff
               c = self%tersoffAngle(atmType2, atmType1, atmType3) % c
               d = self%tersoffAngle(atmType2, atmType1, atmType3) % d
               h = self%tersoffAngle(atmType2, atmType1, atmType3) % h            
+              lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+              gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
 
               angijk = self%angleCalc(-rxij, -ryij, -rzij, rij, rxjk, ryjk, rzjk, rjk)
-              Zeta2 = Zeta2 + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rjk, Req, D2)
+              Zeta2 = Zeta2 + exp(lam3*(rij-rjk))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rjk, Req, D2)
             endif     
           enddo
           if(Zeta /= 0E0_dp) then
@@ -580,9 +590,11 @@ module FF_Pair_Tersoff
                 c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
                 d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
                 h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+                lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+                gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
                 rik = sqrt(rik)
                 angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-                sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+                sub = exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
                 Zeta = Zeta + sub
               endif
               rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
@@ -596,9 +608,11 @@ module FF_Pair_Tersoff
                 c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
                 d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
                 h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+                lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+                gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
                 rik = sqrt(rik)
                 angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-                sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+                sub = exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
                 Zeta2 = Zeta2 + sub
               endif
             else
@@ -613,10 +627,12 @@ module FF_Pair_Tersoff
                 c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
                 d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
                 h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+                lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+                gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
                 rik = sqrt(rik)
 
                 angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-                sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+                sub = exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
                 Zeta = Zeta + sub
                 Zeta2 = Zeta2 + sub
               endif
@@ -675,7 +691,7 @@ module FF_Pair_Tersoff
     real(dp) :: sub
     real(dp) :: rmin_ij
     real(dp) :: A, B, c, d, Req, D2 
-    real(dp) :: lam1, lam2
+    real(dp) :: lam1, lam2, lam3, gam
     real(dp) :: Zeta, Zeta2
     real(dp) :: BetaPar, n, h
     real(dp) :: b1, b2, V1, V2
@@ -740,8 +756,10 @@ module FF_Pair_Tersoff
               c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
               d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
               h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+              lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+              gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-              Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
+              Zeta = Zeta + exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
             endif     
           enddo
           if(Zeta /= 0E0_dp) then
@@ -803,8 +821,10 @@ module FF_Pair_Tersoff
           c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
           d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
           h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+          lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+          gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
           angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-          Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
+          Zeta = Zeta + exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
         endif
 
       enddo
@@ -872,10 +892,12 @@ module FF_Pair_Tersoff
               c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
               d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
               h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+              lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+              gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
               rik = sqrt(rik)
 
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-              sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+              sub = exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
               Zeta = Zeta + sub
               Zeta2 = Zeta2 + sub
             endif
@@ -891,11 +913,13 @@ module FF_Pair_Tersoff
           rik = sqrt(rik)
           D2 = self%tersoffPair(atmType1, atmType3) % D
           Req = self%tersoffPair(atmType1, atmType3) % Req
+          lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
           c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
           d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
           h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+          gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
           angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-          sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+          sub = exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
           Zeta = Zeta + sub
 
           BetaPar = self%tersoffPair(atmType1, atmType2) % beta
@@ -944,7 +968,7 @@ module FF_Pair_Tersoff
     real(dp) :: sub
     real(dp) :: rmin_ij
     real(dp) :: A, B, c, d, Req, D2 
-    real(dp) :: lam1, lam2
+    real(dp) :: lam1, lam2, lam3, gam
     real(dp) :: Zeta, Zeta2
     real(dp) :: BetaPar, n, h
     real(dp) :: b1, b2, V1, V2
@@ -1002,8 +1026,10 @@ module FF_Pair_Tersoff
               c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
               d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
               h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+              lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+              gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-              Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
+              Zeta = Zeta + exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
             endif     
           enddo
           if(Zeta /= 0E0_dp) then
@@ -1066,11 +1092,13 @@ module FF_Pair_Tersoff
           rik = sqrt(rik)
           D2 = self%tersoffPair(atmType1, atmType3) % D
           Req = self%tersoffPair(atmType1, atmType3) % Req
+          lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
           c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
           d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
           h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+          gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
           angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-          Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
+          Zeta = Zeta + exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Req, D2)
         endif
 
       enddo
@@ -1139,13 +1167,16 @@ module FF_Pair_Tersoff
             if(rik < rMaxSq) then
               D2 = self%tersoffPair(atmType1, atmType3) % D
               Req = self%tersoffPair(atmType1, atmType3) % Req
+              lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
               c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
               d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
               h = self%tersoffAngle(atmType1, atmType2, atmType3) % h            
+              gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
               rik = sqrt(rik)
 
               angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-              sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+!              sub = self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
+              sub = exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) *  self%Fc_Func(rik, Req, D2)
               if(kAtom == nAtom) then
                 Zeta2 = Zeta2 + sub
               else
@@ -1197,7 +1228,7 @@ module FF_Pair_Tersoff
     integer :: molIndx1, molIndx2, molIndx3
     real(dp) :: A, B, c, d, Reqij, Reqik, Dij, Dik
     real(dp) :: E_Tersoff
-    real(dp) :: lam1, lam2
+    real(dp) :: lam1, lam2, lam3, gam
     real(dp) :: Zeta
     real(dp) :: BetaPar, n, h
     real(dp) :: b1, b2, V1
@@ -1272,8 +1303,10 @@ module FF_Pair_Tersoff
             c = self%tersoffAngle(atmType1, atmType2, atmType3) % c
             d = self%tersoffAngle(atmType1, atmType2, atmType3) % d
             h = self%tersoffAngle(atmType1, atmType2, atmType3) % h
+            lam3 = self%tersoffAngle(atmType1, atmType2, atmType3) % lam3
+            gam = self%tersoffAngle(atmType1, atmType2, atmType3) % gam
             angijk = self%angleCalc(rxij, ryij, rzij, rij, rxik, ryik, rzik, rik)
-            Zeta = Zeta + self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Reqik, Dik)
+            Zeta = Zeta + exp(lam3*(rij-rik))*gam*self%gik_Func(angijk, c, d, h) * self%Fc_Func(rik, Reqik, Dik)
           endif
         enddo
 

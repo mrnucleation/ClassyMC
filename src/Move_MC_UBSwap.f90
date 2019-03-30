@@ -174,6 +174,9 @@ use VarPrecision
     endif
 
 
+    if(nCount == 0) then
+      return
+    endif
 
     !Compute the generation probability
     Prob = real(trialBox%nMolTotal, dp) * self%ubVol

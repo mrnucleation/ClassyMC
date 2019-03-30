@@ -850,6 +850,7 @@ module SimpleSimBox
     enddo
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
     write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
+    write(nout,*) "Box ", self%boxID, " Temperature: ", self % temperature
 
     call self % ComputeEnergy
     call self % NeighList(1) % BuildList
