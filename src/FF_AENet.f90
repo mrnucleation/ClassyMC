@@ -15,7 +15,7 @@ module FF_AENet
   !AENet Library functions
 #ifdef AENET
   use predict_lib, only: initialize_lib, get_energy_lib
-  use aenet, only: aenet_atomic_energy
+  use aenet, only: aenet_atomic_energy,&
                    aenet_Rc_min, aenet_Rc_max
   use geometry, only: geo_recip_lattice
   use input, only: InputData
