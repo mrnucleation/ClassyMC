@@ -16,7 +16,7 @@ module FF_AENet
 #ifdef AENET
   use predict_lib, only: initialize_lib, get_energy_lib
   use aenet, only: aenet_atomic_energy
-!                   aenet_Rc_min, aenet_Rc_max,
+                   aenet_Rc_min, aenet_Rc_max
   use geometry, only: geo_recip_lattice
   use input, only: InputData
 #endif
@@ -71,15 +71,15 @@ module FF_AENet
 !       call aenet_load_potential(itype, inp%netFile(itype), stat)
 !     enddo
 
-!     self%rCut = aenet_Rc_max
-!     self%rCutSq = aenet_Rc_max * aenet_Rc_max
+     self%rCut = aenet_Rc_max
+     self%rCutSq = aenet_Rc_max * aenet_Rc_max
      allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
      allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
      self%rMin = 0E0_dp
      self%rMinTable = 0E0_dp
 
-     self%rCut = 4.0E0_dp
-     self%rCutSq = 4.0E0_dp**2
+!     self%rCut = 4.0E0_dp
+!     self%rCutSq = 4.0E0_dp**2
 
 
   end subroutine
