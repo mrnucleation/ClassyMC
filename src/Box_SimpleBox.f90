@@ -27,12 +27,15 @@ module SimpleSimBox
 !    real(dp), allocatable :: ETable(:), dETable(:)
 !    real(dp), allocatable :: atoms(:,:)
 !
+!    Molecule Based Indexing and Census Arrays 
 !    integer, allocatable :: NMolMin(:), NMolMax(:)
 !    integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
 !
+!    Atom Based Indexing Arrays 
 !    integer, allocatable :: AtomType(:), MolType(:)
 !    integer, allocatable :: MolIndx(:), MolSubIndx(:), SubIndx(:)
 !
+!      
 !    integer, allocatable :: MolGlobalIndx(:, :)
 !    integer, allocatable :: TypeFirst(:), TypeLast(:)
 !
@@ -68,12 +71,13 @@ module SimpleSimBox
       procedure, pass :: DumpData => SimpleBox_DumpData
 
       !Coordinate Processing Functions
+      procedure, pass :: GetNeighborList => Simplebox_GetNeighborList
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
 !      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
 
-      !Property Gathering Functions
+      !New Property Gathering Functions
       procedure, pass :: GetNewEnergy => Simplebox_GetNewEnergy
       procedure, pass :: GetNewMolCount => Simplebox_GetNewMolCount
 !      procedure, pass :: GetNewAtomCount => Simplebox_GetNewAtomCount
@@ -81,6 +85,7 @@ module SimpleSimBox
 
 
       !Update Functions
+      procedure, pass :: IsActive => SimpleBox_IsActive
       procedure, pass :: AddMol => SimpleBox_AddMol
       procedure, pass :: DeleteMol => SimpleBox_DeleteMol
       procedure, pass :: Update => SimpleBox_Update
@@ -590,15 +595,15 @@ module SimpleSimBox
 
   end function
 !==========================================================================================
-!  subroutine SimpleBox_GetCoordinates(self, atoms)
-!    implicit none
-!    class(SimpleBox), intent(inout), target :: self
-!    real(dp), pointer :: atoms(:,:)
-!
-!
-!    atoms => self%atoms
-!
-!  end subroutine
+  subroutine SimpleBox_GetNeighborList(self, listindx, neighlist, nNei)
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    integer, intent(in) :: listIndx
+    integer, pointer, intent(inout) :: neighlist(:,:), nNei(:)
+
+    call self%NeighList(listindx)%GetListArray(neighlist, nNei)
+
+  end subroutine
 !==========================================================================================
   subroutine SimpleBox_GetEnergyTable(self, etable)
     implicit none
@@ -633,6 +638,22 @@ module SimpleSimBox
       class is(Deletion)
         nNew = nNew - 1
     end select
+
+  end function
+!==========================================================================================
+!  Checks to see if the atom is present in the box.  This is required 
+  function SimpleBox_IsActive(self, atmIndx) result(active)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    logical :: active
+    integer, intent(in) :: atmIndx
+
+    if( self%MolSubIndx(atmIndx) > self%NMol(self%MolType(atmIndx)) ) then
+      active = .false.
+    else
+      active = .true.
+    endif
 
   end function
 !==========================================================================================

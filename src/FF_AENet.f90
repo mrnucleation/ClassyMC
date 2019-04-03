@@ -245,7 +245,7 @@ module FF_AENet
     real(dp), pointer :: atoms(:,:) => null()
 
 
-    call curbox%Neighlist(1)%GetListArray(nNeigh, neighlist)
+    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
     call curbox%GetCoordinates(atoms)
     accept = .true.
     E_Diff = 0E0_dp

@@ -47,7 +47,7 @@ module Template_NeighList
 
   end subroutine
 !===================================================================================
-  subroutine GetListArray(self, nNeigh, list)
+  subroutine GetListArray(self,list,  nNeigh )
     implicit none
     class(NeighListDef), intent(inout), target :: self
     integer, pointer, intent(inout) :: nNeigh(:)
