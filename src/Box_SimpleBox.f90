@@ -75,6 +75,7 @@ module SimpleSimBox
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
+      procedure, pass :: CountAtoms => SimpleBox_CountAtoms
 !      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
 
       !New Property Gathering Functions
@@ -595,6 +596,39 @@ module SimpleSimBox
 
   end function
 !==========================================================================================
+! Returns the total number of atoms in the system.  Alternatively can be used to
+! get the atoms of a single type by passing a value to atmtype
+  function SimpleBox_CountAtoms(self, atmtype) result(nCount)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, optional, intent(in) :: atmtype
+    integer :: iAtom, atmType1
+    integer :: nCount
+
+    nCount = 0
+
+    if(present(atmtype)) then
+       do iAtom = 1, self%nMaxAtoms
+         if(.not. self%IsActive(iAtom)) then
+           cycle
+         endif
+         atmType1 = self%AtomType(iAtom)
+         if(atmType1 == atmType) then
+           nCount = nCount + 1
+         endif
+      enddo
+    else
+       do iAtom = 1, self%nMaxAtoms
+         if(self%IsActive(iAtom)) then
+           nCount = nCount + 1
+         endif
+      enddo
+    endif
+
+
+  end function
+!==========================================================================================
   subroutine SimpleBox_GetNeighborList(self, listindx, neighlist, nNei)
     implicit none
     class(SimpleBox), intent(inout), target :: self
@@ -785,9 +819,12 @@ module SimpleSimBox
     implicit none
     class(SimpleBox), intent(inout) :: self
     logical :: accept
+    integer :: iList
     real(dp) :: tempE
 
-    call self % NeighList(1) % BuildList
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
 !    call self % ComputeEnergy
 
 !    call self % EFunc % Method % DetailedECalc( self, tempE, accept )
@@ -862,7 +899,7 @@ module SimpleSimBox
     implicit none
     class(SimpleBox), intent(inout) :: self
     logical :: accept
-    integer :: iConstrain, iMol
+    integer :: iConstrain, iMol, iList
     integer :: iType, molStart
 
     self%nMolTotal = 0
@@ -874,7 +911,9 @@ module SimpleSimBox
     write(nout,*) "Box ", self%boxID, " Temperature: ", self % temperature
 
     call self % ComputeEnergy
-    call self % NeighList(1) % BuildList
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
 
     if( size(self%Constrain) > 0 ) then
       do iConstrain = 1, size(self%Constrain)
@@ -905,14 +944,16 @@ module SimpleSimBox
     use Units, only: outEngUnit, engStr
     implicit none
     class(SimpleBox), intent(inout) :: self
-    integer :: iConstrain
+    integer :: iConstrain, iList
     real(dp) :: E_Culm
 
     E_Culm = self%ETotal
 
     write(nout,*) "--------Box", self%boxID , "Energy---------"
     call self % ComputeEnergy
-    call self % NeighList(1) % BuildList
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
 
     write(nout, *) "Final Energy:", self % ETotal/outEngUnit, engStr
     if(self%ETotal /= 0) then

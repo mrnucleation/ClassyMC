@@ -41,9 +41,10 @@ module Template_NeighList
 
   end subroutine
 !===================================================================================
-  subroutine BuildList(self)
+  subroutine BuildList(self, listindx)
     implicit none
     class(NeighListDef), intent(inout) :: self
+    integer, intent(in) :: listindx
 
   end subroutine
 !===================================================================================

@@ -37,7 +37,9 @@ module MasterTemplate
     character(len=*), intent(in) :: line
     integer, intent(out) :: lineStat
 
-    lineStat = 0
+    lineStat = -1
+    write(0,*) "This Object does not contain any modifiable parameters"
+    write(0,*) line
 
   end subroutine
 !====================================================================

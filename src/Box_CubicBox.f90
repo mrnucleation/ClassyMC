@@ -212,8 +212,6 @@ module CubicBoxDef
         self % maintFreq = intVal
         write(nout,*) "Neigh Update Frequency:", self % maintFreq
 
-
-
       case("chempotential")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
@@ -299,11 +297,13 @@ module CubicBoxDef
     implicit none
     class(CubeBox), intent(inout) :: self
     logical :: accept
-    integer :: iAtom, iDims, iConstrain, iType
+    integer :: iAtom, iDims, iConstrain, iType, iList
     integer :: iMol, molStart
 
     call self % ComputeEnergy
-    call self % NeighList(1) % BuildList
+    do iList = 1 ,size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
 
     do iAtom = 1, self%nMaxAtoms
       if( self%MolSubIndx(iAtom) > self%NMol(self%MolType(iAtom)) ) then
@@ -364,14 +364,16 @@ module CubicBoxDef
     use Units, only: outEngUnit, engStr
     implicit none
     class(CubeBox), intent(inout) :: self
-    integer :: iConstrain
+    integer :: iConstrain, iList
     real(dp) :: E_Culm
 
     E_Culm = self%ETotal
 
     write(nout,*) "--------Box", self%boxID , "Energy---------"
     call self % ComputeEnergy
-    call self % NeighList(1) % BuildList
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
 
     write(nout, *) "Final Energy:", self % ETotal/outEngUnit, engStr
     write(nout, *) "Final Energy (Per Mol):", self % ETotal/(self%nMolTotal*outEngUnit), engStr

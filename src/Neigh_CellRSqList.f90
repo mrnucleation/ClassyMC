@@ -177,10 +177,11 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
-  subroutine CellRSqList_BuildList(self)
+  subroutine CellRSqList_BuildList(self, listindx)
     use SearchSort, only: QSort
     implicit none
     class(CellRSqList), intent(inout) :: self
+    integer, intent(in) :: listindx
 
     integer :: iAtom, jNei, jAtom
     integer :: maxAtoms

@@ -358,7 +358,8 @@
      
       end subroutine   
 !========================================================            
-      subroutine modifyCommand(line, lineStat)
+    subroutine modifyCommand(line, lineStat)
+      use AnalysisData, only: AnalysisArray, analyCommon
       use BoxData, only: BoxArray
       use Template_SimBox
       use ForcefieldData, only: EnergyCalculator, nForceFields
@@ -382,6 +383,11 @@
       call GetXCommand(line, command, 2, lineStat)
       call LowerCaseLine(command)
       select case(adjustl(trim(command)))
+        case("analysis")
+           call GetXCommand(line, command2, 3, lineStat)
+           read(command2, *) intValue
+           call AnalysisArray(intValue) % func % ModifyIO(line, lineStat)
+
         case("box")
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue

@@ -109,9 +109,14 @@ use Template_NeighList, only: NeighListDef
 !    call self%DumpList(2)
   end subroutine
 !===================================================================================
-  subroutine RSqList_BuildList(self)
+  subroutine RSqList_BuildList(self, listindx)
     implicit none
     class(RSqList), intent(inout) :: self
+    integer, intent(in) :: listindx
+
+    if(listindx > 1) then
+      return
+    endif
 
 
     call Builder_RSq(self%parent)

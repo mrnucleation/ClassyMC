@@ -89,6 +89,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_MolTranslation.f90\
         		$(SRC)/Move_MC_IsoVol.f90\
         		$(SRC)/Move_MC_PlaneRotate.f90\
+        		$(SRC)/Move_MC_PlaneTranslate.f90\
         		$(SRC)/Move_MC_ThermoLambda.f90\
         		$(SRC)/Move_MC_UBSwap.f90\
         		$(SRC)/Move_MC_VolExchange.f90\

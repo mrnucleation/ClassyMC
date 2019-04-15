@@ -8,11 +8,12 @@ module Input_Moves
   use MCMove_AVBMC, only: AVBMC
   use MCMove_AnisoVol, only: AnisoVol
   use MCMove_AtomTranslation, only: AtomTranslate
-  use MCMove_ParticleExchange, only: ParticleExchange
   use MCMove_Basic_Swap, only: Basic_Swap
   use MCMove_Delete, only: MoveDelete
   use MCMove_MolTranslation, only: MolTranslate
+  use MCMove_ParticleExchange, only: ParticleExchange
   use MCMove_PlaneRotation, only: PlaneRotate
+  use MCMove_PlaneTranslation, only: PlaneTranslate
   use MCMove_IsoVol, only: IsoVol
   use MCMove_UB_Swap, only: UB_Swap
   use MCMove_VolExchange, only: VolExchange
@@ -71,6 +72,9 @@ module Input_Moves
 
       case("planerotate")
         allocate(PlaneRotate::Moves(moveNum)%move)
+
+      case("planetranslation")
+        allocate(PlaneTranslate::Moves(moveNum)%move)
 
       case("volexchange")
         allocate(VolExchange::Moves(moveNum)%move)

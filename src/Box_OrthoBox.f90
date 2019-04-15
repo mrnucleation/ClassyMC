@@ -36,10 +36,12 @@ module OrthoBoxDef
     class(OrthoBox), intent(inout) :: self
     logical :: accept
     integer :: iType, iMol, iAtom, jType, subIndx, arrayIndx
-    integer :: iConstrain, molStart, molEnd
+    integer :: iConstrain, iList, molStart, molEnd
 
     call self % ComputeEnergy
-    call self % NeighList(1) % BuildList
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
 
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit
@@ -106,14 +108,16 @@ module OrthoBoxDef
     use Units, only: outEngUnit, engStr
     implicit none
     class(OrthoBox), intent(inout) :: self
-    integer :: iConstrain
+    integer :: iConstrain, iList
     real(dp) :: E_Culm
 
     E_Culm = self%ETotal
 
     write(nout,*) "--------Box", self%boxID , "Energy---------"
     call self % ComputeEnergy
-    call self % NeighList(1) % BuildList
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
 
     write(nout, *) "Final Energy:", self % ETotal/outEngUnit, engStr
     write(nout, *) "Final Energy (Per Mol):", self % ETotal/(self%nMolTotal*outEngUnit), engStr
