@@ -977,7 +977,7 @@ module SimpleSimBox
 
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
     write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
-    if( size(self%Constrain) > 0 ) then
+    if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % Epilogue
       enddo
