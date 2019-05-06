@@ -406,7 +406,7 @@ module SimpleSimBox
     endif
 
     nDisp = size(disp)
-    if( size(self%Constrain) > 0 ) then
+    if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % DiffCheck( self, disp(1:nDisp), accept )
       enddo
@@ -433,7 +433,7 @@ module SimpleSimBox
 
 
     nDisp = size(disp)
-    if( size(self%Constrain) > 0 ) then
+    if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % PostEnergy( self, disp(1:nDisp), E_Diff, accept )
       enddo
@@ -928,7 +928,8 @@ module SimpleSimBox
 
 
     write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit, engStr
-    write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Initial Energy (Per Mol): ", self % ETotal/(outEngUnit*self%nMolTotal), engStr
+    write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Initial Energy (Per Mol): ", &
+                                           self % ETotal/(outEngUnit*self%nMolTotal), engStr
 
     do iMol = 1, self%maxMol
       call self%GetMolData(iMol, molStart=molStart)
@@ -988,16 +989,18 @@ module SimpleSimBox
     class(SimpleBox), intent(inout) :: self
     integer :: iConstrain, iList
 
-    if( size(self%Constrain) > 0 ) then
+    if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % Update
       enddo
     endif
 
-    if( size(self%NeighList) > 0 ) then
+    if( allocated(self%NeighList) ) then
       do iList = 1, size(self%NeighList)
         call self%NeighList(iList) % Update
       enddo
+    else
+      stop "No Neighbor List has been defined!"
     endif
 
 

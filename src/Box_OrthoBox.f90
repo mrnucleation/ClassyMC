@@ -92,7 +92,8 @@ module OrthoBoxDef
 
 
     write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit, engStr
-    write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Initial Energy (Per Mol): ", self % ETotal/(outEngUnit*self%nMolTotal), engStr
+    write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Initial Energy (Per Mol): ", &
+                                          self % ETotal/(outEngUnit*self%nMolTotal), engStr
     do iMol = 1, self%maxMol
       call self%GetMolData(iMol, molStart=molStart)
       if( self%MolSubIndx(molStart) <= self%NMol(self%MolType(molStart)) ) then

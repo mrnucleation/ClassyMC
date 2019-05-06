@@ -96,7 +96,7 @@ use Template_NeighList, only: NeighListDef
 
     self%list = 0
     self%nNeigh = 0 
-    IF (AllocateStatus /= 0) STOP "*** NeighRSQList: Not enough memory ***"
+    IF (AllocateStatus /= 0) STOP "*** CellNeighRSQList: Memory Allocation Error! ***"
 
     self%restrictType = .false.
   end subroutine
