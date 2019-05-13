@@ -12,7 +12,7 @@ module Anaylsis_DensityOfStates
 #ifdef PARALLEL
     logical :: parallel = .true.
 #else
-    logical, parameter :: parallel = .false.
+    logical  :: parallel = .false.
 #endif
 
     integer :: fileunit = 300

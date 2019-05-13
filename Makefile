@@ -22,8 +22,8 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
 
 OPTIMIZE_FLAGS_GFORT := -O3 -cpp 
-OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds
-OPTIMIZE_FLAGS_GFORT += -g
+OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
+OPTIMIZE_FLAGS_GFORT += -g -lblas -llapack
 
 DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -cpp
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
@@ -186,8 +186,8 @@ default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
 default: COMPFLAGS += $(DEBUGFLAGS)
 default: startUP classyMC finale
 
-aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
+#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
+aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET
 aenet: startUP classyMCAENet finale

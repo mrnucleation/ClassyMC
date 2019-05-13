@@ -73,6 +73,7 @@ module SimpleSimBox
       !Coordinate Processing Functions
       procedure, pass :: GetNeighborList => Simplebox_GetNeighborList
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
+      procedure, pass :: GetIndexData => Simplebox_GetIndexData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
       procedure, pass :: CountAtoms => SimpleBox_CountAtoms
@@ -552,6 +553,27 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
+  subroutine SimpleBox_GetIndexData(self, MolIndx, MolSubIndx, SubIndx)
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    integer, intent(inout), pointer, optional :: MolIndx(:), MolSubIndx(:), SubIndx(:)
+
+    if(present(MolIndx)) then
+      MolIndx => self%MolIndx
+    endif
+
+    if(present(MolSubIndx)) then
+      MolSubIndx => self%MolSubIndx
+    endif
+
+    if(present(SubIndx)) then
+      SubIndx => self%SubIndx
+    endif
+
+
+
+  end subroutine
+!==========================================================================================
   subroutine SimpleBox_GetMolData(self, globalIndx, molStart, molEnd, molType, subIndx)
     implicit none
     class(SimpleBox), intent(inout) :: self
@@ -639,12 +661,21 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_GetEnergyTable(self, etable)
+  subroutine SimpleBox_GetEnergyTable(self, etable, detable)
     implicit none
     class(SimpleBox), intent(inout), target :: self
-    real(dp), pointer :: etable(:)
+    real(dp), pointer, optional :: ETable(:)
+    real(dp), pointer, optional :: dETable(:)
 
-    etable => self%ETable
+    if(present(etable)) then
+      ETable => self%ETable
+    endif
+
+    if(present(dETable)) then
+      dETable => self%dETable
+    endif
+
+
 
   end subroutine
 !==========================================================================================

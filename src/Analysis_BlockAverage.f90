@@ -3,6 +3,8 @@ module Anaylsis_BlockAverage
   use AnaylsisClassDef, only: Analysis
   use VarPrecision
 
+
+
   type, public, extends(Analysis):: BlockAverage
 !    logical :: perMove = .false.
 !    integer :: IOUnit = -1
@@ -11,7 +13,7 @@ module Anaylsis_BlockAverage
 #ifdef PARALLEL
     logical :: parallel = .true.
 #else
-    logical, parameter :: parallel = .false.
+    logical :: parallel = .false.
 #endif
 
     integer :: fileunit = 300
