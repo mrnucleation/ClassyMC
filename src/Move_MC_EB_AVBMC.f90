@@ -395,6 +395,295 @@ use VarPrecision
     lineStat = 0
 
   end subroutine
+!=================================================================================    
+  subroutine EBias_Insert_ChooseTarget(nInsType, nTarget, nTargType, nMol, ProbSel)
+      implicit none
+      integer , intent(in) :: nInsType
+      integer, intent(out) :: nTarget, nTargType, nMol
+      real(dp), intent(out) :: ProbSel
+      
+      integer :: i, iType
+      integer :: cnt(1:nMolTypes)
+      real(dp) :: avgE(1:nMolTypes)
+      real(dp) :: ProbTable(1:maxMol)
+      real(dp) :: grnd, norm       
+      real(dp) :: ranNum, sumInt   
+      
+      ProbTable = 0d0
+      avgE = 0d0
+      cnt = 0 
+      do i = 1, maxMol
+        if(isActive(i)) then
+           iType = typeList(i)
+           avgE(iType) = avgE(iType) + ETable(i)
+           cnt(iType) = cnt(iType) + 1
+        endif
+      enddo
+
+      do iType = 1, nMolTypes
+        if(cnt(iType) .ne. 0) then
+          avgE(iType) = avgE(iType)/dble(cnt(iType))
+        endif
+      enddo
+      do i = 1, maxMol
+        if(isActive(i)) then
+          iType = typeList(i)        
+          ProbTable(i) = exp(biasAlpha(nInsType,iType)*(ETable(i)-avgE(iType)))
+        endif
+      enddo
+      
+      norm = sum(ProbTable)
+      ranNum = norm*grnd()
+   
+      sumInt = 0d0
+      nTarget = 0
+      do while(sumInt .lt. ranNum)
+        nTarget = nTarget + 1
+        sumInt = sumInt + ProbTable(nTarget)
+      enddo
+      nTargType = typeList(nTarget) 
+      ProbSel = ProbTable(nTarget)/norm
+ 
+      nMol = 0
+      do i = 1, nTargType-1
+        nMol = nMol + NMAX(i)
+      enddo
+      nMol = nTarget - nMol
+      
+  end subroutine
+!=================================================================================    
+  subroutine EBias_Insert_ReverseProbTarget(nTarget, nType, newNeiETable, ProbRev)
+  implicit none
+  integer, intent(in) :: nTarget,nType
+  real(dp), intent(in) :: newNeiETable(:)
+  real(dp), intent(out) :: ProbRev
+  
+      integer :: i, nIndx
+      integer :: cnt(1:nMolTypes)
+      real(dp) :: ProbTable(1:maxMol)
+      real(dp) :: norm, EMax
+  
+      nIndx = molArray(nType)%mol(NPART(nType)+1)%indx
+      ProbTable = 0d0
+      EMax = newNeiETable(nTarget)
+!      EMax = 0d0
+      cnt = 0 
+      do i = 1, maxMol
+        if(isActive(i) .or. (i .eq. nIndx)) then
+          ProbTable(i) = exp(beta*(newNeiETable(i)-Emax))
+        endif
+      enddo
+!      ProbTable(nIndx) = exp(beta*(newNeiETable(nIndx)-Emax))
+      
+      norm = sum(ProbTable)
+      ProbRev = ProbTable(nTarget)/norm
+
+      end subroutine
+!=================================================================================    
+      subroutine EBias_Insert_ReverseProbSel(nTarget, nType, dE, ProbRev)
+      use SimParameters  
+      use Coords
+      use EnergyTables
+      use UmbrellaFunctions
+      implicit none
+      integer, intent(in) :: nTarget, nType
+      real(dp), intent(in) :: dE(:)
+      real(dp), intent(out) :: ProbRev
+      
+      integer :: i, iType, nIndx, bIndx
+      integer :: NDiff(1:nMolTypes)
+      real(dp) :: biasArray(1:nMolTypes)
+      real(dp) :: norm, bias_diff, biasOld, biasNew       
+
+
+!      biasArray = 0d0
+!      NDiff = 0
+!      NDiff(nType) = +1
+!      bIndx = getNewBiasIndex(NPart,NMAX, NDiff)
+!      biasOld = NBias(bIndx)      
+!      do iType = 1, nMolTypes
+!        NDiff = 0
+!        NDiff(nType) = +1
+!        NDiff(iType) = NDiff(iType) - 1       
+!        if(NPART(iType) - 1 .lt. NMIN(iType)) cycle
+!        bIndx = getNewBiasIndex(NPart,NMAX, NDiff)
+!        biasNew = NBias(bIndx)      
+!        bias_diff = biasNew - biasOld
+!        biasArray(iType) = bias_diff
+!      enddo      
+      
+      nIndx = molArray(nType)%mol(NPART(nType)+1)%indx
+      norm = 0d0
+      do i = 1, maxMol
+        if(.not. isActive(i)) then
+          cycle
+        endif
+        if(NeighborList(i,nTarget)) then
+          if(i .ne. nTarget) then
+!            iType = typeList(i)        
+!            norm = norm + exp(beta*(ETable(i)+dE(i)-dE(nIndx)) + biasArray(iType))
+            norm = norm + exp(beta*(ETable(i)+dE(i)-dE(nIndx)))          
+          endif
+        endif
+      enddo
+!      norm = norm + exp(biasArray(nType))
+      norm = norm + 1d0
+!      ProbRev = exp(biasArray(nType))/norm
+      ProbRev = 1d0/norm
+      
+      end subroutine
+!=================================================================================    
+      subroutine EBias_Remove_ChooseTarget(nTarget, nType, nMol, ProbTarget)
+      use SimParameters  
+      use Coords
+      use EnergyTables
+      implicit none
+      integer, intent(out) :: nTarget, nType, nMol
+      real(dp), intent(out) :: ProbTarget
+      
+      integer :: i
+      real(dp) :: ProbTable(1:maxMol)
+      real(dp) :: scaleE
+      real(dp) :: grnd, norm
+      real(dp) :: ranNum, sumInt   
+        
+      ProbTable = 0d0
+      scaleE = 0d0
+      do i = 1, maxMol
+        if(isActive(i)) then
+          scaleE = NeiETable(i)
+          exit
+        endif
+      enddo   
+!      write(6,*) scaleE
+      do i = 1, maxMol
+        if(isActive(i)) then
+          ProbTable(i) = exp(beta * ( NeiETable(i) - scaleE ) )
+        endif
+      enddo
+
+      norm = sum(ProbTable)
+      ranNum = norm * grnd()
+
+      sumInt = 0d0
+      nTarget = 0
+      do while(sumInt .lt. ranNum)
+        nTarget = nTarget + 1
+        sumInt = sumInt + ProbTable(nTarget)
+      enddo
+      
+      nType = typeList(nTarget) 
+      ProbTarget = ProbTable(nTarget)/norm
+      
+      nMol = 0
+      do i = 1, nType-1
+        nMol = nMol + NMAX(i)
+      enddo
+      nMol = nTarget - nMol
+      
+      end subroutine
+!=================================================================================    
+      subroutine EBias_Remove_ChooseNeighbor(nTarget, biasArray, nSel, ProbTarget)
+      use SimParameters  
+      use Coords
+      use EnergyTables
+      implicit none
+      integer, intent(in) :: nTarget
+      real(dp), intent(in) :: biasArray(:)       
+      integer, intent(out) ::  nSel
+      real(dp), intent(out) :: ProbTarget
+      
+      integer :: i, iType
+      real(dp) :: ProbTable(1:maxMol)
+      real(dp) :: grnd, norm       
+      real(dp) :: ranNum, sumInt   
+      real(dp) :: dummy
+
+      ProbTable = 0d0
+      dummy = biasArray(1)
+      do i = 1, maxMol
+        if(.not. isActive(i)) then
+          cycle
+        endif
+        if(NeighborList(i,nTarget)) then
+          if(i .ne. nTarget) then
+!            iType = typeList(i)
+!            ProbTable(i) = exp(beta * ETable(i) + biasArray(iType))
+            ProbTable(i) = exp(beta * ETable(i))          
+          endif
+        endif
+      enddo
+
+      norm = sum(ProbTable)
+      ranNum = norm * grnd()
+
+      sumInt = 0d0
+      nSel = 0
+      do while(sumInt .lt. ranNum)
+        nSel = nSel + 1
+        sumInt = sumInt + ProbTable(nSel)
+      enddo
+
+      ProbTarget = ProbTable(nSel) / norm
+
+      end subroutine 
+!=================================================================================    
+      subroutine EBias_Remove_ReverseProbTarget(nTarget, nSel, nType, dE, ProbSel)
+      use SimParameters  
+      use Coords
+      use EnergyTables
+      implicit none
+      integer, intent(in) :: nSel, nType
+      integer, intent(in) :: nTarget
+      real(dp), intent(in) :: dE(:)
+      real(dp), intent(out) :: ProbSel
+
+      
+      integer :: i, iType
+      integer :: cnt(1:nMolTypes)
+
+      real(dp) :: avgE(1:nMolTypes)
+      real(dp) :: ProbTable(1:maxMol)
+      real(dp) :: grnd, norm       
+        
+      if(NTotal .eq. 2) then
+         ProbSel=1d0
+         return      
+      endif
+      
+      ProbTable = 0d0
+      avgE = 0d0
+      cnt = 0 
+      do i = 1, maxMol
+        if(isActive(i)) then
+          if(i .ne. nSel) then        
+            iType = typeList(i)
+            avgE(iType) = avgE(iType) + ETable(i) - dE(i)
+            cnt(iType) = cnt(iType) + 1
+
+          endif
+        endif
+      enddo
+
+      do iType = 1, nMolTypes
+        if(cnt(iType) .ne. 0) then
+          avgE(iType) = avgE(iType)/dble(cnt(iType))
+        endif
+      enddo
+      
+      do i = 1, maxMol
+        if(isActive(i)) then
+          if(i .ne. nSel) then    
+            iType = typeList(i)        
+            ProbTable(i) = exp(biasAlpha(nType,iType) * ((ETable(i)-dE(i))-avgE(iType)) )
+          endif
+        endif
+      enddo
+    
+      norm = sum(ProbTable)
+      ProbSel = ProbTable(nTarget)/norm
+
+      end subroutine
 
 !========================================================
 end module
