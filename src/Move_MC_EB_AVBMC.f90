@@ -274,7 +274,7 @@ use VarPrecision
 
   end subroutine
 !========================================================
-  subroutine EB_AVBMC_CountSites(self, trialBox, targetIndx, nNei)
+  subroutine EB_AVBMC_GetNeighbors(self, trialBox, targetIndx, nNei)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(EB_AVBMC), intent(inout) :: self

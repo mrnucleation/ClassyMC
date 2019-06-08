@@ -127,7 +127,7 @@
       use Common_NeighData
       use ParallelVar
       use RandomGen, only: initSeed
-      use SimControl, only: nMoves, nCycles, screenFreq
+      use SimControl, only: nMoves, nCycles, screenFreq, energyCheck
       use Units, only: outEngUnit, outLenUnit, outAngUnit,outPressUnit,  &
                        inEngUnit, inLenUnit, inAngUnit,inPressUnit, &
                        FindEngUnit, FindLengthUnit, FindAngularUnit,  &
@@ -151,6 +151,11 @@
           call GetXCommand(line, command, 3, lineStat)
           read(command, *) realValue  
           nCycles = nint(realValue, kind=8)
+
+        case("energycheck")
+          call GetXCommand(line, command, 3, lineStat)
+          read(command, *) intValue  
+          energyCheck = intValue
 
         case("moves")
           call GetXCommand(line, command, 3, lineStat)
@@ -414,7 +419,6 @@
      
       end subroutine
 !========================================================            
-!     The purpose of this subroutine is to lower case a given character string. 
       subroutine IO_ErrorControl(iLine, lineNumber, lineStore, lineStat)
       implicit none
       integer, intent(in) :: iLine, lineStat

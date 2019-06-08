@@ -22,7 +22,7 @@ contains
     use MultiBoxMoveDef, only: MCMultiBoxMove
     use Output_DumpCoords, only: Output_DumpData
     use RandomGen, only: sgrnd, grnd, ListRNG
-    use SimControl, only: nMoves, nCycles, screenfreq, configfreq
+    use SimControl, only: nMoves, nCycles, screenfreq, configfreq, energyCheck
     use Units, only: outEngUnit
 
     implicit none
@@ -87,6 +87,16 @@ contains
       if( mod(iCycle, int(configfreq, 8) ) == 0) then
         call Output_DumpData
       endif
+
+      if(energyCheck > 0) then
+        if( mod(iCycle, int(energyCheck, 8) ) == 0) then
+          do boxNum = 1, size(BoxArray)
+            call BoxArray(boxNum)%box%EnergySafetyCheck
+          enddo
+        endif
+      endif
+
+
 
       call Analyze(iCycle, iMove, accept, .false.) !Per Cycle Analysis
       call Maintenance(iCycle, iMove)

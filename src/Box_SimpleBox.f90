@@ -58,6 +58,7 @@ module SimpleSimBox
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
       procedure, pass :: Boundary => SimpleBox_Boundary
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
+      procedure, pass :: EnergySafetyCheck => SimpleBox_EnergySafetyCheck
       procedure, pass :: ComputeCM => SimpleBox_ComputeCM
 
 
@@ -75,6 +76,7 @@ module SimpleSimBox
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetIndexData => Simplebox_GetIndexData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
+      procedure, pass :: GetMolEnergy => SimpleBox_GetMolEnergy
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
       procedure, pass :: CountAtoms => SimpleBox_CountAtoms
 !      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
@@ -360,19 +362,48 @@ module SimpleSimBox
     call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
   end subroutine
 !==========================================================================================
+  subroutine SimpleBox_EnergySafetyCheck(self)
+    use ParallelVar, only: nout
+    use Units, only: outEngUnit, engStr
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    logical :: accept
+    real(dp) :: E_Current
+
+
+    E_Current = self%ETotal
+    call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
+
+    if(self%ETotal /= 0) then
+      if( abs((E_Current-self%ETotal)/self%ETotal) > 1E-7_dp ) then
+        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "Box: ", self%boxID
+        write(nout, *) "Culmative Energy: ", E_Current/outEngUnit, engStr
+        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
+        write(nout, *) "Difference: ", (self%ETotal-E_Current)/outEngUnit, engStr
+      endif
+    else
+      if( abs(E_Current-self%ETotal) > 1E-7_dp ) then
+        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "Box: ", self%boxID
+        write(nout, *) "Culmative Energy: ", E_Current/outEngUnit, engStr
+        write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
+        write(nout, *) "Difference: ", (self%ETotal-E_Current)/outEngUnit, engStr
+      endif
+    endif
+
+
+
+  end subroutine
+!==========================================================================================
   subroutine SimpleBox_UpdateEnergy(self, E_Diff)
     implicit none
     class(SimpleBox), intent(inout) :: self
     real(dp), intent(in) :: E_Diff
-!    real(dp), parameter :: infCheck = huge(dp)
-
-!    if(E_aDiff > infCheck) then
-!    endif
-
-    
 
     self % ETotal = self % ETotal + E_Diff
     self % ETable = self % ETable + self % dETable
+    self%dETable = 0E0_dp
 
   end subroutine
 !==========================================================================================
@@ -675,6 +706,36 @@ module SimpleSimBox
       dETable => self%dETable
     endif
 
+
+
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_GetMolEnergy(self, molIndx, EMol, newstate)
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    integer, intent(in) :: molIndx
+    logical, intent(in), optional :: newstate
+    real(dp), intent(out) :: EMol
+    logical :: calcDE
+    integer :: molStart, molEnd
+    integer :: iAtom
+
+    if(present(newstate)) then
+      calcDE = newstate
+    else
+      calcDE =.false.
+    endif
+
+    call self%GetMolData(molIndx, molStart=molStart, molEnd=molEnd)
+
+    EMol = 0E0_dp
+    do iAtom = molStart, molEnd
+      if(.not. calcDE) then
+        EMol = EMol + self%ETable(iAtom)
+      else
+        EMol = EMol + self%ETable(iAtom) + self%dETable(iAtom)
+      endif
+    enddo
 
 
   end subroutine

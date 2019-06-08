@@ -8,6 +8,7 @@ use VarPrecision
   type, public, extends(MCMove) :: AVBMC
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
+    logical :: ebias = .false.
     real(dp) :: inatmps = 1E-30_dp
     real(dp) :: inaccpt = 0E0_dp
     real(dp) :: outatmps = 1E-30_dp
@@ -28,6 +29,8 @@ use VarPrecision
       procedure, pass :: SwapIn => AVBMC_SwapIn
       procedure, pass :: SwapOut => AVBMC_SwapOut
       procedure, pass :: CountSites => AVBMC_CountSites
+      procedure, pass :: SelectNeigh => AVBMC_SelectNeigh
+      procedure, pass :: SelectNeighReverse => AVBMC_SelectNeighReverse
 !      procedure, pass :: Maintenance => AVBMC_Maintenance
       procedure, pass :: ProcessIO => AVBMC_ProcessIO
       procedure, pass :: Prologue => AVBMC_Prologue
@@ -85,14 +88,14 @@ use VarPrecision
     logical :: relative
     integer :: nTarget, nType, rawIndx, iConstrain
     integer :: CalcIndex, nMove, nCount
-    integer :: iAtom, iDisp, nNei
+    integer :: iAtom, iDisp
     integer :: molType, molStart, molEnd, atomIndx, nAtoms
     integer :: targStart
     real(dp) :: insPoint(1:3)
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, radius, extraTerms
     real(dp) :: Prob = 1E0_dp
-    real(dp) :: ProbSub
+    real(dp) :: ProbSub, ProbSel
 
     self % atmps = self % atmps + 1E0_dp
     self % inatmps = self % inatmps + 1E0_dp
@@ -169,12 +172,14 @@ use VarPrecision
     endif
 
 
-    call self % CountSites(trialBox, targStart,nNei)
+    !Compute the probability of reversing the move
+    call self%SelectNeighReverse(trialBox, nTarget, ProbSel)
+
 
     !Compute the generation probability
     Prob = real(trialBox%nMolTotal, dp) * self%avbmcVol
-    Prob = Prob/(real(nNei+1, dp) * real(trialBox%nMolTotal+1, dp))
-!    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1
+    Prob = Prob*ProbSel/real(trialBox%nMolTotal+1, dp)
+!    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1, ProbSel
 
     !Get the chemical potential term for GCMC
     extraTerms = sampling % GetExtraTerms(self%newpart(1:nAtoms), trialBox)
@@ -202,10 +207,11 @@ use VarPrecision
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
     integer :: molType, molStart, molEnd
-    integer :: nMove, rawIndx, iConstrain
-    integer :: CalcIndex, nNei, nCount
+    integer :: nTarget, nMove, rawIndx, iConstrain
+    integer :: CalcIndex, nCount
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, extraTerms
+    real(dp) :: ProbSel = 1E0_dp
     real(dp) :: Prob = 1E0_dp
     real(dp) :: Probconstruct = 1E0_dp
 
@@ -215,7 +221,13 @@ use VarPrecision
 
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
-    call FindMolecule(trialbox, rawIndx, nMove)
+    call FindMolecule(trialbox, rawIndx, nTarget)
+    call trialBox % GetMolData(nTarget, molType=molType, molStart=molStart)
+    call self%SelectNeigh(trialBox, nTarget, nMove, ProbSel)
+
+    if(nMove < 1) then
+      return
+    endif
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart)
 
 
@@ -253,11 +265,9 @@ use VarPrecision
 
 
     call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
-    call self % CountSites(trialBox, molStart, nNei)
-
-    Prob = real(nNei, dp) * real(trialBox%nMolTotal, dp)
+    Prob = real(trialBox%nMolTotal, dp)/ProbSel
     Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%avbmcVol)
-!    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%avbmcVol, nNei, trialBox%nMolTotal-1
+!    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%avbmcVol, trialBox%nMolTotal-1, ProbSel
 
     !Get chemical potential term
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), trialBox)
@@ -285,21 +295,164 @@ use VarPrecision
     integer :: targetStart
     real(dp) :: rx, ry,rz, rsq
 
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+
+    call trialbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call trialbox%GetCoordinates(atoms)
 
     nNei = 0
-    do iNei = 1, trialbox % NeighList(1) % nNeigh(targetIndx)
-      iAtom = trialBox % NeighList(1) % list(iNei, targetIndx)
+    do iNei = 1, nNeigh(targetIndx)
+      iAtom = neighlist(iNei, targetIndx)
       molIndx = trialBox%MolIndx(iAtom)
       if(iAtom == trialBox%MolStartIndx(molIndx)) then
-        rx = trialBox % atoms(1, iAtom) - trialBox % atoms(1, targetIndx)
-        ry = trialBox % atoms(2, iAtom) - trialBox % atoms(2, targetIndx)
-        rz = trialBox % atoms(3, iAtom) - trialBox % atoms(3, targetIndx)
+        rx = atoms(1, iAtom) - atoms(1, targetIndx)
+        ry = atoms(2, iAtom) - atoms(2, targetIndx)
+        rz = atoms(3, iAtom) - atoms(3, targetIndx)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%avbmcRadSq) then
           nNei = nNei + 1
         endif
       endif
     enddo
+
+  end subroutine
+!========================================================
+  subroutine AVBMC_SelectNeigh(self, trialBox, targetIndx, removeIndx, ProbOut)
+    use Common_MolInfo, only: MolData, nMolTypes
+    use RandomGen, only: ListRNG, grnd
+    implicit none
+    class(AVBMC), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: trialBox
+    integer, intent(in) :: targetIndx
+    integer, intent(out) :: removeIndx
+    real(dp), intent(out) :: ProbOut
+    integer :: iNei, iAtom, molIndx
+    integer :: nNei
+    integer :: targetStart
+    integer :: removelist(1:60)
+    real(dp) :: rx, ry,rz, rsq
+    real(dp) :: weights(1:60), norm, maxweight, EMol
+
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+
+    call trialbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call trialbox%GetCoordinates(atoms)
+
+
+    nNei = 0
+    do iNei = 1, nNeigh(targetIndx)
+      iAtom = neighlist(iNei, targetIndx)
+      molIndx = trialBox%MolIndx(iAtom)
+      if(iAtom == trialBox%MolStartIndx(molIndx)) then
+        rx = atoms(1, iAtom) - atoms(1, targetIndx)
+        ry = atoms(2, iAtom) - atoms(2, targetIndx)
+        rz = atoms(3, iAtom) - atoms(3, targetIndx)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%avbmcRadSq) then
+          nNei = nNei + 1
+          removelist(nNei) = molIndx
+        endif
+      endif
+    enddo
+
+    if(nNei < 1) then
+      removeIndx = -1
+      ProbOut = 0E0_dp
+      return
+    endif
+
+    if(self%ebias) then
+      weights = 0E0_dp
+      do iNei = 1, nNei
+        call trialbox%GetMolEnergy(removelist(iNei), EMol, newstate=.false.)
+        weights(iNei) = EMol
+      enddo
+      maxweight = maxval(weights(1:nNei))
+      do iNei = 1, nNei
+        EMol = weights(iNei)
+        weights(iNei) = exp((EMol-maxweight)*trialBox%beta)
+      enddo     
+      norm = sum(weights(1:nNei))
+      removeIndx = ListRNG(weights, norm)
+      ProbOut = weights(removeIndx)/norm
+    else
+      removeIndx = floor(grnd()*nNei + 1E0_dp)
+      ProbOut = 1E0_dp/real(nNei,dp)
+    endif
+
+  end subroutine
+!========================================================
+  subroutine AVBMC_SelectNeighReverse(self, trialBox, targetIndx, ProbOut)
+    use Common_MolInfo, only: MolData, nMolTypes
+    use RandomGen, only: ListRNG, grnd
+    implicit none
+    class(AVBMC), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: trialBox
+    integer, intent(in) :: targetIndx
+    real(dp), intent(out) :: ProbOut
+    integer :: iNei, iAtom, molIndx
+    integer :: nNei
+    integer :: targetStart
+    integer :: removelist(1:60)
+    real(dp) :: rx, ry,rz, rsq
+    real(dp) :: weights(1:60), norm, maxweight, EMol
+
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+
+    call trialbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call trialbox%GetCoordinates(atoms)
+
+
+    nNei = 0
+    do iNei = 1, nNeigh(targetIndx)
+      iAtom = neighlist(iNei, targetIndx)
+      molIndx = trialBox%MolIndx(iAtom)
+      if(iAtom == trialBox%MolStartIndx(molIndx)) then
+        rx = atoms(1, iAtom) - atoms(1, targetIndx)
+        ry = atoms(2, iAtom) - atoms(2, targetIndx)
+        rz = atoms(3, iAtom) - atoms(3, targetIndx)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%avbmcRadSq) then
+          nNei = nNei + 1
+          removelist(nNei) = molIndx
+        endif
+      endif
+    enddo
+    nNei = nNei + 1
+    removelist(nNei) = self%newPart(1)%molIndx
+
+    if(nNei < 1) then
+      ProbOut = 0E0_dp
+      return
+    endif
+
+    if(self%ebias) then
+      weights = 0E0_dp
+      do iNei = 1, nNei
+        call trialbox%GetMolEnergy(removelist(iNei), EMol, newstate=.true.)
+        weights(iNei) = EMol
+      enddo
+      maxweight = maxval(weights(1:nNei))
+!      write(*,*) "Max:", maxweight
+!      write(*,*) "Max:", weights(1:nNei)
+      do iNei = 1, nNei
+        EMol = weights(iNei)
+!        write(*,*) EMol, maxweight, EMol-maxweight
+        weights(iNei) = exp((EMol-maxweight)*trialBox%beta)
+      enddo     
+      norm = sum(weights(1:nNei))
+
+!      write(*,*) "Norm:", norm
+      ProbOut = weights(nNei)/norm
+    else
+      ProbOut = 1E0_dp/real(nNei,dp)
+    endif
 
   end subroutine
 !=========================================================================
@@ -375,6 +528,11 @@ use VarPrecision
 
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
+      case("energybias")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self%ebias = logicVal
+
       case("radius")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal

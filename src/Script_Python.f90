@@ -10,7 +10,7 @@
 
       end subroutine
 !========================================================            
-      subroutine Script_ReadParameters
+      subroutine Script_Command
       use ClassyConstants
       use Input_Forcefield
       use Input_AnalysisType, only: Script_AnalysisType

@@ -80,6 +80,7 @@ module SimControl
   integer(kind=8) :: nCycles = 0
   integer(kind=8) :: nMoves = 0
 
+  integer :: energyCheck = -1
   integer :: screenFreq = 1000
   integer :: configFreq = 100
   logical :: printBox = .true.
