@@ -11,6 +11,7 @@ contains
     use ForcefieldData, only: nForceFields
     use FF_Einstein, only: Pair_Einstein
     use FF_HardSphere, only: Pair_HardSphere
+    use FF_Hybrid, only: Pair_Hybrid
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use FF_Pair_LJ_Shift, only: Pair_LJ_Shift
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
@@ -40,6 +41,24 @@ contains
 
     !Forcefield objects go here!
     select case(trim(adjustl(FF_Type)))
+#ifdef AENET
+      case("aenet")
+        allocate(AENet::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as AENet style"
+#endif
+
+      case("einstein")
+        allocate(Pair_Einstein::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Einstein Crystal"
+
+      case("hardsphere")
+        allocate(Pair_HardSphere::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Hard Sphere"
+
+      case("hybrid")
+        allocate(Pair_Hybrid::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a Hybrid Forcefield"
+
       case("lj_cut")
         allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
@@ -52,36 +71,18 @@ contains
         allocate(Pair_LJ_Q_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
 
-!      case("lj_cut_nonei")
-!        allocate(Pair_LJ_Cut_NoNei::EnergyCalculator(FFNum) % Method)
-!        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut (No Neighbor List) style"
-
-      case("einstein")
-        allocate(Pair_Einstein::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Einstein Crystal"
-
-      case("hardsphere")
-        allocate(Pair_HardSphere::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Hard Sphere"
-
-      case("thermointegration")
-        allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
-
       case("pedone")
         allocate(Pair_Pedone_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Pedone Cut style"
-
 
       case("tersoff")
         allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
 
-#ifdef AENET
-      case("aenet")
-        allocate(AENet::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as AENet style"
-#endif
+      case("thermointegration")
+        allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
+
       case default
 !        write(*,*) "Here"
         lineStat = -1
