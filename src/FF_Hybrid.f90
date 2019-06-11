@@ -66,6 +66,7 @@ module FF_Hybrid
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
+    integer :: iField
     real(dp) :: E_Half
     real(dp) :: ESub
 
@@ -81,7 +82,7 @@ module FF_Hybrid
       endif
       self%EDiff(iField) = ESub
       E_Diff = E_Diff + ESub
-    endif
+    enddo
 
   end subroutine
 !=============================================================================+
@@ -114,7 +115,7 @@ module FF_Hybrid
         do iField = 1, self%NFFields 
           call GetXCommand(line, command, 1+iField, lineStat)
           read(command, *) intVal
-          self%ECalc(iField) = intVal
+          self%ECalcIndx(iField) = intVal
         enddo
 
       case default

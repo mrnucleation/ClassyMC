@@ -113,6 +113,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_AENet.f90\
         		$(SRC)/FF_Einstein.f90\
         		$(SRC)/FF_HardSphere.f90\
+        		$(SRC)/FF_Hybrid.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Shift.f90\
         		$(SRC)/FF_LJ_Ele_Cut.f90\
