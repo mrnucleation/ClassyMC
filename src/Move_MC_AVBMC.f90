@@ -9,6 +9,7 @@ use VarPrecision
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
     logical :: ebias = .false.
+    integer :: neilistindx = 1
     real(dp) :: inatmps = 1E-30_dp
     real(dp) :: inaccpt = 0E0_dp
     real(dp) :: outatmps = 1E-30_dp
@@ -226,6 +227,7 @@ use VarPrecision
     call self%SelectNeigh(trialBox, nTarget, nMove, ProbSel)
 
     if(nMove < 1) then
+      accept = .false.
       return
     endif
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart)
@@ -319,15 +321,16 @@ use VarPrecision
 
   end subroutine
 !========================================================
-  subroutine AVBMC_SelectNeigh(self, trialBox, targetIndx, removeIndx, ProbOut)
+  subroutine AVBMC_SelectNeigh(self, trialBox, targetIndx, removeMolIndx, ProbOut)
     use Common_MolInfo, only: MolData, nMolTypes
     use RandomGen, only: ListRNG, grnd
     implicit none
     class(AVBMC), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     integer, intent(in) :: targetIndx
-    integer, intent(out) :: removeIndx
+    integer, intent(out) :: removeMolIndx
     real(dp), intent(out) :: ProbOut
+    integer :: removeIndx
     integer :: iNei, iAtom, molIndx
     integer :: nNei
     integer :: targetStart
@@ -339,11 +342,11 @@ use VarPrecision
     integer, pointer :: neighlist(:,:) => null()
     real(dp), pointer :: atoms(:,:) => null()
 
-    call trialbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call trialbox%GetNeighborList(self%neilistindx, neighlist, nNeigh)
     call trialbox%GetCoordinates(atoms)
 
-
     nNei = 0
+    removelist = 0
     do iNei = 1, nNeigh(targetIndx)
       iAtom = neighlist(iNei, targetIndx)
       molIndx = trialBox%MolIndx(iAtom)
@@ -359,8 +362,9 @@ use VarPrecision
       endif
     enddo
 
+
     if(nNei < 1) then
-      removeIndx = -1
+      removeMolIndx = -1
       ProbOut = 0E0_dp
       return
     endif
@@ -378,9 +382,11 @@ use VarPrecision
       enddo     
       norm = sum(weights(1:nNei))
       removeIndx = ListRNG(weights, norm)
+      removeMolIndx = removelist(removeIndx)
       ProbOut = weights(removeIndx)/norm
     else
       removeIndx = floor(grnd()*nNei + 1E0_dp)
+      removeMolIndx = removelist(removeIndx)
       ProbOut = 1E0_dp/real(nNei,dp)
     endif
 
@@ -405,9 +411,8 @@ use VarPrecision
     integer, pointer :: neighlist(:,:) => null()
     real(dp), pointer :: atoms(:,:) => null()
 
-    call trialbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call trialbox%GetNeighborList(self%neilistindx, neighlist, nNeigh)
     call trialbox%GetCoordinates(atoms)
-
 
     nNei = 0
     do iNei = 1, nNeigh(targetIndx)
@@ -439,16 +444,11 @@ use VarPrecision
         weights(iNei) = EMol
       enddo
       maxweight = maxval(weights(1:nNei))
-!      write(*,*) "Max:", maxweight
-!      write(*,*) "Max:", weights(1:nNei)
       do iNei = 1, nNei
         EMol = weights(iNei)
-!        write(*,*) EMol, maxweight, EMol-maxweight
         weights(iNei) = exp((EMol-maxweight)*trialBox%beta)
       enddo     
       norm = sum(weights(1:nNei))
-
-!      write(*,*) "Norm:", norm
       ProbOut = weights(nNei)/norm
     else
       ProbOut = 1E0_dp/real(nNei,dp)
@@ -524,6 +524,7 @@ use VarPrecision
     integer, intent(out) :: lineStat
     character(len=30) :: command
     logical :: logicVal
+    integer :: intVal
     real(dp) :: realVal
 
     call GetXCommand(line, command, 4, lineStat)
@@ -532,6 +533,11 @@ use VarPrecision
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) logicVal
         self%ebias = logicVal
+
+      case("neighlist")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) intVal
+        self%neilistindx = intVal
 
       case("radius")
         call GetXCommand(line, command, 5, lineStat)

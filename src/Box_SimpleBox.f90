@@ -1,4 +1,6 @@
 !========================================================================================
+#define __StdErr__ 0
+!========================================================================================
 module SimpleSimBox
   use VarPrecision
   use ForcefieldData, only: ECalcArray
@@ -376,7 +378,7 @@ module SimpleSimBox
 
     if(self%ETotal /= 0) then
       if( abs((E_Current-self%ETotal)/self%ETotal) > 1E-7_dp ) then
-        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "!!!!!!!!!!!!!!!!!!ERROR! Large energy drift detected!!!!!!!!!!!!!!!!!!!!!!!!!!"
         write(nout, *) "Box: ", self%boxID
         write(nout, *) "Culmative Energy: ", E_Current/outEngUnit, engStr
         write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
@@ -384,7 +386,7 @@ module SimpleSimBox
       endif
     else
       if( abs(E_Current-self%ETotal) > 1E-7_dp ) then
-        write(nout, *) "ERROR! Large energy drift detected!"
+        write(nout, *) "!!!!!!!!!!!!!!!!!!ERROR! Large energy drift detected!!!!!!!!!!!!!!!!!!!!!!!!!!"
         write(nout, *) "Box: ", self%boxID
         write(nout, *) "Culmative Energy: ", E_Current/outEngUnit, engStr
         write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
@@ -610,6 +612,13 @@ module SimpleSimBox
     class(SimpleBox), intent(inout) :: self
     integer, intent(in)  :: globalIndx
     integer, intent(inout), optional :: molStart, molEnd, molType, subIndx
+
+
+    if((size(self%molStartIndx) < globalIndx) .or. (globalIndx < 1)) then
+      write(__StdErr__, *) "Error in Sim Box class: GetMolData has been given an invalid index"
+      write(__StdErr__, *) "Given Index:", globalIndx 
+      write(__StdErr__, *) "Array Size:", size(self%molStartIndx)
+    endif
 
     if( present(molStart) ) then
       molStart = self % MolStartIndx(globalIndx)

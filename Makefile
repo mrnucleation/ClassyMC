@@ -243,7 +243,7 @@ libClassyMC.so: $(OBJ_COMPLETE)
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
+		@$(FC) $(COMPFLAGS) $(MODFLAGS) -shared -fpic $^ -o $@ 	
 
        
 classyMC: $(OBJ_COMPLETE) 

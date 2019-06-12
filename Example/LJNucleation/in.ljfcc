@@ -1,12 +1,13 @@
 #======================================
-#  set rng_seed -6
-  set rng_seed 4272
+# Example Script capable of computing the nucleation free energy
+# of a Lennard-Jones system using the AVBMC or UB approach. 
+#======================================
+#
+  set rng_seed -6
   set NeighSkin 2.0
   set moves 100
   set cycles 600000
-#  SamplingType Metropolis
   SamplingType UmbrellaWHAM
-#  SamplingType Umbrella
   modify Sampling biasvariables 1
   modify Sampling analysis 1
   modify Sampling bounds 1 9 1.0 10.0
@@ -23,7 +24,7 @@
   modify box 1 temperature 0.8
   modify box 1 buildfreq 100
 
-  modify box 1 chempotential 1 -9.210340372
+  modify box 1 chempotential 1 -9.210340372 
   NeighList 1 rsqlist 1
 
   Create Moves
@@ -38,14 +39,13 @@
 
   Create Analysis
     clustersize 1 1 
-#    distpair 1 2 
   End_Create
 
 
-#  Create trajectory
-#    xyz 1 100 "Traj.xyz"
-#End_Create
+# Create trajectory
+#   xyz 1 100 "Traj.xyz"
+# End_Create
 
 
-   Run
+  Run
 #=====================================

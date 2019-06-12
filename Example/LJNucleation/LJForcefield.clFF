@@ -5,6 +5,7 @@ atomdef
   "He"  1.0
 end_atomdef
 
+
 molecule 1
   RegrowthType Simple
   atoms
