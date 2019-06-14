@@ -34,7 +34,7 @@ module Template_SimBox
     integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
 
     integer, allocatable :: AtomType(:), MolType(:)
-    integer, allocatable :: MolIndx(:), MolSubIndx(:), SubIndx(:)
+    integer, allocatable :: MolIndx(:), MolSubIndx(:), AtomSubIndx(:)
 
     integer, allocatable :: MolGlobalIndx(:, :)
     integer, allocatable :: TypeFirst(:), TypeLast(:)
@@ -161,11 +161,11 @@ module Template_SimBox
     lineStat = 0
   end subroutine
 !==========================================================================================
-  subroutine GetMolData(self, globalIndx, molStart, molEnd, molType, subIndx)
+  subroutine GetMolData(self, globalIndx, molStart, molEnd, molType, atomSubIndx)
     implicit none
     class(SimBox), intent(inout) :: self
     integer, intent(in)  :: globalIndx
-    integer, intent(inout), optional :: molStart, molEnd, molType, subIndx
+    integer, intent(inout), optional :: molStart, molEnd, molType, atomSubIndx
 
 
   end subroutine

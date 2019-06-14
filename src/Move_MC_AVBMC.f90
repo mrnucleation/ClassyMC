@@ -488,6 +488,7 @@ use VarPrecision
 
     self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
     self%avbmcRadSq = self%avbmcRad * self%avbmcRad
+    write(nout,*) "AVBMC Radius:", self%avbmcRad
     write(nout,*) "AVBMC Volume:", self%avbmcVol
 
     allocate( self%tempNNei(maxAtoms) )
@@ -549,7 +550,6 @@ use VarPrecision
         self%avbmcRad = realVal
         self%avbmcRadSq = realVal*realVal
         self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
-
 
       case default
         lineStat = -1

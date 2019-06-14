@@ -35,14 +35,13 @@ module SimpleSimBox
 !
 !    Atom Based Indexing Arrays 
 !    integer, allocatable :: AtomType(:), MolType(:)
-!    integer, allocatable :: MolIndx(:), MolSubIndx(:), SubIndx(:)
+!    integer, allocatable :: MolIndx(:), MolSubIndx(:), AtomSubIndx(:)
 !
 !      
 !    integer, allocatable :: MolGlobalIndx(:, :)
 !    integer, allocatable :: TypeFirst(:), TypeLast(:)
 !
 !    integer :: nLists
-!    class(NeighListDef), allocatable :: NeighList(:)
 !    ----------------------------
 !    
     integer :: nTotal
@@ -159,7 +158,7 @@ module SimpleSimBox
     allocate(self%MolType(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%MolIndx(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%MolSubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
-    allocate(self%SubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%AtomSubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
 
     allocate(self%MolStartIndx(1:maxMol), stat=AllocateStatus)
     allocate(self%MolEndIndx(1:maxMol), stat=AllocateStatus)
@@ -180,7 +179,7 @@ module SimpleSimBox
     self%MolType = 0
     self%MolIndx = 0
     self%MolSubIndx = 0
-    self%SubIndx = 0
+    self%AtomSubIndx = 0
     self%MolStartIndx = 0
     self%MolEndIndx = 0
 
@@ -191,6 +190,11 @@ module SimpleSimBox
 
     self%chempot = 0E0_dp
 
+
+    !This block creates the indexing arrays that can be used to find features
+    !such as what molecule an atom belongs to, indexs relative to an atoms position in the
+    !molecule, the molecules type, atom type, the indicies of other atoms in the molecule.
+    !
     atmIndx = 0
     molIndx = 0
     do iType = 1, nMolTypes
@@ -206,7 +210,7 @@ module SimpleSimBox
           self%AtomType(atmIndx) = MolData(iType)%atomType(iAtom)
           self%MolIndx(atmIndx)  = molIndx
           self%MolSubIndx(atmIndx)  = iMol
-          self%SubIndx(atmIndx)  = iAtom
+          self%AtomSubIndx(atmIndx)  = iAtom
         enddo
       enddo 
       self%TypeLast(iType) = atmIndx 
@@ -586,10 +590,10 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_GetIndexData(self, MolIndx, MolSubIndx, SubIndx)
+  subroutine SimpleBox_GetIndexData(self, MolIndx, MolSubIndx, AtomSubIndx)
     implicit none
     class(SimpleBox), intent(inout), target :: self
-    integer, intent(inout), pointer, optional :: MolIndx(:), MolSubIndx(:), SubIndx(:)
+    integer, intent(inout), pointer, optional :: MolIndx(:), MolSubIndx(:), AtomSubIndx(:)
 
     if(present(MolIndx)) then
       MolIndx => self%MolIndx
@@ -599,19 +603,19 @@ module SimpleSimBox
       MolSubIndx => self%MolSubIndx
     endif
 
-    if(present(SubIndx)) then
-      SubIndx => self%SubIndx
+    if(present(AtomSubIndx)) then
+      AtomSubIndx => self%AtomSubIndx
     endif
 
 
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_GetMolData(self, globalIndx, molStart, molEnd, molType, subIndx)
+  subroutine SimpleBox_GetMolData(self, globalIndx, molStart, molEnd, molType, atomSubIndx)
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer, intent(in)  :: globalIndx
-    integer, intent(inout), optional :: molStart, molEnd, molType, subIndx
+    integer, intent(inout), optional :: molStart, molEnd, molType, atomSubIndx
 
 
     if((size(self%molStartIndx) < globalIndx) .or. (globalIndx < 1)) then
@@ -632,8 +636,8 @@ module SimpleSimBox
       molType = self % MolType(globalIndx)
     endif
 
-    if( present(subIndx) ) then
-      subIndx = self %SubIndx(globalIndx)
+    if( present(atomSubIndx) ) then
+      atomSubIndx = self%AtomSubIndx(globalIndx)
     endif
 
   end subroutine

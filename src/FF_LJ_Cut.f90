@@ -99,8 +99,8 @@ module FF_Pair_LJ_Cut
         if(rsq < self%rCutSq) then
           atmType2 = curbox % AtomType(jAtom)
           ep = self % epsTable(atmType1, atmType2)
-          sig_sq = self % sigTable(atmType1, atmType2)          
-          rmin_ij = self % rMinTable(atmType1, atmType2)          
+          sig_sq = self % sigTable(atmType1, atmType2)
+          rmin_ij = self % rMinTable(atmType1, atmType2)
           if(rsq < rmin_ij) then
             write(*,*) sqrt(rsq)
             write(*,*) iAtom, jAtom
@@ -109,7 +109,7 @@ module FF_Pair_LJ_Cut
             write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
           endif 
           LJ = (sig_sq/rsq)**3
-          LJ = ep * LJ * (LJ-1E0)              
+          LJ = ep * LJ * (LJ-1E0_dp)
           E_LJ = E_LJ + LJ
           curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
           curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ 
