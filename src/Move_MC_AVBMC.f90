@@ -202,6 +202,7 @@ use VarPrecision
     use Common_NeighData, only: neighSkin
     use Common_MolInfo, only: MolData
     use Box_Utility, only: FindMolecule
+    use ClassyConstants, only: pi
     use ParallelVar, only: nout
     implicit none
     class(AVBMC), intent(inout) :: self
@@ -354,6 +355,7 @@ use VarPrecision
         rx = atoms(1, iAtom) - atoms(1, targetIndx)
         ry = atoms(2, iAtom) - atoms(2, targetIndx)
         rz = atoms(3, iAtom) - atoms(3, targetIndx)
+        call trialbox%Boundary(rx,ry,rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%avbmcRadSq) then
           nNei = nNei + 1
@@ -422,6 +424,7 @@ use VarPrecision
         rx = atoms(1, iAtom) - atoms(1, targetIndx)
         ry = atoms(2, iAtom) - atoms(2, targetIndx)
         rz = atoms(3, iAtom) - atoms(3, targetIndx)
+        call trialbox%Boundary(rx,ry,rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%avbmcRadSq) then
           nNei = nNei + 1
@@ -485,7 +488,7 @@ use VarPrecision
 
     self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
     self%avbmcRadSq = self%avbmcRad * self%avbmcRad
-!    write(*,*) self%avbmcVol
+    write(nout,*) "AVBMC Volume:", self%avbmcVol
 
     allocate( self%tempNNei(maxAtoms) )
     allocate( self%tempList(2000,maxAtoms ) )
@@ -517,6 +520,7 @@ use VarPrecision
   end subroutine
 !=========================================================================
   subroutine AVBMC_ProcessIO(self, line, lineStat)
+    use ClassyConstants, only: pi
     use Input_Format, only: GetXCommand, maxLineLen
     implicit none
     class(AVBMC), intent(inout) :: self
@@ -544,6 +548,8 @@ use VarPrecision
         read(command, *) realVal
         self%avbmcRad = realVal
         self%avbmcRadSq = realVal*realVal
+        self%avbmcVol = (4E0_dp/3E0_dp)*pi*self%avbmcRad**3
+
 
       case default
         lineStat = -1

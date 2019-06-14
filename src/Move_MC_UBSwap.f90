@@ -308,6 +308,7 @@ use VarPrecision
         rx = x - trialBox % atoms(1, iAtom)
         ry = y - trialBox % atoms(2, iAtom)
         rz = z - trialBox % atoms(3, iAtom)
+        call trialbox%Boundary(rx,ry,rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%ubRadSq) then
           nCount = nCount + 1
@@ -378,6 +379,7 @@ use VarPrecision
   end subroutine
 !=========================================================================
   subroutine UB_Swap_ProcessIO(self, line, lineStat)
+    use ClassyConstants, only: pi
     use Input_Format, only: GetXCommand, maxLineLen
     implicit none
     class(UB_Swap), intent(inout) :: self
@@ -394,6 +396,7 @@ use VarPrecision
         read(command, *) realVal
         self%ubRad = realVal
         self%ubRadSq = realVal*realVal
+        self%ubVol = (4E0_dp/3E0_dp)*pi*self%ubRad**3
 
       case default
         lineStat = -1
