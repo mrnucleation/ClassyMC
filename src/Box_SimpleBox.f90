@@ -360,12 +360,50 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_ComputeEnergy(self)
+! This subroutine recomputes the entire system energy from scratch. If
+! tablecheck is passed the code will compare the current energy table
+! to a recalculated version to see if it has bene properly kept.
+  subroutine SimpleBox_ComputeEnergy(self, tablecheck)
+    use ParallelVar, only: nout
+    use Units, only: outEngUnit, engStr
     implicit none
     class(SimpleBox), intent(inout) :: self
+    logical, optional, intent(in) :: tablecheck
     logical :: accept
+    integer :: iAtom
+    real(dp), allocatable :: tempETable(:)
+    real(dp) :: ECul, ECalc, EDiff
+
+    if(present(tablecheck))then
+      if(tablecheck) then
+        allocate(tempETable(1:size(self%ETable)))
+      endif
+      tempETable = self%ETable
+    endif
 
     call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
+
+    if(present(tablecheck))then
+      do iAtom = 1, self%nMaxAtoms
+        if(.not. self%IsActive(iAtom)) cycle
+        ECul = tempETable(iAtom)
+        ECalc = self%ETable(iAtom)
+        EDiff = abs(ECul-ECalc)
+        if(ECalc /= 0E0_dp) then
+          if( EDiff/abs(ECalc)  > 1E-7_dp ) then
+            write(nout, *) "Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
+          endif
+        else
+          if( EDiff > 1E-7_dp ) then
+            write(nout, *) "Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
+          endif
+        endif
+      enddo
+      if(tablecheck) then
+        deallocate(tempETable)
+      endif
+      write(nout,*) "Energy Table Check complete!"
+    endif
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_EnergySafetyCheck(self)
@@ -380,7 +418,7 @@ module SimpleSimBox
     E_Current = self%ETotal
     call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
 
-    if(self%ETotal /= 0) then
+    if(self%ETotal /= 0E0_dp) then
       if( abs((E_Current-self%ETotal)/self%ETotal) > 1E-7_dp ) then
         write(nout, *) "!!!!!!!!!!!!!!!!!!ERROR! Large energy drift detected!!!!!!!!!!!!!!!!!!!!!!!!!!"
         write(nout, *) "Box: ", self%boxID
@@ -1056,7 +1094,7 @@ module SimpleSimBox
     E_Culm = self%ETotal
 
     write(nout,*) "--------Box", self%boxID , "Energy---------"
-    call self % ComputeEnergy
+    call self % ComputeEnergy(tablecheck=.true.)
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
@@ -1079,7 +1117,8 @@ module SimpleSimBox
         write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit, engStr
       endif
     endif
-
+    write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Final Energy (Per Mol): ", &
+                                           self % ETotal/(outEngUnit*self%nMolTotal), engStr
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
     write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
     if( allocated(self%Constrain) ) then

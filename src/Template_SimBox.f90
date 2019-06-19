@@ -55,6 +55,7 @@ module Template_SimBox
       procedure, public, pass :: DumpData
       procedure, public, pass :: GetThermo
       procedure, public, pass :: ThermoLookUp
+      procedure, public, pass :: IsActive
       procedure, public, pass :: UpdateEnergy
       procedure, public, pass :: UpdatePosition
       procedure, public, pass :: UpdateVol
@@ -146,9 +147,10 @@ module Template_SimBox
     real(dp), intent(in) :: scalar(:)
   end subroutine
 !==========================================================================================
-  subroutine ComputeEnergy(self)
+  subroutine ComputeEnergy(self, tablecheck)
     implicit none
     class(SimBox), intent(inout) :: self
+    logical, optional, intent(in) :: tablecheck
   end subroutine
 !==========================================================================================
   subroutine ProcessIO(self, line, lineStat)
@@ -169,6 +171,17 @@ module Template_SimBox
 
 
   end subroutine
+!==========================================================================================
+!  Checks to see if the atom is present in the box.  This is required 
+  function IsActive(self, atmIndx) result(active)
+    implicit none
+    class(SimBox), intent(inout) :: self
+    logical :: active
+    integer, intent(in) :: atmIndx
+
+    active = .false.
+
+  end function
 !==========================================================================================
   subroutine DumpData(self, filename)
     use Input_Format, only: maxLineLen

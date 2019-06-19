@@ -9,13 +9,14 @@ module FF_AENet
   use SimpleSimBox, only: SimpleBox
   use CubicBoxDef, only: CubeBox
   use OrthoBoxDef, only: OrthoBox
+  use Input_Format, only: maxLineLen
   use VarPrecision
   use CoordinateTypes
 
   !AENet Library functions
 #ifdef AENET
   use predict_lib, only: initialize_lib, get_energy_lib
-  use aenet, only: aenet_atomic_energy,&
+  use aenet, only: aenet_atomic_energy, aenet_init, aenet_load_potential, &
                    aenet_Rc_min, aenet_Rc_max
   use geometry, only: geo_recip_lattice
   use input, only: InputData
@@ -25,8 +26,9 @@ module FF_AENet
 
   type, public, extends(forcefield) :: AENet
 !    real(dp) :: rCut, rCutSq
-!    logical :: initialized = .false.
+    logical :: initialized = .false.
     integer, allocatable :: atomTypes(:)
+    character(len=maxLineLen), allocatable :: inputfiles(:)
     real(dp), allocatable :: tempcoords(:,:)
     real(dp)  :: box(3,3)
     real(dp)  :: boxrecp(3,3)
@@ -39,6 +41,7 @@ module FF_AENet
 #ifdef AENET
       procedure, pass :: Constructor => Constructor_AENet
       procedure, pass :: DetailedECalc => DetailedECalc_AENet
+      procedure, pass :: Predict => DetailedECalc_AENet_Predict
       procedure, pass :: DiffECalc => DiffECalc_AENet
       procedure, pass :: VolECalc => VolECalc_AENet
 #endif
@@ -52,7 +55,7 @@ module FF_AENet
 !=============================================================================+
   subroutine Constructor_AENet(self)
     use BoxData, only: BoxArray
-    use Common_MolInfo, only: nMolTypes, nAtomTypes
+    use Common_MolInfo, only: nMolTypes, nAtomTypes, AtomData
     use ClassyConstants, only: pi
     use ParallelVar, only: nout
     implicit none
@@ -62,30 +65,109 @@ module FF_AENet
     character(len=100) :: str1, str2
     integer :: iBox, atomLimit, iType
     integer :: AllocateStat
-     write(nout, *) "Initializing AENet"
-!     inp = read_InpPredict(inFile)
-     call initialize_lib(str1, str2, inp)
-!     call initialize(str1, str2, indata)
-!     call aenet_init(inp%typeName, stat)
-!     do iType = 1, inp%nTypes
-!       call aenet_load_potential(itype, inp%netFile(itype), stat)
-!     enddo
+    character(len=5), allocatable :: symbols(:)
 
-     self%rCut = aenet_Rc_max
-     self%rCutSq = aenet_Rc_max * aenet_Rc_max
-     allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
-     allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
-     self%rMin = 0E0_dp
-     self%rMinTable = 0E0_dp
+    write(nout, *) "Initializing AENet"
+    if(.not. self%initialized) then
+      allocate(symbols(1:nAtomTypes))
+      do iType = 1, nAtomTypes
+        symbols(iType) = adjustl(trim(AtomData(iType)%Symb))
+      enddo
+      call aenet_init(symbols, AllocateStat)
+      deallocate(symbols)
+    endif
+!    call initialize_lib(str1, str2, inp)
 
-!     self%rCut = 4.0E0_dp
-!     self%rCutSq = 4.0E0_dp**2
 
+
+    allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    self%rMin = 0E0_dp
+    self%rMinTable = 0E0_dp
 
   end subroutine
 !==========================================================================+
   subroutine DetailedECalc_AENet(self, curbox, E_T, accept)
 !    use boxData, only: self%boxArray
+    use ClassyConstants, only: pi
+    use ParallelVar, only: nout
+    implicit none
+    class(AENet), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    real(dp), intent(inout) :: E_T
+    logical, intent(out) :: accept
+    logical :: pbc = .false.
+    integer :: i,j
+    integer :: iAtom, jAtom
+    integer :: atmType1, atmType2
+    integer :: nTotalMol, stat
+    integer :: nCurAtoms = 0
+    real(dp) :: E_Atom
+    real(dp) :: rx, ry, rz, rsq, rmin_ij
+    real(dp), pointer :: atoms(:,:) => null()
+
+    select type(curbox)
+      class is(SimpleBox)
+        call curbox%GetCoordinates(atoms)
+    end select
+    E_T = 0E0_dp
+    accept = .true.
+    self%atomTypes = 0
+
+    do iAtom = 1, curbox%nMaxAtoms
+      if( .not. curbox%IsActive(iAtom) ) then
+        cycle
+      endif
+      nCurAtoms = 0
+      atmType1 = curbox % AtomType(iAtom)
+      do jAtom = 1, curbox%nMaxAtoms
+        if( .not. curbox%IsActive(iAtom) ) cycle
+        if(iAtom == jAtom) cycle
+!        if( curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)  ) cycle
+        rx = atoms(1, jAtom) - atoms(1, iAtom) 
+        ry = atoms(2, jAtom) - atoms(2, iAtom) 
+        rz = atoms(3, jAtom) - atoms(3, iAtom) 
+        call curbox % Boundary(rx, ry, rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%rCutSq) then
+          atmType2 = curbox % AtomType(jAtom)
+          rmin_ij = self % rMinTable(atmType2, atmType1)          
+          if(rsq < rmin_ij) then
+            write(*,*) sqrt(rsq)
+            write(*,*) iAtom, jAtom
+            write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
+            write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
+            write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
+          endif 
+          nCurAtoms = nCurAtoms + 1
+          self%atomTypes(nCurAtoms) = atmType2
+
+          !Reshift and store atomic coordinates such that the 
+          !nearest image of the atom is used.
+          self%tempcoords(1, nCurAtoms) = rx + atoms(1, iAtom) 
+          self%tempcoords(2, nCurAtoms) = ry + atoms(2, iAtom) 
+          self%tempcoords(3, nCurAtoms) = rz + atoms(3, iAtom)
+        endif
+      enddo
+!      write(*,*) iAtom,atmType1, nCurAtoms, self%rCutSq
+      call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, &
+                               self%tempcoords(1:3, 1:nCurAtoms), &
+                               self%atomtypes(1:nCurAtoms), E_Atom, stat) 
+      E_T = E_T + E_Atom
+      curbox%ETable(iAtom) = E_Atom/boltz
+    enddo
+    write(nout, *) "Raw Neuro Net Energy:", E_T
+    E_T = E_T / boltz
+    write(nout, *) "Total Neuro Net Energy:", E_T
+
+!    call self%Predict(curbox, E_T, accept)
+!    stop
+
+  end subroutine
+!==========================================================================+
+! Old Version of the DetailedCalc.  This is becoming obsolete and will be
+! replaced.
+  subroutine DetailedECalc_AENet_Predict(self, curbox, E_T, accept)
     use ClassyConstants, only: pi
     use ParallelVar, only: nout
     implicit none
@@ -113,13 +195,13 @@ module FF_AENet
     nCurAtoms = 0
     self%box = 0E0_dp
     self%tempcoords = 0E0_dp
-!    self%atomTypes = 1
+    self%atomTypes = 1
 
     xmax = 0E0_dp
     ymax = 0E0_dp
     zmax = 0E0_dp
     do iAtom = 1, curbox%nMaxAtoms
-      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+      if( curbox%IsActive(iAtom) ) then
         cycle
       endif
       nCurAtoms = nCurAtoms + 1
@@ -209,6 +291,8 @@ module FF_AENet
      E_T = E_T / boltz
      write(nout, *) "Total Neuro Net Energy:", E_T
 
+
+
   end subroutine
 !============================================================================
   subroutine DiffECalc_AENet(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
@@ -249,6 +333,7 @@ module FF_AENet
     call curbox%GetCoordinates(atoms)
     accept = .true.
     E_Diff = 0E0_dp
+    curbox%dETable = 0E0_dp
 
     recalcList = 0
     nRecalc = 0
@@ -376,6 +461,7 @@ module FF_AENet
         call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
                                 E_Atom, stat) 
         E_Old = E_Old + E_Atom
+        curbox%dETable(iAtom) = curbox%dETable(iAtom) - E_Atom/boltz
 
      enddo
 
@@ -450,6 +536,7 @@ module FF_AENet
         call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
                                 E_Atom, stat) 
         E_New = E_New + E_Atom
+        curbox%dETable(iAtom) = curbox%dETable(iAtom) + E_Atom/boltz
      enddo
 
      !Now calculate the contribution of the atoms that were moved during this move.
@@ -485,6 +572,7 @@ module FF_AENet
           call aenet_atomic_energy(tempatom(1:3), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
                                 E_Atom, stat) 
           E_New = E_New + E_Atom
+          curbox%dETable(iAtom) = curbox%dETable(iAtom) + E_Atom/boltz
 
 
           nCurAtoms = 0
@@ -508,6 +596,7 @@ module FF_AENet
           call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
                                 E_Atom, stat) 
           E_Old = E_Old + E_Atom
+          curbox%dETable(iAtom) = curbox%dETable(iAtom) - E_Atom/boltz
         enddo
       !-----------------------------------------------------
       class is(Addition)
@@ -540,6 +629,7 @@ module FF_AENet
           call aenet_atomic_energy(tempatom(1:3), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
                                 E_Atom, stat) 
           E_New = E_New + E_Atom
+          curbox%dETable(iAtom) = curbox%dETable(iAtom) + E_Atom/boltz
         enddo
       !-----------------------------------------------------
       class is(Deletion)
@@ -567,6 +657,7 @@ module FF_AENet
           call aenet_atomic_energy(atoms(1:3, iAtom), atmType1, nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomtypes(1:nCurAtoms),&
                                 E_Atom, stat) 
           E_Old = E_Old + E_Atom
+          curbox%dETable(iAtom) = curbox%dETable(iAtom) - E_Atom/boltz
 
         enddo
 
@@ -618,38 +709,43 @@ module FF_AENet
     end select
 
     !Check the rMin criteria first to ensure there is no overlap prior to
-    !passing the configuration to AENet
-    select type(disp)
-      !-----------------------------------------------------
-      class is(OrthoVolChange)
-        do iAtom = 1, curBox%nMaxAtoms
-          if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
-            cycle
-          endif
-          atmType1 = curbox % AtomType(iAtom)
-          molIndx1 = curbox % MolIndx(iAtom)
-          dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
-          dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
-          dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
-          do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-            jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-            molIndx2 = curbox % MolIndx(jAtom)
-            atmType2 = curbox % AtomType(jAtom)
-            dxj = curbox % centerMass(1, molIndx2) * (xScale-1E0_dp)
-            dyj = curbox % centerMass(2, molIndx2) * (yScale-1E0_dp)
-            dzj = curbox % centerMass(3, molIndx2) * (zScale-1E0_dp)
-            rx = atoms(1, iAtom) + dx  -  atoms(1, jAtom) - dxj
-            ry = atoms(2, iAtom) + dy  -  atoms(2, jAtom) - dyj
-            rz = atoms(3, iAtom) + dz  -  atoms(3, jAtom) - dzj
-            rsq = rx*rx + ry*ry + rz*rz
-            rmin_ij = self % rMinTable(atmType2, atmType1)      
-            if(rsq < rmin_ij) then
-              accept = .false.
-              return
-            endif 
-          enddo
-        enddo
-    end select
+    !passing the configuration to AENet. This only needs to be checked
+    !if the box is being compressed.  If it is expanded and it previously
+    !statisfied rmin constraints, it won't overlap on expansion.
+    if(any([xscale, yscale, zscale] < 1E0_dp)) then
+        select type(disp)
+          !-----------------------------------------------------
+          class is(OrthoVolChange)
+            do iAtom = 1, curBox%nMaxAtoms
+              if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+                cycle
+              endif
+              atmType1 = curbox % AtomType(iAtom)
+              molIndx1 = curbox % MolIndx(iAtom)
+              dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
+              dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
+              dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
+              do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+                jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+                molIndx2 = curbox % MolIndx(jAtom)
+                atmType2 = curbox % AtomType(jAtom)
+                dxj = curbox % centerMass(1, molIndx2) * (xScale-1E0_dp)
+                dyj = curbox % centerMass(2, molIndx2) * (yScale-1E0_dp)
+                dzj = curbox % centerMass(3, molIndx2) * (zScale-1E0_dp)
+                rx = atoms(1, iAtom) + dx  -  atoms(1, jAtom) - dxj
+                ry = atoms(2, iAtom) + dy  -  atoms(2, jAtom) - dyj
+                rz = atoms(3, iAtom) + dz  -  atoms(3, jAtom) - dzj
+                rsq = rx*rx + ry*ry + rz*rz
+                call curbox%BoundaryNew(rx, ry, rz, disp)
+                rmin_ij = self % rMinTable(atmType2, atmType1)      
+                if(rsq < rmin_ij) then
+                  accept = .false.
+                  return
+                endif 
+              enddo
+            enddo
+        end select
+    endif
 
     ! Convert the Classy Array into an Array that AENet can read.
     nCurAtoms = 0
@@ -773,46 +869,61 @@ module FF_AENet
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: CountCommands, GetXCommand
     use Input_Format, only: maxLineLen
+    use ParallelVar, only: nout
     implicit none
     class(AENet), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
-    character(len=30) :: command
+    character(len=100) :: command
+    character(len=maxLineLen) :: command2
     logical :: param = .false.
-    integer :: jType, lineStat
+    integer :: jType, lineStat, stat
     integer :: type1, type2, nPar
     real(dp) :: ep, sig, rCut, rMin
   
 
-!    call GetXCommand(line, command, 1, lineStat)
-!    select case(trim(adjustl(command)))
-!      case("rcut")
-!        call GetXCommand(line, command, 2, lineStat)
-!        read(command, *) rCut
-!        self % rCut = rCut
-!        self % rCutSq = rCut * rCut
-!      case default
-!        param = .true.
-!    end select
+    if(.not. allocated(self%inputfiles)) then
+      allocate(self%inputfiles(1:nAtomTypes))
+    endif
 
 
-!    if(param) then
-!    endif
-    call CountCommands(line, nPar)
-    select case(nPar)
-      case(2)
-        read(line, *) type1, rMin
-        self%rMin(type1) = rMin
-        do jType = 1, nAtomTypes
-          self%rMinTable(type1, jType) = max(rMin, self%rMin(jType))**2
-          self%rMinTable(jType, type1) = max(rMin, self%rMin(jType))**2
-        enddo
-      case(3)
-        read(line, *) type1, type2, rMin
-        self%rMinTable(type1, type2) = rMin**2
-        self%rMinTable(type2, type1) = rMin**2
+    call GetXCommand(line, command, 1, lineStat)
+    select case(trim(adjustl(command)))
+      case("network")
+        call GetXCommand(line, command, 2, lineStat)
+        read(command,*) type1
+        call GetXCommand(line, command, 3, lineStat)
+        write(*,*) command
+        self%inputfiles = ""
+        read(command, *) self%inputfiles(type1)
+
+        write(nout, *) "Loading potential from file: ", self%inputfiles(type1)
+        call aenet_load_potential(type1, self%inputfiles(type1), stat)
+        self%rCut = aenet_Rc_max
+        self%rCutSq = aenet_Rc_max * aenet_Rc_max
+
       case default
-        lineStat = -1
+        param = .true.
     end select
+
+    if(param) then
+      call CountCommands(line, nPar)
+      select case(nPar)
+        case(2)
+          read(line, *) type1, rMin
+          self%rMin(type1) = rMin
+          do jType = 1, nAtomTypes
+            self%rMinTable(type1, jType) = max(rMin, self%rMin(jType))**2
+            self%rMinTable(jType, type1) = max(rMin, self%rMin(jType))**2
+          enddo
+        case(3)
+          write(*,*) line
+          read(line, *) type1, type2, rMin
+          self%rMinTable(type1, type2) = rMin**2
+          self%rMinTable(type2, type1) = rMin**2
+        case default
+          lineStat = -1
+      end select
+    endif
 
 
   end subroutine
@@ -820,9 +931,11 @@ module FF_AENet
   subroutine Prologue_AENet(self)
     use BoxData, only: BoxArray
     use Common_MolInfo, only: nMolTypes, nAtomTypes
+    use ParallelVar, only: nout
     implicit none
     class(AENet), intent(inout) :: self
     integer :: atomLimit, iBox
+    integer :: iType, AllocateStat
       atomLimit = 0
      do iBox = 1, size(BoxArray)
        if( atomLimit < boxArray(iBox) % box % GetMaxAtoms()) then
@@ -832,7 +945,14 @@ module FF_AENet
      allocate(self%atomTypes(1:atomLimit))
      allocate(self%tempcoords(3, 1:atomLimit))
 
+!    if(.not. self%initialized) then
+!      do iType = 1, nAtomTypes
+!      enddo
+!      self%initialized = .true.
+!    endif
 
+1    self%rCut = aenet_Rc_max
+!    self%rCutSq = aenet_Rc_max * aenet_Rc_max
   end subroutine
 !=============================================================================+
 end module
