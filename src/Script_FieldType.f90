@@ -21,7 +21,7 @@ contains
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
 
 #ifdef AENET
-    use FF_AENet, only: AENet
+    use FF_AENet, only: Pair_AENet
 #endif
 
     use ParallelVar, only: nout
@@ -43,7 +43,7 @@ contains
     select case(trim(adjustl(FF_Type)))
 #ifdef AENET
       case("aenet")
-        allocate(AENet::EnergyCalculator(FFNum) % Method)
+        allocate(Pair_AENet::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as AENet style"
 #endif
 

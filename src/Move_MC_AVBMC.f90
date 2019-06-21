@@ -340,6 +340,7 @@ use VarPrecision
     real(dp) :: weights(1:60), norm, maxweight, EMol
 
     integer, pointer :: nNeigh(:) => null()
+
     integer, pointer :: neighlist(:,:) => null()
     real(dp), pointer :: atoms(:,:) => null()
 

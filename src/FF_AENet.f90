@@ -24,9 +24,10 @@ module FF_AENet
 
   real(dp), parameter :: boltz = 8.6173303E-5_dp
 
-  type, public, extends(forcefield) :: AENet
+  type, public, extends(forcefield) :: Pair_AENet
 !    real(dp) :: rCut, rCutSq
     logical :: initialized = .false.
+    integer :: neilistindx = 1
     integer, allocatable :: atomTypes(:)
     character(len=maxLineLen), allocatable :: inputfiles(:)
     real(dp), allocatable :: tempcoords(:,:)
@@ -43,7 +44,7 @@ module FF_AENet
       procedure, pass :: DetailedECalc => DetailedECalc_AENet
       procedure, pass :: Predict => DetailedECalc_AENet_Predict
       procedure, pass :: DiffECalc => DiffECalc_AENet
-      procedure, pass :: VolECalc => VolECalc_AENet
+      procedure, pass :: VolECalc => VolECalc_AENet_V2
 #endif
       procedure, pass :: ProcessIO => ProcessIO_AENet
       procedure, pass :: Prologue => Prologue_AENet
@@ -59,7 +60,7 @@ module FF_AENet
     use ClassyConstants, only: pi
     use ParallelVar, only: nout
     implicit none
-    class(AENet), intent(inout) :: self
+    class(Pair_AENet), intent(inout) :: self
 
     type(InputData) :: inp
     character(len=100) :: str1, str2
@@ -92,7 +93,7 @@ module FF_AENet
     use ClassyConstants, only: pi
     use ParallelVar, only: nout
     implicit none
-    class(AENet), intent(inout) :: self
+    class(Pair_AENet), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
     logical, intent(out) :: accept
@@ -171,7 +172,7 @@ module FF_AENet
     use ClassyConstants, only: pi
     use ParallelVar, only: nout
     implicit none
-    class(AENet), intent(inout) :: self
+    class(Pair_AENet), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
     logical, intent(out) :: accept
@@ -298,7 +299,7 @@ module FF_AENet
   subroutine DiffECalc_AENet(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     use ClassyConstants, only: pi
     implicit none
-    class(AENet), intent(inout) :: self
+    class(Pair_AENet), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
 !    class(displacement), intent(in) :: disp(:)
     class(Perturbation), intent(in) :: disp(:)
@@ -329,14 +330,9 @@ module FF_AENet
     real(dp), pointer :: atoms(:,:) => null()
 
 
-    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
-    call curbox%GetCoordinates(atoms)
     accept = .true.
     E_Diff = 0E0_dp
-    curbox%dETable = 0E0_dp
 
-    recalcList = 0
-    nRecalc = 0
 
 
     nTotalMol = curbox%nMolTotal
@@ -345,6 +341,12 @@ module FF_AENet
         call self%VolECalc(curbox, disp, E_Diff, accept)
         return
     end select
+
+    curbox%dETable = 0E0_dp
+    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call curbox%GetCoordinates(atoms)
+    recalcList = 0
+    nRecalc = 0
 
     !Check the rMin criteria first to ensure there is no overlap prior to
     !passing the configuration to AENet. In addition create a list of atoms
@@ -667,10 +669,111 @@ module FF_AENet
 
   end subroutine
 !============================================================================
+  subroutine VolECalc_AENet_V2(self, curbox, disp, E_Diff, accept)
+    use ClassyConstants, only: pi
+    implicit none
+    class(Pair_AENet), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    class(OrthoVolChange), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    logical :: pbc=.false.
+    integer :: nCurAtoms = 0
+    integer :: iAtom, jAtom, jNei, j
+    integer :: atmType1, atmType2, molIndx1, molIndx2
+    integer :: iDisp, nTotalMol, stat
+    real(dp) :: E_T, E_Atom
+    real(dp) :: rmin_ij
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: newcoords(1:3)
+    real(dp) :: dx, dy, dz
+    real(dp) :: dxj, dyj, dzj
+    real(dp) :: xscale, yscale, zscale
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+
+    accept = .true.
+    E_Diff = 0E0_dp
+    curbox%dETable = 0E0_dp
+
+
+    select type(curbox)
+      class is(SimpleBox)
+        call curbox%GetCoordinates(atoms)
+        call curbox%GetNeighborList(self%neilistindx, neighlist, nNeigh)
+    end select
+
+
+    nTotalMol = curbox%nMolTotal
+    select type(disp)
+      class is(OrthoVolChange)
+        xscale = disp(1)%xScale
+        yscale = disp(1)%yScale
+        zscale = disp(1)%zScale
+    end select
+
+    do iAtom = 1, curbox%nMaxAtoms
+      if( .not. curbox%IsActive(iAtom) ) then
+        cycle
+      endif
+      nCurAtoms = 0
+      atmType1 = curbox % AtomType(iAtom)
+      molIndx1 = curbox % MolIndx(iAtom)
+      dx = curbox % centerMass(1, molIndx1) * (xScale-1E0_dp)
+      dy = curbox % centerMass(2, molIndx1) * (yScale-1E0_dp)
+      dz = curbox % centerMass(3, molIndx1) * (zScale-1E0_dp)
+
+      newcoords(1) = atoms(1, iAtom) + dx
+      newcoords(2) = atoms(2, iAtom) + dy
+      newcoords(3) = atoms(3, iAtom) + dz
+      do jNei = 1, nNeigh(iAtom)
+        jAtom = NeighList(jNei, iAtom)
+        molIndx2 = curbox % MolIndx(jAtom)
+        atmType2 = curbox % AtomType(jAtom)
+        dxj = curbox % centerMass(1, molIndx2) * (xScale-1E0_dp)
+        dyj = curbox % centerMass(2, molIndx2) * (yScale-1E0_dp)
+        dzj = curbox % centerMass(3, molIndx2) * (zScale-1E0_dp)
+        rx = newcoords(1) - atoms(1, jAtom) - dxj
+        ry = newcoords(2) - atoms(2, jAtom) - dyj
+        rz = newcoords(3) - atoms(3, jAtom) - dzj
+        rsq = rx*rx + ry*ry + rz*rz
+        call curbox%BoundaryNew(rx, ry, rz, disp)
+        rmin_ij = self % rMinTable(atmType2, atmType1)      
+        if(rsq < rmin_ij) then
+          accept = .false.
+          return
+        endif 
+        if(rsq < self%rCutSq) then
+          atmType2 = curbox % AtomType(jAtom)
+          rmin_ij = self % rMinTable(atmType2, atmType1)          
+          nCurAtoms = nCurAtoms + 1
+          self%atomTypes(nCurAtoms) = atmType2
+
+          !Reshift and store atomic coordinates such that the 
+          !nearest image of the atom is used.
+          self%tempcoords(1, nCurAtoms) = rx + newcoords(1)
+          self%tempcoords(2, nCurAtoms) = ry + newcoords(2)
+          self%tempcoords(3, nCurAtoms) = rz + newcoords(3)
+        endif
+      enddo
+      call aenet_atomic_energy(newcoords(1:3), atmType1, nCurAtoms, &
+                               self%tempcoords(1:3, 1:nCurAtoms), &
+                               self%atomtypes(1:nCurAtoms), E_Atom, stat) 
+      E_T = E_T + E_Atom
+      curbox%dETable(iAtom) = E_Atom/boltz
+    enddo
+    E_T = E_T / boltz
+    E_Diff = E_T - curbox%ETotal
+    E_Diff = E_Diff - curbox%ETotal
+    curbox % dETable = curbox%dETable - curbox % ETable
+  end subroutine
+!============================================================================
   subroutine VolECalc_AENet(self, curbox, disp, E_Diff, accept)
     use ClassyConstants, only: pi
     implicit none
-    class(AENet), intent(inout) :: self
+    class(Pair_AENet), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
 !    class(displacement), intent(in) :: disp(:)
     class(OrthoVolChange), intent(in) :: disp(:)
@@ -871,7 +974,7 @@ module FF_AENet
     use Input_Format, only: maxLineLen
     use ParallelVar, only: nout
     implicit none
-    class(AENet), intent(inout) :: self
+    class(Pair_AENet), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
     character(len=100) :: command
     character(len=maxLineLen) :: command2
@@ -933,7 +1036,7 @@ module FF_AENet
     use Common_MolInfo, only: nMolTypes, nAtomTypes
     use ParallelVar, only: nout
     implicit none
-    class(AENet), intent(inout) :: self
+    class(Pair_AENet), intent(inout) :: self
     integer :: atomLimit, iBox
     integer :: iType, AllocateStat
       atomLimit = 0
