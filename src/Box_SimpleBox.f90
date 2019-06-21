@@ -74,6 +74,7 @@ module SimpleSimBox
 
       !Coordinate Processing Functions
       procedure, pass :: GetNeighborList => Simplebox_GetNeighborList
+      procedure, pass :: GetNewNeighborList => Simplebox_GetNewNeighborList
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetIndexData => Simplebox_GetIndexData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
@@ -741,6 +742,18 @@ module SimpleSimBox
 
     call self%NeighList(listindx)%GetListArray(neighlist, nNei)
 
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_GetNewNeighborList(self, listindx, iAtom, tempList, tempNNei, disp)
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    integer, intent(in) :: listIndx
+    integer, intent(in) :: iAtom
+    integer, intent(inout) :: tempNnei(:)
+    integer, intent(inout) :: tempList(:, :)
+    class(Perturbation), intent(inout) :: disp
+
+    call self%NeighList(listindx)%GetNewList(iAtom, tempList, tempNNei, disp)
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_GetEnergyTable(self, etable, detable)

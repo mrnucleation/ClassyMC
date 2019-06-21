@@ -45,8 +45,8 @@ module FF_AENet
       procedure, pass :: Predict => DetailedECalc_AENet_Predict
       procedure, pass :: DiffECalc => DiffECalc_AENet
       procedure, pass :: VolECalc => VolECalc_AENet_V2
-#endif
       procedure, pass :: ProcessIO => ProcessIO_AENet
+#endif
       procedure, pass :: Prologue => Prologue_AENet
 !      procedure, pass :: GetCutOff
   end type
@@ -966,7 +966,6 @@ module FF_AENet
   end subroutine
 !=============================================================================+
 !End -DAENET safety block
-#endif
 !=============================================================================+
   subroutine ProcessIO_AENet(self, line)
     use Common_MolInfo, only: nAtomTypes
@@ -1030,6 +1029,10 @@ module FF_AENet
 
 
   end subroutine
+
+!=============================================================================+
+#endif 
+!End AENet Safety Block
 !=============================================================================+
   subroutine Prologue_AENet(self)
     use BoxData, only: BoxArray
@@ -1054,7 +1057,7 @@ module FF_AENet
 !      self%initialized = .true.
 !    endif
 
-1    self%rCut = aenet_Rc_max
+!    self%rCut = aenet_Rc_max
 !    self%rCutSq = aenet_Rc_max * aenet_Rc_max
   end subroutine
 !=============================================================================+

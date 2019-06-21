@@ -54,6 +54,7 @@ contains
 
     flush(nout)
 
+    call ScreenOut(iCycle, iMove)
     do iCycle = 1, nCycles
 
       !-----Start Move Loop
