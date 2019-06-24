@@ -39,7 +39,7 @@ contains
     iCycle = 0
     iMove = 0
 
-    call Prologue(iCycle, iMove)
+    call Prologue
     call SafetyCheck
     nBoxes = size(BoxArray)
     allocate( boxProb(1:nBoxes) )
@@ -73,9 +73,8 @@ contains
             call curMove % FullMove(BoxArray(boxNum)%box, accept)
         end select
         call Sampling%UpdateStatistics(accept)
-
         if(accept) then
-          call Update(iCycle, iMove, accept)
+          call Update(accept)
         endif
 
         call Analyze(iCycle, iMove, accept, .true.) !Per Move Analysis
@@ -110,7 +109,7 @@ contains
     write(nout,*) "     Simulation End"
     write(nout,*) "======================================="
 
-    call Epilogue(iCycle, iMove)
+    call Epilogue
 
 #ifdef PARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
@@ -267,7 +266,7 @@ contains
 
   end subroutine
 !===========================================================================
-  subroutine Update(iCycle, iMove, accept)
+  subroutine Update(accept)
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
     use ForcefieldData, only: EnergyCalculator
@@ -275,7 +274,6 @@ contains
     use TrajData, only: TrajArray
     use CommonSampling, only: Sampling
     implicit none
-    integer(kind=8), intent(in) :: iCycle, iMove
     logical, intent(in) :: accept
     integer :: i
 
@@ -390,51 +388,7 @@ contains
 
   end subroutine
 !===========================================================================
-  subroutine Epilogue(iCycle, iMove)
-    use AnalysisData, only: AnalysisArray
-    use BoxData, only: BoxArray
-    use Common_MolInfo, only: MolData
-    use MCMoveData, only: Moves, MoveProb
-    use TrajData, only: TrajArray
-    use CommonSampling, only: Sampling
-    use ParallelVar, only: nout
-    implicit none
-    integer(kind=8), intent(in) :: iCycle, iMove
-    integer :: i
-
-    do i = 1, size(BoxArray)
-      call BoxArray(i) % box % Epilogue
-    enddo
-    write(nout, *) "-----------------------"
-
-    call Sampling % Epilogue
-    
-    do i = 1, size(MolData)
-      call MolData(i) % molConstruct % Epilogue
-    enddo
-
-
-
-    if( allocated(AnalysisArray) ) then
-      do i = 1, size(AnalysisArray)
-        call AnalysisArray(i) % func % Epilogue
-      enddo
-    endif
-
-    if( allocated(TrajArray) ) then
-      do i = 1, size(TrajArray)
-        call TrajArray(i) % traj % Epilogue
-      enddo
-    endif
-
-
-    do i = 1, size(Moves)
-      call Moves(i) % move % Epilogue
-    enddo
-
-  end subroutine
-!===========================================================================
-  subroutine Prologue(iCycle, iMove)
+  subroutine Prologue
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
     use CommonSampling, only: Sampling
@@ -443,7 +397,6 @@ contains
     use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
     implicit none
-    integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
 
     do i = 1, size(MolData)
@@ -483,6 +436,49 @@ contains
 !    flush(nout)
     do i = 1, size(Moves)
       call Moves(i) % move % Prologue
+    enddo
+
+  end subroutine
+!===========================================================================
+  subroutine Epilogue
+    use AnalysisData, only: AnalysisArray
+    use BoxData, only: BoxArray
+    use Common_MolInfo, only: MolData
+    use MCMoveData, only: Moves, MoveProb
+    use TrajData, only: TrajArray
+    use CommonSampling, only: Sampling
+    use ParallelVar, only: nout
+    implicit none
+    integer :: i
+
+    do i = 1, size(BoxArray)
+      call BoxArray(i) % box % Epilogue
+    enddo
+    write(nout, *) "-----------------------"
+
+    call Sampling % Epilogue
+    
+    do i = 1, size(MolData)
+      call MolData(i) % molConstruct % Epilogue
+    enddo
+
+
+
+    if( allocated(AnalysisArray) ) then
+      do i = 1, size(AnalysisArray)
+        call AnalysisArray(i) % func % Epilogue
+      enddo
+    endif
+
+    if( allocated(TrajArray) ) then
+      do i = 1, size(TrajArray)
+        call TrajArray(i) % traj % Epilogue
+      enddo
+    endif
+
+
+    do i = 1, size(Moves)
+      call Moves(i) % move % Epilogue
     enddo
 
   end subroutine
