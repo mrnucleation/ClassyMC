@@ -25,6 +25,8 @@ OPTIMIZE_FLAGS_GFORT := -O3 -cpp
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
 OPTIMIZE_FLAGS_GFORT += -g -lblas -llapack
 
+LIBRARY_FLAGS := 
+
 DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -cpp
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
@@ -61,6 +63,7 @@ OBJ := $(CUR_DIR)/objects
 # ====================================
 
 SRC_MAIN := $(SRC)/Common.f90\
+        		$(SRC)/C_To_Fotran.f90\
         		$(SRC)/Common_BoxData.f90\
         		$(SRC)/Common_TrajData.f90\
         		$(SRC)/Common_Analysis.f90\
@@ -150,7 +153,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/VariablePrecision.f90\
         		$(SRC)/Sim_MonteCarlo.f90\
         		$(SRC)/Sim_GeneticAlgor.f90\
-        		$(SRC)/Main.f90\
+        		$(SRC)/Sim_LibControl.f90\
         		$(SRC)/Units.f90
 
 SRC_TEMPLATE := $(SRC)/Template_Master.f90\
@@ -178,13 +181,13 @@ SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN)
 OBJ_MAIN:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_MAIN))
 OBJ_TEMPLATE:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_TEMPLATE))
 OBJ_AENET:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_AENET))
-
 OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN) 
 # ====================================
 #        Compile Commands
 # ====================================
 default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
 default: COMPFLAGS += $(DEBUGFLAGS)
+default: SRC_COMPLETE += $(SRC)/Main.f90
 default: startUP classyMC finale
 
 aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
@@ -193,7 +196,8 @@ aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET
 aenet: startUP classyMCAENet finale
 
-lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) 
+lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) -shared -fpic
+lib: startUP libclassymc.so finale
 
 gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 gfortran: COMPFLAGS += $(DEBUGFLAGS)
@@ -239,26 +243,26 @@ $(OBJ)/%.o: $(TEMPLATE)/%.f90
 		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
 
-libClassyMC.so: $(OBJ_COMPLETE) 
+libclassymc.so: $(OBJ_COMPLETE) 
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS) -shared -fpic $^ -o $@ 	
+		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 
        
-classyMC: $(OBJ_COMPLETE) 
+classyMC: $(OBJ_COMPLETE) $(SRC)/Main.f90 
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
 		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 	
-classyMCAENet: $(OBJ_COMPLETE)  $(LIB)/libaenet.a
+classyMCAENet: $(OBJ_COMPLETE) $(SRC)/Main.f90  $(LIB)/libaenet.a
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
 		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 	
-classyMC_debug: $(OBJ_COMPLETE) 
+classyMC_debug: $(OBJ_COMPLETE) $(SRC)/Main.f90
 	    
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
@@ -296,6 +300,7 @@ removeObjects:
 		@rm -f $(OBJ)/*.o		
 
 removeExec:
+		@rm -f $(CUR_DIR)/libclassymc.so
 		@rm -f $(CUR_DIR)/classyMC
 		@rm -f $(CUR_DIR)/classyMC_debug
 		@rm -f $(CUR_DIR)/classyMC.exe
@@ -355,7 +360,8 @@ $(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o
 
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
-$(OB)/Main.o: $(OBJ)/Sim_MonteCarlo.o
+$(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o
+$(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 
 $(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
 

@@ -108,7 +108,7 @@ contains
     use VarPrecision
     implicit none
     character(len=*), intent(in) :: line
-    character(len=30), intent(out) :: command
+    character(len=*), intent(out) :: command
     integer, intent(out) :: lineStat
     integer :: i, sizeLine, lowerLim, upperLim
 

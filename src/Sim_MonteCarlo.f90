@@ -16,8 +16,8 @@ contains
     use BoxData, only: BoxArray
     use CommonSampling, only: Sampling
     use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
-    use Debug, only: Debug_DumpNeiList
-    use ForcefieldData, only: EnergyCalculator
+!    use Debug, only: Debug_DumpNeiList
+!    use ForcefieldData, only: EnergyCalculator
     use MCMoveData, only: Moves, MoveProb
     use MoveClassDef, only: MCMove
     use MultiBoxMoveDef, only: MCMultiBoxMove

@@ -1,12 +1,11 @@
 !========================================================            
 ! 
 !========================================================            
-      module ScriptInput
+    module ScriptInput
       use Input_Format
-!      integer, parameter :: maxLineLen = 100   
       contains
 !========================================================            
-      subroutine Script_ReadParameters
+      subroutine Script_ReadParameters(infile)
       use ClassyConstants
       use Input_Forcefield
       use Input_AnalysisType, only: Script_AnalysisType
@@ -22,6 +21,7 @@
       integer :: iLine, lineStat, AllocateStat
       integer :: nLines, nForceLines, lineBuffer
       integer, allocatable :: lineNumber(:)
+      character(len=*), intent(in), optional :: infile
 
 
       character(len=maxLineLen), allocatable :: lineStore(:)
@@ -30,24 +30,26 @@
       character(len=50) :: forcefieldFile
 
     
-!      Get the filename from the command line. 
-      nArgs = command_argument_count()
-      if(nArgs > 0) then
-!        stop "This program only takes one argument"
-           
-!      elseif(nArgs == 1) then
-        call get_command_argument(1, fileName)
-        nLines = 0
-        call LoadFile(lineStore, nLines, lineNumber, fileName)
-        if(nLines == 0) then
-          write(*,*) "ERROR! Input file is empty or could not be read!"
-          stop
-        else
-          write(nout, *) "File successfully loaded!"
-        endif
-      elseif(nArgs == 0) then
-        write(*,*) "ERROR! No Input File has been given!"
-        stop
+      nLines = 0
+      if(present(infile)) then
+         filename = trim(adjustl(infile))
+         call LoadFile(lineStore, nLines, lineNumber, fileName)
+      else
+         !If no filename was passed, get the filename from the command line. 
+          nArgs = command_argument_count()
+          if(nArgs > 0) then
+            call get_command_argument(1, fileName)
+            call LoadFile(lineStore, nLines, lineNumber, fileName)
+            if(nLines == 0) then
+              write(*,*) "ERROR! Input file is empty or could not be read!"
+              stop
+            else
+              write(nout, *) "File successfully loaded!"
+            endif
+          elseif(nArgs == 0) then
+            write(*,*) "ERROR! No Input File has been given!"
+            stop
+          endif
       endif
 
 !      This block counts the number of lines in the input file to determine how large the lineStorage array needs to be.
@@ -65,7 +67,7 @@
           cycle
         endif
         lineStat = 0        
-        call getCommand(lineStore(iLine), command, lineStat)
+        call GetCommand(lineStore(iLine), command, lineStat)
 !         If line is empty or commented, move to the next line.         
         if(lineStat .eq. 1) then
           cycle
@@ -92,12 +94,12 @@
             call setCommand( lineStore(iLine), lineStat )
 
           case("run")
+            write(*,*) "run"
+
             call CPU_TIME(TimeStart)
             call Script_Initialize
             call RunMonteCarlo
             call CPU_TIME(TimeEnd)
-
-
             
           case default
             write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
@@ -137,11 +139,13 @@
       character(len=maxLineLen), intent(in) :: line      
       integer, intent(out) :: lineStat
 
-      character(len=30) :: command, command2
+      character(len=50) :: command, command2
       logical :: logicValue
       integer :: intValue
       real(dp) :: realValue
       
+
+      write(*,*) line
 
       lineStat  = 0
 
