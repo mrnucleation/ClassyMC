@@ -302,6 +302,7 @@ removeObjects:
 removeExec:
 		@rm -f $(CUR_DIR)/libclassymc.so
 		@rm -f $(CUR_DIR)/classyMC
+		@rm -f $(CUR_DIR)/classyMCAENet
 		@rm -f $(CUR_DIR)/classyMC_debug
 		@rm -f $(CUR_DIR)/classyMC.exe
 

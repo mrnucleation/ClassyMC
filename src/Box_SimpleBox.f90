@@ -110,6 +110,8 @@ module SimpleSimBox
       procedure, pass :: Prologue => SimpleBox_Prologue
       procedure, pass :: Epilogue => SimpleBox_Epilogue
 
+      procedure, pass :: Destructor => SimpleBox_Destructor
+
 !      GENERIC, PUBLIC :: ASSIGNMENT(=) => SimpleBox_CopyBox
 
   end type
@@ -217,6 +219,42 @@ module SimpleSimBox
       self%TypeLast(iType) = atmIndx 
     enddo
 
+
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_Constructor(self)
+    class(SimpleBox), intent(inout) :: self
+    implicit none
+
+    deallocate(self%atoms)
+    deallocate(self%ETable)
+    deallocate(self%dETable)
+
+    !Allocate the arrays which contain the atom type and quick look up information.
+    deallocate(self%AtomType)
+    deallocate(self%MolType)
+    deallocate(self%MolIndx)
+    deallocate(self%MolSubIndx)
+    deallocate(self%AtomSubIndx)
+
+    deallocate(self%MolStartIndx)
+    deallocate(self%MolEndIndx)
+    deallocate(self%centerMass)
+
+    deallocate(self%TypeFirst)
+    deallocate(self%TypeLast)
+
+    deallocate(self%MolGlobalIndx)
+    deallocate(self%chempot)
+
+    deallocate(self%NMol)
+    deallocate(self%NMolMax)
+    deallocate(self%NMolMin)
+
+
+    if( allocated(self%Constrain) ) then
+      deallocate(self%Constrain)
+    endif
 
   end subroutine
 !==========================================================================================
