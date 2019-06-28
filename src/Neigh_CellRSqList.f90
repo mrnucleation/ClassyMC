@@ -61,11 +61,12 @@ use Template_NeighList, only: NeighListDef
     integer :: AllocateStatus
     real(dp), pointer :: coords(:,:)
 
+
+
+    self%parent => BoxArray(parentID)%box
     if(self%initialized) then
       return
     endif
-
-    self%parent => BoxArray(parentID)%box
     call self%parent%GetCoordinates(coords)
 !     If no rCut value is given by the subroutine call attempt to pull
 !     the rSq value from the parent box's energy function. The assumption being

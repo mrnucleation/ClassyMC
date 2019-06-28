@@ -16,12 +16,17 @@ class ClassyMC(object):
         self.ClassyLib = self.__startlibrary()
 
         self.verbose = verbose
+        self.prologue = False
+
+        self.movecount = 0
 
         # Classy Library Function Signatures
         self.FFI.cdef("""void Classy_ReadScript(int strlen, char *str);""")
         self.FFI.cdef("""void Classy_RunMove();""")
         self.FFI.cdef("""void Classy_FullSim();""")
-#        self.FFI.cdef("""void Classy_RunMove();""")
+        self.FFI.cdef("""void Classy_RunPrologue();""")
+        self.FFI.cdef("""void Classy_ScreenOut(long cyclenum);""")
+#        self.FFI.cdef("""void Classy_ForceMove();""")
 
         if startscript is not None:
             self.readscript(startscript)
@@ -50,6 +55,7 @@ class ClassyMC(object):
         # to the "run" command in a standard Classy script
         '''
         self.ClassyLib.Classy_FullSim()
+        self.prologue = True
 
     #------------------------------------
     def runmove(self):
@@ -57,14 +63,25 @@ class ClassyMC(object):
         # Tells Classy to perform a single randomly selected
         # MC move and returns back to Python
         '''
+        if not self.prologue:
+            self.ClassyLib.Classy_RunPrologue()
+            self.prologue = True
         self.ClassyLib.Classy_RunMove()
+        self.movecount += 1
     #------------------------------------
     def forcemove(self, movenum):
         pass
         '''
         # Tells Classy to perform a specified Monte Carlo move.
         '''
-#        self.ClassyLib.Classy_ReadScript()
+#        self.ClassyLib.Classy_ForceMove()
+        self.movecount += 1
+    #------------------------------------
+    def printstat(self):
+        '''
+        # Tells Classy to print mid-simulation screen output
+        '''
+        self.ClassyLib.Classy_ScreenOut(self.movecount)
     #------------------------------------
     def getpositions(self, boxnum):
         c_boxnum = c_int()

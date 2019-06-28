@@ -25,7 +25,7 @@ OPTIMIZE_FLAGS_GFORT := -O3 -cpp
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
 OPTIMIZE_FLAGS_GFORT += -g -lblas -llapack
 
-LIBRARY_FLAGS := 
+LIBRARY_FLAGS := -shared -fpic
 
 DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -cpp
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
@@ -196,8 +196,11 @@ aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET
 aenet: startUP classyMCAENet finale
 
-lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) -shared -fpic
+lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(LIBRARY_FLAGS)
 lib: startUP libclassymc.so finale
+
+lib_debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(LIBRARY_FLAGS)
+lib_debug: startUP libclassymc.so finale
 
 gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 gfortran: COMPFLAGS += $(DEBUGFLAGS)
