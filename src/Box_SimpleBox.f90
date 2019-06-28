@@ -222,9 +222,9 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_Constructor(self)
-    class(SimpleBox), intent(inout) :: self
+  subroutine SimpleBox_Destructor(self)
     implicit none
+    class(SimpleBox), intent(inout) :: self
 
     deallocate(self%atoms)
     deallocate(self%ETable)

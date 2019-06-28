@@ -61,7 +61,6 @@
 
       lineBuffer = 0
       do iLine = 1, nLines
-!        write(*,*) trim(adjustl(lineStore(iLine)))
         if(lineBuffer > 0) then
           lineBuffer = lineBuffer - 1
           cycle
@@ -94,7 +93,6 @@
             call setCommand( lineStore(iLine), lineStat )
 
           case("run")
-            write(*,*) "run"
 
             call CPU_TIME(TimeStart)
             call Script_Initialize
@@ -145,7 +143,6 @@
       real(dp) :: realValue
       
 
-      write(*,*) line
 
       lineStat  = 0
 

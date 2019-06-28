@@ -538,7 +538,7 @@ module FF_Pair_Tersoff
  
 !          write(*,*) "Old:", iAtom, jAtom, -V1
           curbox%dETable(iAtom) = curbox%dETable(iAtom) - V1
-          curbox%dETable(jAtom) = curbox%dETable(iAtom) - V1
+          curbox%dETable(jAtom) = curbox%dETable(jAtom) - V1
           E_Diff = E_Diff - V1
         endif
       enddo

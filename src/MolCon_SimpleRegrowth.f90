@@ -31,7 +31,9 @@ module MolCon_SimpleRegrowth
     integer, allocatable :: freq(:)
 
     nAtoms = MolData(self%molType)%nAtoms
-    allocate( self%tempcoords(1:3, 1:nAtoms) )
+    if(.not. allocated(self%tempcoords)) then
+      allocate( self%tempcoords(1:3, 1:nAtoms) )
+    endif
 
     !Locate the central atom by determining the atom that appears the most frequently
     !in the bond topology.

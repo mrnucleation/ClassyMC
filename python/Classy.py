@@ -5,13 +5,17 @@ import os
 from ctypes import c_int
 import cffi
 
-
+#===================================================
+class ClassyCrash(Exception):
+    pass
 #===================================================
 class ClassyMC(object):
     #------------------------------------
-    def __init__(self, startscript=None):
+    def __init__(self, startscript=None, verbose=False):
         self.FFI = cffi.FFI()
         self.ClassyLib = self.__startlibrary()
+
+        self.verbose = verbose
 
         # Classy Library Function Signatures
         self.FFI.cdef("""void Classy_ReadScript(int strlen, char *str);""")
@@ -19,12 +23,12 @@ class ClassyMC(object):
         self.FFI.cdef("""void Classy_FullSim();""")
 #        self.FFI.cdef("""void Classy_RunMove();""")
 
-        if startscript is None:
+        if startscript is not None:
             self.readscript(startscript)
 
     #------------------------------------
     def __startlibrary(self):
-        return FFI.dlopen("./libclassymc.so")
+        return self.FFI.dlopen("./libclassymc.so")
 
     #------------------------------------
     def readscript(self, infile):
@@ -33,13 +37,14 @@ class ClassyMC(object):
         # in the same fashion as if the script was passed in via the command
         # line.
         '''
-        c_infile = FFI.new("char[]", infile)
+        if self.verbose:
+            print("Classy: Reading from file %s"%(infile))
+        c_infile = self.FFI.new("char[]", infile)
         c_insize = c_int()
         c_insize = len(infile)
         self.ClassyLib.Classy_ReadScript(c_insize, c_infile)
     #------------------------------------
     def runsimulation(self):
-        pass
         '''
         # Tells Classy to perform an entire simulation. Equivalent
         # to the "run" command in a standard Classy script
@@ -61,7 +66,9 @@ class ClassyMC(object):
         '''
 #        self.ClassyLib.Classy_ReadScript()
     #------------------------------------
-    def getpositions(self):
+    def getpositions(self, boxnum):
+        c_boxnum = c_int()
+        c_boxnum = boxnum
         pass
     #------------------------------------
 

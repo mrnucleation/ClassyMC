@@ -80,7 +80,9 @@ module Traj_Lammps
         self%xLen = 2
 !        self%boxstr = "ITEM: BOX BOUNDS xx yy zz"
         self%boxstr = "ITEM: BOX BOUNDS pp pp pp"
-        allocate( self%boxDim(1:2, 1:box%nDimension) )
+        if(.not. allocated(self%boxDim)) then
+          allocate( self%boxDim(1:2, 1:box%nDimension) )
+        endif
 
     end select
 

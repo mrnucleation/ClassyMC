@@ -18,6 +18,7 @@ use Template_NeighList, only: NeighListDef
 !      logical :: restrictType = .false.
 !      integer, allocatable :: allowed(:)
 !      integer :: safetyCheck = .false.
+      logical :: initialized = .false.
       integer :: nCells = 0
       integer, allocatable :: cellID(:)
       integer, allocatable :: nCellAtoms(:)
@@ -60,6 +61,10 @@ use Template_NeighList, only: NeighListDef
     integer :: AllocateStatus
     real(dp), pointer :: coords(:,:)
 
+    if(self%initialized) then
+      return
+    endif
+
     self%parent => BoxArray(parentID)%box
     call self%parent%GetCoordinates(coords)
 !     If no rCut value is given by the subroutine call attempt to pull
@@ -84,20 +89,27 @@ use Template_NeighList, only: NeighListDef
     endif
     write(nout,*) "Neighbor List Maximum Neighbors:", self%maxNei
 
-    allocate( self%cellID(1:self%parent%nMaxAtoms), stat=AllocateStatus )
-    allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
-    allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
-    allocate( self%atomList(1:self%parent%nMaxAtoms), stat=AllocateStatus )
+    if(.not. self%initialized) then
+        allocate( self%cellID(1:self%parent%nMaxAtoms), stat=AllocateStatus )
+        allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
+        allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
+        allocate( self%atomList(1:self%parent%nMaxAtoms), stat=AllocateStatus )
 
-    if(.not. allocated(self%allowed) ) then
-      allocate(self%allowed(1:nAtomTypes), stat=AllocateStatus )
-      self%allowed = .true.
+      if(.not. allocated(self%allowed) ) then
+        allocate(self%allowed(1:nAtomTypes), stat=AllocateStatus )
+        self%allowed = .true.
+      endif
     endif
 
     self%list = 0
     self%nNeigh = 0 
-    IF (AllocateStatus /= 0) STOP "*** CellNeighRSQList: Memory Allocation Error! ***"
+    IF (AllocateStatus /= 0) then
+        write(0,*) "Error Code:", AllocateStatus
+        STOP "*** CellNeighRSQList: Memory Allocation Error! ***"
+    endif
 
+
+    self%initialized = .true.
     self%restrictType = .false.
   end subroutine
 !===================================================================================
