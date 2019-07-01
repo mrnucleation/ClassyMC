@@ -26,6 +26,29 @@ contains
  
   end subroutine
   !===========================================================================
+  subroutine Library_SetLogFile(strlen, cfilename) bind(C,name='Classy_SetLogFile')
+    use C_F_Routines, only: C_F_String
+    use ParallelVar, only: nout
+    use iso_c_binding, only: c_ptr, c_f_pointer, c_int, c_null_char, c_loc
+    implicit none
+    integer(c_int), intent(in), value :: strlen
+    type(c_ptr), value, intent(in) :: cfilename
+    character(len=strlen):: outfile
+    logical :: isopen
+    integer :: i, slen
+
+    inquire(unit=nout, opened=isopen)
+
+    if(isopen) then
+      close(nout)
+    endif
+
+    outfile = c_f_string(cfilename)
+
+    open(newunit=nout, file=outfile)
+ 
+  end subroutine
+  !===========================================================================
   subroutine Library_FullSimulation() bind(C,name='Classy_FullSim')
     use Input_Initialize, only: Script_Initialize
     use SimControl, only: TimeStart, TimeEnd
@@ -107,7 +130,7 @@ contains
     use MultiBoxMoveDef, only: MCMultiBoxMove
     use RandomGen, only: sgrnd, grnd, ListRNG
     implicit none
-    integer(c_int), intent(in) :: movenum
+    integer(kind=c_int), intent(in), value :: movenum
 
     logical :: accept
     integer(kind=8) :: iCycle, iMove
