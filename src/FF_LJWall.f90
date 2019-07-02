@@ -1,39 +1,38 @@
 !================================================================================
-module FF_Pair_LJ_Cut
+module FF_Pair_LJ_Wall
   use Template_ForceField, only: ForceField
   use VarPrecision
   use Template_SimBox, only: SimBox
   use CoordinateTypes
 
-  type, extends(forcefield) :: Pair_LJ_Cut
-    real(dp), allocatable :: eps(:)
-    real(dp), allocatable :: sig(:)
-    real(dp), allocatable :: rMin(:)
+  type, extends(forcefield) :: Pair_LJ_Wall
+    real(dp), allocatable :: eps_star(:)
+    real(dp), allocatable :: sig_star(:)
+    real(dp) :: wallZPos
 
-    real(dp), allocatable :: epsTable(:,:)
-    real(dp), allocatable :: sigTable(:,:)
-    real(dp), allocatable :: rMinTable(:,:)
 !    real(dp) :: rCut, rCutSq
     contains
-      procedure, pass :: Constructor => Constructor_LJ_Cut
-      procedure, pass :: DetailedECalc => Detailed_LJ_Cut
-      procedure, pass :: DiffECalc => DiffECalc_LJ_Cut
-      procedure, pass :: ShiftECalc_Single => Shift_LJ_Cut_Single
-!      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Cut_Multi
-      procedure, pass :: NewECalc => New_LJ_Cut
-      procedure, pass :: OldECalc => Old_LJ_Cut
-      procedure, pass :: OrthoVolECalc => OrthoVol_LJ_Cut
-      procedure, pass :: ProcessIO => ProcessIO_LJ_Cut
-      procedure, pass :: Prologue => Prologue_LJ_Cut
-      procedure, pass :: GetCutOff => GetCutOff_LJ_Cut
+      procedure, pass :: Constructor => Constructor_LJ_Wall
+      procedure, pass :: DetailedECalc => Detailed_LJ_Wall
+      procedure, pass :: DiffECalc => DiffECalc_LJ_Wall
+      procedure, pass :: ShiftECalc_Single => Shift_LJ_Wall_Single
+!      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Wall_Multi
+      procedure, pass :: NewECalc => New_LJ_Wall
+      procedure, pass :: OldECalc => Old_LJ_Wall
+      procedure, pass :: OrthoVolECalc => OrthoVol_LJ_Wall
+      procedure, pass :: ProcessIO => ProcessIO_LJ_Wall
+      procedure, pass :: Prologue => Prologue_LJ_Wall
+      procedure, pass :: GetCutOff => GetCutOff_LJ_Wall
   end type
+
+  real(dp), parameter :: coeff1 = 2.0E0_dp/15E0_dp
 
   contains
   !=============================================================================+
-  subroutine Constructor_LJ_Cut(self)
+  subroutine Constructor_LJ_Wall(self)
     use Common_MolInfo, only: nAtomTypes
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     integer :: AllocateStat
 
     allocate(self%eps(1:nAtomTypes), stat = AllocateStat)
@@ -46,11 +45,8 @@ module FF_Pair_LJ_Cut
 
     self%eps = 4E0_dp
     self%sig = 1E0_dp
-    self%rMin = 0.5E0_dp
+    self%zMin = 0.5E0_dp
 
-    self%epsTable = 4E0_dp
-    self%sigTable = 1E0_dp
-    self%rMinTable = 0.5E0_dp
     self%rCut = 5E0_dp
     self%rCutSq = 5E0_dp**2
 
@@ -58,11 +54,11 @@ module FF_Pair_LJ_Cut
 
   end subroutine
   !===================================================================================
-  subroutine Detailed_LJ_Cut(self, curbox, E_T, accept)
+  subroutine Detailed_LJ_Wall(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
@@ -70,7 +66,7 @@ module FF_Pair_LJ_Cut
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
+    real(dp) :: ep, sig
     real(dp) :: LJ
     real(dp) :: E_LJ
     real(dp) :: rmin_ij      
@@ -78,53 +74,30 @@ module FF_Pair_LJ_Cut
     E_LJ = 0E0
     curbox%ETable = 0E0
     accept = .true.
-    do iAtom = 1, curbox%nMaxAtoms-1
+    do iAtom = 1, curbox%nMaxAtoms
       atmType1 = curbox % AtomType(iAtom)
-      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+      if( curbox%IsActive(iAtom) ) then
         cycle
       endif
-      do jAtom = iAtom+1, curbox%nMaxAtoms
-        if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then
-          cycle
-        endif
-        if( curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)  ) then
-          cycle
-        endif
-
-        rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
-        ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
-        rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
-        call curbox%Boundary(rx, ry, rz)
-        rsq = rx**2 + ry**2 + rz**2
-        if(rsq < self%rCutSq) then
-          atmType2 = curbox % AtomType(jAtom)
-          ep = self % epsTable(atmType1, atmType2)
-          sig_sq = self % sigTable(atmType1, atmType2)
-          rmin_ij = self % rMinTable(atmType1, atmType2)
-          if(rsq < rmin_ij) then
-            write(*,*) sqrt(rsq)
-            write(*,*) iAtom, jAtom
-            write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
-            write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
-            write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
-          endif 
-          LJ = (sig_sq/rsq)**3
-          LJ = ep * LJ * (LJ-1E0_dp)
-          E_LJ = E_LJ + LJ
-          curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
-          curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ 
-        endif
-      enddo
+      rz = curbox % atoms(3, iAtom) - self%wallZPos
+      call curbox%Boundary(rx, ry, rz)
+      if(rz < self%rCutSq) then
+      endif
+      ep = self % eps_star(atmType1)
+      sig = self % sig_star(atmType1)
+      LJ = (sig/rz)**3
+      LJ = ep * LJ * (coeff1*LJ*LJ - 1E0_dp)
+      E_LJ = E_LJ + LJ
     enddo
   
-!    write(nout,*) "Lennard-Jones Energy:", E_LJ
+    write(nout,*) "Lennard-Jones Wall Energy:", E_LJ
       
     E_T = E_LJ    
   end subroutine
 !============================================================================
-  subroutine DiffECalc_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+  subroutine DiffECalc_LJ_Wall(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     class(Perturbation), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
@@ -151,7 +124,7 @@ module FF_Pair_LJ_Cut
          call self % OrthoVolECalc( curbox, disp, E_Diff, accept)
 
       class default
-        write(*,*) "Unknown Perturbation Type Encountered by the LJ_Cut Pair Style."
+        write(*,*) "Unknown Perturbation Type Encountered by the LJ_Wall Pair Style."
         stop
 
     end select
@@ -160,9 +133,9 @@ module FF_Pair_LJ_Cut
   end subroutine
 
   !=====================================================================
-  subroutine Shift_LJ_Cut_Single(self, curbox, disp, E_Diff, accept)
+  subroutine Shift_LJ_Wall_Single(self, curbox, disp, E_Diff, accept)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(Displacement), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -172,9 +145,8 @@ module FF_Pair_LJ_Cut
 !    integer :: maxIndx, minIndx
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
+    real(dp) :: ep, sig
     real(dp) :: LJ
-    real(dp) :: rmin_ij      
 
     dispLen = size(disp)
     E_Diff = 0E0_dp
@@ -182,30 +154,16 @@ module FF_Pair_LJ_Cut
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
+      rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
+      ep = self % epsTable(atmType2, atmType1)
+      sig = self % sigTable(atmType2, atmType1)  
+      if(rsq < self%rCutSq) then
+        if(rsq < rmin_ij) then
+          accept = .false.
+          return
+        endif 
 
-!      write(*,*) iAtom, curbox%NeighList(1)%nNeigh(iAtom)
-!      write(*,*) iAtom, curbox%NeighList(1)%list(:, iAtom)
-      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-
-        rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
-        ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
-        rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
-        call curbox%Boundary(rx, ry, rz)
-        rsq = rx*rx + ry*ry + rz*rz
-!        write(*,*) sqrt(rsq)
-
-        atmType2 = curbox % AtomType(jAtom)
-        ep = self % epsTable(atmType2, atmType1)
-        sig_sq = self % sigTable(atmType2, atmType1)  
-        if(rsq < self%rCutSq) then
-          rmin_ij = self % rMinTable(atmType2, atmType1)          
-          if(rsq < rmin_ij) then
-            accept = .false.
-            return
-          endif 
-
-          LJ = (sig_sq/rsq)
+          LJ = (sig/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)              
           E_Diff = E_Diff + LJ
@@ -223,7 +181,7 @@ module FF_Pair_LJ_Cut
           if(iAtom == jAtom) then
             write(*,*) "NeighborList Error!", iAtom, jAtom
           endif
-          LJ = (sig_sq/rsq)
+          LJ = (sig/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)              
           E_Diff = E_Diff - LJ
@@ -236,9 +194,9 @@ module FF_Pair_LJ_Cut
  
   end subroutine
   !=====================================================================
-  subroutine New_LJ_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+  subroutine New_LJ_Wall(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(Addition), intent(in) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
@@ -248,7 +206,7 @@ module FF_Pair_LJ_Cut
     integer :: iDisp, iAtom, jAtom, dispLen, maxNei, listIndx, jNei
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
+    real(dp) :: ep, sig
     real(dp) :: LJ
     real(dp) :: rmin_ij      
 
@@ -282,9 +240,9 @@ module FF_Pair_LJ_Cut
             return
           endif
           ep = self%epsTable(atmType2, atmType1)
-          sig_sq = self%sigTable(atmType2, atmType1)          
+          sig = self%sigTable(atmType2, atmType1)          
 
-          LJ = (sig_sq/rsq)
+          LJ = (sig/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
           E_Diff = E_Diff + LJ
@@ -296,9 +254,9 @@ module FF_Pair_LJ_Cut
     enddo
   end subroutine
   !=====================================================================
-  subroutine Old_LJ_Cut(self, curbox, disp, E_Diff)
+  subroutine Old_LJ_Wall(self, curbox, disp, E_Diff)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(Deletion), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -306,7 +264,7 @@ module FF_Pair_LJ_Cut
     integer :: atmType1, atmType2
     integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
+    real(dp) :: ep, sig
     real(dp) :: LJ, LJ2
     real(dp) :: rmin_ij      
 
@@ -317,21 +275,13 @@ module FF_Pair_LJ_Cut
 
     do iAtom = molStart, molEnd
       atmType1 = curbox % AtomType(iAtom) 
-      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+      ep = self % epsTable(atmType1, atmType2)
+      sig = self % sigTable(atmType1, atmType2)          
 
-        atmType2 = curbox % AtomType(jAtom)
-        ep = self % epsTable(atmType1, atmType2)
-        sig_sq = self % sigTable(atmType1, atmType2)          
-!        rmin_ij = self % rMinTable(atmType1, atmType2)          
-
-        rx = curbox % atoms(1, iAtom) - curbox % atoms(1, jAtom)
-        ry = curbox % atoms(2, iAtom) - curbox % atoms(2, jAtom)
-        rz = curbox % atoms(3, iAtom) - curbox % atoms(3, jAtom)
-        call curbox%Boundary(rx, ry, rz)
-        rsq = rx*rx + ry*ry + rz*rz
-        if(rsq < self%rCutSq) then
-          LJ = (sig_sq/rsq)
+      rz = curbox % atoms(3, iAtom) - curbox % atoms(3, jAtom)
+      call curbox%Boundary(rx, ry, rz)
+      if(rsq < self%rCutSq) then
+        LJ = (sig/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
 !          write(*,*) iAtom, jAtom, rsq, LJ
@@ -343,9 +293,9 @@ module FF_Pair_LJ_Cut
     enddo
   end subroutine
   !=====================================================================
-  subroutine OrthoVol_LJ_Cut(self, curbox, disp, E_Diff, accept)
+  subroutine OrthoVol_LJ_Wall(self, curbox, disp, E_Diff, accept)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(OrthoVolChange), intent(in) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
@@ -358,7 +308,7 @@ module FF_Pair_LJ_Cut
     real(dp) :: dxj, dyj, dzj
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: rx2, ry2, rz2, rsq2
-    real(dp) :: ep, sig_sq, ratio
+    real(dp) :: ep, sig, ratio
     real(dp) :: LJ, LJ2
     real(dp) :: rmin_ij      
 
@@ -397,8 +347,8 @@ module FF_Pair_LJ_Cut
             return
           endif
           ep = self%epsTable(atmType2, atmType1)
-          sig_sq = self%sigTable(atmType2, atmType1)          
-          LJ = (sig_sq/rsq)
+          sig = self%sigTable(atmType2, atmType1)          
+          LJ = (sig/rsq)
           LJ = LJ * LJ * LJ
           LJ = ep * LJ * (LJ-1E0_dp)
           E_Diff = E_Diff + LJ
@@ -415,13 +365,13 @@ module FF_Pair_LJ_Cut
 
   end subroutine
   !=====================================================================
-  subroutine ProcessIO_LJ_Cut(self, line)
+  subroutine ProcessIO_LJ_Wall(self, line)
     use Common_MolInfo, only: nAtomTypes
     use Input_Format, only: CountCommands, GetXCommand
     use Input_Format, only: maxLineLen
     use Units, only: inEngUnit, inLenUnit
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
     character(len=30) :: command
     logical :: param = .false.
@@ -488,19 +438,19 @@ module FF_Pair_LJ_Cut
 
   end subroutine
   !=============================================================================+
-  function GetCutOff_LJ_Cut(self) result(rCut)
+  function GetCutOff_LJ_Wall(self) result(rCut)
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     real(dp) :: rCut
 
     rCut = self%rCut
   end function
   !=====================================================================
-  subroutine Prologue_LJ_Cut(self)
+  subroutine Prologue_LJ_Wall(self)
     use Common_MolInfo, only: nAtomTypes
     use ParallelVar, only: nout
     implicit none
-    class(Pair_LJ_Cut), intent(inout) :: self
+    class(Pair_LJ_Wall), intent(inout) :: self
     integer :: i, j
 
     do i = 1, nAtomTypes

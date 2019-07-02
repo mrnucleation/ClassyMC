@@ -119,19 +119,26 @@ module CubicBoxDef
   subroutine Cube_Boundary(self, rx, ry, rz)
   implicit none
   class(CubeBox), intent(in) :: self
-  real(dp), intent(inout) :: rx, ry, rz 
+  real(dp), intent(inout), optional :: rx, ry, rz 
 !  real(dp) :: rx_new, ry_new, rz_new
 
-  if(abs(rx) > self%boxL2) then
-    rx = rx - sign(self%boxL, rx)
+
+  if(present(rx)) then
+    if(abs(rx) > self%boxL2) then
+      rx = rx - sign(self%boxL, rx)
+    endif
   endif
 
-  if(abs(ry) > self%boxL2) then
-    ry = ry - sign(self%boxL, ry)
+  if(present(ry)) then
+    if(abs(ry) > self%boxL2) then
+      ry = ry - sign(self%boxL, ry)
+    endif
   endif
 
-  if(abs(rz) > self%boxL2) then
-    rz = rz - sign(self%boxL, rz)
+  if(present(rz)) then
+    if(abs(rz) > self%boxL2) then
+      rz = rz - sign(self%boxL, rz)
+    endif
   endif
 
   end subroutine
@@ -140,7 +147,7 @@ module CubicBoxDef
   implicit none
   class(CubeBox), intent(in) :: self
   class(Perturbation), intent(in) :: disp(:)
-  real(dp), intent(inout) :: rx, ry, rz 
+  real(dp), intent(inout), optional :: rx, ry, rz 
   real(dp) :: scaleFactor
 
   select type(disp)
@@ -148,16 +155,22 @@ module CubicBoxDef
       scaleFactor = disp(1)%xScale
   end select
   
-  if(abs(rx) > self%boxL2*scaleFactor) then
-    rx = rx - sign(self%boxL*scaleFactor, rx)
+  if(present(rx)) then
+    if(abs(rx) > self%boxL2*scaleFactor) then
+      rx = rx - sign(self%boxL*scaleFactor, rx)
+    endif
   endif
 
-  if(abs(ry) > self%boxL2*scaleFactor) then
-    ry = ry - sign(self%boxL*scaleFactor, ry)
+  if(present(ry)) then
+    if(abs(ry) > self%boxL2*scaleFactor) then
+      ry = ry - sign(self%boxL*scaleFactor, ry)
+    endif
   endif
 
-  if(abs(rz) > self%boxL2*scaleFactor) then
-    rz = rz - sign(self%boxL*scaleFactor, rz)
+  if(present(rz)) then
+    if(abs(rz) > self%boxL2*scaleFactor) then
+      rz = rz - sign(self%boxL*scaleFactor, rz)
+    endif
   endif
 
   end subroutine

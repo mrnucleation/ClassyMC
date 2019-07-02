@@ -205,18 +205,24 @@ module OrthoBoxDef
   subroutine Ortho_Boundary(self, rx, ry, rz)
     implicit none
     class(OrthoBox), intent(in) :: self
-    real(dp), intent(inout) :: rx, ry, rz 
+    real(dp), intent(inout), optional :: rx, ry, rz 
 
-    if(abs(rx) > self%boxLx2) then
-      rx = rx - sign(self%boxLx, rx)
+    if(present(rx)) then
+      if(abs(rx) > self%boxLx2) then
+        rx = rx - sign(self%boxLx, rx)
+      endif
     endif
- 
-    if(abs(ry) > self%boxLy2) then
-      ry = ry - sign(self%boxLy, ry)
+     
+    if(present(ry)) then
+      if(abs(ry) > self%boxLy2) then
+        ry = ry - sign(self%boxLy, ry)
+      endif
     endif
 
-    if(abs(rz) > self%boxLz2) then
-      rz = rz - sign(self%boxLz, rz)
+    if(present(rz)) then
+      if(abs(rz) > self%boxLz2) then
+        rz = rz - sign(self%boxLz, rz)
+      endif
     endif
 
   end subroutine
@@ -225,7 +231,7 @@ module OrthoBoxDef
   implicit none
   class(OrthoBox), intent(in) :: self
   class(Perturbation), intent(in) :: disp(:)
-  real(dp), intent(inout) :: rx, ry, rz 
+  real(dp), intent(inout), optional :: rx, ry, rz 
   real(dp) :: scaleX, scaleY, scaleZ
 
   select type(disp)
@@ -235,16 +241,22 @@ module OrthoBoxDef
       scaleZ = disp(1)%zScale
   end select
   
-  if(abs(rx) > self%boxLx2*scaleX) then
-    rx = rx - sign(self%boxLx*scaleX, rx)
+  if(present(rx)) then
+    if(abs(rx) > self%boxLx2*scaleX) then
+      rx = rx - sign(self%boxLx*scaleX, rx)
+    endif
   endif
 
-  if(abs(ry) > self%boxLy2*scaleY) then
-    ry = ry - sign(self%boxLy*scaleY, ry)
+  if(present(ry)) then
+    if(abs(ry) > self%boxLy2*scaleY) then
+      ry = ry - sign(self%boxLy*scaleY, ry)
+    endif
   endif
 
-  if(abs(rz) > self%boxLz2*scaleZ) then
-    rz = rz - sign(self%boxLz*scaleZ, rz)
+  if(present(rz)) then
+    if(abs(rz) > self%boxLz2*scaleZ) then
+      rz = rz - sign(self%boxLz*scaleZ, rz)
+    endif
   endif
 
   end subroutine

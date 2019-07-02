@@ -108,7 +108,7 @@ module Template_SimBox
   subroutine Boundary(self, rx, ry, rz)
     implicit none
     class(SimBox), intent(in) :: self
-    real(dp), intent(inout) :: rx, ry, rz 
+    real(dp), intent(inout), optional :: rx, ry, rz 
 
   end subroutine
 !==========================================================================================
@@ -116,7 +116,7 @@ module Template_SimBox
     implicit none
     class(SimBox), intent(in) :: self
     class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(inout) :: rx, ry, rz 
+    real(dp), intent(inout), optional :: rx, ry, rz 
 
   end subroutine
 !==========================================================================================

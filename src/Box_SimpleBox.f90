@@ -395,7 +395,7 @@ module SimpleSimBox
   subroutine SimpleBox_Boundary(self, rx, ry, rz)
     implicit none
     class(SimpleBox), intent(in) :: self
-    real(dp), intent(inout) :: rx, ry, rz 
+    real(dp), intent(inout), optional :: rx, ry, rz 
 
   end subroutine
 !==========================================================================================
