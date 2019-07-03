@@ -13,6 +13,7 @@ contains
     use FF_HardSphere, only: Pair_HardSphere
     use FF_Hybrid, only: Pair_Hybrid
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
+    use FF_Pair_LJ_Wall, only: Pair_LJ_Wall
     use FF_Pair_LJ_Shift, only: Pair_LJ_Shift
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
     use FF_Pair_LJ_Q_Cut, only: Pair_LJ_Q_Cut
@@ -59,6 +60,7 @@ contains
         allocate(Pair_Hybrid::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a Hybrid Forcefield"
 
+
       case("lj_cut")
         allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
@@ -70,6 +72,10 @@ contains
       case("lj_q_cut")
         allocate(Pair_LJ_Q_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
+
+      case("lj_wall")
+        allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 9-3 LJ Wall style"
 
       case("pedone")
         allocate(Pair_Pedone_Cut::EnergyCalculator(FFNum) % Method)

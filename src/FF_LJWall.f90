@@ -8,7 +8,7 @@ module FF_Pair_LJ_Wall
   type, extends(forcefield) :: Pair_LJ_Wall
     real(dp), allocatable :: eps_star(:)
     real(dp), allocatable :: sig_star(:)
-    real(dp) :: wallZPos
+    real(dp) :: zWallPos
 
 !    real(dp) :: rCut, rCutSq
     contains
@@ -35,22 +35,16 @@ module FF_Pair_LJ_Wall
     class(Pair_LJ_Wall), intent(inout) :: self
     integer :: AllocateStat
 
-    allocate(self%eps(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%sig(1:nAtomTypes), stat = AllocateStat)
-    allocate(self%rMin(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%eps_star(1:nAtomTypes), stat = AllocateStat)
+    allocate(self%sig_star(1:nAtomTypes), stat = AllocateStat)
 
-    allocate(self%epsTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
-    allocate(self%sigTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
-    allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat = AllocateStat)
+    self%eps_star = 4E0_dp
+    self%sig_star = 1E0_dp
 
-    self%eps = 4E0_dp
-    self%sig = 1E0_dp
-    self%zMin = 0.5E0_dp
+    self%rCut = 0E0_dp
+    self%rCutSq = 0E0_dp
 
-    self%rCut = 5E0_dp
-    self%rCutSq = 5E0_dp**2
-
-    IF (AllocateStat /= 0) STOP "Allocation in the LJ/Cut Pair Style"
+    IF (AllocateStat /= 0) STOP "Allocation in the LJ/Wall Pair Style"
 
   end subroutine
   !===================================================================================
@@ -72,15 +66,16 @@ module FF_Pair_LJ_Wall
     real(dp) :: rmin_ij      
 
     E_LJ = 0E0
-    curbox%ETable = 0E0
+!    curbox%ETable = 0E0
     accept = .true.
     do iAtom = 1, curbox%nMaxAtoms
       atmType1 = curbox % AtomType(iAtom)
       if( curbox%IsActive(iAtom) ) then
         cycle
       endif
-      rz = curbox % atoms(3, iAtom) - self%wallZPos
-      call curbox%Boundary(rx, ry, rz)
+      rz = curbox % atoms(3, iAtom) - self%zWallPos
+!      call curbox%Boundary(rx, ry, rz)
+      call curbox%Boundary(rz=rz)
       if(rz < self%rCutSq) then
       endif
       ep = self % eps_star(atmType1)
@@ -154,42 +149,25 @@ module FF_Pair_LJ_Wall
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
-      rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
-      ep = self % epsTable(atmType2, atmType1)
-      sig = self % sigTable(atmType2, atmType1)  
-      if(rsq < self%rCutSq) then
-        if(rsq < rmin_ij) then
-          accept = .false.
-          return
-        endif 
+      rz = disp(iDisp)%z_new  -  self%zWallPos
+      call curbox%Boundary(rz=rz)
+      if(rz < 0.0) then
+        accept = .false.
+        return
+      endif 
+      ep = self % eps_star(atmType1)
+      sig = self % sig_star(atmType1)
+      LJ = (sig/rz)
+      LJ = LJ*LJ*LJ
+      LJ = ep * LJ * (coeff1*LJ*LJ - 1E0_dp)
+      E_Diff = E_Diff + LJ
 
-          LJ = (sig/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)              
-          E_Diff = E_Diff + LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
-        endif
-
-        rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
-        ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
-        rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
-        call curbox%Boundary(rx, ry, rz)
-        rsq = rx*rx + ry*ry + rz*rz
-!        write(*,*) sqrt(rsq)
-        if(rsq < self%rCutSq) then
-          if(iAtom == jAtom) then
-            write(*,*) "NeighborList Error!", iAtom, jAtom
-          endif
-          LJ = (sig/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)              
-          E_Diff = E_Diff - LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
-        endif
-
-      enddo
+      rz = curbox % atoms(3, iAtom)  -  self%zWallPos
+      call curbox%Boundary(rz=rz)
+      LJ = (sig/rz)
+      LJ = LJ*LJ*LJ
+      LJ = ep * LJ * (coeff1*LJ*LJ - 1E0_dp)
+      E_Diff = E_Diff - LJ
     enddo
  
   end subroutine
@@ -219,38 +197,19 @@ module FF_Pair_LJ_Wall
 !    write(*,*)
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
-!      write(*,*) iAtom
       atmType1 = curbox % AtomType(iAtom)
-
-      listIndx = disp(iDisp)%listIndex
-      maxNei = tempNNei(listIndx)
-      do jNei = 1, maxNei
-        jAtom = tempList(jNei, listIndx)
-        rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
-        ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
-        rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
-        call curbox%Boundary(rx, ry, rz)
-        rsq = rx*rx + ry*ry + rz*rz
-        if(rsq < self%rCutSq) then
-          atmType2 = curbox % AtomType(jAtom)
-          rmin_ij = self%rMinTable(atmType2, atmType1)          
-        
-          if(rsq < rmin_ij) then
-            accept = .false.
-            return
-          endif
-          ep = self%epsTable(atmType2, atmType1)
-          sig = self%sigTable(atmType2, atmType1)          
-
-          LJ = (sig/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)
-          E_Diff = E_Diff + LJ
-!          write(*,*) iAtom, jAtom, rsq, LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
-        endif
-      enddo
+      rz = disp(iDisp)%z_new - self%zWallPos
+      call curbox%Boundary(rz=rz)
+      if(rz < 0.0) then
+        accept = .false.
+        return
+      endif
+      ep = self % eps_star(atmType1)
+      sig = self % sig_star(atmType1)
+      LJ = (sig/rz)
+      LJ = LJ*LJ*LJ
+      LJ = ep * LJ * (coeff1*LJ*LJ - 1E0_dp)
+      E_Diff = E_Diff + LJ
     enddo
   end subroutine
   !=====================================================================
@@ -275,21 +234,14 @@ module FF_Pair_LJ_Wall
 
     do iAtom = molStart, molEnd
       atmType1 = curbox % AtomType(iAtom) 
-      ep = self % epsTable(atmType1, atmType2)
-      sig = self % sigTable(atmType1, atmType2)          
-
-      rz = curbox % atoms(3, iAtom) - curbox % atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
-      if(rsq < self%rCutSq) then
-        LJ = (sig/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)
-!          write(*,*) iAtom, jAtom, rsq, LJ
-          E_Diff = E_Diff - LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) - LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) - LJ
-        endif
-      enddo
+      rz = curbox % atoms(3, iAtom) - self%zWallPos
+      call curbox%Boundary(rz=rz)
+      ep = self % eps_star(atmType1)
+      sig = self % sig_star(atmType1)
+      LJ = (sig/rz)
+      LJ = LJ*LJ*LJ
+      LJ = ep * LJ * (coeff1*LJ*LJ - 1E0_dp)
+      E_Diff = E_Diff - LJ
     enddo
   end subroutine
   !=====================================================================
@@ -313,55 +265,34 @@ module FF_Pair_LJ_Wall
     real(dp) :: rmin_ij      
 
     E_Diff = 0E0_dp
-    do iAtom = 1, curbox%nMaxAtoms-1
-      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+    do iAtom = 1, curbox%nMaxAtoms
+      if( curbox%IsActive(iAtom) ) then
         cycle
       endif
       atmType1 = curbox % AtomType(iAtom)
       molIndx1 = curbox % MolIndx(iAtom)
-      dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
-      dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
       dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
-      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-        if(jAtom <= iAtom) then
-          cycle
-        endif
-        molIndx2 = curbox % MolIndx(jAtom)
-        dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
-        dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
-        dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
+      rz =  curbox % atoms(3, iAtom) + dzi - self%zWallPos
+      call curbox%BoundaryNew(rz=rz, disp=disp)
+      if(rz < 0.0) then
+        accept = .false.
+        return
+      endif
+      ep = self % eps_star(atmType1)
+      sig = self % sig_star(atmType1)
+      LJ = (sig/rz)
+      LJ = LJ*LJ*LJ
+      LJ = ep * LJ * (coeff1*LJ*LJ - 1E0_dp)
+      E_Diff = E_Diff + LJ
 
-        rx =  curbox % atoms(1, iAtom) + dxi - curbox % atoms(1, jAtom) - dxj
-        ry =  curbox % atoms(2, iAtom) + dyi - curbox % atoms(2, jAtom) - dyj
-        rz =  curbox % atoms(3, iAtom) + dzi - curbox % atoms(3, jAtom) - dzj
-
-        call curbox%BoundaryNew(rx, ry, rz, disp)
-        rsq = rx*rx + ry*ry + rz*rz
-
-        atmType2 = curbox % AtomType(jAtom)
-        if(rsq < self%rCutSq) then
-          rmin_ij = self%rMinTable(atmType2, atmType1)          
-          if(rsq < rmin_ij) then
-            accept = .false.
-            return
-          endif
-          ep = self%epsTable(atmType2, atmType1)
-          sig = self%sigTable(atmType2, atmType1)          
-          LJ = (sig/rsq)
-          LJ = LJ * LJ * LJ
-          LJ = ep * LJ * (LJ-1E0_dp)
-          E_Diff = E_Diff + LJ
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
-        endif
-
-
-      enddo
+      rz = curbox % atoms(3, iAtom) - self%zWallPos
+      call curbox%Boundary(rz=rz)
+      LJ = (sig/rz)
+      LJ = LJ*LJ*LJ
+      LJ = ep * LJ * (coeff1*LJ*LJ - 1E0_dp)
+      E_Diff = E_Diff - LJ
     enddo
 
-    E_Diff = E_Diff - curbox%ETotal
-    curbox % dETable = curbox%dETable - curbox % ETable
 
   end subroutine
   !=====================================================================
@@ -377,17 +308,16 @@ module FF_Pair_LJ_Wall
     logical :: param = .false.
     integer :: jType, lineStat
     integer :: type1, type2, nPar
-    real(dp) :: ep, sig, rCut, rMin
+    real(dp) :: ep, sig, zWall, rMin
   
 
     call GetXCommand(line, command, 1, lineStat)
 
     select case(trim(adjustl(command)))
-      case("rcut")
+      case("wallposition")
         call GetXCommand(line, command, 2, lineStat)
-        read(command, *) rCut
-        self % rCut = rCut
-        self % rCutSq = rCut * rCut
+        read(command, *) zWall
+        self % zWallPos = zWall
 
       case default
         param = .true.
@@ -399,38 +329,12 @@ module FF_Pair_LJ_Wall
       call CountCommands(line, nPar)
       select case(nPar)
         case(4)
-          read(line, *) type1, ep, sig, rMin
+          read(line, *) type1, ep, sig
           ep = ep * inEngUnit
           sig = sig * inLenUnit
-          rMin = rMin * inLenUnit
 
-          self%eps(type1) = ep 
-          self%sig(type1) = sig 
-          self%rMin(type1) = rMin 
-
-
-          do jType = 1, nAtomTypes
-            self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%eps(jType))
-            self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%eps(jType))
-
-            self%sigTable(type1, jType) = (0.5E0_dp * (sig + self%sig(jType)))**2
-            self%sigTable(jType, type1) = (0.5E0_dp * (sig + self%sig(jType)))**2
-
-            self%rMinTable(type1, jType) = max(rMin, self%rMin(jType))**2
-            self%rMinTable(jType, type1) = max(rMin, self%rMin(jType))**2
-          enddo
-        case(5)
-          read(line, *) type1, type2, ep, sig, rMin
-          self%epsTable(type1, type2) = ep
-          self%epsTable(type2, type1) = ep
-
-          self%sigTable(type1, type2) = sig
-          self%sigTable(type2, type1) = sig
-
-          self%rMinTable(type1, type2) = rMin**2
-          self%rMinTable(type2, type1) = rMin**2
-
-
+          self%eps_star(type1) = ep 
+          self%sig_star(type1) = sig 
         case default
           lineStat = -1
       end select
@@ -443,7 +347,7 @@ module FF_Pair_LJ_Wall
     class(Pair_LJ_Wall), intent(inout) :: self
     real(dp) :: rCut
 
-    rCut = self%rCut
+    rCut = 0.0E0_dp
   end function
   !=====================================================================
   subroutine Prologue_LJ_Wall(self)
@@ -452,19 +356,6 @@ module FF_Pair_LJ_Wall
     implicit none
     class(Pair_LJ_Wall), intent(inout) :: self
     integer :: i, j
-
-    do i = 1, nAtomTypes
-      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
-    enddo
-
-    do i = 1, nAtomTypes
-      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
-    enddo
-
-    do i = 1, nAtomTypes
-      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
-    enddo
-
 
 
   end subroutine
