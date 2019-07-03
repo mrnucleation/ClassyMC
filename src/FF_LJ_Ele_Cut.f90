@@ -236,6 +236,8 @@ module FF_Pair_LJ_Q_Cut
               LJ = LJ * LJ * LJ
               LJ = ep * LJ * (LJ-1E0_dp)
               E_Diff = E_Diff + LJ
+              curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+              curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
             endif
           endif
 
@@ -509,6 +511,7 @@ module FF_Pair_LJ_Q_Cut
           do jType = 1, nAtomTypes
             self%epsTable(type1, jType) = 4E0_dp * sqrt(ep * self%eps(jType))
             self%epsTable(jType, type1) = 4E0_dp * sqrt(ep * self%eps(jType))
+
 
             self%sigTable(type1, jType) = (0.5E0_dp * (sig + self%sig(jType)))**2
             self%sigTable(jType, type1) = (0.5E0_dp * (sig + self%sig(jType)))**2

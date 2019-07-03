@@ -11,6 +11,7 @@ use VarPrecision
 
     real(dp), allocatable :: boxatmps(:)
     real(dp) , allocatable:: boxaccpt(:)
+    logical :: verbose = .true.
     logical :: proportional = .true.
     logical :: tuneMax = .true.
     real(dp) :: limit = 3.00E0_dp
@@ -21,6 +22,11 @@ use VarPrecision
     real(dp), allocatable :: boxmax_dist(:)
 
     type(Displacement), allocatable :: disp(:)
+
+    !Rejection Counters
+    integer :: ovlaprej = 0 
+    integer :: constrainrej = 0 
+    integer :: detailedrej = 0 
 
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
@@ -148,18 +154,21 @@ use VarPrecision
     !Check Constraint
     accept = trialBox % CheckConstraint( self%disp(1:nAtoms) )
     if(.not. accept) then
+      self%constrainrej = self%constrainrej + 1
       return
     endif
 
     !Energy Calculation
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:nAtoms), self%tempList, self%tempNNei, E_Diff, accept)
     if(.not. accept) then
+      self%ovlaprej = self%ovlaprej + 1
       return
     endif
 
     !Check Post Energy Constraint
     accept = trialBox % CheckPostEnergy( self%disp(1:nAtoms), E_Diff )
     if(.not. accept) then
+      self%constrainrej = self%constrainrej + 1
       return
     endif
 
@@ -173,7 +182,8 @@ use VarPrecision
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:nAtoms), self%tempList, self%tempNNei)
-!    else
+    else
+      self%detailedrej = self%detailedrej + 1
 !      write(*,*) E_Diff, trialBox%beta, Prob
     endif
 
@@ -234,7 +244,12 @@ use VarPrecision
     if(self%tunemax) then
       write(nout,"(1x,A,100F15.8)") "Final Maximum Displacement: ", self%boxmax_dist(1:)
     endif
- 
+
+    if(self%verbose) then
+      write(nout, "(1x,A,I15)") "Molecule Translation, Rejections due to overlap:", self%ovlaprej
+      write(nout, "(1x,A,I15)") "Molecule Translation, Rejections due to constraint:", self%constrainrej
+      write(nout, "(1x,A,I15)") "Molecule Translation, Rejections due to detailed balance:", self%detailedrej
+    endif
 
   end subroutine
 !=========================================================================

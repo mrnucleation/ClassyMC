@@ -290,6 +290,7 @@ use Template_NeighList, only: NeighListDef
       do jNei = 1, nCellAtoms
         jAtom = self%atomlist(jNei)
         if(jAtom <= iAtom) cycle
+        if( self%parent%MolIndx(iAtom) == self%parent%MolIndx(jAtom)) cycle
         rx = coords(1, iAtom) - coords(1, jAtom)
         ry = coords(2, iAtom) - coords(2, jAtom)
         rz = coords(3, iAtom) - coords(3, jAtom)
