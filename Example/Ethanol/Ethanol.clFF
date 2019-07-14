@@ -1,0 +1,68 @@
+moleculetypes 1
+
+atomdef
+#  Element - Atomic Mass
+  "CH3"  15.034
+  "CH2"  14.026
+  "O"  16.00
+  "H"  1.008
+end_atomdef
+
+bonddef
+  ridgid 1.540  #CHx-CH3
+  ridgid 1.430  #CHx-OH
+  ridgid 0.945  #O-H
+end_bonddef
+
+units angle deg
+
+AngleDef
+  ridgid 109.50 #CHx-CHy-OH
+  ridgid 108.50 #CHx-O-H
+End_AngleDef
+
+TorsionDef
+  ridgid 109.50 #CHx-CHy-O-H
+End_TorsionDef
+
+
+molecule 1
+  RegrowthType LinearCBMC
+  atoms
+    1
+    2
+    3
+    4
+  end_atoms
+
+  bonds
+    1   1 2
+    1   2 3
+    1   3 4
+  end_bonds
+
+  angles
+    1    1 2 3
+    1    2 3 4
+  end_angles
+
+  torsion
+    1    1 2 3 4
+  end_torsion
+end_molecule
+
+forcefieldtype
+  LJ_Q_Cut
+end_forcefieldtype
+
+units energy kb
+# type epsilon sigma q rmin
+forcefield 1
+  LJRCut 15.5
+  QRCut 15.5
+  1  98.0    3.750   0.000   1.5
+  2  46.0    3.950   0.265   0.6
+  3  93.0    3.020  -0.700   0.6
+  4  0.0     0.000   0.434   0.6
+end_forcefield
+
