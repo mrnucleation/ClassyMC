@@ -17,6 +17,7 @@ module Template_MolConstructor
       procedure, public, pass :: Constructor
       procedure, public, pass :: SetMolType
       procedure, public, pass :: GenerateConfig
+      procedure, public, pass :: GeneratePartialConfig
       procedure, public, pass :: ReverseConfig
       procedure, public, pass :: GasConfig
       procedure, public, pass :: GetNInsertPoints
@@ -51,6 +52,17 @@ module Template_MolConstructor
     probconstruct = 1E0_dp
   end subroutine
 !==========================================================================================
+  subroutine GeneratePartialConfig(self, trialBox, disp, probconstruct, insPoint)
+    implicit none
+    class(MolConstructor), intent(inout) :: self
+    class(Perturbation), intent(inout) :: disp(:)
+    class(SimBox), intent(inout) :: trialBox
+    real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(out) :: probconstruct 
+
+    probconstruct = 1E0_dp
+  end subroutine
+!==========================================================================================
   subroutine ReverseConfig(self, trialBox, probconstruct, accept)
     implicit none
     class(MolConstructor), intent(inout) :: self
@@ -63,10 +75,9 @@ module Template_MolConstructor
     probconstruct = 1E0_dp
   end subroutine
 !==========================================================================================
-  subroutine GasConfig(self, molType, probGas)
+  subroutine GasConfig(self,  probGas)
     implicit none
     class(MolConstructor), intent(inout) :: self
-    integer, intent(in) :: molType
     real(dp), intent(out) :: probGas
 
     probGas = 1E0_dp

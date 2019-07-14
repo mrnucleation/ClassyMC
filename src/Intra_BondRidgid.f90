@@ -49,9 +49,10 @@ module IntraBond_Ridgid
 
   end subroutine
 !==========================================================================
-  subroutine RidgidBond_GenerateDist(self, val, probgen)
+  subroutine RidgidBond_GenerateDist(self, beta, val, probgen)
     implicit none
     class(RidgidBond), intent(inout) :: self
+    real(dp), intent(in) :: beta
     real(dp), intent(out) :: val
     real(dp), intent(out) :: probgen
 

@@ -17,7 +17,6 @@ module Template_Intra_FF
   contains
 !=============================================================================+
   subroutine Constructor(self)
-!         use Common_MolInfo, only: nMolTypes
     implicit none
     class(Intra_FF), intent(inout) :: self
 
@@ -48,9 +47,10 @@ module Template_Intra_FF
 
   end subroutine
 !==========================================================================
-  subroutine GenerateDist(self, val, probgen)
+  subroutine GenerateDist(self, beta, val, probgen)
     implicit none
     class(Intra_FF), intent(inout) :: self
+    real(dp), intent(in) :: beta
     real(dp), intent(out) :: val
     real(dp), intent(out) :: probgen
 

@@ -5,6 +5,7 @@ module Input_Forcefield
   use Input_FieldType
   use Input_AngleType
   use Input_BondType
+  use Input_TorsionType
   use Input_Format
 
   real(dp) :: engUnit = 1E0_dp 
@@ -16,8 +17,9 @@ module Input_Forcefield
     use ForcefieldData, only: nForceFields, EnergyCalculator
     use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile
-    use Common_MolInfo, only: AtomData, MolData, BondData, AngleData, &
-                             nMolTypes, nAtomTypes, nBondTypes, nAngleTypes
+    use Common_MolInfo, only: AtomData, MolData, BondData, AngleData, TorsionData, &
+                             nMolTypes, nAtomTypes, nBondTypes, nAngleTypes, &
+                            nTorsionTypes
     implicit none
     character(len=50), intent(in) :: fileName      
     integer, intent(out) :: lineStat
@@ -132,6 +134,22 @@ module Input_Forcefield
             enddo   
           else
             write(*,*) "ERROR! The AngleDef has already been used and can not be called twice"
+            stop
+          endif
+
+!        -----------------------------------------------------------------------------
+        case("torsiondef")
+          call FindCommandBlock(iLine, lineStore, "end_torsiondef", lineBuffer)
+          nItems = lineBuffer - 1
+          if( .not. allocated(TorsionData) ) then
+            nTorsionTypes = nItems
+            allocate(TorsionData(1:nItems), stat = AllocateStat)
+            do i = 1, nItems
+              curLine = iLine + i
+              call Script_TorsionType(lineStore(curLine), i, lineStat)
+            enddo   
+          else
+            write(*,*) "ERROR! The TorsionDef has already been used and can not be called twice"
             stop
           endif
 

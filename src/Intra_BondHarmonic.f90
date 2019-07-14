@@ -49,9 +49,10 @@ module IntraBond_Harmonic
 
   end subroutine
 !==========================================================================
-  subroutine HarmonicBond_GenerateDist(self, val, probgen)
+  subroutine HarmonicBond_GenerateDist(self, beta, val, probgen)
     implicit none
     class(HarmonicBond), intent(inout) :: self
+    real(dp), intent(in) :: beta
     real(dp), intent(out) :: val
     real(dp), intent(out) :: probgen
 

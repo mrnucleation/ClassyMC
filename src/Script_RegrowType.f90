@@ -8,6 +8,7 @@ contains
   subroutine Script_RegrowType(line, molNum, lineStat)
     use Common_MolInfo, only: MolData
     use ForcefieldData, only: nForceFields
+    use MolCon_LinearCBMC, only: LinearCBMC
     use MolCon_SimpleRegrowth, only: SimpleRegrowth
     use MolCon_RidgidRegrowth, only: RidgidRegrowth
     use ParallelVar, only: nout
@@ -36,6 +37,9 @@ contains
         allocate(SimpleRegrowth :: MolData(molNum)%molConstruct )
         write(nout,*) "Molecule uses simple regrowth"
 
+      case("linearcbmc")
+        allocate(LinearCBMC :: MolData(molNum)%molConstruct )
+        write(nout,*) "Molecule uses Linear CBMC"
       case default
         lineStat = -1
         return

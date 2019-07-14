@@ -115,7 +115,7 @@ module MolCon_SimpleRegrowth
         self%tempcoords(2, Atm1) = 0E0_dp
         self%tempcoords(3, Atm1) = 0E0_dp
         call FindBond(molType, atm1, atm2, bondType)
-        call BondData(bondType) % bondFF % GenerateDist(r, prob)
+        call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r, prob)
         call Generate_UnitSphere(dx, dy, dz)
         self%tempcoords(1, Atm2) = r * dx
         self%tempcoords(2, Atm2) = r * dy
@@ -128,7 +128,7 @@ module MolCon_SimpleRegrowth
         self%tempcoords(2, atm2) = 0E0_dp
         self%tempcoords(3, atm2) = 0E0_dp
         call FindBond(molType, atm1, atm2, bondType)
-        call BondData(bondType) % bondFF % GenerateDist(r, prob)
+        call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r, prob)
         call Generate_UnitSphere(dx, dy, dz)
         v1(1) = r*dx
         v1(2) = r*dy
@@ -137,9 +137,9 @@ module MolCon_SimpleRegrowth
         self%tempcoords(2, atm1) = r * dy
         self%tempcoords(3, atm1) = r * dz
         call FindBond(molType, atm2, atm3, bondType)
-        call BondData(bondType) % bondFF % GenerateDist(r, prob)
+        call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r, prob)
         call FindAngle(molType, atm1, atm2, atm3, angleType)
-        call AngleData(angleType) % angleFF % GenerateDist(theta, prob)
+        call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta,theta, prob)
         call Generate_UnitCone(v1, r, theta, v2)
         self%tempcoords(1, atm3) = v2(1) 
         self%tempcoords(2, atm3) = v2(2)

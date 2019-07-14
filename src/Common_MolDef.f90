@@ -4,6 +4,7 @@ module StructureTypes
   use Template_MolConstructor, only: MolConstructor
   use Template_IntraBond, only: Bond_FF
   use Template_IntraAngle, only: Angle_FF
+  use Template_IntraTorsion, only: Torsion_FF
 
 
   type AtomDef 
@@ -17,6 +18,10 @@ module StructureTypes
 
   type AngleDef 
     class(Angle_FF), allocatable :: angleFF
+  end type
+
+  type TorsionDef 
+    class(Torsion_FF), allocatable :: torsionFF
   end type
 
   type MiscDef 
@@ -54,6 +59,10 @@ module StructureTypes
 
     integer :: nTors = 0
     type(TorsMem), allocatable :: torsion(:)
+
+    integer :: nMisc = 0
+    integer, allocatable :: misc(:)
+
   end type
 
 
@@ -68,6 +77,7 @@ module Common_MolInfo
   integer :: nBondTypes = -1
   integer :: nAngleTypes = -1
   integer :: nTorsionTypes = -1
+  integer :: nMiscTypes = -1
 
   integer :: mostAtoms = -1
 
@@ -75,6 +85,8 @@ module Common_MolInfo
   type(AtomDef), allocatable :: AtomData(:)
   type(BondDef), allocatable :: BondData(:)
   type(AngleDef), allocatable :: AngleData(:)
+  type(TorsionDef), allocatable :: TorsionData(:)
+  type(MiscDef), allocatable :: MiscData(:)
 
 
 end module

@@ -26,6 +26,8 @@ contains
         call GetXCommand(lineStore(iLine), command, 4, lineStat)
         read(command, *) intVal
         call FCC(BoxNum, realVal, intVal)
+      case("singlemol")  !Format = singlemol (boxnum)
+!        call 
 
       case default
         lineStat = -1
@@ -133,6 +135,12 @@ contains
 
 
   end subroutine
+!===============================
+!  subroutine SingleMol(BoxNum, latConst, replicate)
+!    use BoxData, only: BoxArray
+!    implicit none
+!
+!  end subroutine
 !===============================
 end module
 !===============================

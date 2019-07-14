@@ -12,7 +12,7 @@ module Template_IntraBond
       procedure, pass :: Constructor 
       procedure, pass :: DetailedECalc 
       procedure, pass :: DiffECalc
-      procedure, pass :: GenerateDist
+!      procedure, pass :: GenerateDist
       procedure, pass :: ProcessIO
   end type
 
@@ -50,16 +50,16 @@ module Template_IntraBond
 
   end subroutine
 !==========================================================================
-  subroutine GenerateDist(self, val, probgen)
-    implicit none
-    class(Bond_FF), intent(inout) :: self
-    real(dp), intent(out) :: val
-    real(dp), intent(out) :: probgen
-
-    val = 0E0_dp
-    probgen = 1E0_dp
-
-  end subroutine
+!  subroutine GenerateDist(self, val, probgen)
+!    implicit none
+!    class(Bond_FF), intent(inout) :: self
+!    real(dp), intent(out) :: val
+!    real(dp), intent(out) :: probgen
+!
+!    val = 0E0_dp
+!    probgen = 1E0_dp
+!
+!  end subroutine
 !=============================================================================+
   subroutine ProcessIO(self, line)
     use Input_Format, only: maxLineLen

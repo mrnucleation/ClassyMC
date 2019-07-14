@@ -21,9 +21,9 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
 
-OPTIMIZE_FLAGS_GFORT := -O3 -cpp 
+OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
-OPTIMIZE_FLAGS_GFORT += -g -lblas -llapack
+#OPTIMIZE_FLAGS_GFORT += -g -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic
 
@@ -124,14 +124,17 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_Tersoff.f90\
         		$(SRC)/FF_ThermoInt.f90\
+        		$(SRC)/Intra_AngleRidgid.f90\
         		$(SRC)/Intra_BondRidgid.f90\
         		$(SRC)/Intra_BondHarmonic.f90\
-        		$(SRC)/Intra_AngleRidgid.f90\
+        		$(SRC)/Intra_TorsionRidgid.f90\
+        		$(SRC)/MolCon_LinearCBMC.f90\
         		$(SRC)/MolCon_RidgidRegrowth.f90\
         		$(SRC)/MolCon_SimpleRegrowth.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
  	        	$(SRC)/Script_AngleType.f90\
  	        	$(SRC)/Script_BondType.f90\
+ 	        	$(SRC)/Script_TorsionType.f90\
  	        	$(SRC)/Script_Constraint.f90\
  	        	$(SRC)/Script_Forcefield.f90\
  	        	$(SRC)/Script_FieldType.f90\
@@ -162,6 +165,7 @@ SRC_TEMPLATE := $(SRC)/Template_Master.f90\
 				$(SRC)/Template_Analysis.f90\
 				$(SRC)/Template_BondFF.f90\
 				$(SRC)/Template_AngleFF.f90\
+				$(SRC)/Template_TorsionFF.f90\
 				$(SRC)/Template_Constraint.f90\
 				$(SRC)/Template_Forcefield.f90\
 	            $(SRC)/Template_SimBox.f90\
@@ -335,6 +339,7 @@ $(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o
 $(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o 
 $(OBJ)/Template_AngleFF.o: $(OBJ)/Template_IntraFF.o
 $(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o
+$(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o
 
 $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
