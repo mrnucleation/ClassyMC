@@ -11,6 +11,7 @@ module Input_Sampling
     use AcceptNoneRule, only: AcceptNone
     use MetropolisRule, only: Metropolis
     use MinMetroRule, only: MinMetro
+    use NestedSampling, only: Nested
     use UmbrellaRule, only: Umbrella
     use UmbrellaWHAMRule, only: UmbrellaWHAM
     implicit none
@@ -31,16 +32,19 @@ module Input_Sampling
     call LowerCaseLine(command)
     select case(trim(adjustl(command)))
       case("acceptall")
-        allocate(acceptall::sampling)
+        allocate(AcceptAll::sampling)
 
       case("acceptnone")
-        allocate(acceptnone::sampling)
+        allocate(AcceptNone::sampling)
 
       case("metropolis")
-        allocate(metropolis::sampling)
+        allocate(Metropolis::sampling)
 
       case("min")
         allocate(MinMetro::sampling)
+
+      case("nested")
+        allocate(Nested::sampling)
 
       case("umbrella")
         allocate(Umbrella::sampling)

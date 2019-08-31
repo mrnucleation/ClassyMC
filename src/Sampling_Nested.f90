@@ -5,11 +5,13 @@ module NestedSampling
   use Template_AcceptRule, only: acceptrule
  
   type, public, extends(acceptrule) :: Nested
-    real(dp) :: E_Median
-    real(dp) :: E_Min, E_Max, dE
-    real(dp) :: E_Hist(0:1000) = 0E0_dp
+    integer :: binmiss = 0
+    real(dp) :: EMedian
+    real(dp) :: EMin, EMax, dE
+    real(dp) :: EHist(0:1000)
     character(len=560) :: logfile = "Nested.dat"
     contains
+       procedure, pass :: Prologue => Nested_Prologue
        procedure, pass :: MakeDecision => Nested_MakeDecision
        procedure, pass :: MakeDecision2Box => Nested_MakeDecision2Box
        procedure, pass :: Maintenance => Nested_Maintenance
@@ -31,13 +33,18 @@ module NestedSampling
     real(dp), intent(in) :: E_Diff
     logical :: accept
     integer :: ebin
-    real(dp) :: E_Total, chemPot, extraTerms, probTerm
+    real(dp) :: E_Total, E_PerAtom, chemPot, extraTerms, probTerm
 
     E_Total = trialBox%ETotal + E_Diff
-    if(E_Total <= self%E_Median) then
+    E_PerAtom = E_Total/trialBox%nAtoms
+    if(E_PerAtom <= self%EMedian) then
       accept = .true.
-      ebin = floor( (E_Total-self%EMin)*self%dE )
-      E_Hist(ebin) = E_Hist(ebin) + 1E0_dp
+      if(E_PerAtom > self%EMin .and. E_Total < self%EMax) then
+        ebin = floor( (E_PerAtom-self%EMin)*self%dE )
+        self%EHist(ebin) = self%EHist(ebin) + 1E0_dp
+      else
+        self%binmiss = self%binmiss + 1
+      endif
     else
       accept = .false.
     endif
@@ -99,6 +106,7 @@ module NestedSampling
 !====================================================================
   subroutine Nested_ProcessIO(self, line, linestat) 
     use Input_Format, only: GetXCommand, maxLineLen
+    use Units, only: outEngUnit
     implicit none
     class(Nested), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line   
@@ -122,11 +130,13 @@ module NestedSampling
       case("emax")
           call GetXCommand(line, command, 4, lineStat)
           read(command, *) self%EMax
+          self%EMax = self%EMax*outEngUnit
           self%dE = 1000.0E0_dp/(self%EMax-self%EMin)
 
       case("emin")
           call GetXCommand(line, command, 4, lineStat)
           read(command, *) self%EMin
+          self%EMin = self%EMin*outEngUnit
           self%dE = 1000.0E0_dp/(self%EMax-self%EMin)
 
       case("filename")
@@ -139,9 +149,19 @@ module NestedSampling
 
   end subroutine
 !====================================================================
+  subroutine Nested_Prologue(self)
+    implicit none
+    class(Nested), intent(inout) :: self
+
+    self%EMedian = self%EMax
+    self%EHist = 0E0_dp
+
+  end subroutine
+!====================================================================
   subroutine Nested_Maintenance(self)
     use AnalysisData, only: AnalysisArray
     use ParallelVar, only: nout, myid
+    use Units, only: outEngUnit
     implicit none
     class(Nested), intent(inout) :: self
     integer :: nMedian
@@ -149,16 +169,24 @@ module NestedSampling
     real(dp) :: sumint
 
     norm = sum(self%EHist)*0.5E0_dp
+    write(nout,*) "Updating Nested Sampling..."
 
     sumint = 0.0E0_dp
     nMedian = -1
-    do while(sumint < norm)
+    do   
       nMedian = nMedian + 1
       sumint = sumint + self%EHist(nMedian)
-    enddo
+!      write(nout,*) nMedian, norm, sumint, self%EHist(nMedian)
+      if(sumint > norm) then
+        exit
+      endif
 
-    self%E_Median = 0.5E0_dp*(self%EHist(nMedian) + self%EHist(nMedian-1))
+    enddo
+!    write(nout,*) nMedian, norm, sumint
+
+    self%EMedian = 0.5E0_dp*( (nMedian/self%dE) + (nMedian-1)/self%dE + 2.0*self%EMin)
     self%EHist = 0E0_dp
+    write(nout,*) "New Median Value:", self%EMedian/outEngUnit
 
   end subroutine
 !====================================================================

@@ -53,7 +53,7 @@ module SimpleSimBox
 
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
-      procedure, pass, private :: AllocateMolBound => SimpleBox_AllocateMolBound
+      procedure, pass :: AllocateMolBound => SimpleBox_AllocateMolBound
       procedure, pass :: LoadAtomCoord => Simplebox_LoadAtomCoord
       procedure, pass :: LoadDimension => Simplebox_LoadDimension
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
