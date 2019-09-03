@@ -162,30 +162,50 @@ module NestedSampling
     use AnalysisData, only: AnalysisArray
     use ParallelVar, only: nout, myid
     use Units, only: outEngUnit
+#ifdef PARALLEL
+    use MPI
+#endif
     implicit none
     class(Nested), intent(inout) :: self
     integer :: nMedian
     real(dp) :: norm
     real(dp) :: sumint
+#ifdef PARALLEL
+    real(dp) :: temphist(0:1000)
+#endif
 
     norm = sum(self%EHist)*0.5E0_dp
     write(nout,*) "Updating Nested Sampling..."
 
-    sumint = 0.0E0_dp
-    nMedian = -1
-    do   
-      nMedian = nMedian + 1
-      sumint = sumint + self%EHist(nMedian)
-!      write(nout,*) nMedian, norm, sumint, self%EHist(nMedian)
-      if(sumint > norm) then
-        exit
-      endif
+#ifdef PARALLEL
+    call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
 
-    enddo
-!    write(nout,*) nMedian, norm, sumint
+    arraySize = size(self%UHist)     
+    if(myid .eq. 0) then
+      self%TempHist = 0E0_dp
+    endif
+    call MPI_REDUCE(self%EHist, TempHist, arraySize, &
+              MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)       
+#endif
+    if(myid == 0) then
+      sumint = 0.0E0_dp
+      nMedian = -1
+      do   
+        nMedian = nMedian + 1
+        sumint = sumint + self%EHist(nMedian)
+  !      write(nout,*) nMedian, norm, sumint, self%EHist(nMedian)
+        if(sumint > norm) then
+          exit
+        endif
+
+      enddo
+  !    write(nout,*) nMedian, norm, sumint
+    endif
 
     self%EMedian = 0.5E0_dp*( (nMedian/self%dE) + (nMedian-1)/self%dE + 2.0*self%EMin)
     self%EHist = 0E0_dp
+    self%EMax = self%EMedian
+    self%dE = 1000.0E0_dp/(self%EMax - self%EMin)
     write(nout,*) "New Median Value:", self%EMedian/outEngUnit
 
   end subroutine
