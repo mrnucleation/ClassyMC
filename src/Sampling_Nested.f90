@@ -35,8 +35,17 @@ module NestedSampling
     integer :: ebin
     real(dp) :: E_Total, E_PerAtom, chemPot, extraTerms, probTerm
 
+
     E_Total = trialBox%ETotal + E_Diff
     E_PerAtom = E_Total/trialBox%nAtoms
+    if(trialBox%ETotal/trialBox%nAtoms > self%EMedian) then
+      if(E_PerAtom < trialBox%ETotal/trialBox%nAtoms) then
+        accept = .true.
+        return
+      endif
+    endif
+
+
     if(E_PerAtom <= self%EMedian) then
       accept = .true.
       if(E_PerAtom > self%EMin .and. E_Total < self%EMax) then
