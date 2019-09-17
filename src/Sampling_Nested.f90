@@ -176,7 +176,7 @@ module NestedSampling
 #endif
     implicit none
     class(Nested), intent(inout) :: self
-    integer :: nMedian
+    integer :: nMedian, iError, arraySize
     real(dp) :: norm
     real(dp) :: sumint
 #ifdef PARALLEL
@@ -189,9 +189,9 @@ module NestedSampling
 #ifdef PARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
 
-    arraySize = size(self%UHist)     
+    arraySize = size(self%EHist)     
     if(myid .eq. 0) then
-      self%TempHist = 0E0_dp
+      TempHist = 0E0_dp
     endif
     call MPI_REDUCE(self%EHist, TempHist, arraySize, &
               MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)       
