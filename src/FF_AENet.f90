@@ -15,7 +15,7 @@ module FF_AENet
 
   !AENet Library functions
 #ifdef AENET
-  use predict_lib, only: initialize_lib, get_energy_lib
+!  use predict_lib, only: initialize_lib, get_energy_lib
   use aenet, only: aenet_atomic_energy, aenet_init, aenet_load_potential, &
                    aenet_Rc_min, aenet_Rc_max
   use geometry, only: geo_recip_lattice
@@ -282,10 +282,10 @@ module FF_AENet
 !          call aenet_atomic_energy(coo_i, type_i, nnb, nbcoo, nbtype, &
 !                                   E_i, stat)
 !     enddo
-     call get_energy_lib(self%box(1:3, 1:3), nCurAtoms, &
-                         self%tempcoords(1:3, 1:nCurAtoms), &
-                         self%atomTypes(1:nCurAtoms), pbc, &
-                         Ecoh, E_T)
+!     call get_energy_lib(self%box(1:3, 1:3), nCurAtoms, &
+!                         self%tempcoords(1:3, 1:nCurAtoms), &
+!                         self%atomTypes(1:nCurAtoms), pbc, &
+!                         Ecoh, E_T)
 
      write(nout, *) "Raw Neuro Net Energy:", E_T, Ecoh
 !     E_T = E_T * curbox%nMolTotal / boltz
@@ -728,6 +728,7 @@ module FF_AENet
       newcoords(1) = atoms(1, iAtom) + dx
       newcoords(2) = atoms(2, iAtom) + dy
       newcoords(3) = atoms(3, iAtom) + dz
+      write(2,*) "1", newcoords(1:3)
       do jNei = 1, nNeigh(iAtom)
         jAtom = NeighList(jNei, iAtom)
         molIndx2 = curbox % MolIndx(jAtom)
@@ -735,19 +736,20 @@ module FF_AENet
         dxj = curbox % centerMass(1, molIndx2) * (xScale-1E0_dp)
         dyj = curbox % centerMass(2, molIndx2) * (yScale-1E0_dp)
         dzj = curbox % centerMass(3, molIndx2) * (zScale-1E0_dp)
-        rx = newcoords(1) - atoms(1, jAtom) - dxj
-        ry = newcoords(2) - atoms(2, jAtom) - dyj
-        rz = newcoords(3) - atoms(3, jAtom) - dzj
-        rsq = rx*rx + ry*ry + rz*rz
+        rx = atoms(1, jAtom) + dxj - newcoords(1)
+        ry = atoms(2, jAtom) + dyj - newcoords(2)
+        rz = atoms(3, jAtom) + dzj - newcoords(3) 
+!        rx = -rx
+!        ry = -ry
+!        rz = -rz
         call curbox%BoundaryNew(rx, ry, rz, disp)
+        rsq = rx*rx + ry*ry + rz*rz
         rmin_ij = self % rMinTable(atmType2, atmType1)      
         if(rsq < rmin_ij) then
           accept = .false.
           return
         endif 
         if(rsq < self%rCutSq) then
-          atmType2 = curbox % AtomType(jAtom)
-          rmin_ij = self % rMinTable(atmType2, atmType1)          
           nCurAtoms = nCurAtoms + 1
           self%atomTypes(nCurAtoms) = atmType2
 
@@ -758,15 +760,23 @@ module FF_AENet
           self%tempcoords(3, nCurAtoms) = rz + newcoords(3)
         endif
       enddo
+      write(2,*) nCurAtoms
+      do jAtom = 1, nCurAtoms
+        write(2,*) "2", self%tempcoords(1:3, jAtom)
+      enddo
+      write(2,*)
+      flush(2)
       call aenet_atomic_energy(newcoords(1:3), atmType1, nCurAtoms, &
                                self%tempcoords(1:3, 1:nCurAtoms), &
                                self%atomtypes(1:nCurAtoms), E_Atom, stat) 
       E_T = E_T + E_Atom
       curbox%dETable(iAtom) = E_Atom/boltz
     enddo
+    write(*,*) E_T, curbox%ETotal
     E_T = E_T / boltz
+    write(*,*) E_T, curbox%ETotal
     E_Diff = E_T - curbox%ETotal
-    E_Diff = E_Diff - curbox%ETotal
+!    E_Diff = E_Diff - curbox%ETotal
     curbox % dETable = curbox%dETable - curbox % ETable
   end subroutine
 !============================================================================
@@ -959,7 +969,7 @@ module FF_AENet
      self%boxrecp = 0E0_dp
      self%boxrecp(:,:) = geo_recip_lattice(self%box)
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
-     call get_energy_lib(self%box(1:3,1:3), nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
+!     call get_energy_lib(self%box(1:3,1:3), nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
      E_T = E_T / boltz
      E_Diff = E_T - curbox%ETotal
 
@@ -994,7 +1004,7 @@ module FF_AENet
         call GetXCommand(line, command, 2, lineStat)
         read(command,*) type1
         call GetXCommand(line, command, 3, lineStat)
-        write(*,*) command
+!        write(*,*) command
         self%inputfiles = ""
         read(command, *) self%inputfiles(type1)
 
@@ -1050,6 +1060,8 @@ module FF_AENet
      enddo
      allocate(self%atomTypes(1:atomLimit))
      allocate(self%tempcoords(3, 1:atomLimit))
+
+     write(nout, *) "AENet Cutoff Distance:", self%rCut
 
 !    if(.not. self%initialized) then
 !      do iType = 1, nAtomTypes

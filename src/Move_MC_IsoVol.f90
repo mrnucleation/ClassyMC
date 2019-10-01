@@ -13,11 +13,20 @@ module MCMove_Isovol
   type, public, extends(MCMove) :: IsoVol
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp   
+
+    
+    logical :: verbose = .true.
     integer :: style = 1
     real(dp) :: maxDv = 0.01E0_dp
     logical :: tuneMax = .true.
     real(dp) :: limit = 3.00E0_dp
     real(dp) :: targAccpt = 50E0_dp
+
+    !Rejection Counters
+    integer :: volrejection = 0 
+    integer :: ovlaprej = 0 
+    integer :: constrainrej = 0 
+    integer :: detailedrej = 0 
 
     integer :: nDim = 3
     type(OrthoVolChange) :: disp(1:1)
@@ -103,18 +112,21 @@ module MCMove_Isovol
     !Check Constraint
     accept = trialBox % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then
+      self%constrainrej = self%constrainrej + 1
       return
     endif
 
     !Energy Calculation
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
     if(.not. accept) then
+      self%ovlaprej = self%ovlaprej + 1
       return
     endif
 
     !Check Post Energy Constraint
     accept = trialBox % CheckPostEnergy( self%disp(1:1), E_Diff )
     if(.not. accept) then
+      self%constrainrej = self%constrainrej + 1
       return
     endif
 
@@ -136,6 +148,8 @@ module MCMove_Isovol
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
+    else
+      self%detailedrej = self%detailedrej + 1
     endif
 
   end subroutine
@@ -193,7 +207,12 @@ module MCMove_Isovol
     if(self%tunemax) then
       write(nout,"(1x,A,F15.8)") "Final Maximum Volume Change: ", self%maxDv
     endif
- 
+
+    if(self%verbose) then
+      write(nout, "(1x,A,I15)") "Iso-Volume, Rejections due to overlap:", self%ovlaprej
+      write(nout, "(1x,A,I15)") "Iso-Volume, Rejections due to constraint:", self%constrainrej
+      write(nout, "(1x,A,I15)") "Iso-Volume, Rejections due to detailed balance:", self%detailedrej
+    endif
 
   end subroutine
 !=========================================================================
@@ -210,11 +229,6 @@ module MCMove_Isovol
 
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
-      case("tunemax")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) logicVal
-        self%tunemax = logicVal
-
       case("dynamiclimit")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal
@@ -239,11 +253,20 @@ module MCMove_Isovol
             self%style = 2
         end select
 
+      case("tunemax")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self%tunemax = logicVal
+
       case("updatefreq")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         self%maintFreq = intVal
 
+      case("verbose")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self%verbose = logicVal
 
       case default
         lineStat = -1

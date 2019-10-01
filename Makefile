@@ -23,11 +23,12 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 
 OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
-#OPTIMIZE_FLAGS_GFORT += -g -lblas -llapack
+OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
+#OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic
 
-DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -cpp
+DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -cpp -ffpe-trap=overflow,invalid,zero -lblas -llapack
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
@@ -196,8 +197,8 @@ default: COMPFLAGS += $(DEBUGFLAGS)
 default: SRC_COMPLETE += $(SRC)/Main.f90
 default: startUP classyMC finale
 
-aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
+#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
+aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET
 aenet: startUP classyMCAENet finale
@@ -215,8 +216,8 @@ gfortran: startUP classyMC finale
 debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
 debug: startUP_debug classyMC_debug finale
 
-#debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
-debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
+debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
+#debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
 debugaenet: COMPFLAGS += -DAENET
 debugaenet: startUP classyMCAENet finale
 

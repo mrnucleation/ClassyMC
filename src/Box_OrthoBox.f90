@@ -115,6 +115,9 @@ module OrthoBoxDef
     E_Culm = self%ETotal
 
     write(nout,*) "--------Box", self%boxID , "Energy---------"
+    if(isnan(E_Culm)) then
+      write(nout, *) "ERROR! Final Culmative Energy is not a number!"
+    endif
     call self % ComputeEnergy
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)

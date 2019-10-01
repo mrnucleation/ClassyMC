@@ -1144,8 +1144,12 @@ module SimpleSimBox
 
     E_Culm = self%ETotal
 
+
     write(nout,*) "--------Box", self%boxID , "Energy---------"
-    call self % ComputeEnergy(tablecheck=.true.)
+    if(isnan(E_Culm)) then
+      write(nout, *) "ERROR! Final Culmative Energy is not a number!"
+    endif
+    call self % ComputeEnergy(tablecheck=.false.)
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
