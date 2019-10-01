@@ -11,6 +11,7 @@ module MolCon_LinearCBMC
   type, public, extends(MolConstructor) :: LinearCBMC
     integer :: firstAtom = 1
     integer :: rosenbluth = 1
+!    integer :: inspoints = 1
     real(dp), allocatable :: tempcoords(:, :)
     integer, allocatable :: patharray(:)
     integer, allocatable :: pathposition(:)
@@ -21,6 +22,7 @@ module MolCon_LinearCBMC
       procedure, public, pass :: Prologue => LinearCBMC_Prologue
       procedure, public, pass :: GenerateConfig => LinearCBMC_GenerateConfig
       procedure, public, pass :: ReverseConfig => LinearCBMC_ReverseConfig
+!      procedure, public, pass :: GetNInsertPoints
   end type
 !==========================================================================================
   contains
@@ -154,10 +156,10 @@ module MolCon_LinearCBMC
     class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(out) :: probconstruct
 
     integer :: bondType, angleType, molType
     integer :: atm1, atm2,atm3, iDisp, iAtom
-    real(dp), intent(out) :: probconstruct
     real(dp), dimension(1:3) :: v1, v2, v3
     real(dp) :: dx, dy, dz, r, theta
     real(dp) :: r1, r2
@@ -171,6 +173,13 @@ module MolCon_LinearCBMC
       class default
         stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
     end select
+
+    !Weight Insertion Points
+    atm1 = 
+
+
+
+
 
 
 

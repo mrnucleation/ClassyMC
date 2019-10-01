@@ -26,10 +26,12 @@ end module
 !===================================================================      
 module Units
   use VarPrecision
+  real(dp), parameter :: PaToBoltz = 0.724297303E-7_dp
+
   real(dp) :: inEngUnit = 1E0_dp
   real(dp) :: inLenUnit = 1E0_dp
   real(dp) :: inAngUnit = 1E0_dp
-  real(dp) :: inPressUnit = 1E0_dp
+  real(dp) :: inPressUnit = PaToBoltz*101325E0_dp
   character(len=6) :: inengStr = "kb"
   character(len=6) :: inlenStr = "ang"
   character(len=6) :: inangStr = "rad"
@@ -38,7 +40,7 @@ module Units
   real(dp) :: outEngUnit = 1E0_dp
   real(dp) :: outLenUnit = 1E0_dp
   real(dp) :: outAngUnit = 1E0_dp
-  real(dp) :: outPressUnit = 1E0_dp
+  real(dp) :: outPressUnit = PaToBoltz*101325E0_dp
   character(len=6) :: engStr = "kb"
   character(len=6) :: lenStr = "ang"
   character(len=6) :: angStr = "rad"
@@ -129,7 +131,6 @@ module Units
   function FindPressureUnit(unitName) result(units)
      implicit none 
      character(len=*) :: unitName       
-     real(dp), parameter :: PaToBoltz = 0.724297303E-7_dp
      real(dp) :: units
       
      select case(trim(adjustl(unitName)))
@@ -140,7 +141,7 @@ module Units
          units = PaToBoltz
 
        case("bar")
-         units = PaToBoltz*1E5
+         units = PaToBoltz*1E5_dp
 
        case("mmhg")
          units = PaToBoltz*133.322E0_dp
