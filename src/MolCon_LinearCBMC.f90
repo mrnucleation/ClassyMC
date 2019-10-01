@@ -175,7 +175,7 @@ module MolCon_LinearCBMC
     end select
 
     !Weight Insertion Points
-    atm1 = 
+!        atm1 = 
 
 
 
