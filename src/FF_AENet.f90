@@ -728,7 +728,6 @@ module FF_AENet
       newcoords(1) = atoms(1, iAtom) + dx
       newcoords(2) = atoms(2, iAtom) + dy
       newcoords(3) = atoms(3, iAtom) + dz
-      write(2,*) "1", newcoords(1:3)
       do jNei = 1, nNeigh(iAtom)
         jAtom = NeighList(jNei, iAtom)
         molIndx2 = curbox % MolIndx(jAtom)
@@ -760,21 +759,16 @@ module FF_AENet
           self%tempcoords(3, nCurAtoms) = rz + newcoords(3)
         endif
       enddo
-      write(2,*) nCurAtoms
-      do jAtom = 1, nCurAtoms
-        write(2,*) "2", self%tempcoords(1:3, jAtom)
-      enddo
-      write(2,*)
-      flush(2)
+
       call aenet_atomic_energy(newcoords(1:3), atmType1, nCurAtoms, &
                                self%tempcoords(1:3, 1:nCurAtoms), &
                                self%atomtypes(1:nCurAtoms), E_Atom, stat) 
       E_T = E_T + E_Atom
       curbox%dETable(iAtom) = E_Atom/boltz
     enddo
-    write(*,*) E_T, curbox%ETotal
+!    write(*,*) E_T, curbox%ETotal
     E_T = E_T / boltz
-    write(*,*) E_T, curbox%ETotal
+!    write(*,*) E_T, curbox%ETotal
     E_Diff = E_T - curbox%ETotal
 !    E_Diff = E_Diff - curbox%ETotal
     curbox % dETable = curbox%dETable - curbox % ETable

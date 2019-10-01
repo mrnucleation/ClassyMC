@@ -197,8 +197,8 @@ default: COMPFLAGS += $(DEBUGFLAGS)
 default: SRC_COMPLETE += $(SRC)/Main.f90
 default: startUP classyMC finale
 
-#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
+aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
+#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET
 aenet: startUP classyMCAENet finale
@@ -216,8 +216,8 @@ gfortran: startUP classyMC finale
 debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
 debug: startUP_debug classyMC_debug finale
 
-debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
-#debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
+#debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
+debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
 debugaenet: COMPFLAGS += -DAENET
 debugaenet: startUP classyMCAENet finale
 
