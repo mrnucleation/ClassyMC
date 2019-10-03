@@ -139,6 +139,13 @@ module Template_ForceField
 
   end subroutine
 !=============================================================================+
+  function GetRMin(self) result(rMinOut)
+    implicit none
+    class(forcefield), intent(inout) :: self
+    real(dp), pointer :: rMinOut(:)
+
+  end function
+!=============================================================================+
   function GetCutOff(self) result(rCut)
     implicit none
     class(forcefield), intent(inout) :: self

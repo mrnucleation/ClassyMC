@@ -152,6 +152,7 @@ module Anaylsis_BlockAverage
       endif
     endif
     write(self%fileunit, *) self%writeNum*self%maintFreq, self%varSum/self%nSamp, self%varSumSq/self%nSamp
+    flush(self%fileunit)
     self%varSum = 0E0_dp
     self%varSumSq = 0E0_dp
     self%nSamp = 1E-40_dp

@@ -84,6 +84,10 @@ module Units
      real(dp) :: units
       
      select case(trim(adjustl(unitName)))
+       case("m")
+         units = 1E-10_dp
+       case("cm")
+         units = 1E-8_dp
        case("nm")
          units = 1E-1_dp
        case("a")

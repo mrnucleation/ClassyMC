@@ -306,7 +306,7 @@ module CubicBoxDef
   subroutine Cube_Prologue(self)
     use Common_MolInfo, only: nMolTypes
     use ParallelVar, only: nout
-    use Units, only: outEngUnit, engStr
+    use Units, only: outEngUnit, engStr, outPressUnit, pressStr
     implicit none
     class(CubeBox), intent(inout) :: self
     logical :: accept
@@ -354,7 +354,7 @@ module CubicBoxDef
 
 
     self%volume = self%boxL**3
-    write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure
+    write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure/outPressUnit, pressStr
     write(nout,*) "Box ", self%boxID, " Volume: ", self%volume
     write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%boxL**3
 

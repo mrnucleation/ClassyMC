@@ -24,6 +24,7 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
 OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
+#OPTIMIZE_FLAGS_GFORT += -pg
 #OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic
@@ -343,7 +344,7 @@ $(OBJ)/Template_AngleFF.o: $(OBJ)/Template_IntraFF.o
 $(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o
 $(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o
 
-$(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o
+$(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o

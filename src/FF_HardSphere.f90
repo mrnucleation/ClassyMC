@@ -279,7 +279,7 @@ module FF_HardSphere
 
     accept = .true.
     do iAtom = 1, curbox%nMaxAtoms
-      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+      if( curbox%IsActive(iAtom) ) then
         cycle
       endif
       atmType1 = curbox % AtomType(iAtom)

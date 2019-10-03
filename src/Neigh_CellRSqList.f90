@@ -57,7 +57,7 @@ use Template_NeighList, only: NeighListDef
     class(CellRSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
-    real(dp), parameter :: atomRadius = 0.65E0_dp  !Used to estimate an approximate volume of 
+    real(dp), parameter :: atomRadius = 1.0E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
     real(dp), pointer :: coords(:,:)
 

@@ -28,6 +28,9 @@ module SimpleSimBox
 !
 !    real(dp), allocatable :: ETable(:), dETable(:)
 !    real(dp), allocatable :: atoms(:,:)
+    integer :: dangerbuilds = 0
+    real(dp), allocatable :: dr(:,:)
+    real(dp) :: largestdr = 0E0_dp
 !
 !    Molecule Based Indexing and Census Arrays 
 !    integer, allocatable :: NMolMin(:), NMolMax(:)
@@ -44,6 +47,7 @@ module SimpleSimBox
 !    integer :: nLists
 !    ----------------------------
 !    
+    integer :: volnum
     integer :: nTotal
     type(constrainArray), allocatable :: Constrain(:)
  
@@ -153,6 +157,7 @@ module SimpleSimBox
 
     !Allocate the position and energy related arrays. 
     allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%dr(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%ETable(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%dETable(1:self%nMaxAtoms), stat=AllocateStatus)
 
@@ -927,6 +932,7 @@ module SimpleSimBox
     do iAtom = 1, MolData(nType) % nAtoms
       do iDimn = 1, self%nDimension
         self % atoms(iDimn, nStart+iAtom-1 ) = self % atoms(iDimn, jStart+iAtom-1 )
+        self % dr(iDimn, nStart+iAtom-1 ) = self % dr(iDimn, jStart+iAtom-1 )
       enddo
     enddo
 
@@ -956,6 +962,9 @@ module SimpleSimBox
         dispLen = size(disp)
         do iDisp = 1, dispLen
           dispIndx = disp(iDisp) % atmIndx
+          self % dr(1, dispIndx) = self % dr(1, dispIndx) + disp(iDisp)%x_new - self%atoms(1, dispIndx)
+          self % dr(2, dispIndx) = self % dr(2, dispIndx) + disp(iDisp)%y_new - self%atoms(2, dispIndx)
+          self % dr(3, dispIndx) = self % dr(3, dispIndx) + disp(iDisp)%z_new - self%atoms(3, dispIndx)
           call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
           self % atoms(1, dispIndx) = disp(iDisp)%x_new
           self % atoms(2, dispIndx) = disp(iDisp)%y_new
@@ -973,6 +982,7 @@ module SimpleSimBox
           self % atoms(1, dispIndx) = disp(iDisp)%x_new
           self % atoms(2, dispIndx) = disp(iDisp)%y_new
           self % atoms(3, dispIndx) = disp(iDisp)%z_new
+          self % dr(1:3, dispIndx) = 0E0_dp
         enddo
         call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
         call self % AddMol(disp(1)%molType)
@@ -991,6 +1001,9 @@ module SimpleSimBox
               self%atoms(1, iAtom) = self%atoms(1, iAtom) + dx
               self%atoms(2, iAtom) = self%atoms(2, iAtom) + dy
               self%atoms(3, iAtom) = self%atoms(3, iAtom) + dz
+              self % dr(1, iAtom) = self % dr(1, iAtom) + dx
+              self % dr(2, iAtom) = self % dr(2, iAtom) + dy
+              self % dr(3, iAtom) = self % dr(3, iAtom) + dz
 !              write(*,*) self%atoms(1:3, iAtom)
             enddo
             self%centerMass(1, iMol) = self%centerMass(1, iMol) * disp(1)%xScale
@@ -1010,15 +1023,62 @@ module SimpleSimBox
 !==========================================================================================
   subroutine SimpleBox_Maintenance(self)
     use CoordinateTypes
+    use Common_NeighData, only: neighSkin
+    use ParallelVar, only: nout
     implicit none
     class(SimpleBox), intent(inout) :: self
     logical :: accept
     integer :: iList
-    real(dp) :: tempE
+    integer :: iAtom
+    real(dp) :: tempE, drsq
+    real(dp) :: maxdr, maxdr2
 
-    do iList = 1, size(self%NeighList)
-      call self % NeighList(iList) % BuildList(iList)
+!    do iList = 1, size(self%NeighList)
+!      call self % NeighList(iList) % BuildList(iList)
+!    enddo
+!    return
+
+    !Check to see if the particles have shifted enough from their original position to justify a
+    !neighorlist rebuild.
+    maxdr = 0E0_dp
+    maxdr2 = 0E0_dp
+    do iAtom = 1, self%nMaxAtoms
+      if(.not. self%IsActive(iAtom)) cycle
+
+      drsq = self%dr(1, iAtom)*self%dr(1, iAtom) + self%dr(2, iAtom)*self%dr(2, iAtom) + &
+             self%dr(3, iAtom)*self%dr(3, iAtom)
+!      write(*,*) iAtom, maxdr, maxdr2
+      if(drsq > maxdr) then
+        maxdr2 = maxdr
+        maxdr = drsq
+      else
+        if(drsq > maxdr2) then
+          maxdr2 = drsq
+        endif
+      endif
     enddo
+
+    maxdr = sqrt(maxdr)
+    maxdr2 = sqrt(maxdr2)
+
+    !Keep track of the largest displacement between rebuilds seen through the course of the simulation
+
+
+
+!    write(*,*) maxdr, maxdr2, neighSkin
+    if( (maxdr + maxdr2) > neighSkin ) then
+      if(maxdr > neighskin) then
+        self%dangerbuilds = self%dangerbuilds + 1
+        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
+      endif
+      if(maxdr > self%largestdr) then
+        self%largestdr = maxdr
+      endif
+      do iList = 1, size(self%NeighList)
+        call self % NeighList(iList) % BuildList(iList)
+      enddo
+      self%dr = 0E0_dp
+    endif
 !    call self % ComputeEnergy
 
 !    call self % EFunc % Method % DetailedECalc( self, tempE, accept )
@@ -1054,7 +1114,7 @@ module SimpleSimBox
     use Common_MolInfo, only: nMolTypes
     use ParallelVar, only: nout
     use Input_Format, only: ReplaceText
-    use Units, only: outEngUnit
+    use Units, only: outEngUnit, outLenUnit
     implicit none
     class(SimpleBox), intent(inout) :: self
     logical :: accept
@@ -1075,9 +1135,11 @@ module SimpleSimBox
     tempStr = ReplaceText(tempStr, "%s2", trim(adjustl(tempStr2)))
     write(nout, "(A)") trim(tempStr)
 
-    write(tempStr, "(A)") "        Per Mol Energy: %s1"
+    write(tempStr, "(A)") "        Per Mol Energy: %s1    Volume: %s2"
     write(tempStr2, "(F40.8)") self%ETotal/(outEngUnit*self%nMolTotal)
     tempStr = ReplaceText(tempStr, "%s1", trim(adjustl(tempStr2)))
+    write(tempStr2, "(F40.8)") self%Volume/(outLenUnit**3)
+    tempStr = ReplaceText(tempStr, "%s2", trim(adjustl(tempStr2)))
     write(nout, "(A)") trim(tempStr)
 
 
@@ -1132,6 +1194,7 @@ module SimpleSimBox
       endif
     enddo
 
+
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_Epilogue(self)
@@ -1172,10 +1235,13 @@ module SimpleSimBox
         write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit, engStr
       endif
     endif
-    write(nout, "(1x,A,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Final Energy (Per Mol): ", &
+    write(nout, "(1x,A4,I2,A,E15.8,1x,A)") "Box ", self%boxID, " Final Energy (Per Mol): ", &
                                            self % ETotal/(outEngUnit*self%nMolTotal), engStr
-    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
-    write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
+    write(nout, "(1x,A4,I2,A,I8)") "Box ", self%boxID, " Molecule Count: ", self % NMol
+    write(nout, "(1x,A4,I2,A,I8)") "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
+    write(nout, "(1x,A4,I2,A,I8)") "Box ", self%boxID, " Dangerous Builds: ", self % dangerbuilds
+    write(nout, "(1x,A4,I2,A,E15.8)") "Box ", self%boxID, " Largest Atom Displacement Between Neigh Builds: ", self % largestdr
+
     if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % Epilogue
