@@ -1067,7 +1067,7 @@ module SimpleSimBox
 
 !    write(*,*) maxdr, maxdr2, neighSkin
     if( (maxdr + maxdr2) > neighSkin ) then
-      if(maxdr*0.5E0 > neighskin) then
+      if(maxdr > neighskin*0.5E0_dp) then
         self%dangerbuilds = self%dangerbuilds + 1
 !        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
       endif
