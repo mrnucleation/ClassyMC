@@ -59,24 +59,29 @@ module FF_HardSphere
     real(dp) :: E_LJ
     real(dp) :: rmin_ij      
 
+    integer, pointer :: AtomType(:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+    call curbox%GetAtomTypes(AtomType)
+    call curbox%GetCoordinates(atoms)
+
     E_LJ = 0E0
     curbox%ETable = 0E0
     accept = .true.
     do iAtom = 1, curbox%nMaxAtoms-1
-      atmType1 = curbox % AtomType(iAtom)
-      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+      atmType1 = AtomType(iAtom)
+      if( .not. curbox%IsActive(iAtom) ) then
         cycle
       endif
       do jAtom = iAtom+1, curbox%nMaxAtoms
-        if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then
+        if( .not. curbox%IsActive(jAtom) ) then
           cycle
         endif
-        atmType2 = curbox % AtomType(jAtom)
+        atmType2 = AtomType(jAtom)
         rmin_ij = self % rMinTable(atmType1,atmType2)          
 
-        rx = curbox % atoms(1, iAtom)  -  curbox % atoms(1, jAtom)
-        ry = curbox % atoms(2, iAtom)  -  curbox % atoms(2, jAtom)
-        rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
+        rx = atoms(1, iAtom) - atoms(1, jAtom)
+        ry = atoms(2, iAtom) - atoms(2, jAtom)
+        rz = atoms(3, iAtom) - atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx**2 + ry**2 + rz**2
         if(rsq < rmin_ij) then
@@ -141,19 +146,27 @@ module FF_HardSphere
     real(dp) :: ep, sig_sq
     real(dp) :: rmin_ij      
 
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+    integer, pointer :: AtomType(:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+    call curbox%GetCoordinates(atoms)
+    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call curbox%GetAtomTypes(AtomType)
+
     dispLen = size(disp)
     accept = .true.
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
-      atmType1 = curbox % AtomType(iAtom)
-      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-        atmType2 = curbox % AtomType(jAtom)
+      atmType1 = AtomType(iAtom)
+      do jNei = 1, nNeigh(iAtom)
+        jAtom = neighlist(jNei, iAtom)
+        atmType2 = AtomType(jAtom)
         rmin_ij = self % rMinTable(atmType2, atmType1)          
 
-        rx = disp(iDisp)%x_new  -  curbox % atoms(1, jAtom)
-        ry = disp(iDisp)%y_new  -  curbox % atoms(2, jAtom)
-        rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
+        rx = disp(iDisp)%x_new - atoms(1, jAtom)
+        ry = disp(iDisp)%y_new - atoms(2, jAtom)
+        rz = disp(iDisp)%z_new - atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < rmin_ij) then
@@ -180,15 +193,14 @@ module FF_HardSphere
     real(dp) :: ep, sig_sq
     real(dp) :: LJ
     real(dp) :: rmin_ij      
+    real(dp), pointer :: atoms(:,:) => null()
 
+    call curbox%GetCoordinates(atoms)
     dispLen = size(disp)
     E_Diff = 0E0_dp
     accept = .true.
 
     do iDisp = 1, dispLen
-!      if(.not. disp(iDisp)%newAtom) then
-!        cycle
-!      endif
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
       listIndx = disp(iDisp)%listIndex
@@ -211,9 +223,9 @@ module FF_HardSphere
         atmType2 = curbox % AtomType(jAtom)
         rmin_ij = self%rMinTable(atmType2, atmType1)          
 
-        rx = disp(iDisp)%x_new - curbox % atoms(1, jAtom)
-        ry = disp(iDisp)%y_new - curbox % atoms(2, jAtom)
-        rz = disp(iDisp)%z_new - curbox % atoms(3, jAtom)
+        rx = disp(iDisp)%x_new - atoms(1, jAtom)
+        ry = disp(iDisp)%y_new - atoms(2, jAtom)
+        rz = disp(iDisp)%z_new - atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < rmin_ij) then
@@ -223,6 +235,70 @@ module FF_HardSphere
       enddo
     enddo
   end subroutine
+  !===================================================================================
+  subroutine OrthoVol_HardSphere(self, curbox, disp, E_Diff, accept)
+    implicit none
+    class(Pair_HardSphere), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    type(OrthoVolChange), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    integer :: iType, jType, iAtom, jAtom
+    integer :: jNei
+    integer :: atmType1, atmType2
+    integer :: molIndx1, molIndx2
+    real(dp) :: dxi, dyi, dzi
+    real(dp) :: dxj, dyj, dzj
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: ep, sig_sq
+    real(dp) :: rmin_ij      
+    real(dp), pointer :: atoms(:,:) => null()
+
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+
+    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call curbox%GetCoordinates(atoms)
+
+    E_Diff = 0E0_dp
+
+    accept = .true.
+    do iAtom = 1, curbox%nMaxAtoms
+      if( curbox%IsActive(iAtom) ) then
+        cycle
+      endif
+      atmType1 = curbox % AtomType(iAtom)
+      molIndx1 = curbox % MolIndx(iAtom)
+      dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
+      dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
+      dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
+      do jNei = 1, nNeigh(iAtom)
+        jAtom = neighlist(jNei, iAtom)
+        if(jAtom <= iAtom) then
+          cycle
+        endif
+        atmType2 = curbox % AtomType(jAtom)
+        molIndx2 = curbox % MolIndx(jAtom)
+        dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
+        dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
+        dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
+        rx = atoms(1, iAtom) + dxi - atoms(1, jAtom) - dxj
+        ry = atoms(2, iAtom) + dyi - atoms(2, jAtom) - dyj
+        rz = atoms(3, iAtom) + dzi - atoms(3, jAtom) - dzj
+        call curbox%BoundaryNew(rx, ry, rz, disp)
+        rsq = rx*rx + ry*ry + rz*rz
+        rmin_ij = self % rMinTable(atmType2, atmType1)
+        if(rsq < rmin_ij) then
+          accept = .false.
+          return
+        endif
+      enddo
+    enddo
+  
+      
+  end subroutine
+
   !=====================================================================
   subroutine ProcessIO_HardSphere(self, line)
     use Common_MolInfo, only: nAtomTypes
@@ -257,60 +333,6 @@ module FF_HardSphere
         lineStat = -1
     end select
 
-  end subroutine
-  !===================================================================================
-  subroutine OrthoVol_HardSphere(self, curbox, disp, E_Diff, accept)
-    implicit none
-    class(Pair_HardSphere), intent(inout) :: self
-    class(SimBox), intent(inout) :: curbox
-    type(OrthoVolChange), intent(in) :: disp(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
-
-    integer :: iType, jType, iAtom, jAtom
-    integer :: jNei
-    integer :: atmType1, atmType2
-    integer :: molIndx1, molIndx2
-    real(dp) :: dxi, dyi, dzi
-    real(dp) :: dxj, dyj, dzj
-    real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: rmin_ij      
-
-    accept = .true.
-    do iAtom = 1, curbox%nMaxAtoms
-      if( curbox%IsActive(iAtom) ) then
-        cycle
-      endif
-      atmType1 = curbox % AtomType(iAtom)
-      molIndx1 = curbox % MolIndx(iAtom)
-      dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
-      dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
-      dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
-      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
-        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
-        if(jAtom <= iAtom) then
-          cycle
-        endif
-        atmType2 = curbox % AtomType(jAtom)
-        molIndx2 = curbox % MolIndx(jAtom)
-        dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
-        dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
-        dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
-        rx = curbox % atoms(1, iAtom) + dxi -  curbox % atoms(1, jAtom) - dxj
-        ry = curbox % atoms(2, iAtom) + dyi -  curbox % atoms(2, jAtom) - dyj
-        rz = curbox % atoms(3, iAtom) + dzi -  curbox % atoms(3, jAtom) - dzj
-        call curbox%BoundaryNew(rx, ry, rz, disp)
-        rsq = rx*rx + ry*ry + rz*rz
-        rmin_ij = self % rMinTable(atmType2, atmType1)
-        if(rsq < rmin_ij) then
-          accept = .false.
-          return
-        endif
-      enddo
-    enddo
-  
-      
   end subroutine
   !=============================================================================+
   function GetCutOff_HardSphere(self) result(rCut)

@@ -63,12 +63,13 @@ module FF_Pair_Tersoff
     class(Pair_Tersoff), intent(in) :: self
     real(dp), intent(in) :: theta, c, d, h
     real(dp) :: c_sq, d_sq
-    real(dp) :: val  
+    real(dp) :: val, t_term
  
     c_sq = c * c
     d_sq = d * d
 !    val = 1E0_dp + c_sq/d_sq - c_sq/(d_sq + (cos(theta) - h)**2) 
-    val = 1E0_dp + c_sq/d_sq - c_sq/(d_sq + (theta - h)**2) 
+    t_term = (theta-h)
+    val = 1E0_dp + c_sq/d_sq - c_sq/(d_sq + t_term*t_term) 
 
   end function
 !======================================================================================
@@ -173,8 +174,9 @@ module FF_Pair_Tersoff
           atmType3 = curbox % AtomType(kAtom)
           Reqik = self%tersoffPair(atmType1, atmType3) % REq
           Dik = self%tersoffPair(atmType1, atmType3) % D
-          rMax = Reqik + Dik
-          rMax_sq = rMax * rMax
+          rMax = self%tersoffPair(atmType1, atmType3) % RMax
+          rMax_sq = self%tersoffPair(atmType1, atmType3) % RMaxSq
+!          rMax_sq = rMax * rMax
 
           rxik = curbox % atoms(1, kAtom)  -  curbox % atoms(1, iAtom)
           ryik = curbox % atoms(2, kAtom)  -  curbox % atoms(2, iAtom)
@@ -1465,7 +1467,8 @@ module FF_Pair_Tersoff
         enddo
       enddo
 
-      rCut = self%rCut
+      self%rCut = rCut
+      self%rCutSq = rCut*rCut
     end function
   !=====================================================================
 

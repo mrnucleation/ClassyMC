@@ -47,6 +47,7 @@ module Template_SimBox
       procedure, public, pass :: LoadAtomCoord
       procedure, public, pass :: LoadDimension
       procedure, public, pass :: GetCoordinates
+      procedure, public, pass :: GetAtomTypes
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
       procedure, public, pass :: BoundaryNew
@@ -88,7 +89,15 @@ module Template_SimBox
     atoms => self%atoms
 
   end subroutine
+!==========================================================================================
+  subroutine GetAtomTypes(self, Atomtype)
+    implicit none
+    class(SimBox), intent(inout), target :: self
+    integer, pointer, intent(out) :: AtomType(:)
 
+    Atomtype => self%AtomType
+
+  end subroutine
 !==========================================================================================
   subroutine LoadDimension(self, line, lineStat)
     implicit none

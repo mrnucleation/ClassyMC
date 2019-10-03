@@ -28,6 +28,7 @@ module SimpleSimBox
 !
 !    real(dp), allocatable :: ETable(:), dETable(:)
 !    real(dp), allocatable :: atoms(:,:)
+    integer :: rebuilds = 0
     integer :: dangerbuilds = 0
     real(dp), allocatable :: dr(:,:)
     real(dp) :: largestdr = 0E0_dp
@@ -77,6 +78,7 @@ module SimpleSimBox
       procedure, pass :: DumpData => SimpleBox_DumpData
 
       !Coordinate Processing Functions
+!      procedure, pass :: GetAtomTypes => Simplebox_GetAtomTypes
       procedure, pass :: GetNeighborList => Simplebox_GetNeighborList
       procedure, pass :: GetNewNeighborList => Simplebox_GetNewNeighborList
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
@@ -1067,6 +1069,7 @@ module SimpleSimBox
 
 !    write(*,*) maxdr, maxdr2, neighSkin
     if( (maxdr + maxdr2) > neighSkin ) then
+      self%rebuilds = self%rebuilds + 1
       if(maxdr > neighskin*0.5E0_dp) then
         self%dangerbuilds = self%dangerbuilds + 1
 !        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
@@ -1239,6 +1242,7 @@ module SimpleSimBox
                                            self % ETotal/(outEngUnit*self%nMolTotal), engStr
     write(nout, "(1x,A4,I2,A,I8)") "Box ", self%boxID, " Molecule Count: ", self % NMol
     write(nout, "(1x,A4,I2,A,I8)") "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
+    write(nout, "(1x,A4,I2,A,I8)") "Box ", self%boxID, " Neigh Rebuilds: ", self % rebuilds
     write(nout, "(1x,A4,I2,A,I8)") "Box ", self%boxID, " Dangerous Builds: ", self % dangerbuilds
     write(nout, "(1x,A4,I2,A,E15.8)") "Box ", self%boxID, " Largest Atom Displacement Between Neigh Builds: ", self % largestdr
 
