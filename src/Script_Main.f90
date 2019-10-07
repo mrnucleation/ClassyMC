@@ -1,5 +1,5 @@
 !========================================================            
-! 
+#define __StdErr__ 0
 !========================================================            
     module ScriptInput
       use Input_Format
@@ -41,13 +41,13 @@
             call get_command_argument(1, fileName)
             call LoadFile(lineStore, nLines, lineNumber, fileName)
             if(nLines == 0) then
-              write(*,*) "ERROR! Input file is empty or could not be read!"
+              write(__StdErr__,*) "ERROR! Input file is empty or could not be read!"
               stop
             else
               write(nout, *) "File successfully loaded!"
             endif
           elseif(nArgs == 0) then
-            write(*,*) "ERROR! No Input File has been given!"
+            write(__StdErr__,*) "ERROR! No Input File has been given!"
             stop
           endif
       endif
@@ -100,16 +100,16 @@
             call CPU_TIME(TimeEnd)
             
           case default
-            write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
-            write(*,*) trim(adjustl(lineStore(iLine)))
+            write(__StdErr__,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
+            write(__StdErr__,*) trim(adjustl(lineStore(iLine)))
             stop 
         end select
 
         ! Ensure that the called processes exited properly.
         if(lineStat .eq. -1) then
-          write(*,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
-          write(*, "(A)") "could not be understood. Please check command for accuracy and try again."
-          write(*,*) trim(adjustl(lineStore(iLine)))
+          write(__StdErr__,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
+          write(__StdErr__, "(A)") "could not be understood. Please check command for accuracy and try again."
+          write(__StdErr__,*) trim(adjustl(lineStore(iLine)))
           stop 
         endif
         
@@ -392,11 +392,21 @@
         case("analysis")
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue
+           if(intvalue > size(AnalysisArray)) then
+             write(__StdErr__,*) "Invalid object number given to modify."
+             write(__StdErr__,*) line
+             return
+           endif
            call AnalysisArray(intValue) % func % ModifyIO(line, lineStat)
 
         case("box")
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue
+           if(intvalue > size(BoxArray)) then
+             write(__StdErr__,*) "Invalid object number given to modify."
+             write(__StdErr__,*) line
+             return
+           endif
            call BoxArray(intValue) % box % ProcessIO(line, lineStat)
 
         case("move")
@@ -407,6 +417,11 @@
            else
              write(0,*) "Modify has been called on a move that is not not defined!"
              stop
+           endif
+           if(intvalue > size(Moves)) then
+             write(__StdErr__,*) "Invalid object number given to modify."
+             write(__StdErr__,*) line
+             return
            endif
 
         case("sampling")

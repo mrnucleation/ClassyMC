@@ -249,14 +249,16 @@ use Template_NeighList, only: NeighListDef
     !Check to see if the cell list is allocated and is large enough to accomodate
     !the number of cells in the system
     if(allocated(self%celllist)) then
-      if(ubound(self%cellList, 2) < self %nCells) then
+      if(ubound(self%cellList, 2) < self%nCells) then
         deallocate(self%cellList)
         allocate(self%cellList(1:self%maxNei, 1:self%nCells))
         if(allocated(self%nCellAtoms)) then
           deallocate(self%nCellAtoms)
         endif
         allocate(self%nCellAtoms(1:nCells))
+
       endif
+
     else
 !      allocate(self%cellID(1:maxAtoms))
       allocate(self%nCellAtoms(1:nCells))
@@ -268,7 +270,7 @@ use Template_NeighList, only: NeighListDef
     self%nCellAtoms = 0
     self%cellList = 0
     do iAtom = 1, maxAtoms
-      if( self%parent%MolSubIndx(iAtom) > self%parent%NMol(self%parent%MolType(iAtom)) ) then
+      if( .not. self%parent%IsActive(iAtom) ) then
         cycle
       endif
 
