@@ -163,6 +163,7 @@ module SimpleSimBox
     allocate(self%ETable(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%dETable(1:self%nMaxAtoms), stat=AllocateStatus)
 
+
     !Allocate the arrays which contain the atom type and quick look up information.
     allocate(self%AtomType(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%MolType(1:self%nMaxAtoms), stat=AllocateStatus)
@@ -184,6 +185,7 @@ module SimpleSimBox
     self%chempot = 0E0_dp
     IF (AllocateStatus /= 0) STOP "Allocation Error in Simulation Box Def"
 
+    self%dr = 0E0_dp
     self%maxMol = maxMol
     self%AtomType = 0
     self%MolType = 0
