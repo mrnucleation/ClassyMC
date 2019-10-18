@@ -137,7 +137,7 @@ module FF_Pair_Tersoff
     accept = .true.
     do iAtom = 1, curbox%nMaxAtoms
       atmType1 = curbox % AtomType(iAtom)
-      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+      if( .not. curbox%IsActive(iAtom) ) then
         cycle
       endif
 
@@ -146,7 +146,7 @@ module FF_Pair_Tersoff
           cycle
         endif
         atmType2 = curbox % AtomType(jAtom)
-        if( curbox%MolSubIndx(jAtom) > curbox%NMol(curbox%MolType(jAtom)) ) then        
+        if( .not. curbox%IsActive(jAtom) ) then        
           cycle
         endif
         Reqij = self%tersoffPair(atmType2, atmType1) % REq
@@ -168,7 +168,7 @@ module FF_Pair_Tersoff
           if( (kAtom == iAtom) .or. (kAtom == jAtom) ) then
             cycle
           endif
-          if( curbox%MolSubIndx(kAtom) > curbox%NMol(curbox%MolType(kAtom)) ) then        
+          if( .not. curbox%IsActive(kAtom) ) then        
             cycle
           endif
           atmType3 = curbox % AtomType(kAtom)
@@ -216,6 +216,7 @@ module FF_Pair_Tersoff
       enddo
     enddo
 
+    write(nout,*) "ETable Sum:", 0.5E0_dp*sum(curbox%ETable)
     write(nout,*) "Tersoff Energy:", E_Tersoff
     E_T = E_Tersoff
 
@@ -664,7 +665,6 @@ module FF_Pair_Tersoff
         D2 = self%tersoffPair(atmType1, atmType2) % D
         Req = self%tersoffPair(atmType1, atmType2) % Req
         V1 = 0.5E0_dp*self%Fc_Func(rij, Req, D2) * (B*exp(-lam2*rij))*(b2 - b1)
-!        write(*,*) "Recalc", iAtom, jAtom, V1
         curbox%dETable(iAtom) = curbox%dETable(iAtom) + V1
         curbox%dETable(jAtom) = curbox%dETable(jAtom) + V1
         E_Diff = E_Diff + V1
@@ -794,6 +794,7 @@ module FF_Pair_Tersoff
     !interaction of particles that did not move.  These interactions must also be recomputed.
 
     !Compute the remaining U_ji interaction
+    jAtom = disp(1)%atmindx
     do iNei = 1, nRecalc
       Zeta = 0E0_dp  !Zeta is the angle term for the new config
       iAtom = recalcList(iNei)
@@ -952,6 +953,8 @@ module FF_Pair_Tersoff
     enddo
 
 !    write(*,*) E_Diff
+!    write(*,*) curbox%dETable(1:3)
+!    write(*,*) curbox%ETable(1:3)+curbox%dETable(1:3)
   end subroutine  
 !====================================================================================== 
   subroutine Old_Tersoff(self, curbox, disp, E_Diff)
@@ -987,9 +990,9 @@ module FF_Pair_Tersoff
     E_Diff = 0E0_dp
 
 
-      iAtom = molStart
-      atmType1 = curbox % AtomType(iAtom)
-      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+    iAtom = molStart
+    atmType1 = curbox % AtomType(iAtom)
+    do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
         atmType2 = curbox % AtomType(jAtom)
 
@@ -1126,7 +1129,9 @@ module FF_Pair_Tersoff
     enddo
  
 
-!    write(*,*) E_Diff, nRecalc
+    if(nRecalc == 0) then
+      return
+    endif
     !Compute the new interactions between the particles already in the system
     nAtom = molStart
     do iNei = 1, nRecalc

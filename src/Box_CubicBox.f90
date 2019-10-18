@@ -383,10 +383,12 @@ module CubicBoxDef
     E_Culm = self%ETotal
 
 
+
     write(nout,*) "--------Box", self%boxID , "Energy---------"
     if(isnan(E_Culm)) then
       write(nout, *) "ERROR! Final Culmative Energy is not a number!"
     endif
+    write(*,*) self%ETable(1:5)
     call self % ComputeEnergy(tablecheck=.false.)
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)

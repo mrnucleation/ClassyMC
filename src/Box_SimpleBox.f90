@@ -933,11 +933,15 @@ module SimpleSimBox
 
 !     Take the top molecule from the atom array and move it's position in the deleted
 !     molecule's slot.
+!    write(*,*) molindx
+!    write(*,*) "e", self%ETable
     do iAtom = 1, MolData(nType) % nAtoms
       do iDimn = 1, self%nDimension
         self % atoms(iDimn, nStart+iAtom-1 ) = self % atoms(iDimn, jStart+iAtom-1 )
         self % dr(iDimn, nStart+iAtom-1 ) = self % dr(iDimn, jStart+iAtom-1 )
       enddo
+      self % ETable(nStart+iAtom-1 ) = self % ETable(jStart+iAtom-1 )
+      self % ETable(jStart+iAtom-1 ) = 0E0_dp
     enddo
 
     do iList = 1, size(self%NeighList)
