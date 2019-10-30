@@ -122,7 +122,7 @@ module FF_AENet
       nCurAtoms = 0
       atmType1 = curbox % AtomType(iAtom)
       do jAtom = 1, curbox%nMaxAtoms
-        if( .not. curbox%IsActive(iAtom) ) cycle
+        if( .not. curbox%IsActive(jAtom) ) cycle
         if(iAtom == jAtom) cycle
 !        if( curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)  ) cycle
         rx = atoms(1, jAtom) - atoms(1, iAtom) 
@@ -202,7 +202,7 @@ module FF_AENet
     ymax = 0E0_dp
     zmax = 0E0_dp
     do iAtom = 1, curbox%nMaxAtoms
-      if( curbox%IsActive(iAtom) ) then
+      if( .not. curbox%IsActive(iAtom) ) then
         cycle
       endif
       nCurAtoms = nCurAtoms + 1

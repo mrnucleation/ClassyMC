@@ -75,7 +75,7 @@ module TrajectoryTemplate
 
 
 
-    open( unit=self%fileUnit, file=trim(adjustl(self%filename)) )
+    open( newunit=self%fileUnit, file=trim(adjustl(self%filename)) )
   end subroutine
 !====================================================================
   subroutine WriteFrame(self, iCycle) 

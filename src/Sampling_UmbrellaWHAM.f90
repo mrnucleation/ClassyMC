@@ -700,7 +700,7 @@ module UmbrellaWHAMRule
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: arraySize, i, j, cnt, maxbin, maxbin2
     real(dp) :: norm, maxBias, denomSum
-    real(dp) :: F_Estimate(1:self%nWhamItter), F_Old(1:self%nWhamItter), fSum     
+    real(qp) :: F_Estimate(1:self%nWhamItter), F_Old(1:self%nWhamItter), fSum     
     real(dp) :: tol, refBias
 
 #ifdef PARALLEL

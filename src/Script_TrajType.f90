@@ -10,6 +10,7 @@ contains
   subroutine Script_TrajType(line, TrajNum, lineStat)
     use ParallelVar, only: nout
     use Traj_Lammps, only: LAMMPSDump
+    use Traj_POSCAR, only: TrajPOSCAR
     use Traj_XYZ, only: trajXYZ
     use Traj_XSF, only: trajXSF
     implicit none
@@ -27,6 +28,9 @@ contains
       case("dump")
         allocate(LAMMPSDump::TrajArray(TrajNum) % traj)
 
+      case("poscar")
+        allocate(TrajPOSCAR::TrajArray(TrajNum) % traj)
+
       case("xyz")
         allocate(trajXYZ::TrajArray(TrajNum) % traj)
 
@@ -39,7 +43,7 @@ contains
     end select
 
 !    write(*,*) line
-    call TrajArray(TrajNum) % traj % SetUnit(1000+TrajNum)
+!    call TrajArray(TrajNum) % traj % SetUnit(1000+TrajNum)
 
     call GetXCommand(line, command, 2, lineStat)
     read(command, *) intVal

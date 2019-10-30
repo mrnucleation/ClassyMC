@@ -37,6 +37,7 @@ module Traj_Lammps
     integer :: nDim, atomType, molType
 
 
+
     boxNum = self%boxNum
     nDim = BoxArray(boxNum)%box%nDimension
 
