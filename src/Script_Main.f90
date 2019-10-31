@@ -107,7 +107,7 @@
 
         ! Ensure that the called processes exited properly.
         if(lineStat .eq. -1) then
-          write(__StdErr__,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
+          write(__StdErr__,"(A,1x,I10)") "ERROR! Command on line:", lineNumber(iLine)
           write(__StdErr__, "(A)") "could not be understood. Please check command for accuracy and try again."
           write(__StdErr__,*) trim(adjustl(lineStore(iLine)))
           stop 
@@ -390,48 +390,72 @@
       call LowerCaseLine(command)
       select case(adjustl(trim(command)))
         case("analysis")
+           if(.not. allocated(AnalysisArray)) then
+             write(__StdErr__,*) "ERROR! You are trying to modify a analysis object before they have been defined!"
+             linestat = -1
+             return
+           endif
+
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue
+
            if(intvalue > size(AnalysisArray)) then
              write(__StdErr__,*) "Invalid object number given to modify."
+             write(__StdErr__,*) "Analysis number does not exit!"
              write(__StdErr__,*) line
              return
            endif
            call AnalysisArray(intValue) % func % ModifyIO(line, lineStat)
 
         case("box")
+           if(.not. allocated(BoxArray)) then
+             write(__StdErr__,*) "ERROR! You are trying to modify a box before boxes have been defined!"
+             linestat = -1
+             return
+           endif
+
            call GetXCommand(line, command2, 3, lineStat)
            read(command2, *) intValue
-           if(intvalue > size(BoxArray)) then
+           if(intvalue > size(BoxArray) .or. intvalue < 1) then
              write(__StdErr__,*) "Invalid object number given to modify."
+             write(__StdErr__,*) "Box Object does not exist!"
              write(__StdErr__,*) line
+             linestat = -1
              return
            endif
            call BoxArray(intValue) % box % ProcessIO(line, lineStat)
 
         case("move")
-             call GetXCommand(line, command2, 3, lineStat)
-             read(command2, *) intValue
-           if(allocated(Moves)) then
-             call Moves(intValue) % Move % ProcessIO(line, lineStat)
-           else
-             write(0,*) "Modify has been called on a move that is not not defined!"
-             stop
-           endif
-           if(intvalue > size(Moves)) then
-             write(__StdErr__,*) "Invalid object number given to modify."
-             write(__StdErr__,*) line
+           if(.not. allocated(Moves)) then
+             write(__StdErr__,*) "ERROR! You are trying to modify a move before they have been defined!"
+             linestat = -1
              return
            endif
 
+           call GetXCommand(line, command2, 3, lineStat)
+           read(command2, *) intValue
+           if(intvalue > size(Moves) .or. intvalue < 1) then
+             write(__StdErr__,*) "Invalid object number given to modify."
+             write(__StdErr__,*) "Move Number does not exist!."
+             write(__StdErr__,*) line
+             return
+           endif
+           call Moves(intValue) % Move % ProcessIO(line, lineStat)
+
+
         case("sampling")
+           if(.not. allocated(Sampling)) then
+             write(__StdErr__,*) "ERROR! You are trying to modify the sampling object before it has been defined!"
+             linestat = -1
+             return
+           endif
            call Sampling % ProcessIO(line, lineStat)
 
         case default
            lineStat = -1
       end select
 
-      IF (AllocateStat /= 0) STOP "Allocation Error in the Modify Command"
+      IF (AllocateStat /= 0) STOP "CRITICAL ERROR! Allocation Error in the Modify Command"
      
       end subroutine
 !========================================================            

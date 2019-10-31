@@ -991,7 +991,6 @@ module FF_AENet
       allocate(self%inputfiles(1:nAtomTypes))
     endif
 
-
     call GetXCommand(line, command, 1, lineStat)
     select case(trim(adjustl(command)))
       case("network")
@@ -1006,6 +1005,7 @@ module FF_AENet
         call aenet_load_potential(type1, self%inputfiles(type1), stat)
         self%rCut = aenet_Rc_max
         self%rCutSq = aenet_Rc_max * aenet_Rc_max
+        return
 
       case default
         param = .true.

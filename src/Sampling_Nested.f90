@@ -5,6 +5,7 @@ module NestedSampling
   use Template_AcceptRule, only: acceptrule
  
   type, public, extends(acceptrule) :: Nested
+    logical :: parallel = .true.
     integer :: binmiss = 0
     real(dp) :: EMedian
     real(dp) :: EMin, EMax, dE
@@ -121,6 +122,7 @@ module NestedSampling
     character(len=maxLineLen), intent(in) :: line   
     integer, intent(out) :: lineStat
 
+    logical :: logicVal
     integer :: i, intVal, intVal2
     real(dp) :: realVal
     character(len=30) :: command
@@ -147,6 +149,11 @@ module NestedSampling
           read(command, *) self%EMin
           self%EMin = self%EMin*outEngUnit
           self%dE = 1000.0E0_dp/(self%EMax-self%EMin)
+
+      case("parallel")
+          call GetXCommand(line, command, 4, lineStat)
+          read(command, *) logicVal
+          self%parallel = logicVal
 
       case("filename")
           call GetXCommand(line, command, 4, lineStat)
@@ -176,6 +183,7 @@ module NestedSampling
 #endif
     implicit none
     class(Nested), intent(inout) :: self
+    integer :: i, debug
     integer :: nMedian, iError, arraySize
     real(dp) :: norm
     real(dp) :: sumint
@@ -183,20 +191,42 @@ module NestedSampling
     real(dp) :: temphist(0:1000)
 #endif
 
-    norm = sum(self%EHist)*0.5E0_dp
     write(nout,*) "Updating Nested Sampling..."
 
 #ifdef PARALLEL
-    call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
-
-    arraySize = size(self%EHist)     
-    if(myid .eq. 0) then
-      TempHist = 0E0_dp
-    endif
-    call MPI_REDUCE(self%EHist, TempHist, arraySize, &
-              MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)       
+    if(self%parallel) then
+      call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
+      arraySize = size(self%EHist)     
+      if(myid .eq. 0) then
+        TempHist = 0E0_dp
+      endif
+      call MPI_REDUCE(self%EHist, TempHist, arraySize, &
+                MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)
+!      if(myid == 0) then
+!        open(newunit=debug, file="Crap.dat")
+!        do i = 1,1000
+!          write(debug,*) i, i/self%dE+self%EMin, self%EHist(i), TempHist(i)
+!        enddo
+!        close(debug)
+!      endif
+      if(myid .eq. 0) then
+          self%EHist=TempHist
+          norm = sum(self%EHist)*0.5E0_dp
+          sumint = 0.0E0_dp
+          nMedian = -1
+          do   
+            nMedian = nMedian + 1
+            sumint = sumint + self%EHist(nMedian)
+      !      write(nout,*) nMedian, norm, sumint, self%EHist(nMedian)
+            if(sumint > norm) then
+              exit
+            endif
+          enddo
+      !    write(nout,*) nMedian, norm, sumint
+      endif
+    else
 #endif
-    if(myid == 0) then
+      norm = sum(self%EHist)*0.5E0_dp
       sumint = 0.0E0_dp
       nMedian = -1
       do   
@@ -209,14 +239,24 @@ module NestedSampling
 
       enddo
   !    write(nout,*) nMedian, norm, sumint
+#ifdef PARALLEL
     endif
+#endif
 
-    self%EMedian = 0.5E0_dp*( (nMedian/self%dE) + (nMedian-1)/self%dE + 2.0*self%EMin)
-    self%EHist = 0E0_dp
-    self%EMax = self%EMedian
-    self%dE = 1000.0E0_dp/(self%EMax - self%EMin)
+    if(self%parallel) then
+      if(myid == 0) then
+        self%EMedian = 0.5E0_dp*( (nMedian/self%dE) + (nMedian-1)/self%dE + 2.0*self%EMin)
+        self%EMax = self%EMedian
+        self%dE = 1000.0E0_dp/(self%EMax - self%EMin)
+      endif
+      call MPI_BCast(self%EMedian, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,  ierror)
+    else
+      self%EMedian = 0.5E0_dp*( (nMedian/self%dE) + (nMedian-1)/self%dE + 2.0*self%EMin)
+      self%EMax = self%EMedian
+      self%dE = 1000.0E0_dp/(self%EMax - self%EMin)
+    endif
     write(nout,*) "New Median Value:", self%EMedian/outEngUnit
-
+    self%EHist = 0E0_dp
   end subroutine
 !====================================================================
 end module

@@ -236,10 +236,10 @@ module SimpleSimBox
     class(SimpleBox), intent(inout) :: self
 
     deallocate(self%atoms)
+    deallocate(self%dr)
     deallocate(self%ETable)
     deallocate(self%dETable)
 
-    !Allocate the arrays which contain the atom type and quick look up information.
     deallocate(self%AtomType)
     deallocate(self%MolType)
     deallocate(self%MolIndx)
@@ -263,6 +263,10 @@ module SimpleSimBox
 
     if( allocated(self%Constrain) ) then
       deallocate(self%Constrain)
+    endif
+
+    if( allocated(self%NeighList) ) then
+      deallocate(self%NeighList)
     endif
 
   end subroutine
