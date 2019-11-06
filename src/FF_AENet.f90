@@ -1001,7 +1001,7 @@ module FF_AENet
         self%inputfiles = ""
         read(command, *) self%inputfiles(type1)
 
-        write(nout, *) "Loading potential from file: ", self%inputfiles(type1)
+        write(nout, *) "Loading potential from file: ", trim(adjustl(self%inputfiles(type1)))
         call aenet_load_potential(type1, self%inputfiles(type1), stat)
         self%rCut = aenet_Rc_max
         self%rCutSq = aenet_Rc_max * aenet_Rc_max
