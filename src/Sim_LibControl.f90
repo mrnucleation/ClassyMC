@@ -4,6 +4,7 @@
 #define __StdErr__ 0
 !===========================================================================
 module Library
+  use ISO_C_BINDING, only: c_int, c_double, c_ptr, c_f_pointer, c_int, c_null_char, c_loc
   use ParallelVar, only: myid, ierror, nout
   use VarPrecision
 
@@ -30,7 +31,6 @@ contains
   subroutine Library_ReadScript(strlen, cfilename) bind(C,name='Classy_ReadScript')
     use C_F_Routines, only: C_F_String
     use ScriptInput, only: Script_ReadParameters
-    use iso_c_binding, only: c_ptr, c_f_pointer, c_int, c_null_char, c_loc
     implicit none
     integer(c_int), intent(in), value :: strlen
     type(c_ptr), value, intent(in) :: cfilename
@@ -199,27 +199,25 @@ contains
  
   end subroutine
 !===========================================================================
-  subroutine Library_GetAtomCount(boxnum) bind(C,name='Classy_GetAtomCount')
-    use ISO_C_BINDING, only: c_long
-    use BoxData, only: BoxArray
-    use SimMonteCarlo, only: ScreenOut
-    implicit none
-    integer(kind=c_long), intent(in), value :: cyclenum
-    integer(kind=8) :: iMove, iCycle
-
- 
-  end subroutine
+!  subroutine Library_GetAtomCount(boxnum) bind(C,name='Classy_GetAtomCount')
+!    use ISO_C_BINDING, only: c_long
+!    use BoxData, only: BoxArray
+!    use SimMonteCarlo, only: ScreenOut
+!    implicit none
+!    integer(kind=c_long), intent(in), value :: cyclenum
+!
+! 
+!  end subroutine
 !===========================================================================
-  subroutine Library_GetAtomPos(boxnum, nAtoms, atompos) bind(C,name='Classy_ScreenOut')
-    use ISO_C_BINDING, only: c_double
+  subroutine Library_GetAtomPos(boxnum, nAtoms, atompos) bind(C,name='Classy_GetAtomPos')
     use BoxData, only: BoxArray
     use SimMonteCarlo, only: ScreenOut
     implicit none
-    integer(c_int) :: intent(in), value :: nAtoms
+    integer(c_int), intent(in), value :: boxnum, nAtoms
     real(c_double), intent(inout) :: atompos(nAtoms, 1:3)
 
     real(dp), pointer :: atoms(:,:) => null()
-    call BoxArray(boxnum)%GetCoordinates(atoms)
+    call BoxArray(boxnum)%box%GetCoordinates(atoms)
 
  
   end subroutine
