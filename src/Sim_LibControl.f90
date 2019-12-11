@@ -6,8 +6,24 @@
 module Library
   use ParallelVar, only: myid, ierror, nout
   use VarPrecision
- 
+
+  !forcefield push/pull
+  logical :: ff_push = .false.
+  logical :: ff_pull = .false.
+
+  !sampling push/pull
+  logical :: samp_push = .false.
+  logical :: samp_pull = .false.
+
   real(dp), allocatable, private :: boxProb(:) 
+
+!===========================================================================
+!  xx_push and xx_pull ->  Logical flags used to communicate with an external computation library such as a Python function
+!                          when push is set to true this implies data from the external library has been pushed to Classy
+!                          when pull is set to true this imples data is ready from Classy that needs to be pulled by the external
+!                          library
+!                                                        
+!  boxProb -> The probability weight array used to random select a simulation box
 !===========================================================================
 contains
   !===========================================================================
@@ -121,6 +137,9 @@ contains
   end subroutine
 !===========================================================================
   subroutine Library_ForceMove(movenum) bind(C, name='Classy_ForceMove')
+  ! ---------------
+  ! This subroutine is used to skip over the random selection process and perform a MC move that is specified by the user.
+  ! ---------------
     use ISO_C_BINDING, only: c_int
     use BoxData, only: BoxArray
     use CommonSampling, only: Sampling
@@ -164,6 +183,9 @@ contains
   end subroutine
 !===========================================================================
   subroutine Library_ScreenOut(cyclenum) bind(C,name='Classy_ScreenOut')
+    ! ---------------
+    ! This subroutine is used to direct Classy to write the standard mid simulation summary to screen. 
+    ! ---------------
     use ISO_C_BINDING, only: c_long
     use SimMonteCarlo, only: ScreenOut
     implicit none
@@ -173,6 +195,31 @@ contains
     iCycle = cyclenum
     iMove = 0
     call ScreenOut(iCycle, iMove)
+
+ 
+  end subroutine
+!===========================================================================
+  subroutine Library_GetAtomCount(boxnum) bind(C,name='Classy_GetAtomCount')
+    use ISO_C_BINDING, only: c_long
+    use BoxData, only: BoxArray
+    use SimMonteCarlo, only: ScreenOut
+    implicit none
+    integer(kind=c_long), intent(in), value :: cyclenum
+    integer(kind=8) :: iMove, iCycle
+
+ 
+  end subroutine
+!===========================================================================
+  subroutine Library_GetAtomPos(boxnum, nAtoms, atompos) bind(C,name='Classy_ScreenOut')
+    use ISO_C_BINDING, only: c_double
+    use BoxData, only: BoxArray
+    use SimMonteCarlo, only: ScreenOut
+    implicit none
+    integer(c_int) :: intent(in), value :: nAtoms
+    real(c_double), intent(inout) :: atompos(nAtoms, 1:3)
+
+    real(dp), pointer :: atoms(:,:) => null()
+    call BoxArray(boxnum)%GetCoordinates(atoms)
 
  
   end subroutine
