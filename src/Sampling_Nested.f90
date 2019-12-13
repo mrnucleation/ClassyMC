@@ -249,7 +249,9 @@ module NestedSampling
         self%EMax = self%EMedian
         self%dE = 1000.0E0_dp/(self%EMax - self%EMin)
       endif
+#ifdef PARALLEL
       call MPI_BCast(self%EMedian, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,  ierror)
+#endif
     else
       self%EMedian = 0.5E0_dp*( (nMedian/self%dE) + (nMedian-1)/self%dE + 2.0*self%EMin)
       self%EMax = self%EMedian

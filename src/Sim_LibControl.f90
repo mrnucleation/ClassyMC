@@ -199,25 +199,37 @@ contains
  
   end subroutine
 !===========================================================================
-!  subroutine Library_GetAtomCount(boxnum) bind(C,name='Classy_GetAtomCount')
-!    use ISO_C_BINDING, only: c_long
-!    use BoxData, only: BoxArray
-!    use SimMonteCarlo, only: ScreenOut
-!    implicit none
-!    integer(kind=c_long), intent(in), value :: cyclenum
-!
-! 
-!  end subroutine
+  function Library_GetAtomCount(boxnum) result(nAtoms) bind(C,name='Classy_GetAtomCount')
+    use BoxData, only: BoxArray
+    use SimMonteCarlo, only: ScreenOut
+    use SimpleSimBox, only: SimpleBox
+    implicit none
+    integer(kind=c_int), intent(in), value :: boxnum
+    integer(kind=c_int) :: nAtoms
+    class(SimpleBox), pointer :: simbox => null()
+
+    nAtoms = simbox%nAtoms
+  end function
 !===========================================================================
   subroutine Library_GetAtomPos(boxnum, nAtoms, atompos) bind(C,name='Classy_GetAtomPos')
     use BoxData, only: BoxArray
     use SimMonteCarlo, only: ScreenOut
+    use SimpleSimBox, only: SimpleBox
     implicit none
     integer(c_int), intent(in), value :: boxnum, nAtoms
     real(c_double), intent(inout) :: atompos(nAtoms, 1:3)
 
+    integer :: iAtom
+    class(SimpleBox), pointer :: simbox => null()
     real(dp), pointer :: atoms(:,:) => null()
-    call BoxArray(boxnum)%box%GetCoordinates(atoms)
+    simbox => BoxArray(boxnum)%box
+    call simbox%GetCoordinates(atoms)
+
+    do iAtom = 1, simbox%nMaxAtoms
+      if(simbox%IsActive(iAtom)) then
+        atompos(iAtom, 1:3) = atoms(1:3, iAtom)
+      endif
+    enddo
 
  
   end subroutine

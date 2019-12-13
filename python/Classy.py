@@ -1,4 +1,4 @@
-#===================================================
+#==================================================
 #Python Bindings for the ClassyMC code base. 
 #===================================================
 import os
@@ -28,6 +28,8 @@ class ClassyMC(object):
         self.FFI.cdef("""void Classy_RunPrologue();""")
         self.FFI.cdef("""void Classy_ScreenOut(long cyclenum);""")
         self.FFI.cdef("""void Classy_ForceMove(int movenum);""")
+        self.FFI.cdef("""int Classy_GetAtomCount(int boxnum);""")
+        self.FFI.cdef("""int Classy_GetAtomPos(int boxnum, int nAtoms, double atompos[][3]);""")
 
         if startscript is not None:
             self.readscript(startscript)
@@ -53,10 +55,10 @@ class ClassyMC(object):
     #------------------------------------
     def setlogfile(self, filename):
         '''
-        # Passes the name of an input file into Classy's Script engine
-        # in the same fashion as if the script was passed in via the command
-        # line. Can be used to initialize Classy in preparation for Python
-        # level control.
+         Passes the name of an input file into Classy's Script engine
+         in the same fashion as if the script was passed in via the command
+         line. Can be used to initialize Classy in preparation for Python
+         level control.
         '''
         if self.verbose:
             print("Classy: Setting Log File to file %s"%(filename))
@@ -68,8 +70,8 @@ class ClassyMC(object):
     #------------------------------------
     def runsimulation(self):
         '''
-        # Tells Classy to perform an entire simulation. Equivalent
-        # to the "run" command in a standard Classy script
+         Tells Classy to perform an entire simulation. Equivalent
+         to the "run" command in a standard Classy script
         '''
         self.ClassyLib.Classy_FullSim()
         self.prologue = True
@@ -77,8 +79,8 @@ class ClassyMC(object):
     #------------------------------------
     def runmove(self):
         '''
-        # Tells Classy to perform a single randomly selected
-        # MC move and returns back to Python
+         Tells Classy to perform a single randomly selected
+         MC move and returns back to Python
         '''
         if not self.prologue:
             self.ClassyLib.Classy_RunPrologue()
@@ -90,26 +92,41 @@ class ClassyMC(object):
     def forcemove(self, movenum):
         pass
         '''
-        # Tells Classy to perform a specified Monte Carlo move. Useful
-        # if the move selection is handled at the Python level.
+         Tells Classy to perform a specified Monte Carlo move. Useful
+         if the move selection is handled at the Python level.
         '''
         self.ClassyLib.Classy_ForceMove()
         self.movecount += 1
     #------------------------------------
     def printstat(self):
         '''
-        # Tells Classy to print mid-simulation screen output
+         Tells Classy to print mid-simulation screen output
         '''
         self.ClassyLib.Classy_ScreenOut(self.movecount)
     #------------------------------------
     def getpositions(self, boxnum):
         '''
-        # Collects the atomic positions of a given simulation box from
-        # 
+         Collects the atomic positions of a given simulation box and returns it in a python friendly format.
+         
         '''
         c_boxnum = c_int()
         c_boxnum = boxnum
+
+        c_nAtoms = c_int()
+        c_nAtoms = self.ClassyLib.Classy_GetAtomCount()
+
+        c_atompos = self.FFI.new("double[%s][3]"%(c_nAtoms.value), [[0.0 for i in range(3)] for j in range(c_nAtoms.value)] )
+        self.ClassyLib.Classy_GetAtomCount(c_boxnum, c_nAtoms, c_atompos)
+        atompos = self.FFI.unpack(c_atompos, self.nParameters*3)
+
+        return atompos
+    #------------------------------------
+    def getatomtypes(self, boxnum):
+        '''
+         Collects the atom types of a given simulation box.
+        '''
         pass
+
     #------------------------------------
     def feedpositions(self):
         pass

@@ -49,6 +49,7 @@ PACKAGE_FLAGS := -DPARALLEL
 
 SRC := $(CUR_DIR)/src
 LIB := $(CUR_DIR)/lib
+MOD := $(CUR_DIR)/mods
 OBJ := $(CUR_DIR)/objects
 
 
@@ -197,39 +198,40 @@ OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN)
 default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
 default: COMPFLAGS += $(DEBUGFLAGS)
 default: SRC_COMPLETE += $(SRC)/Main.f90
-default: startUP classyMC finale
+default: startUP  classyMC modout finale 
 
 aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
 #aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET
-aenet: startUP classyMCAENet finale
+aenet: startUP  classyMCAENet  modout finale 
 
-lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(LIBRARY_FLAGS)
-lib: startUP libclassymc.so finale
+lib: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(LIBRARY_FLAGS)
+#lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(LIBRARY_FLAGS)
+lib:  startUP  libclassymc.so  modout finale 
 
 lib_debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(LIBRARY_FLAGS)
-lib_debug: startUP libclassymc.so finale
+lib_debug: startUP  libclassymc.so  modout finale
 
 gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 gfortran: COMPFLAGS += $(DEBUGFLAGS)
-gfortran: startUP classyMC finale
+gfortran:  startUP classyMC  modout finale 
 
 debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
-debug: startUP_debug classyMC_debug finale
+debug: startUP_debug classyMC_debug  modout finale
 
 #debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
 debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
 debugaenet: COMPFLAGS += -DAENET
-debugaenet: startUP classyMCAENet finale
+debugaenet: startUP classyMCAENet  modout finale
 
 
 debug_gfortran: COMPFLAGS := $(DETAILEDDEBUG_GFORT) $(PACKAGE_FLAGS)
-debug_gfortran: startUP_debug classyMC_debug finale
+debug_gfortran: startUP_debug classyMC_debug  modout finale
 
 #neat: startUP classyMC removeObject finale
 
-clean: removeObjects removeExec finale    
+clean:  removeObjects removeExec finale    
 
 # ====================================
 #        Compile Commands
@@ -287,6 +289,7 @@ startUP:
 		@echo Current Directory:$(CUR_DIR)		
 		@echo Compiler and Flags used:	$(FC) $(COMPFLAGS) 		
 		@echo		
+		@mv $(MOD)/*.mod $(CUR_DIR)/ || echo 
 
 startUP_debug:
 		@echo ==================================================================
@@ -295,11 +298,14 @@ startUP_debug:
 		@echo Compiler and Flags used:	$(FC) $(COMPFLAGS)
 		@echo		
 
+modout:
+		@mv  $(CUR_DIR)/*.mod $(MOD)/ || echo
+
 finale:
 		@echo
 		@echo ---------------------- Finished! ---------------------------------
 		@echo ==================================================================		
-     
+
 removeObjects:
 		@echo =============================================
 		@echo            Cleaning Directory
@@ -307,7 +313,7 @@ removeObjects:
 		@echo		
 		@rm -f ./*.o ./*.mod				
 		@rm -f $(SRC)/*.o $(SRC)/*.mod		
-		@rm -f $(MODS)/*.o $(MODS)/*.mod			
+		@rm -f $(MOD)/*.o $(MOD)/*.mod			
 		@rm -f $(SRC)/*/*.o $(SRC)/*/*.mod
 		@rm -f $(OBJ)/*.o		
 
