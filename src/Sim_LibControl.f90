@@ -207,7 +207,9 @@ contains
     integer(kind=c_int), intent(in), value :: boxnum
     integer(kind=c_int) :: nAtoms
     class(SimpleBox), pointer :: simbox => null()
+    write(*,*) boxnum
 
+    simbox => BoxArray(boxnum)%box
     nAtoms = simbox%nAtoms
   end function
 !===========================================================================
@@ -217,7 +219,7 @@ contains
     use SimpleSimBox, only: SimpleBox
     implicit none
     integer(c_int), intent(in), value :: boxnum, nAtoms
-    real(c_double), intent(inout) :: atompos(nAtoms, 1:3)
+    real(c_double), intent(inout) :: atompos(1:3, nAtoms)
 
     integer :: iAtom
     class(SimpleBox), pointer :: simbox => null()
@@ -227,12 +229,36 @@ contains
 
     do iAtom = 1, simbox%nMaxAtoms
       if(simbox%IsActive(iAtom)) then
-        atompos(iAtom, 1:3) = atoms(1:3, iAtom)
+        atompos(1:3,iAtom) = atoms(1:3, iAtom)
       endif
     enddo
 
  
   end subroutine
+!===========================================================================
+  subroutine Library_GetAtomTypes(boxnum, nAtoms, outatomtypes) bind(C,name='Classy_GetAtomTypes')
+    use BoxData, only: BoxArray
+    use SimMonteCarlo, only: ScreenOut
+    use SimpleSimBox, only: SimpleBox
+    implicit none
+    integer(c_int), intent(in), value :: boxnum, nAtoms
+    integer(c_int), intent(inout) :: outatomtypes(nAtoms)
+
+    integer :: iAtom
+    class(SimpleBox), pointer :: simbox => null()
+    integer, pointer :: atomtypes(:) => null()
+    simbox => BoxArray(boxnum)%box
+    call simbox%GetAtomTypes(atomtypes)
+
+    do iAtom = 1, simbox%nMaxAtoms
+      if(simbox%IsActive(iAtom)) then
+        outatomtypes(iAtom) = atomtypes(iAtom)
+      endif
+    enddo
+
+ 
+  end subroutine
+
 !===========================================================================
 end module
 !===========================================================================

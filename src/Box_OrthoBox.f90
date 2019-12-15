@@ -64,7 +64,7 @@ module OrthoBoxDef
       enddo
     enddo
 
-    if( size(self%Constrain) > 0 ) then
+    if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % Prologue
         call self%Constrain(iConstrain) % method % CheckInitialConstraint(self, accept)
@@ -150,7 +150,7 @@ module OrthoBoxDef
     write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure
     write(nout,*) "Box ", self%boxID, " Volume: ", self%volume
     write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%volume
-    if( size(self%Constrain) > 0 ) then
+    if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % Epilogue
       enddo
