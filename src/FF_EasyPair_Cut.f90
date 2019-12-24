@@ -1,4 +1,10 @@
 !================================================================================
+! Easy Pair Template for general pair forcefields. The purpose of this class is
+! to act as an inheritable object that can allow the user to quickly set up
+! any standard pair distance based forcefields by simply creating a child object
+! from this class. By overwriting the PairFunction class and parameter settings
+! the procedures for all cut-off based forcefields are automatically defined.
+!================================================================================
 module FF_EasyPair_Cut
   use Template_ForceField, only: ForceField
   use VarPrecision

@@ -1,9 +1,18 @@
-!===========================================================================
-! This file contains the code for the C interface to ClassyMC.
+
 !===========================================================================
 #define __StdErr__ 0
 !===========================================================================
 module Library
+  !----------------------------------------------------------------
+  !
+  !.. module:: Library
+  !   :platform: Unix, Windows, Linux
+  !   :synopsis: Interface layer used for
+  !
+  !.. moduleauthor:: Troy D Loeffler <tloeffler@anl.gov>
+  !   
+  !   This file contains the code for the C interface to ClassyMC.
+  !----------------------------------------------------------------
   use ISO_C_BINDING, only: c_int, c_double, c_ptr, c_f_pointer, c_int, c_null_char, c_loc
   use ParallelVar, only: myid, ierror, nout
   use VarPrecision
@@ -29,6 +38,13 @@ module Library
 contains
   !===========================================================================
   subroutine Library_ReadScript(strlen, cfilename) bind(C,name='Classy_ReadScript')
+    !------------------------------------------------------------------------------------------
+    ! Loads a specified script for Classy to read.  This works the exact same
+    ! as loading a script via the command line.
+    !
+    ! C Function Signature
+    ! void Classy_ReadScript(int strlen, char *str);
+    !------------------------------------------------------------------------------------------
     use C_F_Routines, only: C_F_String
     use ScriptInput, only: Script_ReadParameters
     implicit none
@@ -43,6 +59,12 @@ contains
   end subroutine
   !===========================================================================
   subroutine Library_SetLogFile(strlen, cfilename) bind(C,name='Classy_SetLogFile')
+    !------------------------------------------------------------------------------------------
+    ! Specifies a filename for Classy to write it's screen log to.
+    !
+    ! C Function Signature
+    ! void Classy_SetLogfile(int strlen, char *str);
+    !------------------------------------------------------------------------------------------
     use C_F_Routines, only: C_F_String
     use ParallelVar, only: nout
     use iso_c_binding, only: c_ptr, c_f_pointer, c_int, c_null_char, c_loc
@@ -66,13 +88,21 @@ contains
   end subroutine
   !===========================================================================
   subroutine Library_FullSimulation() bind(C,name='Classy_FullSim')
+    !------------------------------------------------------------------------------------------
+    ! Same as calling the "Run" command from a Classy Script. Performs a full MC simulation
+    ! according to the input specified by the input script. 
+    !
+    ! C Function Signature
+    ! void Classy_FullSimulation();
+    !------------------------------------------------------------------------------------------
     use Input_Initialize, only: Script_Initialize
     use SimControl, only: TimeStart, TimeEnd
     use SimMonteCarlo, only: RunMonteCarlo
     implicit none
 
     call CPU_TIME(TimeStart)
-    call Script_Initialize
+!    call Script_Initialize
+    call Library_RunPrologue
     call RunMonteCarlo
     call CPU_TIME(TimeEnd)
  
@@ -95,6 +125,12 @@ contains
   end subroutine
 !===========================================================================
   subroutine Library_RunMove() bind(C,name='Classy_RunMove')
+    ! ---------------
+    ! This subroutine performed one MC move chosen randomly through Classy's normal internal move selection process.
+    !
+    ! C Function Signature
+    ! void Classy_RunMove();
+    ! ---------------
     use BoxData, only: BoxArray
     use CommonSampling, only: Sampling
     use MCMoveData, only: Moves, MoveProb
@@ -137,9 +173,17 @@ contains
   end subroutine
 !===========================================================================
   subroutine Library_ForceMove(movenum) bind(C, name='Classy_ForceMove')
-  ! ---------------
-  ! This subroutine is used to skip over the random selection process and perform a MC move that is specified by the user.
-  ! ---------------
+    ! ---------------
+    ! This subroutine is used to skip over the random selection process and perform a MC move that is specified by the user.
+    ! This is useful if the user wishes to handle the move selection process outside of Classy.
+    !
+    ! Input
+    !    movenum => The index of a MC move that will be performed.  
+    !
+    ! C Function Signature
+    ! void Classy_ForceMove(int movenum);
+    ! ---------------
+
     use ISO_C_BINDING, only: c_int
     use BoxData, only: BoxArray
     use CommonSampling, only: Sampling
@@ -184,7 +228,15 @@ contains
 !===========================================================================
   subroutine Library_ScreenOut(cyclenum) bind(C,name='Classy_ScreenOut')
     ! ---------------
-    ! This subroutine is used to direct Classy to write the standard mid simulation summary to screen. 
+    ! This subroutine is used to direct Classy to write the standard mid simulation summary to screen.  
+    !
+    ! Input
+    !    cyclenum => The cycle number that will be printed to the screen along with the box's statistical information.
+    !                This is useful if another code is controlling the main simulation loop instead of classy and one
+    !                uses to pass the loop index to be printed with the screen information.
+    !
+    ! C Function Signature
+    ! void Classy_ScreenOut(long cyclenum);
     ! ---------------
     use ISO_C_BINDING, only: c_long
     use SimMonteCarlo, only: ScreenOut
@@ -214,6 +266,19 @@ contains
   end function
 !===========================================================================
   subroutine Library_GetAtomPos(boxnum, nAtoms, atompos) bind(C,name='Classy_GetAtomPos')
+    !---------------------------------------------------------
+    ! 
+    ! Input:
+    !    boxnum =>  An integer
+    !    nAtoms =>  The number of atoms used to define the size of the C array. Can be determined with the Library_GetAtomCount
+    !               function. 
+    ! Output:
+    !    atompos => A Nx3 C-array containing the (x,y,z) positions of each atom.
+    !
+    !
+    ! C Function Signature
+    ! void Classy_GetAtomPos(int boxnum, int nAtoms, double atompos[][3]);
+    !---------------------------------------------------------
     use BoxData, only: BoxArray
     use SimMonteCarlo, only: ScreenOut
     use SimpleSimBox, only: SimpleBox
@@ -236,17 +301,51 @@ contains
  
   end subroutine
 !===========================================================================
-  subroutine Library_GetAtomTypes(boxnum, nAtoms, outatomtypes) bind(C,name='Classy_GetAtomTypes')
+  subroutine Library_GetAtomTypes(boxnum, nAtoms, outatomtypes, stat) bind(C,name='Classy_GetAtomTypes')
+    !---------------------------------------------------------
+    ! Returns the atomtype type ids from a specfied simulation box
+    ! 
+    ! Input:
+    !    boxnum =>  An integer that specifies the boxnum that has been requested by the external program
+    !    nAtoms =>  The number of atoms used to define the size of the C array. Can be determined with the Library_GetAtomCount
+    !               function. 
+    ! Output:
+    !    outatomtypes => An N-sized integer C-array containing the atomtypes of each atom.
+    !
+    !
+    ! Variables: integer, iAtom => Integer used to loop over the atom array.
+    !            pointer, simbox => Pointer used to point toward the box by
+    !            pointer, atomtypes => Pointer used to collect the atomtype array from the simulation box
+    !
+    ! Error Code: stat==-1  >  Invalid Box Number was passed
+    !             stat==-2  >  Box Array has not been defined
+    !
+    ! C Function Signature
+    ! void Classy_GetAtomTypes(int boxnum, int nAtoms, int atompos[]);
+    !---------------------------------------------------------
     use BoxData, only: BoxArray
     use SimMonteCarlo, only: ScreenOut
     use SimpleSimBox, only: SimpleBox
     implicit none
     integer(c_int), intent(in), value :: boxnum, nAtoms
+    integer(c_int), intent(inout) :: stat
     integer(c_int), intent(inout) :: outatomtypes(nAtoms)
 
     integer :: iAtom
     class(SimpleBox), pointer :: simbox => null()
     integer, pointer :: atomtypes(:) => null()
+
+ 
+    !Error Checks to ensure the input is actually valid
+    if(.not. allocated(BoxArray)) then
+      stat = -2
+      return
+    endif
+    if( (boxnum < 0) .or. (boxnum > size(BoxArray))) then
+      stat = -1
+      return
+    endif
+
     simbox => BoxArray(boxnum)%box
     call simbox%GetAtomTypes(atomtypes)
 
@@ -255,10 +354,9 @@ contains
         outatomtypes(iAtom) = atomtypes(iAtom)
       endif
     enddo
+    stat = 0
 
- 
   end subroutine
-
 !===========================================================================
 end module
 !===========================================================================

@@ -10,6 +10,9 @@ class ClassyCrash(Exception):
     pass
 #===================================================
 class ClassyMC(object):
+    '''
+     ClassyMC's library interface for Python.  Writen using the python cffi module.
+    '''
     #------------------------------------
     def __init__(self, startscript=None, verbose=False, locallibrary=False):
         self.FFI = cffi.FFI()
@@ -24,13 +27,13 @@ class ClassyMC(object):
         self.FFI.cdef("""void Classy_ReadScript(int strlen, char *str);""")
         self.FFI.cdef("""void Classy_RunMove();""")
         self.FFI.cdef("""void Classy_FullSim();""")
-        self.FFI.cdef("""void Classy_SetLogfile();""")
+        self.FFI.cdef("""void Classy_SetLogfile(int strlen, char *str);""")
         self.FFI.cdef("""void Classy_RunPrologue();""")
         self.FFI.cdef("""void Classy_ScreenOut(long cyclenum);""")
         self.FFI.cdef("""void Classy_ForceMove(int movenum);""")
-        self.FFI.cdef("""int Classy_GetAtomCount(int boxnum);""")
+        self.FFI.cdef("""int  Classy_GetAtomCount(int boxnum);""")
         self.FFI.cdef("""void Classy_GetAtomPos(int boxnum, int nAtoms, double atompos[][3]);""")
-        self.FFI.cdef("""void Classy_GetAtomTypes(int boxnum, int nAtoms, int atompos[]);""")
+        self.FFI.cdef("""void Classy_GetAtomTypes(int boxnum, int nAtoms, int atompos[], int *stat);""")
 
         if startscript is not None:
             self.readscript(startscript)
@@ -52,10 +55,13 @@ class ClassyMC(object):
     #------------------------------------
     def readscript(self, infile):
         '''
-        # Passes the name of an input file into Classy's Script engine
-        # in the same fashion as if the script was passed in via the command
-        # line. Can be used to initialize Classy in preparation for Python
-        # level control.
+         Passes the name of an input file into Classy's Script engine
+         in the same fashion as if the script was passed in via the command
+         line. Can be used to initialize Classy in preparation for Python
+         level control.
+
+         Input
+           infile => String containing the filepath of the desired input script
         '''
         if self.verbose:
             print("Classy: Reading from file %s"%(infile))
@@ -70,6 +76,9 @@ class ClassyMC(object):
          in the same fashion as if the script was passed in via the command
          line. Can be used to initialize Classy in preparation for Python
          level control.
+
+         Input
+           filename => String containing the filepath of the desired input script
         '''
         if self.verbose:
             print("Classy: Setting Log File to file %s"%(filename))
@@ -105,6 +114,9 @@ class ClassyMC(object):
         '''
          Tells Classy to perform a specified Monte Carlo move. Useful
          if the move selection is handled at the Python level.
+
+         Input
+           movenum => Integer ID of the MC to perform.  This is based on the order the moves were defined in the input script
         '''
         self.ClassyLib.Classy_ForceMove()
         self.movecount += 1
@@ -118,7 +130,9 @@ class ClassyMC(object):
     def getpositions(self, boxnum):
         '''
          Collects the atomic positions of a given simulation box and returns it in a python friendly format.
-         
+
+         Input
+           boxnum => Integer ID of the box whose coordinates are being requested. 
         '''
         c_boxnum = c_int()
         c_boxnum = boxnum
@@ -143,6 +157,9 @@ class ClassyMC(object):
     def getatomtypes(self, boxnum):
         '''
          Collects the atom types of a given simulation box.
+
+         Input
+           boxnum => Integer ID of the box whose atomtypes are being requested. 
         '''
 
         c_boxnum = c_int()
@@ -155,6 +172,9 @@ class ClassyMC(object):
         c_nAtoms = c_int()
         c_nAtoms = nAtoms
 
+        c_stat = c_int()
+        c_statpointer = self.FFI.cast("int *", 0)
+
         self.ClassyLib.Classy_GetAtomTypes(c_boxnum, c_nAtoms, c_atomtypes)
         rawatomtypes = list(self.FFI.unpack(c_atomtypes, nAtoms))
         if rawatomtypes is None:
@@ -165,8 +185,39 @@ class ClassyMC(object):
             atomtypes.append(int(atom))
         return atomtypes
     #------------------------------------
-    def feedpositions(self):
-        pass
+    def setpositions(self, boxnum, positions):
+        '''
+         Assigns the atom positions of a given simulation box.
+
+         Input
+           boxnum => Integer ID of the box whose atom coordinates are being set. 
+           positions => A Nx3 List/Array of floating point numbers that correspond to the
+        '''
+
+        # Safety Check to ensure positions is actually a Nx3 array.
+        try:
+            for atom in positions:
+                if len(atom) != 3:
+                    raise TypeError
+                for coord in atom:
+                    if not isinstance(coord, float):
+                        raise TypeError
+        except:
+            raise TypeError("Classy was expecting to receive a Nx3 list of floating points, but instead received something else.")
+
+        c_boxnum = c_int()
+        c_boxnum = boxnum
+
+        nAtoms = self.ClassyLib.Classy_GetAtomCount(c_boxnum)
+
+        try:
+            c_atompos = self.FFI.new("double[%s][3]"%(nAtoms), positions)
+        except:
+            raise TypeError("Classy was expecting to receive a Nx3 list of floating points, but instead received something else.")
+
+        c_nAtoms = c_int()
+        c_nAtoms = nAtoms
+        self.ClassyLib.Classy_SetAtomPos(c_boxnum, c_nAtoms, c_atompos)
     #------------------------------------
     def feedenergy(self, E_New):
         pass
