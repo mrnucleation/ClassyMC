@@ -200,6 +200,10 @@ contains
     integer :: boxNum, nBoxes
     real(dp), allocatable :: boxProb(:)
 
+    if(.not. allocated(Moves)) then
+
+    endif
+
 
     nBoxes = size(BoxArray)
     if(.not. allocated(boxProb) ) then
@@ -259,7 +263,7 @@ contains
     integer(kind=c_int), intent(in), value :: boxnum
     integer(kind=c_int) :: nAtoms
     class(SimpleBox), pointer :: simbox => null()
-    write(*,*) boxnum
+!    write(*,*) boxnum
 
     simbox => BoxArray(boxnum)%box
     nAtoms = simbox%nAtoms
@@ -286,15 +290,17 @@ contains
     integer(c_int), intent(in), value :: boxnum, nAtoms
     real(c_double), intent(inout) :: atompos(1:3, nAtoms)
 
-    integer :: iAtom
+    integer :: iAtom, cnt
     class(SimpleBox), pointer :: simbox => null()
     real(dp), pointer :: atoms(:,:) => null()
     simbox => BoxArray(boxnum)%box
     call simbox%GetCoordinates(atoms)
 
+    cnt = 0
     do iAtom = 1, simbox%nMaxAtoms
       if(simbox%IsActive(iAtom)) then
-        atompos(1:3,iAtom) = atoms(1:3, iAtom)
+        cnt = cnt + 1
+        atompos(1:3, cnt) = atoms(1:3, iAtom)
       endif
     enddo
 
@@ -331,7 +337,7 @@ contains
     integer(c_int), intent(inout) :: stat
     integer(c_int), intent(inout) :: outatomtypes(nAtoms)
 
-    integer :: iAtom
+    integer :: iAtom, cnt
     class(SimpleBox), pointer :: simbox => null()
     integer, pointer :: atomtypes(:) => null()
 
@@ -349,14 +355,77 @@ contains
     simbox => BoxArray(boxnum)%box
     call simbox%GetAtomTypes(atomtypes)
 
+    cnt = 0
     do iAtom = 1, simbox%nMaxAtoms
       if(simbox%IsActive(iAtom)) then
-        outatomtypes(iAtom) = atomtypes(iAtom)
+        cnt = cnt + 1
+        outatomtypes(cnt) = atomtypes(iAtom)
       endif
     enddo
     stat = 0
 
   end subroutine
+!===========================================================================
+  subroutine Library_GetNeighList(boxnum, listNum, nAtoms, outlist, stat) bind(C,name='Classy_GetNeighList')
+    !---------------------------------------------------------
+    ! Returns the atomtype type ids from a specfied simulation box
+    ! 
+    ! Input:
+    !    boxnum =>  An integer that specifies the boxnum that has been requested by the external program
+    !    nAtoms =>  The number of atoms used to define the size of the C array. Can be determined with the Library_GetAtomCount
+    !               function. 
+    ! Output:
+    !    outatomtypes => An NxM-sized integer C-array containing the neighborlist for each atom.
+    !
+    !
+    ! Variables: integer, iAtom => Integer used to loop over the atom array.
+    !            pointer, simbox => Pointer used to point toward the box by
+    !            pointer, atomtypes => Pointer used to collect the atomtype array from the simulation box
+    !
+    ! Error Code: stat==-1  >  Invalid Box Number was passed
+    !             stat==-2  >  Box Array has not been defined
+    !
+    ! C Function Signature
+    ! void Classy_GetNeighList(int boxnum, int nAtoms, int atompos[]);
+    !---------------------------------------------------------
+    use BoxData, only: BoxArray
+    use SimMonteCarlo, only: ScreenOut
+    use SimpleSimBox, only: SimpleBox
+    implicit none
+    integer(c_int), intent(in), value :: boxnum, listnum, nAtoms
+    integer(c_int), intent(inout) :: stat
+    integer(c_int), intent(inout) :: outlist(1:1000, nAtoms)
+
+    integer :: iAtom, cnt
+    class(SimpleBox), pointer :: simbox => null()
+    integer, pointer :: nNei(:) => null()
+    integer, pointer :: NeighList(:,:) => null()
+
+ 
+    !Error Checks to ensure the input is actually valid
+    if(.not. allocated(BoxArray)) then
+      stat = -2
+      return
+    endif
+    if( (boxnum < 0) .or. (boxnum > size(BoxArray))) then
+      stat = -1
+      return
+    endif
+
+    simbox => BoxArray(boxnum)%box
+    call simbox%GetNeighborList(listNum, neighlist, nNei)
+
+    cnt = 0
+    do iAtom = 1, simbox%nMaxAtoms
+      if(simbox%IsActive(iAtom)) then
+        cnt = cnt + 1
+        outlist(1:nNei(iAtom), cnt) = NeighList(1:nNei(iAtom), iAtom)
+      endif
+    enddo
+    stat = 0
+
+  end subroutine
+
 !===========================================================================
 end module
 !===========================================================================
