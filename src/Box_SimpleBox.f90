@@ -1,6 +1,9 @@
 !========================================================================================
-#define __StdErr__ 0
+! Wall-less simulation box which acts as the parent class to other simulaion box types.
+! Unlike the base template this box can be used for either a boundless problem
+! or in conjunction with a hard wall constrain to make a non-periodic condition.
 !========================================================================================
+#define __StdErr__ 0
 module SimpleSimBox
   use VarPrecision
   use ForcefieldData, only: ECalcArray
@@ -13,7 +16,7 @@ module SimpleSimBox
   !Sim Box Definition
   type, public, extends(SimBox) :: SimpleBox
 !    ----------------------------
-!   Inherited Variables from SimBox
+!   Inherited Variables from SimBox are shown as commented variables
 !    character(len=15) :: boxStr = "Empty"
 !    integer :: boxID
 !    integer :: nAtoms, nMaxAtoms
@@ -28,10 +31,10 @@ module SimpleSimBox
 !
 !    real(dp), allocatable :: ETable(:), dETable(:)
 !    real(dp), allocatable :: atoms(:,:)
-    integer :: rebuilds = 0
-    integer :: dangerbuilds = 0
-    real(dp), allocatable :: dr(:,:)
-    real(dp) :: largestdr = 0E0_dp
+    integer, private :: rebuilds = 0
+    integer, private :: dangerbuilds = 0
+    real(dp), allocatable, private :: dr(:,:)
+    real(dp), private :: largestdr = 0E0_dp
 !
 !    Molecule Based Indexing and Census Arrays 
 !    integer, allocatable :: NMolMin(:), NMolMax(:)
