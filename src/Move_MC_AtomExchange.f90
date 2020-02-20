@@ -1,13 +1,14 @@
 !=========================================================================
 module Move_AtomExchange
+use CoordinateTypes, only: Perturbation, AtomExchange
+use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
-use MoveClassDef
 
-  type, public, extends(MCMove) :: AtomExchange
+  type, public, extends(MCMove) :: MC_AtomExchange
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    type(displacement) :: disp(1:1)
+    type(AtomExchange) :: disp(1:1)
     contains
       procedure, pass :: Constructor => AtomExchange_Constructor
       procedure, pass :: GeneratePosition => AtomExchange_GeneratePosition
@@ -22,45 +23,48 @@ use MoveClassDef
   subroutine AtomExchange_Constructor(self)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
-    class(AtomExchange), intent(inout) :: self
+    class(MC_AtomExchange), intent(inout) :: self
 
 
     allocate( self%tempNNei(1) )
-    allocate( self%tempList(100, 1) )
+    allocate( self%tempList(1, 1) )
   end subroutine
-
 !=========================================================================
   subroutine AtomExchange_GeneratePosition(self, disp)
     implicit none
-    class(AtomExchange), intent(in) :: self
+    class(MC_AtomExchange), intent(in) :: self
     class(Perturbation), intent(inout) :: disp
   end subroutine
 !=========================================================================
   subroutine AtomExchange_FullMove(self, trialBox, accept)
     use Common_MolInfo, only: nMolTypes
-    use Box_Utility, only: FindAtom, FindFirstEmptyMol
+    use Box_Utility, only: FindMolecule, FindFirstEmptyMol
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
     use Common_NeighData, only: neighSkin
 
     implicit none
-    class(AtomExchange), intent(inout) :: self
+    class(MC_AtomExchange), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
     integer :: i
     integer :: nAtom, nAtomNew, reduIndx, newtype, oldtype
+    integer :: nTarget
     real(dp) :: OldProb, NewProb, Prob
     real(dp) :: E_Diff
+    real(dp) :: extraTerms
 
 
-    self % atmps = self % atmps + 1E0_dp
     accept = .true.
 
-    ! Choose 
-    reduIndx = floor( trialBox%nTotal * grnd() + 1E0_dp)
-    call FindAtom(trialBox, reduIndx, nAtom)
-    oldtype = trialBox%AtomType(nAtom)
+    ! Choose an atom to remove
+    reduIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
+    call FindMolecule(trialbox, reduIndx, nTarget)
+    call trialBox % GetMolData(nTarget, molStart=nAtom)
+
+!    write(*,*) nAtom
+    oldtype = trialBox%MolType(nTarget)
     if(trialBox%NMolMin(oldtype) > trialBox%NMol(oldtype)-1) then
       return
     endif
@@ -70,31 +74,25 @@ use MoveClassDef
       newtype = floor( nMolTypes * grnd() + 1E0_dp)
     enddo
 
+    if(newtype == oldtype) then
+      return
+    endif
+
     if(trialBox%NMolMax(newtype) < trialBox%NMol(newtype)+1) then
       return
     endif
 
+    self % atmps = self % atmps + 1E0_dp
     nAtomNew = 1
     do i = 1, newtype - 1
       nAtomNew = nAtomNew + trialBox%NMolMax(i)
     enddo
     nAtomNew = nAtomNew + trialBox%NMol(newtype)
 
-    self%disp(1)%newAtom = .true.
-    self%disp(1)%MolType = newType
-    self%disp(1)%MolIndx = nAtomNew
-    self%disp(1)%atmIndx = nAtomNew
-    self%disp(1)%x_new = trialBox%atoms(1, nAtom)
-    self%disp(1)%y_new = trialBox%atoms(2, nAtom)
-    self%disp(1)%z_new = trialBox%atoms(3, nAtom)
-
-    self%disp(1)%oldAtom = .true.
-    self%disp(1)%oldMolType = oldType
-    self%disp(1)%oldMolIndx = nAtom
+    self%disp(1)%newAtmIndx = trialbox%MolStartIndx(nAtomNew)
+    self%disp(1)%newType = newType
     self%disp(1)%oldAtmIndx = nAtom
-
-    self%disp(1)%newlist = .false.
-    self%disp(1)%listIndex = nAtom
+    self%disp(1)%oldType = oldType
 
     accept = trialBox % CheckConstraint( self%disp(1:1) )
     if(.not. accept) then
@@ -105,34 +103,38 @@ use MoveClassDef
     if(.not. accept) then
       return
     endif
+    !Check Post Energy Constraint
+    accept = trialBox % CheckPostEnergy( self%disp(1:1), E_Diff )
+    if(.not. accept) then
+      return
+    endif
 
 
-    NewProb = 1E0_dp / real(trialBox % NMol(newType) + 1, dp)
-    OldProb = 1E0_dp / real(trialBox % NMol(oldType), dp)
-    Prob = OldProb/NewProb
+!    NewProb = 1E0_dp / real(trialBox % NMol(newType) + 1, dp)
+!    OldProb = 1E0_dp / real(trialBox % NMol(oldType), dp)
+!    Prob = OldProb/NewProb
+    Prob = 1.0E0_dp
+    extraTerms = sampling % GetExtraTerms(self%disp(1:1), trialBox)
+!    write(*,*) E_Diff, extraTerms
 
-    accept = sampling % MakeDecision(trialBox, E_Diff, Prob, self%disp(1:1))
+    accept = sampling % MakeDecision(trialBox, E_Diff,  self%disp(1:1), inProb=Prob, extraIn=extraTerms)
+!    write(*,*) accept
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-      do i = 1, size(trialBox%NeighList)
-        call trialBox % NeighList(i) % TransferList(nAtom, nAtomNew)
-      enddo
-      call trialBox % DeleteMol( self%disp(1)%oldMolIndx )
-      call trialBox % AddMol( self%disp(1)%molType )
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList(:,:), self%tempNNei(:))
      endif
 
   end subroutine
 !=========================================================================
   subroutine AtomExchange_Maintenance(self)
-    class(AtomExchange), intent(inout) :: self
+    class(MC_AtomExchange), intent(inout) :: self
   end subroutine
 !=========================================================================
   subroutine AtomExchange_Epilogue(self)
     use ParallelVar, only: nout
     implicit none
-    class(AtomExchange), intent(inout) :: self
+    class(MC_AtomExchange), intent(inout) :: self
     real(dp) :: accptRate
       
     accptRate = self%GetAcceptRate()

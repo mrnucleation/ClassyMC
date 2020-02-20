@@ -77,6 +77,8 @@ module Template_AcceptRule
     class(acceptrule), intent(in) :: self
     class(Perturbation), intent(in) :: disp(:)
     class(SimBox), intent(in) :: trialBox
+    integer :: molNew, molOld
+    integer :: typeNew, typeOld
     real(dp) :: extraTerms
 
      ! The purpose of this section is to add any terms such as the isobaric or
@@ -92,6 +94,13 @@ module Template_AcceptRule
          extraTerms = extraTerms - trialBox%chempot(disp(1)%molType)
        class is(VolChange)
          extraTerms = extraTerms - (disp(1)%volNew-disp(1)%volOld) * trialBox%pressure*trialBox%beta
+       class is(AtomExchange)
+         molNew = trialBox%MolIndx(disp(1)%newAtmIndx)
+         molOld = trialBox%MolIndx(disp(1)%oldAtmIndx)
+         typeNew = trialBox%MolType(molNew)
+         typeOld = trialBox%MolType(molOld)
+         extraTerms = extraTerms + trialBox%chempot(typeNew)
+         extraTerms = extraTerms - trialBox%chempot(typeOld)
        end select
 
   end function

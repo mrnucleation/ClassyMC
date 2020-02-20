@@ -222,8 +222,8 @@ module UmbrellaWHAMRule
     elseif(present(logProb)) then
       probTerm = logProb
     else
-      write(*,*) "Coding Error! Probability has not been passed into Sampling "
-      stop
+      write(0,*) "Coding Error! Probability has not been passed into Sampling "
+      error stop
     endif
 
 
@@ -245,6 +245,8 @@ module UmbrellaWHAMRule
       return
     endif
 
+!    write(*,*) self%oldIndx, self%newIndx
+
     biasOld = self%UBias(self%oldIndx)
     biasNew = self%UBias(self%newIndx)
 
@@ -263,7 +265,7 @@ module UmbrellaWHAMRule
     biasE = -trialBox%beta * E_Diff + probTerm + (biasNew-biasOld) + extraTerms
 !    write(*,*) "Energy:", E_diff
 !    write(*,*) "Prob:", biasE, log(inProb), extraTerms, trialBox%beta, biasNew-biasOld
-    if(biasE > 0.0E0_dp) then
+    if(biasE >= 0.0E0_dp) then
       accept = .true.
     elseif(biasE > log(grnd()) ) then
       accept = .true.

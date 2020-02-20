@@ -30,6 +30,7 @@ module FF_Pair_LJ_Q_Cut
 !      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Q_Cut_Multi
       procedure, pass :: NewECalc => New_LJ_Q_Cut
       procedure, pass :: OldECalc => Old_LJ_Q_Cut
+      procedure, pass :: AtomExchange => AtomExchange_LJ_Q_Cut
       procedure, pass :: ProcessIO => ProcessIO_LJ_Q_Cut
       procedure, pass :: Prologue => Prologue_LJ_Q_Cut
       procedure, pass :: GetCutOff => GetCutOff_LJ_Q_Cut
@@ -96,6 +97,9 @@ module FF_Pair_LJ_Q_Cut
 
       class is(Deletion)
          call self % OldECalc(curbox, disp, E_Diff)
+
+      class is(AtomExchange)
+         call self % AtomExchange( curbox, disp, E_Diff, accept)
 
       class default
         write(*,*) "Unknown Perturbation Type Encountered by the LJ_Q_Cut Pair Style."
@@ -428,6 +432,82 @@ module FF_Pair_LJ_Q_Cut
     enddo
 !    write(*,*) E_Diff
   end subroutine
+  !=====================================================================
+  subroutine AtomExchange_LJ_Q_Cut(self, curbox, disp, E_Diff, accept)
+    implicit none
+    class(Pair_LJ_Q_Cut), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    type(AtomExchange), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    integer :: iDisp, iAtomNew, iAtomOld, jAtom, remLen, jNei
+    integer :: newType1, oldType1
+    integer :: atmType2, globIndx
+    integer :: molEnd, molStart
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: LJNew, LJOld
+    real(dp) :: EleNew, EleOld
+    real(dp) :: ep_old, ep_new
+    real(dp) :: sig_sq_old, sig_sq_new
+    real(dp) :: qij_old, qij_new
+    real(dp) :: rmin_ij      
+
+    E_Diff = 0E0_dp
+
+!    write(*,*) disp(1)%molType, disp(1)%molIndx
+!    globIndx = curBox % MolGlobalIndx(disp(1)%molType, )
+!    call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
+
+    iAtomNew = disp(1) % newAtmIndx
+    iAtomOld = disp(1) % oldAtmIndx
+    newType1 = curbox % AtomType(iAtomNew)
+    oldType1 = curbox % AtomType(iAtomOld) 
+!    write(*,*) iAtomNew, iAtomOld, newType1, oldType1
+    do jNei = 1, curbox%NeighList(1)%nNeigh(iAtomOld)
+      jAtom = curbox%NeighList(1)%list(jNei, iAtomOld)
+      atmType2 = curbox % AtomType(jAtom)
+
+      rx = curbox % atoms(1, iAtomOld) - curbox % atoms(1, jAtom)
+      ry = curbox % atoms(2, iAtomOld) - curbox % atoms(2, jAtom)
+      rz = curbox % atoms(3, iAtomOld) - curbox % atoms(3, jAtom)
+      call curbox%Boundary(rx, ry, rz)
+      rsq = rx*rx + ry*ry + rz*rz
+      if(rsq < self%rCutSq) then
+          if(rsq < self%rLJCutSq) then
+              ep_new = self % epsTable(atmType2, newType1)
+              sig_sq_new = self % sigTable(atmType2, newType1)
+              LJNew = (sig_sq_new/rsq)
+              LJNew = LJNew * LJNew * LJNew
+              LJNew = ep_new * LJNew * (LJNew-1E0_dp)
+
+              ep_old = self % epsTable(atmType2, oldType1)
+              sig_sq_old = self % sigTable(atmType2, oldType1)
+              LJOld = (sig_sq_old/rsq)
+              LJOld = LJOld * LJOld * LJOld
+              LJOld = ep_old * LJOld * (LJOld-1E0_dp)
+              E_Diff = E_Diff + LJNew - LJOld
+              curbox % dETable(iAtomOld) = curbox % dETable(iAtomOld) + LJNew - LJOld
+              curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJNew - LJOld
+          endif
+          if(rsq < self%rQCutSq) then
+              qij_new = self%qTable(atmType2, newtype1)
+              qij_old = self%qTable(atmType2, oldtype1)
+              EleNew = 0E0_dp
+              EleOld = 0E0_dp
+              if( (qij_new /= 0E0_dp) .or. (qij_old /= 0E0_dp) ) then
+                  r = sqrt(rsq)
+                  EleNew = qij_new/r
+                  EleOld = qij_Old/r
+                  E_Diff = E_Diff + EleNew - EleOld
+                  curbox % dETable(iAtomOld) = curbox % dETable(iAtomOld) + EleNew - EleOld
+                  curbox % dETable(jAtom) = curbox % dETable(jAtom) + EleNew - EleOld
+              endif
+          endif
+        endif
+    enddo
+  end subroutine
+
   !=====================================================================
   subroutine ProcessIO_LJ_Q_Cut(self, line)
     use Common_MolInfo, only: nAtomTypes

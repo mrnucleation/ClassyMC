@@ -193,6 +193,7 @@ contains
         call box%AllocateMolBound
 
         box%NMol = 0
+        box%NMolMin = 0
         box%NMolMax = 0
 
         box%NMol(1) = nAtoms

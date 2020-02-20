@@ -1,16 +1,19 @@
-moleculetypes 2
+moleculetypes 3 #Defines the number of molecule types found within the file. For SiO2 there are two single atom types Si and O.
 
+
+#Defines different atoms that can be used in the system
 atomdef
 #  Element - Atomic Mass
   "O"  16.00
   "Si" 28.0855
+  "Li" 6.941
 end_atomdef
 
 #Oxygen Topology
 molecule 1
-  RegrowthType Simple
+  RegrowthType Simple #Defines how a swap algorithm should attempt to insert this atom into the system
   atoms
-    1
+    1  
   end_atoms
 end_molecule
 
@@ -21,6 +24,15 @@ molecule 2
     2
   end_atoms
 end_molecule
+
+#Lithium Topology
+molecule 3
+  RegrowthType Simple
+  atoms
+    3
+  end_atoms
+end_molecule
+
 
 forcefieldtype
   Pedone
@@ -33,5 +45,6 @@ forcefield 1
   rCut 17.5
   1 22.0  3.618701 1.379316  0.042395 -1.2 1.0 #O
   2  1.0  2.1      2.006700  0.340554  2.4 1.0 #Si
+  3  1.0  1.0      2.681360  0.001114  0.6 1.0 #Li
 end_forcefield
 

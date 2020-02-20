@@ -25,6 +25,7 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: BuildList => RSqList_BuildList 
       procedure, pass :: GetNewList => RSqList_GetNewList
       procedure, pass :: AddMol => RSqList_AddMol
+      procedure, pass :: SwapAtomType => RSqList_SwapAtomType
       procedure, pass :: GetNeighCount => RSqList_GetNeighCount
       procedure, pass :: ProcessIO => RSqList_ProcessIO
 !      procedure, pass :: TransferList
@@ -287,6 +288,93 @@ use Template_NeighList, only: NeighListDef
     self % sorted = .false.
 
   end subroutine
+!===================================================================================
+  subroutine RSqList_SwapAtomType(self, disp, topIndx)
+    !----------------
+    ! Routine used to change the type of an atom.  Primarily used for atom swap moves.
+    ! Not currently designed to work with molecules. 
+    ! Variables
+    !    input
+    !        disp => Displacement class variable which contains information related to
+    !                what changed in the system.  For example this might contain the old/new
+    !                positions of an atom that was shifted. This routine expects an
+    !                AtomExchange class which contains the array location of 
+    !                the atom being changed and it's new array location.
+    !    
+    !    function variables
+    !       iAtomNew => Index of the atom's new position in the array
+    !       iAtomOld => Index of the atom's old position in the array
+    !       iNei => Loop integer for looping over the number of neighbors in the neighborlist list
+    !       cellIndx => Cell ID of the current atom. 
+    !       curIndx => Atom Index returned by the search algorithm
+    !
+    !---------
+    use Common_MolInfo, only: nMolTypes, MolData
+    use SearchSort, only: SimpleSearch
+    implicit none
+    class(RSqList), intent(inout) :: self
+    class(AtomExchange), intent(in) :: disp(:)
+    integer, intent(in) :: topIndx
+    integer :: iAtomNew, iAtomOld, iNei, jAtom, iAtom, nNei
+    integer :: topAtom
+    integer :: cellIndx, curIndx
+    integer :: molIndxNew, molIndxOld
+
+
+
+    iAtomNew = disp(1)%newAtmIndx
+    iAtomOld = disp(1)%oldAtmIndx
+    topAtom = self%parent%MolStartIndx(topIndx)
+
+    molIndxNew = self%parent%MolIndx(iAtomNew)
+    molIndxOld = self%parent%MolIndx(iAtomOld)
+
+    !Search through the neighborlists and replace the old atom index for
+    !a new atom index
+    nNei = self%nNeigh(iAtomOld)
+    do iNei = 1, nNei
+      jAtom = self % list(iNei, iAtomOld)
+      curIndx = SimpleSearch( iAtomOld, self%list(1:nNei, jAtom) )
+      self%list(curIndx, jAtom) = iAtomNew
+    enddo
+
+
+    nNei = self%nNeigh(topAtom)
+    do iNei = 1, nNei
+      jAtom = self % list(iNei, topAtom)
+      if(jAtom == iAtomNew) then
+        cycle
+      endif
+      curIndx = SimpleSearch( topAtom, self%list(1:nNei, jAtom) )
+      if(curIndx /= 0) then
+        self%list(curIndx, jAtom) = iAtomOld
+      endif
+    enddo
+    curIndx = SimpleSearch( topAtom, self%list(1:nNei, iAtomOld) )
+    if(curIndx /= 0) then
+      self%list(curIndx, iAtomOld) = iAtomOld
+    endif
+
+    !Copy the neighbor of the atom being swapped list from the old location
+    !to the new location
+    do iNei = 1, self%nNeigh(iAtomOld)
+      self % list(iNei, iAtomNew) =  self % list(iNei, iAtomOld)
+    enddo
+    do iNei = 1, self%nNeigh(topAtom)
+      self % list(iNei, iAtomOld) =  self % list(iNei, topAtom)
+    enddo
+
+
+    self%nNeigh(iAtomNew) = self%nNeigh(iAtomOld) 
+    self%nNeigh(iAtomOld) = self%nNeigh(topAtom) 
+    self%nNeigh(topAtom) = 0
+   
+    self%sorted = .false.
+
+
+
+  end subroutine
+
 !===================================================================================
   subroutine RSqList_GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
     use Common_MolInfo, only: nMolTypes

@@ -56,6 +56,7 @@ module MetropolisRule
     endif
 
     biasE = -trialBox%beta * E_Diff + probTerm + extraTerms
+!    write(*,*) biasE, E_Diff, probTerm, extraTerms
     if(biasE >= 0.0E0_dp) then
       accept = .true.
     elseif( biasE > log(grnd()) ) then
@@ -103,7 +104,7 @@ module MetropolisRule
       probTerm = logProb
     else
       write(0,*) "Coding Error! Probability has not been passed into Sampling "
-      stop
+      error stop
     endif
 
     biasE = -trialBox1%beta*E_Diff1 - trialBox2%beta*E_Diff2 + probTerm + extraTerms

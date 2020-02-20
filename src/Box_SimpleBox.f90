@@ -100,6 +100,9 @@ module SimpleSimBox
       procedure, pass :: IsActive => SimpleBox_IsActive
       procedure, pass :: AddMol => SimpleBox_AddMol
       procedure, pass :: DeleteMol => SimpleBox_DeleteMol
+      procedure, pass :: SwapAtomType => SimpleBox_SwapAtomType
+
+
       procedure, pass :: Update => SimpleBox_Update
       procedure, pass :: UpdateVolume => SimpleBox_UpdateVolume
       procedure, pass :: UpdateEnergy => SimpleBox_UpdateEnergy
@@ -183,7 +186,7 @@ module SimpleSimBox
 
     allocate(self%chempot(1:nMolTypes), stat=AllocateStatus)
     self%chempot = 0E0_dp
-    IF (AllocateStatus /= 0) STOP "Allocation Error in Simulation Box Def"
+    IF (AllocateStatus /= 0) error STOP "Allocation Error in Simulation Box Def"
 
     self%dr = 0E0_dp
     self%maxMol = maxMol
@@ -280,7 +283,7 @@ module SimpleSimBox
     allocate(self%NMol(1:nMolTypes), stat=AllocateStatus)
     allocate(self%NMolMax(1:nMolTypes), stat=AllocateStatus)
     allocate(self%NMolMin(1:nMolTypes), stat=AllocateStatus)
-    IF (AllocateStatus /= 0) STOP "*** SimpleBox: Unable to allocate Mol Bounds ***"
+    IF (AllocateStatus /= 0) error STOP "*** SimpleBox: Unable to allocate Mol Bounds ***"
   end subroutine
 !==========================================================================================
   subroutine Simplebox_LoadDimension(self, line, lineStat)
@@ -499,7 +502,7 @@ module SimpleSimBox
 
     self % ETotal = self % ETotal + E_Diff
     self % ETable = self % ETable + self % dETable
-    self%dETable = 0E0_dp
+    self % dETable = 0E0_dp
 
   end subroutine
 !==========================================================================================
@@ -898,6 +901,80 @@ module SimpleSimBox
 
   end function
 !==========================================================================================
+  subroutine SimpleBox_SwapAtomType(self, disp)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    class(AtomExchange), intent(inout) :: disp(:)
+    integer :: iAtom, iAtomNew, iAtomOld
+    integer :: iList, iType, jStart, iDimn
+    integer :: molIndxNew, molIndxOld
+    integer :: nStartNew, nStartOld, lastMol, nTypeNew, nTypeOld
+
+    iAtomNew = disp(1)%newAtmIndx
+    iAtomOld = disp(1)%oldAtmIndx
+
+    molIndxOld = self%MolStartIndx(iAtomOld)
+    molIndxNew = self%MolStartIndx(iAtomNew)
+
+    nStartNew = self % MolStartIndx(molIndxNew)
+    nStartOld = self% MolStartIndx(molIndxOld)
+    nTypeNew = self % MolType(nStartNew)
+    nTypeOld = self % MolType(nStartOld)
+    if(MolData(nTypeNew)%nAtoms > 1) then
+      write(0,*) "INVALID. An AtomExchange Perturbation was passed into the update function containing"
+      write(0,*) "the index of a molecule type with more than one atom present.  This perturbation was"
+      write(0,*) "only designed for single atom molecules"
+      error stop
+    endif
+    if(MolData(nTypeOld)%nAtoms > 1) then
+      write(0,*) "INVALID. An AtomExchange Perturbation was passed into the update function containing"
+      write(0,*) "the index of a molecule type with more than one atom present.  This perturbation was"
+      write(0,*) "only designed for single atom molecules"
+      error stop
+    endif
+
+
+    lastMol = 0
+    do iType = 1, nTypeOld-1
+      lastMol = lastMol + self%NMolMax(iType) 
+    enddo
+    lastMol = lastMol + self%NMol(nTypeOld)
+    jStart = self % MolStartIndx(lastMol)
+
+
+    self%centermass(1:3,molIndxNew) = self%centermass(1:3, molIndxOld)
+    self%centermass(1:3,molIndxOld) = self%centermass(1:3, lastMol)
+
+!     Take the top molecule from the atom array and move it's position in the deleted
+!     molecule's slot.
+
+    do iDimn = 1, self%nDimension
+      self % atoms(iDimn, nStartNew ) = self % atoms(iDimn, nStartOld)
+      self % dr(iDimn, nStartNew ) = self % dr(iDimn, nStartOld )
+    enddo
+    self % ETable(nStartNew) = self % ETable(nStartOld)
+
+    do iDimn = 1, self%nDimension
+      self % atoms(iDimn, nStartOld) = self % atoms(iDimn, jStart)
+      self % dr(iDimn, nStartOld) = self % dr(iDimn, jStart)
+    enddo
+    self % ETable(nStartOld) = self % ETable(jStart)
+    self % ETable(jStart) = 0E0_dp
+
+
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % SwapAtomType(disp, lastMol)
+    enddo
+
+    self % NMol(nTypeNew) = self % NMol(nTypeNew) + 1 
+    self % NMol(nTypeOld) = self % NMol(nTypeOld) - 1 
+!    self % nMolTotal = self % nMolTotal 
+!    self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
+
+
+  end subroutine
+!==========================================================================================
   subroutine SimpleBox_AddMol(self, molType)
     use Common_MolInfo, only: nMolTypes, MolData
     implicit none
@@ -1024,10 +1101,12 @@ module SimpleSimBox
           endif
         enddo
         call self%UpdateVolume(disp)
+      class is(AtomExchange)
+        call self%SwapAtomType(disp)
 
        !-------------------------------------------------
       class default
-        stop "The code does not know how to update coordinates for this perturbation type."
+        error stop "The code does not know how to update coordinates for this perturbation type."
     end select
 
 
@@ -1109,7 +1188,7 @@ module SimpleSimBox
     real(dp), intent(out) :: reducedCoords(1:3)
 
     reducedCoords = 0E0_dp
-    stop "GetReducedCoords routine has been called on a system where no box is defined."
+    error stop "GetReducedCoords routine has been called on a system where no box is defined."
 
   end subroutine
 !==========================================================================================
@@ -1120,7 +1199,7 @@ module SimpleSimBox
     real(dp), intent(out) :: realCoords(1:3)
 
     realCoords = 0E0_dp
-    stop "GetReducedCoords routine has been called on a system where no box is defined."
+    error stop "GetReducedCoords routine has been called on a system where no box is defined."
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_ScreenOut(self)
@@ -1155,6 +1234,7 @@ module SimpleSimBox
     tempStr = ReplaceText(tempStr, "%s2", trim(adjustl(tempStr2)))
     write(nout, "(A)") trim(tempStr)
 
+    write(nout, "(A, 999(1x,I10))") "      Number of Molecules By Type: ", self%nMol(1:nMolTypes)
 
 
 
@@ -1175,7 +1255,7 @@ module SimpleSimBox
     do iType = 1, nMolTypes    
       self%nMolTotal = self%nMolTotal + self % NMol(iType)
     enddo
-    write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
+    write(nout,*) "Box ", self%boxID, " Molecule Count: ", (self % NMol(iMol), iMol=1,nMolTypes)
     write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
     write(nout,*) "Box ", self%boxID, " Temperature: ", self % temperature
 
@@ -1191,7 +1271,7 @@ module SimpleSimBox
       enddo
       if(.not. accept) then
         write(nout,*) "Initial Constraints are not statisfied!"
-        stop
+        error stop
       endif
     endif
 
@@ -1279,7 +1359,7 @@ module SimpleSimBox
         call self%NeighList(iList) % Update
       enddo
     else
-      stop "No Neighbor List has been defined!"
+      error stop "No Neighbor List has been defined!"
     endif
 
 

@@ -2,7 +2,7 @@
 module Template_NeighList
   use MasterTemplate, only: classyClass
   use VarPrecision
-  use CoordinateTypes, only: Perturbation
+  use CoordinateTypes, only: Perturbation, AtomExchange
 !use Template_SimBox, only: SimBox
 
   type, public, extends(classyClass) :: NeighListDef
@@ -24,6 +24,7 @@ module Template_NeighList
       procedure, pass :: GetNewList
       procedure, pass :: GetNeighCount
       procedure, pass :: AddMol
+      procedure, pass :: SwapAtomType
       procedure, pass :: DumpList
       procedure, pass :: TransferList
       procedure, pass :: DeleteMol
@@ -89,6 +90,13 @@ module Template_NeighList
     integer, intent(in) :: tempList(:,:), tempNNei(:)
 
 
+  end subroutine
+!===================================================================================
+  subroutine SwapAtomType(self, disp, topIndx)
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+    class(AtomExchange), intent(in) :: disp(:)
+    integer, intent(in) :: topIndx
   end subroutine
 !===================================================================================
   subroutine TransferList(self, indx1, indx2)

@@ -16,15 +16,6 @@ module CoordinateTypes
     integer :: listIndex = -1
   end type
 
-  !Move type where one particle is removed and another is inserted
-!  type, extends(Perturbation) :: Exchange
-!    integer(kind=atomIntType) :: molType, atmIndx, molIndx
-!    real(dp) :: x_new, y_new, z_new
-!    integer(kind=atomIntType) :: OldmolType, OldatmIndx, OldmolIndx
-!
-!    logical :: newList = .false.
-!    integer :: listIndex = -1
-!  end type
 
   !Move type where one particle is removed 
   type, extends(Perturbation) :: Deletion
@@ -35,15 +26,15 @@ module CoordinateTypes
   !Move type where one particle is created
   type, extends(Perturbation) :: Addition
     integer(kind=atomIntType) :: molType
-     integer(kind=atomIntType) :: molIndx, atmIndx   
+    integer(kind=atomIntType) :: molIndx, atmIndx   
     real(dp) :: x_new, y_new, z_new
     integer :: listIndex = -1
   end type
 
   !Move type where an atom of one type is exchanged for an atom of another type.
-  type, extends(Perturbation) :: Exchange
-    type(Addition) :: inAtom
-    type(Deletion) :: outAtom
+  type, extends(Perturbation) :: AtomExchange
+    integer(kind=atomIntType) :: newAtmIndx, newType
+    integer(kind=atomIntType) :: oldAtmIndx, oldType
   end type
 
   !Move type where the volume of the entire box is changed.

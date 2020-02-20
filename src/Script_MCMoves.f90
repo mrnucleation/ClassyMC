@@ -4,7 +4,7 @@ module Input_Moves
   use Input_Format
   use MCMoveData, only: Moves, MoveProb
 
-!  use Move_AtomExchange, only: AtomExchange
+  use Move_AtomExchange, only: MC_AtomExchange
   use MCMove_AVBMC, only: AVBMC
   use MCMove_AnisoVol, only: AnisoVol
   use MCMove_AtomTranslation, only: AtomTranslate
@@ -49,8 +49,8 @@ module Input_Moves
       case("atomtranslation")
         allocate(AtomTranslate::Moves(moveNum)%move)
 
-!      case("atomexchange")
-!        allocate(AtomExchange::Moves(moveNum)%move)
+      case("atomexchange")
+        allocate(MC_AtomExchange::Moves(moveNum)%move)
 
       case("basicswap")
         allocate(Basic_Swap::Moves(moveNum)%move)
