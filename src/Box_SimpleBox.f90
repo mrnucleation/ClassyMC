@@ -31,6 +31,7 @@ module SimpleSimBox
 !
 !    real(dp), allocatable :: ETable(:), dETable(:)
 !    real(dp), allocatable :: atoms(:,:)
+    logical :: forceERecompute = .false.
     integer, private :: rebuilds = 0
     integer, private :: dangerbuilds = 0
     real(dp), allocatable, private :: dr(:,:)
@@ -615,6 +616,11 @@ module SimpleSimBox
         read(command, *) intVal
         self % EFunc => EnergyCalculator(intVal)
 
+      case("energyrecompute")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self % forceERecompute = logicVal
+
       case("neighcut")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
@@ -1174,7 +1180,10 @@ module SimpleSimBox
       enddo
       self%dr = 0E0_dp
     endif
-!    call self % ComputeEnergy
+
+    if(self%forceERecompute) then
+      call self % ComputeEnergy(tablecheck=.false.)
+    endif
 
 !    call self % EFunc % Method % DetailedECalc( self, tempE, accept )
 
@@ -1237,7 +1246,7 @@ module SimpleSimBox
     tempStr = ReplaceText(tempStr, "%s2", trim(adjustl(tempStr2)))
     write(nout, "(A)") trim(tempStr)
 
-    write(nout, "(A, 999(1x,I10))") "      Number of Molecules By Type: ", self%nMol(1:nMolTypes)
+    write(nout, "(A, 999(1x,I10))") "        Number of Molecules By Type: ", self%nMol(1:nMolTypes)
 
 
 

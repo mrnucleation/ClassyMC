@@ -205,6 +205,7 @@ module CubicBoxDef
     integer, intent(out) :: lineStat
     character(len=maxLineLen), intent(in) :: line   
 
+    logical :: logicVal
     integer :: intVal
     real(dp) :: realVal
     character(len=30) :: command, val
@@ -236,6 +237,11 @@ module CubicBoxDef
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) intVal
         self % EFunc => EnergyCalculator(intVal)
+
+      case("energyrecompute")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) logicVal
+        self % forceERecompute = logicVal
 
       case("neighcut")
         call GetXCommand(line, command, 5, lineStat)

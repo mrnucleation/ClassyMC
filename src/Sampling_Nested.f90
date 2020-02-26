@@ -1,22 +1,27 @@
 !====================================================================
 module NestedSampling
   use VarPrecision
-  use CoordinateTypes, only: Perturbation, Addition, Deletion, VolChange
+  use CoordinateTypes, only: Perturbation, Addition, Deletion, VolChange, AtomExchange, Displacement
   use Template_AcceptRule, only: acceptrule
  
   type, public, extends(acceptrule) :: Nested
     logical :: parallel = .true.
+!    logical :: canonical = .true.
+    logical :: firstpass = .true.
     integer :: binmiss = 0
     real(dp) :: EMedian
     real(dp) :: EMin, EMax, dE
     real(dp) :: EHist(0:1000)
     character(len=560) :: logfile = "Nested.dat"
+    character(len=50) :: ensemble = "canonical"
     contains
        procedure, pass :: Prologue => Nested_Prologue
        procedure, pass :: MakeDecision => Nested_MakeDecision
        procedure, pass :: MakeDecision2Box => Nested_MakeDecision2Box
        procedure, pass :: Maintenance => Nested_Maintenance
        procedure, pass :: ProcessIO => Nested_ProcessIO
+       procedure, pass :: GetExtraTerms => Nested_GetExtraTerms
+       procedure, pass :: GetExtraTermsOld => Nested_GetExtraTermsOld
   end type
 !====================================================================
   contains
@@ -25,6 +30,7 @@ module NestedSampling
     use Template_SimBox, only: SimBox
     use RandomGen, only: grnd
     use ParallelVar, only: nout
+    use Common_MolInfo, only: MolData
     implicit none
     class(Nested), intent(inout) :: self
     class(SimBox), intent(in) :: trialBox
@@ -34,13 +40,44 @@ module NestedSampling
     real(dp), intent(in) :: E_Diff
     logical :: accept
     integer :: ebin
-    real(dp) :: E_Total, E_PerAtom, chemPot, extraTerms, probTerm
+    real(dp) :: E_Total, E_PerAtom, E_PerAtomOld,chemPot, extraTerms, extraTermsOld, probTerm
+
+    if(trim(adjustl(self%ensemble)) == 'canonical') then
+      select type(disp)
+         class is(Displacement)
+            continue
 
 
-    E_Total = trialBox%ETotal + E_Diff
-    E_PerAtom = E_Total/trialBox%nAtoms
-    if(trialBox%ETotal/trialBox%nAtoms > self%EMedian) then
-      if(E_PerAtom < trialBox%ETotal/trialBox%nAtoms) then
+         class default
+          write(0,*) "In order to use moves that changes volume or particle counts"
+          write(0,*) "the flag canonical must be set to false"
+          write(0,*) "Command => modify sampling canonical .false."
+          stop
+      end select
+    endif
+
+    extraTerms = self%GetExtraTerms(disp, trialBox)
+    extraTermsOld = self%GetExtraTermsOld(disp, trialBox)
+
+
+    E_Total = trialBox%ETotal + E_Diff + extraTerms
+    select type(disp)
+      class is(Addition)
+        E_PerAtom = E_Total/(trialBox%nAtoms + molData(disp(1)%molType)%nAtoms)
+      class is(Deletion)
+        E_PerAtom = E_Total/(trialBox%nAtoms - molData(disp(1)%molType)%nAtoms)
+      class default
+        E_PerAtom = E_Total/trialBox%nAtoms 
+     end select
+
+    E_PerAtomOld = (trialBox%ETotal+extraTermsOld)/trialBox%nAtoms 
+
+    !There's a chance after the adjustment that the current system
+    !energy is above the current median value.  As such we need
+    !to accept any move that drops the energy until the system
+    !is correctly below the current Median value
+    if(E_PerAtomOld > self%EMedian) then
+      if(E_PerAtom < E_PerAtomOld) then
         accept = .true.
         return
       endif
@@ -49,13 +86,19 @@ module NestedSampling
 
     if(E_PerAtom <= self%EMedian) then
       accept = .true.
-      if(E_PerAtom > self%EMin .and. E_Total < self%EMax) then
+      if(E_PerAtom > self%EMin .and. E_PerAtom < self%EMax) then
         ebin = floor( (E_PerAtom-self%EMin)*self%dE )
         self%EHist(ebin) = self%EHist(ebin) + 1E0_dp
       else
         self%binmiss = self%binmiss + 1
       endif
     else
+      if(E_PerAtomOld > self%EMin .and. E_PerAtomOld < self%EMax) then
+        ebin = floor( (E_PerAtomOld-self%EMin)*self%dE )
+        self%EHist(ebin) = self%EHist(ebin) + 1E0_dp
+      else
+        self%binmiss = self%binmiss + 1
+      endif
       accept = .false.
     endif
 
@@ -77,7 +120,7 @@ module NestedSampling
     integer :: iDisp
     real(dp) :: biasE, chemPot, extraTerms, probTerm
 
-    stop
+    stop "Two Box Ensembles are not currently implimented for NestedSampling"
 
 
 
@@ -138,6 +181,10 @@ module NestedSampling
           read(command, *) realVal
           self%maintFreq = floor(realVal)
 
+      case("ensemble")
+          call GetXCommand(line, command, 4, lineStat)
+          self%ensemble = trim(adjustl(command))
+
       case("emax")
           call GetXCommand(line, command, 4, lineStat)
           read(command, *) self%EMax
@@ -190,6 +237,11 @@ module NestedSampling
 #ifdef PARALLEL
     real(dp) :: temphist(0:1000)
 #endif
+    if(self%firstpass) then
+      self%EHist = 0E0_dp
+      self%firstpass = .false.
+      return
+    endif
 
     write(nout,*) "Updating Nested Sampling..."
 
@@ -212,6 +264,12 @@ module NestedSampling
       if(myid .eq. 0) then
           self%EHist=TempHist
           norm = sum(self%EHist)*0.5E0_dp
+          if(norm == 0.0E0_dp) then
+            write(nout,*) "Zero norm encountered in Nested Sampling"
+            write(nout,*) "Simulation is likely Trapped"
+            stop
+
+          endif
           sumint = 0.0E0_dp
           nMedian = -1
           do   
@@ -260,6 +318,94 @@ module NestedSampling
     write(nout,*) "New Median Value:", self%EMedian/outEngUnit
     self%EHist = 0E0_dp
   end subroutine
+!====================================================================
+  function Nested_GetExtraTerms(self, disp, trialBox) result(extraTerms)
+    use Common_MolInfo, only:nMolTypes
+    use Input_Format, only: maxLineLen
+!    use SimpleSimBox, only: SimpleBox
+    use Template_SimBox, only: SimBox
+    implicit none
+    class(Nested), intent(in) :: self
+    class(Perturbation), intent(in) :: disp(:)
+    class(SimBox), intent(in) :: trialBox
+    integer :: iType
+    integer :: molNew, molOld
+    integer :: typeNew, typeOld
+    real(dp) :: extraTerms, potTerms
+
+     ! The purpose of this section is to add any terms such as the isobaric or
+     ! grand canonical ensemble terms (IE the PV or chemical potential) to the
+     ! detailed balance condition. 
+     extraTerms = 0E0_dp
+     potTerms = 0E0_dp
+     if(trim(adjustl(self%ensemble)) == 'canonical') then
+       return
+     elseif(trim(adjustl(self%ensemble)) == 'grand') then
+         do iType = 1, nMolTypes
+           potTerms = potTerms + trialBox%chempot(iType)*trialBox%nMol(iType)
+         enddo
+         select type(disp)
+           class is(Addition)
+               potTerms = potTerms + trialBox%chempot(disp(1)%molType)
+           class is(Deletion)
+               potTerms = potTerms - trialBox%chempot(disp(1)%molType)
+           class is(AtomExchange)
+             molNew = trialBox%MolIndx(disp(1)%newAtmIndx)
+             molOld = trialBox%MolIndx(disp(1)%oldAtmIndx)
+             typeNew = trialBox%MolType(molNew)
+             typeOld = trialBox%MolType(molOld)
+             potTerms = potTerms + trialBox%chempot(typeNew)*trialBox%NMol(typeNew)
+             potTerms = potTerms - trialBox%chempot(typeOld)*trialBox%NMol(typeOld)
+           class is(VolChange)
+             stop "Volume change moves are not allowed in Grand Ensemble Mode!"
+         end select
+
+     elseif(trim(adjustl(self%ensemble)) == 'isobaric') then
+       select type(disp)
+         class is(VolChange)
+           extraTerms = extraTerms + disp(1)%volNew*trialBox%pressure
+         class is(Displacement)
+           extraTerms = 0E0_dp
+         class default
+           stop "Moves besides volume change and translation moves are not allowed in isobaric mode!"
+       end select
+     else
+       stop "Invalid Ensemble was given to the Nested Sampling Algorimth!!"
+     endif
+    extraTerms = extraTerms + potTerms
+
+  end function
+!====================================================================
+  function Nested_GetExtraTermsOld(self, disp, trialBox) result(extraTerms)
+    use Common_MolInfo, only:nMolTypes
+    use Input_Format, only: maxLineLen
+    use Template_SimBox, only: SimBox
+    implicit none
+    class(Nested), intent(in) :: self
+    class(Perturbation), intent(in) :: disp(:)
+    class(SimBox), intent(in) :: trialBox
+    integer :: molNew, molOld
+    integer :: typeNew, typeOld, iType
+    real(dp) :: extraTerms
+
+     ! The purpose of this section is to add any terms such as the isobaric or
+     ! grand canonical ensemble terms (IE the PV or chemical potential) to the
+     ! detailed balance condition. 
+     extraTerms = 0E0_dp
+     if(trim(adjustl(self%ensemble)) == 'canonical') then
+        return
+     
+     elseif(trim(adjustl(self%ensemble)) == 'grand') then
+        do iType = 1, nMolTypes
+          extraTerms = extraTerms + trialBox%chempot(iType)*trialBox%nMol(iType)
+        enddo
+
+     elseif(trim(adjustl(self%ensemble)) == 'isobaric') then
+        extraTerms = extraTerms + trialBox%volume*trialBox%pressure
+     endif
+
+
+  end function
 !====================================================================
 end module
 !====================================================================
