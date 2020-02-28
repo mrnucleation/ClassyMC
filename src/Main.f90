@@ -43,6 +43,12 @@
       format_string = "(A,I6,A)"      
     endif      
 
+    write(nout,*) "============================================================"
+    write(nout,*) "             ****  *    *****    ***    ***  * * "
+    write(nout,*) "             *     *    * * *    *      *     *  "
+    write(nout,*) "             ****  **** *   *  ***    ***     *  "
+    write(nout,*) "============================================================"
+
     write(fl_name,format_string) "ScreenOutput_", myid,".txt"      
     open( unit=100, file=trim(adjustl(fl_name)) ) 
  

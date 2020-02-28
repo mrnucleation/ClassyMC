@@ -49,10 +49,10 @@ module UmbrellaWHAMRule
        procedure, pass :: UpdateStatistics => UmbrellaWHAM_UpdateStatistics
 
        procedure, pass :: GetBiasIndex => UmbrellaWHAM_GetBiasIndex
-       procedure, pass, private :: GetNewBiasIndex => UmbrellaWHAM_GetNewBiasIndex
-       procedure, pass, private :: ReadInitialBias => UmbrellaWHAM_ReadInitialBias
-       procedure, pass, private :: GetUIndexArray => UmbrellaWHAM_GetUIndexArray
-       procedure, pass, private :: FindVarValues => UmbrellaWHAM_FindVarValues
+       procedure, pass :: GetNewBiasIndex => UmbrellaWHAM_GetNewBiasIndex
+       procedure, pass :: ReadInitialBias => UmbrellaWHAM_ReadInitialBias
+       procedure, pass :: GetUIndexArray => UmbrellaWHAM_GetUIndexArray
+       procedure, pass :: FindVarValues => UmbrellaWHAM_FindVarValues
        procedure, pass :: OutputUmbrellaHist => UmbrellaWHAM_OutputUmbrellaHist
        procedure, pass :: AdjustHist => UmbrellaWHAM_AdjustHist
        procedure, pass :: WHAMSimOutput => UmbrellaWHAM_WHAMSimOutput
@@ -797,8 +797,8 @@ module UmbrellaWHAMRule
       self%NewBias = 0E0_dp
       maxbin = maxloc(self%HistStorage,1)
       maxbin2 = maxloc(self%TempHist,1)
-      write(*,*) "Largest Bin", maxbin, maxbin2
-      write(*,*) "Largest Value", self%ProbArray(maxbin)
+      write(nout,*) "Largest Bin", maxbin, maxbin2
+      write(nout,*) "Largest Value", self%ProbArray(maxbin)
       if(self%ProbArray(maxbin) > 1E-200_dp) then
           do i = 1, self%umbrellaLimit
             if(self%ProbArray(i) > 0E0_dp) then

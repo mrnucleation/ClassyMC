@@ -29,7 +29,7 @@ OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 
 LIBRARY_FLAGS := -shared -fpic
 
-DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -cpp -ffpe-trap=overflow,invalid,zero -lblas -llapack
+DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -cpp -ffpe-trap=overflow,invalid,zero 
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
@@ -202,13 +202,13 @@ default: SRC_COMPLETE += $(SRC)/Main.f90
 default: startUP  classyMC modout finale 
 
 aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
+#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
-aenet: COMPFLAGS += -DAENET
+aenet: COMPFLAGS += -DAENET -static-libgfortran -llapack -lblas
 aenet: startUP  classyMCAENet  modout finale 
 
-lib: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(LIBRARY_FLAGS)
-#lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(LIBRARY_FLAGS)
+#lib: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(LIBRARY_FLAGS)
+lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(LIBRARY_FLAGS)
 lib:  startUP  libclassymc.so  modout finale 
 
 lib_debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(LIBRARY_FLAGS)
@@ -271,7 +271,7 @@ classyMC: $(OBJ_COMPLETE) $(SRC)/Main.f90
 		@echo =============================================	
 		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 	
-classyMCAENet: $(OBJ_COMPLETE) $(SRC)/Main.f90  $(LIB)/libaenet.a
+classyMCAENet: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(LIB)/libaenet.a
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
@@ -353,6 +353,7 @@ $(OBJ)/Template_AngleFF.o: $(OBJ)/Template_IntraFF.o
 $(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o
 $(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o
 
+$(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
 $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
@@ -380,12 +381,12 @@ $(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Neigh_CellRSqList.o $(O
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o
 
+$(OBJ)/Sampling_Umbrella.o: $(OBJ)/Sampling_UmbrellaWHAM.o
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
 $(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o
 $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 
-$(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o
 

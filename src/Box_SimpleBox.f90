@@ -375,19 +375,38 @@ module SimpleSimBox
 
     read(line, *) molType, molIndx, atmIndx, x, y ,z
 
+
+    !Safety block to ensure the user didn't reference something that doesn't exist
+    !or is outside of the acceptable bounds.
     if((molType > nMolTypes) .or. (molType < 1)) then
-      write(*,*) "ERROR! Type Index out of bounds!"
-      write(*,*) molType, molIndx, atmIndx
+      write(0,*) "ERROR! Type Index out of bounds!"
+      write(0,*) molType, molIndx, atmIndx
       lineStat = -1
       return
     endif
 
     if( (molIndx > self%NMolMax(molType)) .or. (molIndx < 1) ) then
-      write(*,*) "ERROR! Molecule Index out of bounds!"
-      write(*,*) molType, molIndx, atmIndx
+      write(0,*) "ERROR! Molecule Index out of bounds!"
+      write(0,*) molType, molIndx, atmIndx
       lineStat = -1
       return
     endif
+
+    if( (molIndx > self%NMol(molType)) .or. (molIndx < 1) ) then
+      write(0,*) "ERROR! Molecule Index references a molecule that doesn't exist!"
+      write(0,*) molType, molIndx, atmIndx
+      lineStat = -1
+      return
+    endif
+
+    if( (atmIndx > MolData(molType)%nAtoms) .or. (atmIndx < 1) ) then
+      write(0,*) "ERROR! Atom Index out of bounds!"
+      write(0,*) molType, molIndx, atmIndx
+      lineStat = -1
+      return
+    endif
+
+
 
     subIndx = 0
     do iType = 1, molType-1

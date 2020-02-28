@@ -1,4 +1,18 @@
 !========================================================
+!The AVBMC move is the intra-box variant of the move created by Bin Chen et al. 
+!This is a biased swap move that increase the chances of creating and breaking 
+!bonded configurations by using a small volume around the molecules present in the 
+!system as a "target" location for a newly inserted molecule.
+!This move type is suitable for both bulk and cluster simulations as it can be conformed 
+!to Distance Criteria. For sparse bulk simulations it is suggested that the user still
+!couple this move with addition swap move types that are suitable for low density simulations.
+!
+! Modifiable Parameters
+!   radius (float) => Sets the maxmimum distance in angstroms that the first atom
+!                     can be placed at
+!                             
+!     
+!========================================================
 module MCMove_AVBMC
 use CoordinateTypes, only: Addition, Deletion
 use MoveClassDef
