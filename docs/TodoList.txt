@@ -1,19 +1,14 @@
 This is a short list kept by the developer to keep track of features that are still in need of implimentation
 
-
 1. Finish the Intra Molecular Interaction Framework
 2. Finish Rosenbluth Sampling Modules
 3. Start work on allowing the user to select different parallelization schemes.
 4. Impliment Energy Biased AVBMC
-5. Screen Output Module needs work.
-6. CBMC and support for larger molecules is needed.
-7. Long Range Solver for bulk systems required.
-8. Python Wrapper coupled with modifications for the script interface.
-9. Python Scripts for converting Classy formats to/from LAMMPS and other common formats.
-10. Implimentation of the Stil-Web Potential
-11. Pressure Computations for Gibbs and Iso-volumetric Ensembles
-12. Addition of Analysis modules for RDF and other important calculations.
-13. Finish the EasyPair FF style.
+5. CBMC and support for larger molecules is needed.
+6. Long Range Solver for bulk systems required.
+7. Implimentation of the Stil-Web Potential
+8. Pressure Computations for Gibbs and Iso-volumetric Ensembles
+9. Finish the EasyPair FF style.
 
 Nice things to think about doing in the future:
 

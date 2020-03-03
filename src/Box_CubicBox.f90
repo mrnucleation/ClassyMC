@@ -319,20 +319,17 @@ module CubicBoxDef
     integer :: iAtom, iDims, iConstrain, iType, iList
     integer :: iMol, molStart
 
-    call self % ComputeEnergy
-    do iList = 1 ,size(self%NeighList)
-      call self % NeighList(iList) % BuildList(iList)
-    enddo
 
+    !Check to see if all particles are properly contained within the simulation box.
     do iAtom = 1, self%nMaxAtoms
-      if( self%MolSubIndx(iAtom) > self%NMol(self%MolType(iAtom)) ) then
+      if(.not. self%isactive(iAtom) ) then
         cycle
       endif
       do iDims = 1, self%nDimension
         if(abs(self%atoms(iDims, iAtom)) > self%boxL2) then
           write(nout, *) "Warning! Particle out of bounds!"
           write(nout, *) "Particle Number:", iAtom
-          write(nout, *) "Box Length:", self%boxL2
+          write(nout, *) "Box Length:", self%boxL
           write(nout, *) self%atoms(:, iAtom)
           stop
         endif
@@ -353,11 +350,15 @@ module CubicBoxDef
     self%nMolTotal = 0
     do iType = 1, nMolTypes    
       self%nMolTotal = self%nMolTotal + self % NMol(iType)
+      write(nout,*) "Box ", self%boxID, "Molecule", iType,"Count: ", self%NMol(iType)
     enddo
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
     write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
 
-
+    do iList = 1 ,size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
+    call self % ComputeEnergy
 
     self%volume = self%boxL**3
     write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure/outPressUnit, pressStr

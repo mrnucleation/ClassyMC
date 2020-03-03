@@ -45,7 +45,7 @@ module Input_LoadCoords
     lineBuffer = 0
     nAtoms = 0
     do iLine = 1, nLines
-      if(lineBuffer .gt. 0) then
+      if(lineBuffer > 0) then
         lineBuffer = lineBuffer - 1
         cycle
       endif

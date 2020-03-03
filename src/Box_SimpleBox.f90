@@ -145,8 +145,8 @@ module SimpleSimBox
     integer :: iType, iMol, iAtom, atmIndx, molIndx, maxMol, maxSingleMol
  
     if( .not. allocated(self%NMolMin) ) then
-      write(*,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
-      write(*,*) "prior to box initialization!"
+      write(0,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
+      write(0,*) "prior to box initialization!"
       stop 
     endif
     AllocateStatus = 0
@@ -225,6 +225,7 @@ module SimpleSimBox
         self%MolEndIndx(molIndx) = atmIndx + MolData(iType)%nAtoms 
         do iAtom = 1, MolData(iType)%nAtoms
           atmIndx = atmIndx + 1
+!          write(*,*) iType, molIndx, atmIndx
           self%MolType(atmIndx) = iType
           self%AtomType(atmIndx) = MolData(iType)%atomType(iAtom)
           self%MolIndx(atmIndx)  = molIndx
@@ -406,15 +407,18 @@ module SimpleSimBox
       return
     endif
 
+    call self%Boundary(x,y,z)
 
 
     subIndx = 0
     do iType = 1, molType-1
-      subIndx = self%NMolMax(iType)
+      subIndx = subIndx + self%NMolMax(iType)
     enddo
     subIndx = subIndx + molIndx
     arrayIndx = self%MolStartIndx(subIndx)
     arrayIndx = arrayIndx + atmIndx - 1
+    write(*,*) arrayIndx, trim(adjustl(line))
+    write(*,*) molType, subindx, self%MolStartIndx(subIndx)
 
     self%atoms(1, arrayIndx) = x
     self%atoms(2, arrayIndx) = y
