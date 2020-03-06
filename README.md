@@ -15,9 +15,11 @@ To perform a basic compile specify the make command using your compiler of choic
     make ifort  #Intel Compiler
     
 To build with AEnet use the command
+
     make aenet
 
 To build as a shared library use the command
+
     make lib
     
     
