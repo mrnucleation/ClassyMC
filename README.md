@@ -22,4 +22,4 @@ To build as a shared library use the command
 
     make lib
     
-    
+Commands for use in the input script can be found on the github repo's wiki page.  Example run scripts can be found in the /examples/ directory. 
