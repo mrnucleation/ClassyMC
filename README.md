@@ -10,6 +10,7 @@ ClassyMC requires a Fortran-2003 standard compatible fortran compiler.  It has b
 and GNU fortran based compilers. For parallel implimentations MPI is required. If one wishes to install with the AENet forcefield one must compile AENet as a static library and import it at compile time.
 
 To perform a basic compile specify the make command using your compiler of choice.
+
     make gfortran  # GNU Fortran Compiler    
     make ifort  #Intel Compiler
     
