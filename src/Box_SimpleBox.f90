@@ -85,6 +85,7 @@ module SimpleSimBox
 !      procedure, pass :: GetAtomTypes => Simplebox_GetAtomTypes
       procedure, pass :: GetNeighborList => Simplebox_GetNeighborList
       procedure, pass :: GetNewNeighborList => Simplebox_GetNewNeighborList
+      procedure, pass :: GetLargestNNei => SimpleBox_GetLargestNNei
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetIndexData => Simplebox_GetIndexData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
@@ -472,13 +473,15 @@ module SimpleSimBox
         ECul = tempETable(iAtom)
         ECalc = self%ETable(iAtom)
         EDiff = abs(ECul-ECalc)
-        if(ECalc /= 0E0_dp) then
-          if( EDiff/abs(ECalc)  > 1E-7_dp ) then
-            write(nout, *) "Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
-          endif
-        else
-          if( EDiff > 1E-7_dp ) then
-            write(nout, *) "Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
+        if(ECalc > 1.0E0_dp) then
+          if(ECalc /= 0E0_dp) then
+            if( EDiff/abs(ECalc)  > 1E-4_dp ) then
+              write(nout, *) "Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
+            endif
+          else
+            if( EDiff > 1E-5_dp ) then
+              write(nout, *) "2 Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
+            endif
           endif
         endif
       enddo
@@ -501,7 +504,8 @@ module SimpleSimBox
     E_Current = self%ETotal
     call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
 
-    if(self%ETotal /= 0E0_dp) then
+    if(self%ETotal > 1E0_dp) then
+
       if( abs((E_Current-self%ETotal)/self%ETotal) > 1E-7_dp ) then
         write(nout, *) "!!!!!!!!!!!!!!!!!!ERROR! Large energy drift detected!!!!!!!!!!!!!!!!!!!!!!!!!!"
         write(nout, *) "Box: ", self%boxID
@@ -907,6 +911,29 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 
     call self%NeighList(listindx)%GetNewList(iAtom, tempList, tempNNei, disp)
   end subroutine
+!==========================================================================================
+  function SimpleBox_GetLargestNNei(self) result(maxnei)
+    !-----------------
+    ! Returns the Largest "Max Neighbor Count" for a single atom across all lists
+    !-----------------
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    integer :: maxnei 
+    integer :: curmaxnei = 0
+    integer :: iList
+
+    maxnei = 0
+
+    if(allocated(self%NeighList)) then
+      do iList = 1, size(self%NeighList)
+         curmaxnei = self%NeighList(iList)%GetMaxNei()
+         if(maxnei < curmaxnei) then
+           maxnei = curmaxnei
+         endif
+      enddo
+    endif
+
+  end function 
 !==========================================================================================
   subroutine SimpleBox_GetEnergyTable(self, etable, detable)
     implicit none

@@ -20,8 +20,10 @@ module Template_NeighList
     contains
       procedure, pass :: Constructor
       procedure, pass :: BuildList
+      procedure, pass :: SortList
       procedure, pass :: GetListArray
       procedure, pass :: GetNewList
+      procedure, pass :: GetMaxNei
       procedure, pass :: GetNeighCount
       procedure, pass :: AddMol
       procedure, pass :: SwapAtomType
@@ -49,6 +51,13 @@ module Template_NeighList
 
   end subroutine
 !===================================================================================
+  subroutine SortList(self)
+    use SearchSort, only: QSort
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+
+  end subroutine
+!===================================================================================
   subroutine GetListArray(self,list,  nNeigh )
     implicit none
     class(NeighListDef), intent(inout), target :: self
@@ -59,6 +68,14 @@ module Template_NeighList
     list => self%list
  
   end subroutine
+!===================================================================================
+  function GetMaxNei(self) result(outval)
+    implicit none
+    class(NeighListDef), intent(inout), target :: self
+    integer :: outval
+
+    outval = self%maxnei
+  end function
 !===================================================================================
   subroutine GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
     implicit none

@@ -1,6 +1,6 @@
 !========================================================
-!Guarnteed delete move.  Only used for debuging. 
-!
+!Guarnteed delete move.  Only used for debuging things such as neighborlists. 
+!========================================================
 module MCMove_Delete
 use CoordinateTypes, only: Deletion
 use MoveClassDef
@@ -39,7 +39,7 @@ use VarPrecision
     class(MoveDelete), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
-    integer, parameter :: delVal = 2
+    integer, parameter :: delVal = 1
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex
     real(dp) :: E_Diff
@@ -69,7 +69,7 @@ use VarPrecision
 
     call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
 
-    write(*,*) "Delete"
+    write(*,*) "Delete", delVal
 
     !Accept/Reject
     if(accept) then
