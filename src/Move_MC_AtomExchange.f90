@@ -120,6 +120,7 @@ use VarPrecision
     accept = sampling % MakeDecision(trialBox, E_Diff,  self%disp(1:1), inProb=Prob, extraIn=extraTerms)
 !    write(*,*) accept
     if(accept) then
+!      write(*,*) "Atom Exchange"
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList(:,:), self%tempNNei(:))

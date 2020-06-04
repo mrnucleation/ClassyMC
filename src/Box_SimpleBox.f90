@@ -85,6 +85,7 @@ module SimpleSimBox
 !      procedure, pass :: GetAtomTypes => Simplebox_GetAtomTypes
       procedure, pass :: GetNeighborList => Simplebox_GetNeighborList
       procedure, pass :: GetNewNeighborList => Simplebox_GetNewNeighborList
+      procedure, pass :: GetLargestNNei => SimpleBox_GetLargestNNei
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetIndexData => Simplebox_GetIndexData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
@@ -98,7 +99,8 @@ module SimpleSimBox
       procedure, pass :: GetNewMolCount => Simplebox_GetNewMolCount
 !      procedure, pass :: GetNewAtomCount => Simplebox_GetNewAtomCount
 
-
+      !Search Functions
+      procedure, pass :: FindMolByTypeIndex => SimpleBox_FindMolByTypeIndex
 
       !Update Functions
       procedure, pass :: IsActive => SimpleBox_IsActive
@@ -471,13 +473,15 @@ module SimpleSimBox
         ECul = tempETable(iAtom)
         ECalc = self%ETable(iAtom)
         EDiff = abs(ECul-ECalc)
-        if(ECalc /= 0E0_dp) then
-          if( EDiff/abs(ECalc)  > 1E-7_dp ) then
-            write(nout, *) "Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
-          endif
-        else
-          if( EDiff > 1E-7_dp ) then
-            write(nout, *) "Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
+        if(ECalc > 1.0E0_dp) then
+          if(ECalc /= 0E0_dp) then
+            if( EDiff/abs(ECalc)  > 1E-4_dp ) then
+              write(nout, *) "Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
+            endif
+          else
+            if( EDiff > 1E-5_dp ) then
+              write(nout, *) "2 Table Discrepancy: ", iAtom, ECul/outEngUnit, ECalc/outEngUnit,  EDiff/outEngUnit, engStr
+            endif
           endif
         endif
       enddo
@@ -500,7 +504,8 @@ module SimpleSimBox
     E_Current = self%ETotal
     call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
 
-    if(self%ETotal /= 0E0_dp) then
+    if(self%ETotal > 1E0_dp) then
+
       if( abs((E_Current-self%ETotal)/self%ETotal) > 1E-7_dp ) then
         write(nout, *) "!!!!!!!!!!!!!!!!!!ERROR! Large energy drift detected!!!!!!!!!!!!!!!!!!!!!!!!!!"
         write(nout, *) "Box: ", self%boxID
@@ -766,7 +771,72 @@ module SimpleSimBox
     endif
 
   end subroutine
+!==========================================================================================
+function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) result(molstartindx)
+    !------------------------------------------------------------------------------
+    ! Returns the atom index of the first atom of the specified molecule by default.
+    ! Can also return the n-th atom of the molecule 
+    ! Search input requires the molecule type id and molecule sub-index to be given
+    !
+    ! Input:
+    !   Integer: MolType => The molecule type ID to be searched for
+    !   Integer: nthofMolType => The nth molecule of this type. Also known as a sub-index
+    !   Integer, Optional: nthAtom => Can be specified if the user wants a different atom b
+    !
+    ! Output:
+    !   Integer: molStartIndx => First atom of the molecule in this index
+    ! Function Variables:
+    !   Integer: iType => Loop Variable to iterate over the number of molecule types
+    !   Integer: globalMolIndx => The value
+    !   Integer: atomIndx => Local version of nthAtom. Set to 1 if nthAtom is not given.
+    !------------------------------------------------------------------------------
+    use Common_MolInfo, only: MolData, nMolTypes
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(in) :: MolType, nthofMolType
+    integer, intent(in), optional :: nthAtom
+    integer :: molStartIndx    
 
+    integer :: iType
+    integer :: globalMolIndx, atomIndx
+
+
+    if(present(nthAtom)) then
+      atomIndx = nthAtom
+    else
+      atomIndx = 1
+    endif
+
+    !Safety block to ensure the user didn't reference something that doesn't exist
+    !or is outside of the acceptable bounds.
+    if((molType > nMolTypes) .or. (molType < 1)) then
+      write(0,*) "ERROR! Type Index out of bounds!"
+      write(0,*) molType, nthofMolType, atomIndx
+      error stop
+    endif
+
+    if( (nthofMolType > self%NMolMax(molType)) .or. (nthofMolType < 1) ) then
+      write(0,*) "ERROR! Molecule Index out of bounds!"
+      write(0,*) molType, nthofMolType, atomIndx
+      error stop
+    endif
+
+    if( (nthofMolType > self%NMol(molType)) .or. (nthofMolType < 1) ) then
+      write(0,*) "ERROR! Molecule Index references a molecule that doesn't exist!"
+      write(0,*) molType, nthofMolType, atomIndx
+      error stop
+    endif
+
+    globalMolIndx = 0
+    do iType = 1, molType-1
+      globalMolIndx = globalMolIndx + self%NMolMax(iType)
+    enddo
+    globalMolIndx = globalMolIndx + nthofMolType
+    MolStartIndx = self%MolStartIndx(globalMolIndx)
+    MolStartIndx = MolStartIndx + atomIndx - 1
+
+
+  end function
 !==========================================================================================
   function SimpleBox_GetMaxAtoms(self) result(nMax)
     use Common_MolInfo, only: nMolTypes, MolData
@@ -841,6 +911,29 @@ module SimpleSimBox
 
     call self%NeighList(listindx)%GetNewList(iAtom, tempList, tempNNei, disp)
   end subroutine
+!==========================================================================================
+  function SimpleBox_GetLargestNNei(self) result(maxnei)
+    !-----------------
+    ! Returns the Largest "Max Neighbor Count" for a single atom across all lists
+    !-----------------
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    integer :: maxnei 
+    integer :: curmaxnei = 0
+    integer :: iList
+
+    maxnei = 0
+
+    if(allocated(self%NeighList)) then
+      do iList = 1, size(self%NeighList)
+         curmaxnei = self%NeighList(iList)%GetMaxNei()
+         if(maxnei < curmaxnei) then
+           maxnei = curmaxnei
+         endif
+      enddo
+    endif
+
+  end function 
 !==========================================================================================
   subroutine SimpleBox_GetEnergyTable(self, etable, detable)
     implicit none

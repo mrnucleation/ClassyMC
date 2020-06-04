@@ -59,7 +59,8 @@ use VarPrecision
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(AVBMC), intent(inout) :: self
-    integer :: nBoxes
+    integer :: iBox, nBoxes
+    integer :: iMol, nMaxPerMol, nMaxPerBox, maxnei
 
     if(.not. allocated(self%boxProb)) then
       nBoxes = size(boxArray)
@@ -67,11 +68,28 @@ use VarPrecision
       self%boxProb = 1E0_dp/real(nBoxes,dp)
     endif
 
+    !To allocate the temporary neighborlist, we need to find out how big of a list we need.
+    !In order to do this we need the number of atoms in the largest molecule and
+    !the largest number of neighbors a single atom can encounter.
+
+    nMaxPerMol = 0
+    do iMol = 1, nMolTypes
+      if(MolData(iMol)%natoms > nMaxPerMol) then
+        nMaxPerMol = MolData(iMol)%natoms
+      endif
+    enddo
+    
+    nMaxPerBox = 0
+    do iBox = 1, nBoxes
+      maxnei = BoxArray(iBox)%box%GetLargestNNei()
+      if(nMaxPerBox < maxnei) then
+        nMaxPerBox = maxnei
+      endif
+    enddo
 
 
-
-!    allocate( self%tempNNei(1) )
-!    allocate( self%tempList(200, 1) )
+    allocate( self%tempNNei(nMaxPerMol) )
+    allocate( self%tempList(nMaxPerBox, nMaxPerMol) )
   end subroutine
 !===============================================
   subroutine AVBMC_FullMove(self, trialBox, accept) 

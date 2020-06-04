@@ -4,7 +4,6 @@ module CoordinateTypes
  
   !Base Perturbation Class
   type :: Perturbation
-!     integer(kind=atomIntType) :: molIndx, atmIndx   
   end type
 
   !Move type where a single particle's position is changed.
@@ -42,12 +41,12 @@ module CoordinateTypes
     real(dp) :: volNew, volOld
   end type
 
-  !Move type where the vol
+  !Move type where the volume of the entire box by scaling each side by different scale factors
   type, extends(VolChange) :: OrthoVolChange
     real(dp) :: xScale, yScale, zScale
   end type
 
-  !Move type where the vol
+  !Not Implimented Yet
   type, extends(VolChange) :: TriVolChange
     real(dp) :: xScale, yScale, zScale
   end type

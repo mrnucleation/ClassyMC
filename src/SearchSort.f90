@@ -30,7 +30,7 @@ contains
     listSize = size(list)
     if(listSize < 1) then
       write(0,*) "Critical Error! A list size of 0 has been passed to the sort function!"
-      error stop 9
+      error stop 
     endif
 
 !    write(*,*) curIndx, list(curIndx)
@@ -50,7 +50,44 @@ contains
 
   end function
 !======================================
-  function BinarySearch(val, list) result(outIndx)
+  recursive function BinarySearch(val, list) result(outIndx)
+    implicit none
+    integer, intent(in) :: val
+    integer, intent(in) :: list(:)
+    integer :: outIndx
+    integer :: upper, lower, curIndx
+    integer :: listSize, loop
+
+
+    lower = LBound(list, dim=1)
+    upper = UBound(list, dim=1)
+
+
+    listSize = size(list)
+    if(listSize < 1) then
+      outIndx = 0
+      return
+    endif
+
+
+    curIndx = nint(0.5E0_dp*(lower + upper))
+    if(list(curIndx) == val) then
+      outIndx = curIndx
+    elseif(list(curIndx) < val) then
+      outIndx = BinarySearch(val, list(curIndx+1:upper))
+      if(outIndx /= 0) then
+        outIndx = outIndx + curIndx 
+      endif
+    else
+      outIndx = BinarySearch(val, list(lower:curIndx-1))
+      if(outIndx /= 0) then
+        outIndx = outIndx + lower - 1
+      endif
+    endif
+
+  end function
+!======================================
+  function BinarySearch_Old(val, list) result(outIndx)
     implicit none
     integer, intent(in) :: val
     integer, intent(in) :: list(:)
@@ -64,9 +101,10 @@ contains
 
     curIndx = 1
 
-    listSize = size(list)+1
+    listSize = size(list)
     if(listSize < 1) then
-      stop "Critical Error! A list size of 0 has beeen passed to the sort function!"
+      write(0,*) "Critical Error! A list size of 0 has been passed to the sort function!"
+      error stop 
     endif
 
 
@@ -120,15 +158,45 @@ contains
 
   end function
 !======================================
-  recursive subroutine QSort(list)
+recursive subroutine QSort(list)
+  implicit none
+  integer, intent(inout) ::  list(:)
+  real(dp) :: x, t
+  integer :: lower, upper
+  integer :: i, j
+  lower = LBound(list, dim=1)
+  upper = UBound(list, dim=1)
+  if(size(list) < 1) then
+    return
+  endif
+  x = list( (lower+upper) / 2 )
+  i = lower
+  j = upper
+  do
+    do while (list(i) < x)
+      i=i+1
+    end do
+    do while (x < list(j))
+      j=j-1
+    end do
+    if (i >= j) exit
+    t = list(i);  list(i) = list(j);  list(j) = t
+    i=i+1
+    j=j-1
+  end do
+  if (lower < i-1) call QSort(list(lower:i-1))
+  if (j+1 < upper)  call QSort(list(j+1:upper))
+end subroutine QSort
+!======================================
+  recursive subroutine QSortOld(list)
     implicit none
     integer, intent(inout) :: list(:)
     integer :: piv
 
     if( size(list) > 1 ) then
       piv = QSort_Partition(list)
-      call QSort( list(:piv-1) )
-      call QSort( list(piv+1:) )
+      call QSortOld( list(:piv-1) )
+      call QSortOld( list(piv+1:) )
     endif
 
 

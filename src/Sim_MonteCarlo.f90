@@ -105,6 +105,7 @@ contains
     enddo
     !-------End of Main Monte Carlo Simulation Loop-------
  
+    call ScreenOut(iCycle, iMove)
     write(nout,*) "======================================="
     write(nout,*) "     Simulation End"
     write(nout,*) "======================================="
@@ -298,7 +299,6 @@ contains
     do i = 1, size(EnergyCalculator)
       call EnergyCalculator(i)%method%Update
     enddo
-
 
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % Update
