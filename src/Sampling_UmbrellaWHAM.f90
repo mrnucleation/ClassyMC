@@ -212,12 +212,13 @@ module UmbrellaWHAMRule
     real(dp) :: biasE, biasOld, biasNew
     real(dp) :: extraTerms, ranNum, probTerm
 
-    if(inProb <= 0E0_dp) then
-      accept = .false.
-      return
-    endif
+
 
     if(present(inProb)) then
+      if(inProb <= 0E0_dp) then
+        accept = .false.
+        return
+      endif
       probTerm = log(inProb)
     elseif(present(logProb)) then
       probTerm = logProb

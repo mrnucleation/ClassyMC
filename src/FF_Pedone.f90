@@ -32,6 +32,7 @@ module FF_Pair_Pedone_Cut
 !      procedure, pass :: ShiftECalc_Multi => Shift_Pedone_Cut_Multi
       procedure, pass :: NewECalc => New_Pedone_Cut
       procedure, pass :: OldECalc => Old_Pedone_Cut
+      procedure, pass :: OrthoVolECalc => OrthoVol_Pedone_Cut
       procedure, pass :: AtomExchange => AtomExchange_Pedone_Cut
       procedure, pass :: ProcessIO => ProcessIO_Pedone_Cut
       procedure, pass :: Prologue => Prologue_Pedone_Cut
@@ -105,6 +106,9 @@ module FF_Pair_Pedone_Cut
 
       class is(Deletion)
          call self % OldECalc(curbox, disp, E_Diff)
+
+      class is(OrthoVolChange)
+         call self % OrthoVolECalc( curbox, disp, E_Diff, accept)
 
       class is(AtomExchange)
          call self % AtomExchange( curbox, disp, E_Diff, accept)
@@ -488,6 +492,103 @@ module FF_Pair_Pedone_Cut
       enddo
     enddo
   end subroutine
+  !=====================================================================
+  subroutine OrthoVol_Pedone_Cut(self, curbox, disp, E_Diff, accept)
+    implicit none
+    class(Pair_Pedone_Cut), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    type(OrthoVolChange), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    integer :: iAtom, jAtom, maxNei, listIndx, jNei
+    integer :: atmType1, atmType2
+    integer :: molIndx1, molIndx2
+    real(dp) :: dxi, dyi, dzi
+    real(dp) :: dxj, dyj, dzj
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: born1, born2
+    real(dp) :: q_ij, alpha, delta, repul_C, r_eq
+    real(dp) :: LJ, Ele, Morse, Solvent
+    real(dp) :: rmin_ij      
+
+    E_Diff = 0E0_dp
+    do iAtom = 1, curbox%nMaxAtoms-1
+      if( .not. curbox%IsActivE(iAtom) ) then
+        cycle
+      endif
+      atmType1 = curbox % AtomType(iAtom)
+      molIndx1 = curbox % MolIndx(iAtom)
+      dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
+      dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
+      dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
+      do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
+        jAtom = curbox%NeighList(1)%list(jNei, iAtom)
+        if(jAtom <= iAtom) then
+          cycle
+        endif
+        molIndx2 = curbox % MolIndx(jAtom)
+        dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
+        dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
+        dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
+
+        rx =  curbox % atoms(1, iAtom) + dxi - curbox % atoms(1, jAtom) - dxj
+        ry =  curbox % atoms(2, iAtom) + dyi - curbox % atoms(2, jAtom) - dyj
+        rz =  curbox % atoms(3, iAtom) + dzi - curbox % atoms(3, jAtom) - dzj
+
+        call curbox%BoundaryNew(rx, ry, rz, disp)
+        rsq = rx*rx + ry*ry + rz*rz
+
+        atmType2 = curbox % AtomType(jAtom)
+
+        if(rsq < self%rCutSq) then
+
+          rmin_ij = self%rMinTable(atmType2, atmType1)          
+          if(rsq < rmin_ij) then
+            accept = .false.
+            return
+          endif
+          repul_C = self%repul_tab(atmType2, atmType1)
+          LJ = (1E0_dp/rsq)**6
+          LJ = repul_C * LJ
+          E_Diff = E_Diff + LJ
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) + LJ
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + LJ
+
+          q_ij = self%qTable(atmType2, atmType1)
+          r = sqrt(rsq)
+          Ele = q_ij/r
+          E_Diff = E_Diff + Ele
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) + Ele
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + Ele
+
+
+          if(self%implicitSolvent) then
+             born1 = self%bornRad(atmType1)
+             born2 = self%bornRad(atmType2)
+             Solvent = self%solventFunction(r, q_ij, born1, born2)
+             E_Diff = E_Diff + Solvent
+             curbox % dETable(iAtom) = curbox % dETable(iAtom) + Solvent
+             curbox % dETable(jAtom) = curbox % dETable(jAtom) + Solvent
+          endif
+
+          delta = self%D_Tab(atmType2, atmType1)
+          alpha = self % alpha_Tab(atmType2, atmType1)
+          r_eq = self % rEqTable(atmType2, atmType1)
+          Morse = 1E0_dp - exp(-alpha*(r-r_eq))
+          Morse = delta*(Morse*Morse - 1E0_dp)
+          E_Diff = E_Diff + Morse
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) + Morse
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + Morse
+        endif
+      enddo
+    enddo
+
+    E_Diff = E_Diff - curbox%ETotal
+    curbox % dETable = curbox%dETable - curbox % ETable
+
+  end subroutine
+
   !=====================================================================
   subroutine AtomExchange_Pedone_Cut(self, curbox, disp, E_Diff, accept)
     implicit none
