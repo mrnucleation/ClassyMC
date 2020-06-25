@@ -54,7 +54,12 @@ module Traj_Lammps
       write(self%fileUnit, *) (self%boxdim(i, jDim), i=1,self%xLen)
     enddo
 
-    write(self%fileUnit, "(A)") "ITEM: ATOMS id type x y z  "
+    if(self%dumpforces) then
+      write(self%fileUnit, "(A)") "ITEM: ATOMS id type x y z fx fy fz "
+      call BoxArray(boxNum)%box%ComputeForces
+    else
+      write(self%fileUnit, "(A)") "ITEM: ATOMS id type x y z  "
+    endif
 
     do iAtom = 1, BoxArray(boxNum)%box%nMaxAtoms
       molType = BoxArray(boxNum)%box%MolType(iAtom)
@@ -62,7 +67,12 @@ module Traj_Lammps
 
 !      write(*, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
       if(BoxArray(boxNum)%box%NMol(molType) >= BoxArray(boxNum)%box%MolSubIndx(iAtom) ) then
-        write(self%fileUnit, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
+        if(self%dumpforces) then
+
+          write(self%fileUnit, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim), (BoxArray(boxNum)%box%forces(jDim, iAtom), jDim=1,nDim)
+        else
+          write(self%fileUnit, *) iAtom, atomType, (BoxArray(boxNum)%box%atoms(jDim, iAtom), jDim=1,nDim)
+        endif
       endif
     enddo
 

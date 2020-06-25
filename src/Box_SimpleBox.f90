@@ -31,6 +31,11 @@ module SimpleSimBox
 !
 !    real(dp), allocatable :: ETable(:), dETable(:)
 !    real(dp), allocatable :: atoms(:,:)
+!
+!    logical :: forceoutofdate = .true.
+!    real(dp) :: forcedelta = 1E-6_dp
+!    real(dp), allocatable :: forces(:,:)
+
     logical :: forceERecompute = .false.
     integer, private :: rebuilds = 0
     integer, private :: dangerbuilds = 0
@@ -67,9 +72,10 @@ module SimpleSimBox
       procedure, pass :: LoadDimension => Simplebox_LoadDimension
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
       procedure, pass :: Boundary => SimpleBox_Boundary
-      procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
-      procedure, pass :: EnergySafetyCheck => SimpleBox_EnergySafetyCheck
       procedure, pass :: ComputeCM => SimpleBox_ComputeCM
+      procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
+      procedure, pass :: ComputeForces => SimpleBox_ComputeForces
+      procedure, pass :: EnergySafetyCheck => SimpleBox_EnergySafetyCheck
 
 
       !IO Functions
@@ -87,6 +93,7 @@ module SimpleSimBox
       procedure, pass :: GetNewNeighborList => Simplebox_GetNewNeighborList
       procedure, pass :: GetLargestNNei => SimpleBox_GetLargestNNei
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
+      procedure, pass :: GetForceArray => SimpleBox_GetForceArray
       procedure, pass :: GetIndexData => Simplebox_GetIndexData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMolEnergy => SimpleBox_GetMolEnergy
@@ -492,6 +499,60 @@ module SimpleSimBox
     endif
   end subroutine
 !==========================================================================================
+! This subroutine recomputes the forces for the system.
+  subroutine SimpleBox_ComputeForces(self)
+    use ParallelVar, only: nout
+    use CoordinateTypes, only: Displacement
+    use Units, only: outEngUnit, engStr
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    logical :: accept
+    integer :: iAtom, atmType
+    type(Displacement) :: disp(1:1)
+    real(dp) :: E_Diff
+    integer :: tempNnei(1)
+    integer :: tempList(1, 1)
+
+
+    if(.not. allocated(self%forces)) then
+      allocate(self%forces(1:3, 1:self%nMaxAtoms))
+    endif
+
+    !Since force computation is very expensive, only do it if absolutely
+    !nessisary.
+    if(.not. self%forceoutofdate) then
+      return
+    endif
+
+    self%forces = 0E0_dp
+
+
+    do iAtom = 1, self%nMaxAtoms
+      if(.not. self%isActive(iAtom)) cycle
+      disp(1)%molType = self%MolType(iAtom)
+      disp(1)%molIndx = self%MolIndx(iAtom)
+      disp(1)%atmIndx = iAtom
+      !Approximate the gradient by making a very small displacement on the atom position
+      !and computing the slope (E2-E2)/(x2-x1).  Do this in each direction for the fx, fy, and fz components
+      disp(1)%x_new = self%atoms(1, iAtom) + self%forcedelta
+      disp(1)%y_new = self%atoms(2, iAtom) 
+      disp(1)%z_new = self%atoms(3, iAtom)
+      call self%EFunc%Method%DiffECalc(self, disp(1:1), tempList, tempNNei, E_Diff, accept)
+      self%forces(1, iAtom) = E_diff/self%forcedelta
+
+      disp(1)%x_new = self%atoms(1, iAtom) 
+      disp(1)%y_new = self%atoms(2, iAtom) + self%forcedelta
+      call self%EFunc%Method%DiffECalc(self, disp(1:1), tempList, tempNNei, E_Diff, accept)
+      self%forces(2, iAtom) = E_diff/self%forcedelta
+
+      disp(1)%y_new = self%atoms(2, iAtom) 
+      disp(1)%z_new = self%atoms(3, iAtom) + self%forcedelta
+      call self%EFunc%Method%DiffECalc(self, disp(1:1), tempList, tempNNei, E_Diff, accept)
+      self%forces(3, iAtom) = E_diff/self%forcedelta
+    enddo
+    self%forceoutofdate = .false.
+  end subroutine
+!==========================================================================================
   subroutine SimpleBox_EnergySafetyCheck(self)
     use ParallelVar, only: nout
     use Units, only: outEngUnit, engStr
@@ -890,6 +951,17 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 
   end function
 !==========================================================================================
+  subroutine SimpleBox_GetForceArray(self, forces)
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    real(dp), pointer, intent(inout) :: forces(:,:)
+
+
+    forces => self%forces
+
+
+  end subroutine
+!==========================================================================================
   subroutine SimpleBox_GetNeighborList(self, listindx, neighlist, nNei)
     implicit none
     class(SimpleBox), intent(inout), target :: self
@@ -1169,7 +1241,8 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     integer :: iDisp, dispLen, dispIndx
     integer :: iAtom, iMol, molStart, molEnd
     real(dp) :: dx, dy, dz
-
+    
+    self%forceoutofdate = .true.
     select type(disp)
        !-------------------------------------------------
       class is(Displacement)

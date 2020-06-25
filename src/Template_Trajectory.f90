@@ -4,6 +4,7 @@ module TrajectoryTemplate
   use VarPrecision
 
   type, public, extends(classyClass) :: trajectory
+    logical :: dumpforces = .false.
     integer :: fileUnit = -1
     integer :: boxNum = -1
     integer :: outFreq = 5000

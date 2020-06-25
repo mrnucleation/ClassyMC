@@ -14,10 +14,11 @@
       use Input_Initialize, only: Script_Initialize
       use SimControl, only: TimeStart, TimeEnd
       use SimMonteCarlo, only: RunMonteCarlo
+      use SimMinimize, only: RunMinimize
       use ParallelVar
       use Units
       implicit none
-      integer :: i, ii, j, nArgs
+      integer :: i, ii, j, nArgs, boxnum
       integer :: iLine, lineStat, AllocateStat
       integer :: nLines, nForceLines, lineBuffer
       integer, allocatable :: lineNumber(:)
@@ -92,6 +93,16 @@
           case("set")
             call setCommand( lineStore(iLine), lineStat )
 
+          case("minimize")
+
+            call CPU_TIME(TimeStart)
+            call Script_Initialize
+            call GetXCommand(lineStore(iLine), command2, 2, lineStat)  
+            read(command2,*) boxnum
+            call RunMinimize(boxnum)
+            call CPU_TIME(TimeEnd)
+
+
           case("run")
 
             call CPU_TIME(TimeStart)
@@ -127,7 +138,8 @@
       use Common_NeighData
       use ParallelVar
       use RandomGen, only: initSeed
-      use SimControl, only: nMoves, nCycles, screenFreq, energyCheck
+      use SimControl, only: nMoves, nCycles, screenFreq, energyCheck, &
+                            Etol, Forcetol, lrate
       use Units, only: outEngUnit, outLenUnit, outAngUnit,outPressUnit,  &
                        inEngUnit, inLenUnit, inAngUnit,inPressUnit, &
                        FindEngUnit, FindLengthUnit, FindAngularUnit,  &
@@ -193,6 +205,21 @@
           call GetXCommand(line, command2, 3, lineStat)
           outEngUnit = FindEngUnit(command2)
           engStr = trim(adjustl(command2))
+
+        case("energytol")
+          call GetXCommand(line, command2, 3, lineStat)
+          read(command2, *) realValue
+          Etol = realValue
+
+        case("forcetol")
+          call GetXCommand(line, command2, 3, lineStat)
+          read(command2, *) realValue
+          forcetol = realValue
+
+        case("learnrate")
+          call GetXCommand(line, command2, 3, lineStat)
+          read(command2, *) realValue
+          lrate = realValue
 
         case("pressureunits")
           call GetXCommand(line, command2, 3, lineStat)

@@ -9,7 +9,7 @@ module CoordinateTypes
   !Move type where a single particle's position is changed.
   type, extends(Perturbation) :: Displacement
     integer(kind=atomIntType) :: molType, atmSubIndx
-     integer(kind=atomIntType) :: molIndx, atmIndx   
+    integer(kind=atomIntType) :: molIndx, atmIndx   
     real(dp) :: x_new, y_new, z_new
     logical :: newList = .false.
     integer :: listIndex = -1
@@ -78,6 +78,11 @@ module SimControl
 
   real(dp) :: TimeStart = 0E0_dp
   real(dp) :: TimeEnd = 0E0_dp
+
+  !Minimization Parameters
+  real(dp) :: ETol = 1E-5_dp
+  real(dp) :: ForceTol = 1E-5_dp
+  real(dp) :: lrate =  1E-5_dp
 end module  
 !======================================================
 

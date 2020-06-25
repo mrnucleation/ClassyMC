@@ -30,6 +30,10 @@ module Template_SimBox
     real(dp), allocatable :: ETable(:), dETable(:)
     real(dp), allocatable :: atoms(:,:), centerMass(:,:)
 
+    logical :: forceoutofdate = .true.
+    real(dp) :: forcedelta = 1E-6_dp
+    real(dp), allocatable :: forces(:,:)
+
     integer, allocatable :: NMolMin(:), NMolMax(:)
     integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
 

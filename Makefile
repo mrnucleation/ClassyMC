@@ -161,6 +161,7 @@ SRC_MAIN := $(SRC)/Common.f90\
  	        	$(SRC)/Neigh_CellRSqList.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
+        		$(SRC)/Sim_Minimize.f90\
         		$(SRC)/Sim_MonteCarlo.f90\
         		$(SRC)/Sim_GeneticAlgor.f90\
         		$(SRC)/Sim_LibControl.f90\
@@ -371,7 +372,7 @@ $(OBJ)/Move_GA_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Bo
 
 $(OBJ)/MolCon_SimpleRegrowth.o: $(OBJ)/Template_MolConstructor.o
 
-$(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o $(OBJ)/Script_NeighType.o $(OBJ)/Script_TrajType.o $(OBJ)/Sim_MonteCarlo.o
+$(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o $(OBJ)/Script_NeighType.o $(OBJ)/Script_TrajType.o $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o $(OBJ)/Script_BondType.o $(OBJ)/Script_AngleType.o $(OBJ)/Script_RegrowType.o 
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
@@ -384,7 +385,7 @@ $(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o
 $(OBJ)/Sampling_Umbrella.o: $(OBJ)/Sampling_UmbrellaWHAM.o
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
-$(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o
+$(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 
 
