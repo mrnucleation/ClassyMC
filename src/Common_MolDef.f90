@@ -62,7 +62,6 @@ module StructureTypes
 
     integer :: nMisc = 0
     integer, allocatable :: misc(:)
-
   end type
 
 

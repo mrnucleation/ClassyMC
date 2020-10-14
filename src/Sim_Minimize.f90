@@ -95,6 +95,7 @@ contains
       call Trajectory(iCycle, iMove)
       call Output_DumpData
 
+      if(abs(E_New-E_Curr) < ETol) exit
 
     enddo
     !-------End of Main Minimize Simulation Loop-------

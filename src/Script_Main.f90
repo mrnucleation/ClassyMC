@@ -12,6 +12,9 @@
       use Input_Sampling, only: Script_SamplingType
       use Input_NeighType, only: Script_NeighType
       use Input_Initialize, only: Script_Initialize
+#ifdef EMBPYTHON
+      use SimPython, only: RunPythonTest
+#endif
       use SimControl, only: TimeStart, TimeEnd
       use SimMonteCarlo, only: RunMonteCarlo
       use SimMinimize, only: RunMinimize
@@ -109,7 +112,16 @@
             call Script_Initialize
             call RunMonteCarlo
             call CPU_TIME(TimeEnd)
-            
+#ifdef EMBPYTHON
+           case("testpython")
+
+            call CPU_TIME(TimeStart)
+            call GetXCommand(lineStore(iLine), filename, 2, lineStat)  
+            call Script_Initialize
+            call RunPythonTest(filename)
+            call CPU_TIME(TimeEnd)
+#endif
+           
           case default
             write(__StdErr__,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
             write(__StdErr__,*) trim(adjustl(lineStore(iLine)))

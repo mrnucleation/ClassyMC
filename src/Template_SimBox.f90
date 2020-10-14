@@ -25,10 +25,16 @@ module Template_SimBox
     real(dp) :: ETotal, HTotal
     real(dp) :: pressure = 0E0_dp
     real(dp) :: beta, temperature, volume
-    real(dp), allocatable :: chempot(:)
 
+#ifdef EMBPYTHON
+    real(dp), allocatable :: chempot(:)
     real(dp), allocatable :: ETable(:), dETable(:)
     real(dp), allocatable :: atoms(:,:), centerMass(:,:)
+#else
+    real(dp), asynchronous, allocatable :: chempot(:)
+    real(dp), asynchronous, allocatable :: ETable(:), dETable(:)
+    real(dp), asynchronous, allocatable :: atoms(:,:), centerMass(:,:)
+#endif
 
     logical :: forceoutofdate = .true.
     real(dp) :: forcedelta = 1E-6_dp

@@ -16,6 +16,9 @@ contains
     use Analysis_RDF, only: rdf
     use Anaylsis_ThermoAverage, only: ThermoAverage
     use Anaylsis_ThermoIntegration, only: ThermoIntegration
+#ifdef EMBPYTHON
+    use Anaylsis_PythonFunc, only: PythonFunc
+#endif
 
     implicit none
     character(len=*), intent(in) :: line
@@ -33,11 +36,14 @@ contains
       case("blockaverage")
         allocate(blockAverage::AnalysisArray(AnaNum) % func)
 
+      case("clustersize")
+        allocate(ClusterSize::AnalysisArray(AnaNum) % func)
+
       case("densityofstates")
         allocate(DensityOfStates::AnalysisArray(AnaNum) % func)
 
-      case("rdf")
-        allocate(rdf::AnalysisArray(AnaNum) % func)
+      case("distpair")
+        allocate(DistPair::AnalysisArray(AnaNum) % func)
 
       case("thermoaverage")
         allocate(thermoAverage::AnalysisArray(AnaNum) % func)
@@ -45,11 +51,13 @@ contains
       case("thermointegration")
         allocate(ThermoIntegration::AnalysisArray(AnaNum) % func)
 
-      case("distpair")
-        allocate(DistPair::AnalysisArray(AnaNum) % func)
+      case("rdf")
+        allocate(rdf::AnalysisArray(AnaNum) % func)
 
-      case("clustersize")
-        allocate(ClusterSize::AnalysisArray(AnaNum) % func)
+#ifdef EMBPYTHON
+      case("python")
+        allocate(PythonFunc::AnalysisArray(AnaNum) % func)
+#endif
 
      case default
         lineStat = -1

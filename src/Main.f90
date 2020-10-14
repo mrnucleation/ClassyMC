@@ -8,8 +8,16 @@
     use ParallelVar, only: myid, p_size, ierror, nout
     use SimMonteCarlo, only: RunMonteCarlo
     use ScriptInput, only: Script_ReadParameters
+#ifdef EMBPYTHON
+    use forpy_mod, only: forpy_initialize, list, get_sys_path, forpy_finalize
+#endif
     use VarPrecision
     implicit none
+
+#ifdef EMBPYTHON
+    type(list) :: paths
+#endif
+
     character(len=100) :: format_string, fl_name
     character(len=1500) :: outFormat1
  
@@ -22,6 +30,11 @@
     p_size = 1
 #endif
 
+#ifdef EMBPYTHON
+    ierror = forpy_initialize()
+    ierror = get_sys_path(paths)
+    ierror = paths%append(".")
+#endif
 
     if(myid == 0) then
       nout = 6
@@ -62,6 +75,10 @@
 #ifdef PARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
     call MPI_FINALIZE(ierror)   
+#endif
+
+#ifdef EMBPYTHON
+  call forpy_finalize
 #endif
 
   end program

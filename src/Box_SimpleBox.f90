@@ -201,6 +201,7 @@ module SimpleSimBox
     self%chempot = 0E0_dp
     IF (AllocateStatus /= 0) error STOP "Allocation Error in Simulation Box Def"
 
+    self%atoms = 0.0E0_dp
     self%dr = 0E0_dp
     self%maxMol = maxMol
     self%AtomType = 0

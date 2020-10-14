@@ -25,7 +25,7 @@ OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
 OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 #OPTIMIZE_FLAGS_GFORT += -pg
-#OPTIMIZE_FLAGS_GFORT += -lblas -llapack
+OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic
 
@@ -41,7 +41,13 @@ DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug 
 #COMPFLAGS := $(DEBUGFLAGS) $(OPTIMIZE_FLAGS)
 
 
-PACKAGE_FLAGS := -DPARALLEL
+
+#PACKAGE_FLAGS := -DPARALLEL
+
+
+
+#PACKAGEMAKEFILES = $(shell find . -name "*.Makefile")
+#include $(PACKAGEMAKEFILES)
 
 # ====================================
 #        Directory List
@@ -51,6 +57,7 @@ SRC := $(CUR_DIR)/src
 LIB := $(CUR_DIR)/lib
 MOD := $(CUR_DIR)/mods
 OBJ := $(CUR_DIR)/objects
+PYTHON := $(CUR_DIR)/python
 
 
 # Define file extensions
@@ -183,7 +190,8 @@ SRC_TEMPLATE := $(SRC)/Template_Master.f90\
 				$(SRC)/Template_MoveClass.f90\
 				$(SRC)/Template_MolConstructor.f90
 
-
+OBJ_LIBRARY = 
+-include *.Makefile
 #SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
 SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
 
@@ -191,6 +199,7 @@ SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN)
 #        Object Files
 # ====================================
 OBJ_MAIN:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_MAIN))
+OBJ_MAIN:=$(patsubst $(PYTHON)/%.f90, $(OBJ)/%.o, $(OBJ_MAIN))
 OBJ_TEMPLATE:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_TEMPLATE))
 OBJ_AENET:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_AENET))
 OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN) 
@@ -202,10 +211,11 @@ default: COMPFLAGS += $(DEBUGFLAGS)
 default: SRC_COMPLETE += $(SRC)/Main.f90
 default: startUP  classyMC modout finale 
 
-aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
+#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
+aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
 aenet: COMPFLAGS += -DAENET -static-libgfortran -llapack -lblas
+aenet: OBJ_LIBRARY += $(LIB)/libaenet.a
 aenet: startUP  classyMCAENet  modout finale 
 
 #lib: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(LIBRARY_FLAGS)
@@ -254,31 +264,35 @@ $(OBJ)/%.o: $(SRC)/%.f90
 		@echo Creating $<
 		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
+$(OBJ)/%.o: $(PYTHON)/%.f90
+		@echo Creating $<
+		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
+
 $(OBJ)/%.o: $(TEMPLATE)/%.f90
 		@echo Creating $<
 		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
 
-libclassymc.so: $(OBJ_COMPLETE) 
+libclassymc.so: $(OBJ_COMPLETE)  $(OBJ_LIBRARY)
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
 		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 
        
-classyMC: $(OBJ_COMPLETE) $(SRC)/Main.f90 
+classyMC: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
 		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 	
-classyMCAENet: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(LIB)/libaenet.a
+classyMCAENet: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
 		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 	
-classyMC_debug: $(OBJ_COMPLETE) $(SRC)/Main.f90
+classyMC_debug: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
 	    
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
@@ -363,13 +377,13 @@ $(OBJ)/Box_Presets.o: $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 
 
 $(OBJ)/Move_MC_AVBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o
-$(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
+$(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o $(OBJ)/Common_Sampling.o
 $(OBJ)/Move_MC_IsoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_AnisoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_ThermoLambda.o: $(OBJ)/FF_ThermoInt.o $(OBJ)/Analysis_ThermoIntegration.o 
 $(OBJ)/Move_GA_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_Ultility.o
-
+$(OBJ)/Move_MC_MolTranslation.o: $(OBJ)/Common_Sampling.o
 $(OBJ)/MolCon_SimpleRegrowth.o: $(OBJ)/Template_MolConstructor.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o $(OBJ)/Script_NeighType.o $(OBJ)/Script_TrajType.o $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
@@ -389,6 +403,6 @@ $(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 
 
-$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o
+$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o
 
 
