@@ -212,6 +212,10 @@ default: COMPFLAGS += $(DEBUGFLAGS)
 default: SRC_COMPLETE += $(SRC)/Main.f90
 default: startUP  classyMC modout finale 
 
+debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
+debug: SRC_COMPLETE += $(SRC)/Main.f90
+debug: startUP_debug classyMC_debug  modout finale
+
 aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
 #aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
@@ -231,8 +235,7 @@ gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 gfortran: COMPFLAGS += $(DEBUGFLAGS)
 gfortran:  startUP classyMC  modout finale 
 
-debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
-debug: startUP_debug classyMC_debug  modout finale
+
 
 #debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
 debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
@@ -337,6 +340,7 @@ removeObjects:
 		@rm -f $(OBJ)/*.o		
 
 removeExec:
+		@rm -f $(CUR_DIR)/Python.Makefile
 		@rm -f $(CUR_DIR)/libclassymc.so
 		@rm -f $(CUR_DIR)/classyMC
 		@rm -f $(CUR_DIR)/classyMCAENet
@@ -352,23 +356,24 @@ $(OBJ)/Common_BoxData.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Common_Analysis.o: $(OBJ)/Template_Analysis.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
 $(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Sampling_Metropolis.o
-$(OBJ)/Common_MolDef.o: $(OBJ)/Template_MolConstructor.o  $(OBJ)/Template_BondFF.o
+$(OBJ)/Common_MolDef.o: $(OBJ)/Template_MolConstructor.o  $(OBJ)/Template_BondFF.o  $(OBJ)/Template_TorsionFF.o  $(OBJ)/Template_AngleFF.o
+
 
 $(OBJ)/Neigh_RSqList.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o $(OBJ)/Common_NeighList.o
 
-$(OBJ)/Template_Constraint.o: $(OBJ)/Template_SimBox.o 
-$(OBJ)/Template_AcceptRule.o: $(OBJ)/Common.o $(OBJ)/Input_Format.o $(OBJ)/Template_SimBox.o 
-$(OBJ)/Template_Anaylsis.o: $(OBJ)/Box_SimpleBox.o
-$(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_NeighList.o
+$(OBJ)/Template_Constraint.o: $(OBJ)/Template_SimBox.o  $(OBJ)/Template_Master.o
+$(OBJ)/Template_AcceptRule.o: $(OBJ)/Common.o $(OBJ)/Input_Format.o $(OBJ)/Template_SimBox.o  $(OBJ)/Template_Master.o
+$(OBJ)/Template_Anaylsis.o: $(OBJ)/Box_SimpleBox.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_NeighList.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_Master.o: $(OBJ)/VariablePrecision.o
-$(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o
-$(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/Box_SimpleBox.o
-$(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o
-$(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o
-$(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o 
-$(OBJ)/Template_AngleFF.o: $(OBJ)/Template_IntraFF.o
-$(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o
-$(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o
+$(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/Box_SimpleBox.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o $(OBJ)/Template_Master.o $(OBJ)/Input_Format.o
+$(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o  $(OBJ)/Template_Master.o
+$(OBJ)/Template_AngleFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 
 $(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
 $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o
