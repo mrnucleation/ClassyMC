@@ -105,6 +105,7 @@ contains
     write(nout,*) "     Simulation End"
     write(nout,*) "======================================="
 
+    call Trajectory(iCycle, iMove)
     call Epilogue
 
 #ifdef PARALLEL
