@@ -27,13 +27,13 @@ module Template_SimBox
     real(dp) :: beta, temperature, volume
 
 #ifdef EMBPYTHON
-    real(dp), allocatable :: chempot(:)
-    real(dp), allocatable :: ETable(:), dETable(:)
-    real(dp), allocatable :: atoms(:,:), centerMass(:,:)
-#else
     real(dp), asynchronous, allocatable :: chempot(:)
     real(dp), asynchronous, allocatable :: ETable(:), dETable(:)
     real(dp), asynchronous, allocatable :: atoms(:,:), centerMass(:,:)
+#else
+    real(dp), allocatable :: chempot(:)
+    real(dp), allocatable :: ETable(:), dETable(:)
+    real(dp), allocatable :: atoms(:,:), centerMass(:,:)
 #endif
 
     logical :: forceoutofdate = .true.

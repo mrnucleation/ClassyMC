@@ -190,8 +190,9 @@ SRC_TEMPLATE := $(SRC)/Template_Master.f90\
 				$(SRC)/Template_MoveClass.f90\
 				$(SRC)/Template_MolConstructor.f90
 
-OBJ_LIBRARY = 
--include *.Makefile
+OBJ_LIBRARY = $(shell find $(LIB) -name '*.a')
+-include *.Makefile 
+
 #SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
 SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
 
@@ -211,11 +212,12 @@ default: COMPFLAGS += $(DEBUGFLAGS)
 default: SRC_COMPLETE += $(SRC)/Main.f90
 default: startUP  classyMC modout finale 
 
-#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
+aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
+#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
 aenet: COMPFLAGS += $(DEBUGFLAGS)
-aenet: COMPFLAGS += -DAENET -static-libgfortran -llapack -lblas
-aenet: OBJ_LIBRARY += $(LIB)/libaenet.a
+#aenet: COMPFLAGS += -DAENET -static-libgfortran -llapack -lblas
+aenet: COMPFLAGS += -DAENET -llapack -lblas
+#aenet: OBJ_LIBRARY += $(LIB)/libaenet.a
 aenet: startUP  classyMCAENet  modout finale 
 
 #lib: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(LIBRARY_FLAGS)
