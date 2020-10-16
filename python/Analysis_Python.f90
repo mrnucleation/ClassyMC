@@ -6,7 +6,7 @@
 !
 !  def myfunction(boxlist):
 !=========================================================================
-#define errcheck if(ierror/=0) then;call err_print;stop;endif
+#define errcheck_macro if(ierror/=0) then;call err_print;stop;endif
 !=========================================================================
 module Anaylsis_PythonFunc
   use AnaylsisClassDef, only: Analysis
@@ -44,7 +44,7 @@ module Anaylsis_PythonFunc
 !=========================================================================
   subroutine PythonFunc_Prologue(self)
     use BoxData, only: BoxArray
-    use ClassyPyObj, only: createboxdict_nocopy
+    use ClassyPyObj, only: createboxdict,createboxdict_nocopy
     use Input_Format, only: ReplaceText
     use ParallelVar, only: nout
     implicit none
@@ -62,22 +62,25 @@ module Anaylsis_PythonFunc
     !Open up the Python Script and 
     write(nout,*) "Loading Python Analysis Module: ", self%filename
     ierror = import_py(self%pyanalysis, trim(adjustl(self%filename)))
-    errcheck
+    errcheck_macro
 
 
 
     ierror = list_create(self%boxlist)
-!    errcheck
+!    errcheck_macro
     do iBox = 1, size(BoxArray)
+!      self%boxdicts(iBox) = createboxdict(iBox)
       self%boxdicts(iBox) = createboxdict_nocopy(iBox)
       ierror = self%boxlist%append( self%boxdicts(iBox) )
-!      errcheck
+      errcheck_macro
     enddo
 
     ierror = tuple_create(self%args, 1)
     ierror = self%args%setitem(0, self%boxlist)
 
-
+    ierror = tuple_create(self%newargs, 2)
+    errcheck_macro
+    ierror = self%newargs%setitem(0, self%boxlist)
 
     self%perMove = .true.
     accept = .true.
@@ -89,7 +92,7 @@ module Anaylsis_PythonFunc
 !    Epilogue code
 !    do iBox = 1, size(BoxArray)
 !      call self%boxdicts(iBox)%destroy
-!      errcheck
+!      errcheck_macro
 !    enddo
 !    call self%boxlist%destroy
 !=========================================================================
@@ -112,13 +115,18 @@ module Anaylsis_PythonFunc
     if(self%new) then
       self%lastvalue = self%newvalue
       self%new = .false.
+!      ierror = call_py_noret(self%pyanalysis, "update", args=self%args)
       return
     endif
 
     ierror = call_py(returnval, self%pyanalysis, "compute", args=self%args)
-    errcheck
+    errcheck_macro
     ierror = cast(self%lastvalue, returnval)    
-    errcheck
+    errcheck_macro
+
+    if(isnan(self%lastvalue)) then
+      error stop "NaN value returned from Python compute function!"
+    endif
 
 
 
@@ -126,25 +134,35 @@ module Anaylsis_PythonFunc
 !=========================================================================
   subroutine PythonFunc_CalcNewState(self, disp, newVal)
     use CoordinateTypes, only: Displacement, Perturbation
+    use ClassyPyObj, only: createdisplist
     implicit none
     class(PythonFunc), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
     integer :: iDisp
     real(dp), intent(in), optional :: newVal
     type(object) :: returnobj
+    type(list) :: displist
     integer :: ierror
     real(dp) :: returnval
 
-    ierror = tuple_create(self%newargs, 2)
-    ierror = self%newargs%setitem(0, self%boxlist)
-    ierror = self%newargs%setitem(1, self%boxlist)
+    displist = createdisplist(disp)
+
+
+
+    ierror = self%newargs%setitem(1, displist)
+    errcheck_macro
 
     ierror = call_py(returnobj, self%pyanalysis, "compute_new", args=self%newargs)
-    errcheck
+    errcheck_macro
     ierror = cast(returnval, returnobj)    
-    errcheck
+    errcheck_macro
 
-    call self%newargs%destroy
+    if(isnan(returnval)) then
+      error stop "NaN value returned from Python compute_new function!"
+    endif
+
+!    call self%newargs%destroy
+    call displist%destroy
 
     self%new = .true.
     self%newvalue = returnval

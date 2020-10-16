@@ -59,6 +59,7 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
   subroutine CellRSqList_Constructor(self, parentID, rCut)
     use BoxData, only: BoxArray
+    use SimpleSimBox, only: SimpleBox
     use Common_NeighData, only: neighSkin
     use Common_MolInfo, only: nAtomTypes
     use ParallelVar, only: nout
@@ -72,7 +73,12 @@ use Template_NeighList, only: NeighListDef
 
 
 
+    select type(parbox => BoxArray(parentID)%box)
+      type is(SimpleBox)
+        error stop "ERROR! To use a cell based list you must have a box with a well defined boundary!"
+    end select
     self%parent => BoxArray(parentID)%box
+
     if(self%initialized) then
       return
     endif

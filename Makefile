@@ -29,7 +29,7 @@ OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic
 
-DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-0 -Og -cpp -ffpe-trap=overflow,invalid,zero 
+DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-512 -Og -cpp -ffpe-trap=overflow,invalid,zero 
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
@@ -43,7 +43,6 @@ DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug 
 
 
 #PACKAGE_FLAGS := -DPARALLEL
-
 
 
 #PACKAGEMAKEFILES = $(shell find . -name "*.Makefile")

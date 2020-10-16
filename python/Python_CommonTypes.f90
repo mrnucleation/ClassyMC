@@ -126,7 +126,8 @@ module ClassyPyObj
   function createdisplist(disp) result(displist)
     use BoxData, only: BoxArray
     use Input_Format, only: ReplaceText
-    use CoordinateTypes, only: Perturbation, Displacement, Deletion, Addition, VolChange
+    use CoordinateTypes, only: Perturbation, Displacement, Deletion, Addition, VolChange,&
+                               OrthoVolChange
     implicit none
     type(list) :: displist
     class(Perturbation) :: disp(:)
@@ -139,8 +140,10 @@ module ClassyPyObj
     errcheck
     do iDisp = 1, nDisp
       ierror = dict_create( dispdict(iDisp) )
+      errcheck
       select type(disp)
         class is(Displacement)
+          ierror = dispdict(iDisp)%setitem("name", "displacement")
           ierror = dispdict(iDisp)%setitem("moltype", disp(iDisp)%molType)
           ierror = dispdict(iDisp)%setitem("molindex", disp(iDisp)%molIndx)
           ierror = dispdict(iDisp)%setitem("atomsubindex", disp(iDisp)%atmSubIndx)
@@ -150,11 +153,13 @@ module ClassyPyObj
           ierror = dispdict(iDisp)%setitem("z_new", disp(iDisp)%z_new)
 
         class is(Deletion)
+          ierror = dispdict(iDisp)%setitem("name", "deletion")
           ierror = dispdict(iDisp)%setitem("moltype", disp(iDisp)%molType)
           ierror = dispdict(iDisp)%setitem("molindex", disp(iDisp)%molIndx)
           ierror = dispdict(iDisp)%setitem("atomindex", disp(iDisp)%atmIndx)
 
         class is(Addition)
+          ierror = dispdict(iDisp)%setitem("name", "addition")
           ierror = dispdict(iDisp)%setitem("moltype", disp(iDisp)%molType)
           ierror = dispdict(iDisp)%setitem("molindex", disp(iDisp)%molIndx)
           ierror = dispdict(iDisp)%setitem("atomindex", disp(iDisp)%atmIndx)
@@ -163,6 +168,15 @@ module ClassyPyObj
           ierror = dispdict(iDisp)%setitem("z_new", disp(iDisp)%z_new)
 
         class is(VolChange)
+          ierror = dispdict(iDisp)%setitem("name", "volchange")
+          ierror = dispdict(iDisp)%setitem("volnew", disp(iDisp)%volnew)
+          ierror = dispdict(iDisp)%setitem("volold", disp(iDisp)%volold)
+
+        class is(OrthoVolChange)
+          ierror = dispdict(iDisp)%setitem("name", "orthovolchange")
+          ierror = dispdict(iDisp)%setitem("xscale", disp(iDisp)%xScale)
+          ierror = dispdict(iDisp)%setitem("yscale", disp(iDisp)%yScale)
+          ierror = dispdict(iDisp)%setitem("zscale", disp(iDisp)%zScale)
           ierror = dispdict(iDisp)%setitem("volnew", disp(iDisp)%volnew)
           ierror = dispdict(iDisp)%setitem("volold", disp(iDisp)%volold)
 

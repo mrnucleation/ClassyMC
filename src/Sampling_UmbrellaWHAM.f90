@@ -173,10 +173,10 @@ module UmbrellaWHAMRule
       allocate(self%FreeEnergyEst(1:self%umbrellaLimit), STAT = AllocateStatus)
       allocate(self%ProbArray(1:self%umbrellaLimit), STAT = AllocateStatus)
 
-      self%WHAM_Numerator = 0E0
-      self%WHAM_Denominator = 0E0
-      self%HistStorage = 0E0
-      self%BiasStorage = 0E0
+      self%WHAM_Numerator = 0E0_dp
+      self%WHAM_Denominator = 0E0_dp
+      self%HistStorage = 0E0_dp
+      self%BiasStorage = 0E0_dp
       self%nCurWhamItter = 1
 !        tolLimit = 1d-2
       open(unit = 96, file="Umbrella_Histogram.dat")
@@ -186,8 +186,8 @@ module UmbrellaWHAMRule
 
     allocate(self%TempHist(1:self%umbrellaLimit), STAT = AllocateStatus)      
     allocate(self%NewBias(1:self%umbrellaLimit), STAT = AllocateStatus)
-    self%NewBias = 0E0
-    self%TempHist = 0E0
+    self%NewBias = 0E0_dp
+    self%TempHist = 0E0_dp
 
     write(nout,*) self%refVals, i 
     write(nout,*) "Bin Size:", self%UBinSize
@@ -212,8 +212,6 @@ module UmbrellaWHAMRule
     real(dp) :: biasE, biasOld, biasNew
     real(dp) :: extraTerms, ranNum, probTerm
 
-
-
     if(present(inProb)) then
       if(inProb <= 0E0_dp) then
         accept = .false.
@@ -227,9 +225,6 @@ module UmbrellaWHAMRule
       error stop
     endif
 
-
-
-
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
       call AnalysisArray(indx) % func % CalcNewState(disp)
@@ -237,8 +232,6 @@ module UmbrellaWHAMRule
 
     self%oldIndx = self % GetBiasIndex()
     call self%GetNewBiasIndex(self%newIndx, accept)
-
-
 
     if(.not. accept) then
 !      self%UHist(self%oldIndx) = self%UHist(oldIndx) + 1E0_dp
@@ -345,11 +338,7 @@ module UmbrellaWHAMRule
 !            write(*,*) biasVar
         class default
              write(*,*) "WHAT TYPE IS THIS?! I DON'T KNOW, HELP!"
-
-
-
       end select
-
 
 !      write(*,*) self%valMax(iBias), biasVal
       if(biasVal > self%valMax(iBias) ) then
@@ -363,7 +352,6 @@ module UmbrellaWHAMRule
         return
       endif
 
-
       select type( biasVar => analyCommon(analyIndx)%val )
         type is(integer)
             self%binIndx(iBias) = biasVar-nint(self%valMin(iBias))
@@ -372,10 +360,7 @@ module UmbrellaWHAMRule
             self%binIndx(iBias) = floor((biasVar-self%valMin(iBias))/self%UBinSize(iBias))
 !            write(*,*) biasVar, self%binIndx(iBias), self%valMin(iBias),self%UBinSize(iBias)
       end select
-
-
 !      self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
-
     enddo
 
 
@@ -394,7 +379,6 @@ module UmbrellaWHAMRule
 !    write(*,*) "New Index", biasIndx
 
   end subroutine
-
 !==========================================================================================
     subroutine UmbrellaWHAM_ReadInitialBias(self)
     implicit none
@@ -719,8 +703,12 @@ module UmbrellaWHAMRule
       self%TempHist = 0E0_dp
     endif
     call MPI_REDUCE(self%UHist, self%TempHist, arraySize, &
-              MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)       
+              MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror)
+#else
+    self%TempHist = self%UHist
 #endif
+
+    
 
     if(myid .eq. 0) then
 !        This block calculates the terms needed to 
