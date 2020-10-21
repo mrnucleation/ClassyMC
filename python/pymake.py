@@ -15,7 +15,7 @@ PACKAGE_FLAGS += -DEMBPYTHON   $(PYINC) $(LIBS)
 OBJ_LIBRARY += $(PYLIB)  
 
 
-$(OBJ)/Python_CommonTypes.o:  $(OBJ)/Common_BoxData.o
+$(OBJ)/Python_CommonTypes.o:  $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
 $(OBJ)/Sim_Python.o:  $(OBJ)/Sim_MonteCarlo.o
 $(OBJ)/Common.o += $(OBJ)/forpy_mod.o $(OBJ)/Sim_Python.o
 
