@@ -20,6 +20,7 @@ module Anaylsis_PythonFunc
 !------------------------------------------------------------------------------
   type, public, extends(Analysis):: PythonFunc
     logical, private :: new
+    logical, private :: newloaded
     real(dp) :: lastvalue
     real(dp) :: newvalue
     type(module_py) :: pyanalysis
@@ -81,6 +82,8 @@ module Anaylsis_PythonFunc
     ierror = tuple_create(self%newargs, 2)
     errcheck_macro
     ierror = self%newargs%setitem(0, self%boxlist)
+    ierror = self%newargs%setitem(1, self%boxlist)
+
 
     self%perMove = .true.
     accept = .true.
@@ -102,7 +105,7 @@ module Anaylsis_PythonFunc
     implicit none
     class(PythonFunc), intent(inout) :: self
     logical, intent(in) :: accept
-    type(object) :: returnval
+    type(object) :: returnobj
     integer :: iBox
     integer :: ierror
 
@@ -119,10 +122,11 @@ module Anaylsis_PythonFunc
       return
     endif
 
-    ierror = call_py(returnval, self%pyanalysis, "compute", args=self%args)
+    ierror = call_py(returnobj, self%pyanalysis, "compute", args=self%args)
     errcheck_macro
-    ierror = cast(self%lastvalue, returnval)    
+    ierror = cast(self%lastvalue, returnobj)    
     errcheck_macro
+    call returnobj%destroy
 
     if(isnan(self%lastvalue)) then
       error stop "NaN value returned from Python compute function!"
@@ -141,8 +145,9 @@ module Anaylsis_PythonFunc
     integer :: iDisp
     real(dp), intent(in), optional :: newVal
     type(object) :: returnobj
+    type(object) :: item
     type(list) :: displist
-    integer :: ierror
+    integer :: listlen, ierror
     real(dp) :: returnval
 
     displist = createdisplist(disp)
@@ -156,12 +161,17 @@ module Anaylsis_PythonFunc
     errcheck_macro
     ierror = cast(returnval, returnobj)    
     errcheck_macro
+    call returnobj%destroy
 
     if(isnan(returnval)) then
       error stop "NaN value returned from Python compute_new function!"
     endif
 
 !    call self%newargs%destroy
+    do iDisp = 0, size(disp)-1
+      ierror = displist%getitem(item, iDisp)
+      call item%destroy
+    enddo
     call displist%destroy
 
     self%new = .true.

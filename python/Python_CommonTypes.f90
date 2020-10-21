@@ -4,6 +4,9 @@
 !=========================================================================
 
 module ClassyPyObj
+  use CubicBoxDef, only: CubeBox
+  use OrthoBoxDef, only: OrthoBox
+  use SimpleSimBox, only: SimpleBox
   use VarPrecision
 #ifdef EMBPYTHON
 #define errcheck if(ierror/=0) then;call err_print;stop;endif
@@ -13,6 +16,8 @@ module ClassyPyObj
   function createboxdict(boxnum) result(boxdict)
     use BoxData, only: BoxArray
     use Input_Format, only: ReplaceText
+
+
     implicit none
     integer, intent(in) :: boxnum
     type(dict) :: boxdict
@@ -32,6 +37,20 @@ module ClassyPyObj
 
     ierror = dict_create(boxdict) 
     errcheck
+
+    select type(box => BoxArray(boxnum)%box)
+      type is(SimpleBox)
+          ierror = boxdict%setitem("boxtype", "nobox")
+      class is(CubeBox)
+          ierror = boxdict%setitem("boxtype", "cube")
+      class is(OrthoBox)
+          ierror = boxdict%setitem("boxtype", "ortho")
+      class default
+          ierror = boxdict%setitem("boxtype", "unknown")
+    end select
+
+    ierror = boxdict%setitem("temperature", BoxArray(boxnum)%box%temperature)
+
     ierror = boxdict%setitem("temperature", BoxArray(boxnum)%box%temperature)
     ierror = boxdict%setitem("pressure", BoxArray(boxnum)%box%pressure)
     ierror = boxdict%setitem("volume", BoxArray(boxnum)%box%volume)
@@ -88,6 +107,17 @@ module ClassyPyObj
 
     ierror = dict_create(boxdict) 
     errcheck
+    select type(box => BoxArray(boxnum)%box)
+      type is(SimpleBox)
+          ierror = boxdict%setitem("boxtype", "nobox")
+      class is(CubeBox)
+          ierror = boxdict%setitem("boxtype", "cube")
+      class is(OrthoBox)
+          ierror = boxdict%setitem("boxtype", "ortho")
+      class default
+          ierror = boxdict%setitem("boxtype", "unknown")
+    end select
+
     ierror = boxdict%setitem("temperature", BoxArray(boxnum)%box%temperature)
     ierror = boxdict%setitem("pressure", BoxArray(boxnum)%box%pressure)
     ierror = boxdict%setitem("volume", BoxArray(boxnum)%box%volume)
@@ -143,7 +173,7 @@ module ClassyPyObj
       errcheck
       select type(disp)
         class is(Displacement)
-          ierror = dispdict(iDisp)%setitem("name", "displacement")
+          ierror = dispdict(iDisp)%setitem("type", "displacement")
           ierror = dispdict(iDisp)%setitem("moltype", disp(iDisp)%molType)
           ierror = dispdict(iDisp)%setitem("molindex", disp(iDisp)%molIndx)
           ierror = dispdict(iDisp)%setitem("atomsubindex", disp(iDisp)%atmSubIndx)
@@ -153,13 +183,13 @@ module ClassyPyObj
           ierror = dispdict(iDisp)%setitem("z_new", disp(iDisp)%z_new)
 
         class is(Deletion)
-          ierror = dispdict(iDisp)%setitem("name", "deletion")
+          ierror = dispdict(iDisp)%setitem("type", "deletion")
           ierror = dispdict(iDisp)%setitem("moltype", disp(iDisp)%molType)
           ierror = dispdict(iDisp)%setitem("molindex", disp(iDisp)%molIndx)
           ierror = dispdict(iDisp)%setitem("atomindex", disp(iDisp)%atmIndx)
 
         class is(Addition)
-          ierror = dispdict(iDisp)%setitem("name", "addition")
+          ierror = dispdict(iDisp)%setitem("type", "addition")
           ierror = dispdict(iDisp)%setitem("moltype", disp(iDisp)%molType)
           ierror = dispdict(iDisp)%setitem("molindex", disp(iDisp)%molIndx)
           ierror = dispdict(iDisp)%setitem("atomindex", disp(iDisp)%atmIndx)
@@ -168,12 +198,12 @@ module ClassyPyObj
           ierror = dispdict(iDisp)%setitem("z_new", disp(iDisp)%z_new)
 
         class is(VolChange)
-          ierror = dispdict(iDisp)%setitem("name", "volchange")
+          ierror = dispdict(iDisp)%setitem("type", "volchange")
           ierror = dispdict(iDisp)%setitem("volnew", disp(iDisp)%volnew)
           ierror = dispdict(iDisp)%setitem("volold", disp(iDisp)%volold)
 
         class is(OrthoVolChange)
-          ierror = dispdict(iDisp)%setitem("name", "orthovolchange")
+          ierror = dispdict(iDisp)%setitem("type", "orthovolchange")
           ierror = dispdict(iDisp)%setitem("xscale", disp(iDisp)%xScale)
           ierror = dispdict(iDisp)%setitem("yscale", disp(iDisp)%yScale)
           ierror = dispdict(iDisp)%setitem("zscale", disp(iDisp)%zScale)

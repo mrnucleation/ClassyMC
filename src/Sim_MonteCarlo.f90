@@ -160,7 +160,7 @@ contains
     integer(kind=8), intent(in) :: iCycle, iMove
     integer :: i
     character(len=80) :: tempStr, tempStr2
-    real(dp) :: CurrentTime
+    real(dp) :: CurrentTime, timepercycle
 
     write(tempStr, "(A)") "    ----------------- Cycle Number: %s ----------------------"
     write(tempStr2, "(I60)") iCycle
@@ -173,6 +173,18 @@ contains
     write(tempStr2, "(F60.3)") CurrentTime - TimeStart
     tempStr = ReplaceText(tempStr, "%s", trim(adjustl(tempStr2)))
     write(nout, "(A)") tempStr
+
+    if(iCycle > 0) then
+        write(tempStr, "(A)") "   Time per Cycle: %s sec "
+        timepercycle =  (CurrentTime - TimeStart)/real(iCycle, dp)
+        if(timepercycle > 1e-3_dp) then
+          write(tempStr2, "(F60.3)") timepercycle
+        else
+          write(tempStr2, "(E60.3)") timepercycle
+        endif
+        tempStr = ReplaceText(tempStr, "%s", trim(adjustl(tempStr2)))
+        write(nout, "(A)") tempStr
+    endif
 
     call Sampling % ScreenOut
 

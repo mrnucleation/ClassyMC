@@ -309,6 +309,13 @@ module UmbrellaWHAMRule
 !    write(2,*) biasIndx
 !    write(2,*) 
 
+  if( (biasIndx < 1) .or. (biasIndx > self%umbrellaLimit) ) then
+    write(0,*) "ERROR! Umbrella Bias Index out of bounds!"
+    write(0,*) "This may be due to the initial system configuration being outside the Umbrella sampling range"
+    write(0,*) "or a calculation error in the analysis module being used."
+    error stop "ERROR! Umbrella Bias Index out of bounds!"
+  endif
+
 
   end function
 !==========================================================================

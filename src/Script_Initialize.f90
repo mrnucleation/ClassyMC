@@ -52,6 +52,11 @@ contains
         BoxArray(i)%box%EFunc => EnergyCalculator(1)
       endif
       ! Initialize the neighbor lists for each box
+      if(.not. allocated(BoxArray(i)%box%NeighList)) then
+        write(0,*) "ERROR! No Neighbor List has been defined!"
+        write(0,*) "Box Number: ", i
+        error stop "NO NEIGHBOR LIST DEFINED!"
+      endif
       do j = 1, size(BoxArray(i)%box%NeighList)
         call BoxArray(i)%box%NeighList(j)%constructor(i)
       enddo
