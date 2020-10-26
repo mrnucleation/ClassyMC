@@ -125,9 +125,11 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Box_Ultility.f90\
         		$(SRC)/RandomNew.f90\
         		$(SRC)/FF_AENet.f90\
+        		$(SRC)/FF_EasyPair_Cut.f90\
         		$(SRC)/FF_Einstein.f90\
         		$(SRC)/FF_HardSphere.f90\
         		$(SRC)/FF_Hybrid.f90\
+        		$(SRC)/FF_EP_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJWall.f90\
         		$(SRC)/FF_LJ_Shift.f90\
@@ -407,6 +409,8 @@ $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 
 $(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
+
+$(OBJ)/FF_EP_LJ_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o

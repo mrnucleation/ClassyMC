@@ -572,18 +572,17 @@ module FF_Pair_LJ_Cut
     class(Pair_LJ_Cut), intent(inout) :: self
     integer :: i, j
 
-    do i = 1, nAtomTypes
-      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
-    enddo
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
+!    enddo
 
-    do i = 1, nAtomTypes
-      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
-    enddo
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
+!    enddo
 
-    do i = 1, nAtomTypes
-      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
-    enddo
-
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
+!    enddo
 
 
   end subroutine

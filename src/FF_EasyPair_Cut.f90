@@ -25,6 +25,7 @@ module FF_EasyPair_Cut
       procedure, pass :: NewECalc => New_EasyPair_Cut
       procedure, pass :: OldECalc => Old_EasyPair_Cut
       procedure, pass :: OrthoVolECalc => OrthoVol_EasyPair_Cut
+      procedure, pass :: AtomExchange => AtomExchange_EasyPair_Cut
       procedure, pass :: ProcessIO => ProcessIO_EasyPair_Cut
 !      procedure, pass :: Prologue => Prologue_EasyPair_Cut
       procedure, pass :: GetCutOff => GetCutOff_EasyPair_Cut
@@ -70,7 +71,6 @@ module FF_EasyPair_Cut
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
     real(dp) :: E_Pair
     real(dp) :: E_Total
     real(dp) :: rmin_ij      
@@ -110,8 +110,9 @@ module FF_EasyPair_Cut
             write(*,*) atoms(1,jAtom), atoms(2,jAtom), atoms(3,jAtom)
             write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
           endif 
-          E_Total = E_Total + LJ
-          curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
+          E_Pair = self%PairFunction(rsq, atmtype1, atmtype2) 
+          E_Total = E_Total + E_Pair
+          curbox%ETable(iAtom) = curbox%ETable(iAtom) + E_Pair
           curbox%ETable(jAtom) = curbox%ETable(jAtom) + E_Pair 
         endif
       enddo
@@ -150,6 +151,9 @@ module FF_EasyPair_Cut
       class is(OrthoVolChange)
          call self % OrthoVolECalc( curbox, disp, E_Diff, accept)
 
+      class is(AtomExchange)
+         call self % AtomExchange( curbox, disp, E_Diff, accept)
+
       class default
         write(*,*) "Unknown Perturbation Type Encountered by the EasyPair_Cut Pair Style."
         stop
@@ -172,9 +176,8 @@ module FF_EasyPair_Cut
 !    integer :: maxIndx, minIndx
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
-    real(dp) :: LJ
-    real(dp) :: rmin_ij      
+    real(dp) :: E_Pair
+    real(dp) :: rmin_ij
 
     integer, pointer :: nNeigh(:) => null()
     integer, pointer :: neighlist(:,:) => null()
@@ -189,9 +192,6 @@ module FF_EasyPair_Cut
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
-
-!      write(*,*) iAtom, curbox%NeighList(1)%nNeigh(iAtom)
-!      write(*,*) iAtom, curbox%NeighList(1)%list(:, iAtom)
       do jNei = 1, nNeigh(iAtom)
         jAtom = neighlist(jNei, iAtom)
 
@@ -200,8 +200,6 @@ module FF_EasyPair_Cut
         rz = disp(iDisp)%z_new  - atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-!        write(*,*) sqrt(rsq)
-
         atmType2 = curbox % AtomType(jAtom)
         if(rsq < self%rCutSq) then
           rmin_ij = self % rMinTable(atmType2, atmType1)          
@@ -220,11 +218,10 @@ module FF_EasyPair_Cut
         rz = atoms(3, iAtom) - atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-!        write(*,*) sqrt(rsq)
         if(rsq < self%rCutSq) then
-          if(iAtom == jAtom) then
-            write(*,*) "NeighborList Error!", iAtom, jAtom
-          endif
+!          if(iAtom == jAtom) then
+!            write(*,*) "NeighborList Error!", iAtom, jAtom
+!          endif
           E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
           E_Diff = E_Diff - E_Pair
           curbox % dETable(iAtom) = curbox % dETable(iAtom) - E_Pair
@@ -248,7 +245,6 @@ module FF_EasyPair_Cut
     integer :: iDisp, iAtom, jAtom, dispLen, maxNei, listIndx, jNei
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
     real(dp) :: E_Pair
     real(dp) :: rmin_ij      
 
@@ -309,7 +305,6 @@ module FF_EasyPair_Cut
     integer :: atmType1, atmType2
     integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
     real(dp) :: E_Pair, E_Pair2
     real(dp) :: rmin_ij      
     integer, pointer :: nNeigh(:) => null()
@@ -331,8 +326,6 @@ module FF_EasyPair_Cut
         jAtom = neighlist(jNei, iAtom)
 
         atmType2 = curbox % AtomType(jAtom)
-        ep = self % epsTable(atmType1, atmType2)
-        sig_sq = self % sigTable(atmType1, atmType2)          
 !        rmin_ij = self % rMinTable(atmType1, atmType2)          
 
         rx = atoms(1, iAtom) - atoms(1, jAtom)
@@ -366,9 +359,8 @@ module FF_EasyPair_Cut
     real(dp) :: dxj, dyj, dzj
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: rx2, ry2, rz2, rsq2
-    real(dp) :: ep, sig_sq, ratio
-    real(dp) :: LJ, LJ2
-    real(dp) :: rmin_ij      
+    real(dp) :: rmin_ij
+    real(dp) :: E_Pair
 
     integer, pointer :: nNeigh(:) => null()
     integer, pointer :: neighlist(:,:) => null()
@@ -378,7 +370,7 @@ module FF_EasyPair_Cut
     call curbox%GetCoordinates(atoms)
     E_Diff = 0E0_dp
     do iAtom = 1, curbox%nMaxAtoms-1
-      if( curbox%MolSubIndx(iAtom) > curbox%NMol(curbox%MolType(iAtom)) ) then
+      if(.not. curbox%IsActive(iAtom) ) then
         cycle
       endif
       atmType1 = curbox % AtomType(iAtom)
@@ -402,7 +394,6 @@ module FF_EasyPair_Cut
 
         call curbox%BoundaryNew(rx, ry, rz, disp)
         rsq = rx*rx + ry*ry + rz*rz
-
         atmType2 = curbox % AtomType(jAtom)
         if(rsq < self%rCutSq) then
           rmin_ij = self%rMinTable(atmType2, atmType1)          
@@ -415,14 +406,69 @@ module FF_EasyPair_Cut
           curbox % dETable(iAtom) = curbox % dETable(iAtom) + E_Pair
           curbox % dETable(jAtom) = curbox % dETable(jAtom) + E_Pair
         endif
-
-
       enddo
     enddo
 
     E_Diff = E_Diff - curbox%ETotal
     curbox % dETable = curbox%dETable - curbox % ETable
 
+  end subroutine
+  !=====================================================================
+  subroutine AtomExchange_EasyPair_Cut(self, curbox, disp, E_Diff, accept)
+    implicit none
+    class(EasyPair_Cut), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    type(AtomExchange), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    integer :: iDisp, iAtomNew, iAtomOld, jAtom, remLen, jNei
+    integer :: newType1, oldType1
+    integer :: atmType2, globIndx
+    integer :: molEnd, molStart
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: E_Pair_New, E_Pair_Old
+    real(dp) :: rmin_ij      
+
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+
+    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+    call curbox%GetCoordinates(atoms)
+
+    E_Diff = 0E0_dp
+
+
+    iAtomNew = disp(1) % newAtmIndx
+    iAtomOld = disp(1) % oldAtmIndx
+    newType1 = curbox % AtomType(iAtomNew)
+    oldType1 = curbox % AtomType(iAtomOld) 
+    do jNei = 1, nNeigh(iAtomOld)
+        jAtom = neighlist(jNei, iAtomOld)
+!    do jNei = 1, curbox%NeighList(1)%nNeigh(iAtomOld)
+!        jAtom = curbox%NeighList(1)%list(jNei, iAtomOld)
+        atmType2 = curbox % AtomType(jAtom)
+
+        rx = curbox % atoms(1, iAtomOld) - curbox % atoms(1, jAtom)
+        ry = curbox % atoms(2, iAtomOld) - curbox % atoms(2, jAtom)
+        rz = curbox % atoms(3, iAtomOld) - curbox % atoms(3, jAtom)
+        call curbox%Boundary(rx, ry, rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq < self%rCutSq) then
+          rmin_ij = self%rMinTable(atmType2, newType1)
+          if(rsq < rmin_ij) then
+            accept = .false.
+            return
+          endif
+          E_Pair_new = self%PairFunction(rsq, newType1, atmType2)
+          E_Pair_Old = self%PairFunction(rsq, oldType1, atmType2)
+
+          E_Diff = E_Diff + E_Pair_New - E_Pair_Old
+          curbox % dETable(iAtomOld) = curbox % dETable(iAtomOld) + E_Pair_New - E_Pair_Old
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + E_Pair_New - E_Pair_Old
+        endif
+    enddo
   end subroutine
   !=============================================================================+
   function GetCutOff_EasyPair_Cut(self) result(rCut)
@@ -433,13 +479,11 @@ module FF_EasyPair_Cut
     rCut = self%rCut
   end function
   !=====================================================================
-  subroutine Prologue_EasyPair_Cut(self)
-    use Common_MolInfo, only: nAtomTypes
-    use ParallelVar, only: nout
+  subroutine ProcessIO_EasyPair_Cut(self, line)
+    use Input_Format, only: maxLineLen
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
-    integer :: i, j
-
+    character(len=maxLineLen), intent(in) :: line
 
   end subroutine
   !=====================================================================

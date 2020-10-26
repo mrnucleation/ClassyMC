@@ -4,7 +4,13 @@
 !  This module is designed to pass Classy style
 !  object information into Python.  
 !
-!  def myfunction(boxlist):
+!  For a valid Analysis script the compute function must be defined
+!  def compute(boxlist):
+!
+!  
+!  def compute_new(boxlist, disp):
+!
+!
 !=========================================================================
 #define errcheck_macro if(ierror/=0) then;call err_print;stop;endif
 !=========================================================================
