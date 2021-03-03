@@ -9,34 +9,21 @@ module MolCon_LinearCBMC
 
 
   type, public, extends(MolConstructor) :: LinearCBMC
-!    integer :: inspoints = 1 !
-    integer :: firstAtom = 1 !Index of the first atom to be inserted into the system
-    integer :: nRosenTrials = 8 !Number of Rosenbluth trials to use.  This is the number of potential positions
-                                !that are generated for each new atom as it is being regrown.  One of these positions
-                                !will be selected for the final atom position.  
-
-    real(dp), allocatable :: GenProb(:) !Weight array for chosing which trial position to use
-    real(dp), allocatable :: RosenProb(:) !Weight array for chosing which trial position to use
-    real(dp), allocatable :: tempcoords(:, :) !Temporary storage bucket for trial atom positions
-
-    logical, allocatable :: grown(:) !Array which specifies if an atom has been added to the system or not
-    integer, allocatable :: patharray(:) !Array which lays out the topology of the molecule 
-    integer, allocatable :: pathposition(:) !Array which takes an atom's ID and gives the position in the patharray
-    integer, allocatable :: schedule(:) !The order in which a molecule will be grown
-
-    integer, allocatable :: freq(:) !The number of bonds each atom has.  This will be used to classify the atom
-    !as either a Terminal, Linker, or Branch atom. 
-    ! nBonds  = 0 >> Isolated Atom
-    ! nBonds  = 1 >> Terminal Atom located on the end of a chain
-    ! nBonds  = 2 >> Linker Atom located in the middle of a linear chain
-    ! nBonds >= 3 >> Branch Atom has two or more potential paths one can wander down.
-
+    integer :: firstAtom = 1
+    integer :: nRosenTrials = 1
+!    integer :: inspoints = 1
+    real(dp), allocatable :: RosenProb(:)
+    real(dp), allocatable :: tempcoords(:, :)
+    integer, allocatable :: patharray(:)
+    integer, allocatable :: pathposition(:)
+    integer, allocatable :: grown(:)
+    integer, allocatable :: schedule(:)
+    integer, allocatable :: freq(:)
     contains
 !      procedure, public, pass :: Constructor => LinearCBMC_Constructor
       procedure, public, pass :: Prologue => LinearCBMC_Prologue
       procedure, public, pass :: GenerateConfig => LinearCBMC_GenerateConfig
       procedure, public, pass :: ReverseConfig => LinearCBMC_ReverseConfig
-      procedure, public, pass :: FindAtomsFromPath => LinearCBMC_FindAtomsFromPath
 !      procedure, public, pass :: GetNInsertPoints
   end type
 !==========================================================================================
@@ -104,10 +91,9 @@ module MolCon_LinearCBMC
 
     !Create the path array which is used to determine regrowth order.
     if(.not. allocated(self%patharray) ) then
-      allocate( self%grown(1:nAtoms) )  
-      allocate( self%patharray(1:nAtoms) )  
-      allocate( self%pathposition(1:nAtoms) )  
-      allocate( self%schedule(1:nAtoms) )  
+        allocate( self%patharray(1:nAtoms) )  
+        allocate( self%pathposition(1:nAtoms) )  
+        allocate( self%schedule(1:nAtoms) )  
     endif
     self%patharray = 0
     self%pathposition = 0
@@ -209,17 +195,15 @@ module MolCon_LinearCBMC
     class(Addition), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(in), optional :: insPoint(:)
-    real(dp), intent(in), optional :: insPoint(:)
     real(dp), intent(out) :: probconstruct
-    integer, intent(in), optional :: templist(:,:), tempNNei(:)
 
     integer :: bondType, angleType, molType
-    integer :: iRosen
-    integer :: atm1, atm2,atm3,atm4, iDisp, iAtom
+    integer :: iRosen, 
+    integer :: atm1, atm2,atm3, iDisp, iAtom
     real(dp), dimension(1:3) :: v1, v2, v3
-    real(dp) :: dx, dy, dz, r
+    real(dp) :: dx, dy, dz, r, theta
     real(dp) :: r1, r2
-    real(dp) :: prob_r, prob_ang, prob_tors, probgen
+    real(dp) :: prob
     real(dp) :: ang1, ang2
 
     probconstruct = 1E0_dp
@@ -236,37 +220,24 @@ module MolCon_LinearCBMC
       error stop
     endif
 
-
-    self%grown = .false.
-    nRegrown = 0
-
-
     !Weight Insertion Points and chose one of them.
-    Atm1 = self%schedule(1)
     do iRosen = 1, self%nRosenTrials
 
     enddo
-    nRegrown = nRegrown + 1
-    self%grown(Atm1) = .true.
-
-    if(natoms == 1) then
-      return
-    endif
 
 
     !Starting from the first inserted atom, begin growing the second atom by
     !
-    Atm2 = self%schedule(2)
+    Atm1 = self%schedule(nType, 1)
+    Atm2 = self%schedule(nType, 2)
     call FindBond(nType, Atm1, Atm2, bondType)
     do iRosen = 1, self%nRosenTrials
-      call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r2, prob_r)
-      call Generate_UnitSphere(dx, dy, dz)
-      self%temppos(1, iRosen) = r2*dx + disp(Atm1)%x_new 
-      self%temppos(2, iRosen) = r2*dy + disp(Atm1)%y_new
-      self%temppos(3, iRosen) = r2*dz + disp(Atm1)%z_new
+      call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r2, prob)
+      call Generate_UnitSphere(dx,dy,dz)
+      self%temppos(1, iRosen) = r*dx + disp(Atm1)%x_new 
+      self%temppos(2, iRosen) = r*dy + disp(Atm1)%y_new
+      self%temppos(3, iRosen) = r*dz + disp(Atm1)%z_new
     enddo
-    self%grown(Atm2) = .true.
-    nRegrown = nRegrown + 1
 
     if(natoms == 2) then
       return
@@ -276,13 +247,14 @@ module MolCon_LinearCBMC
 !    we must consider is if the second regrown atom was a terminal atom or a linker atom. If it was a terminal atom 
 !    then the bending angle must use the 1st atom as the central atom for the angle generation.  
 !    However if it was a link in the chain then the 2nd atom regrown should be used as the central atom.
-    Atm3 = self%schedule(3) 
-    if(self%freq(Atm2) == 2) then
+    if(self%freq(Atm2) .eq. 2) then
         Atm1 = self%schedule(1) 
         Atm2 = self%schedule(2) 
+        Atm3 = self%schedule(3) 
     else
-        Atm1 = self%schedule(2) 
-        Atm2 = self%schedule(1) 
+        Atm1 = regrowOrder(nType, 2) 
+        Atm2 = regrowOrder(nType, 1) 
+        Atm3 = regrowOrder(nType, 3) 
     endif
     v1(1) = disp(Atm1)%x_new - disp(Atm2)%x_new
     v1(2) = disp(Atm1)%y_new - disp(Atm2)%y_new
@@ -290,56 +262,92 @@ module MolCon_LinearCBMC
     call FindBond(nType, Atm2, Atm3, bondType)
     call FindAngle(nType, Atm1, Atm2, Atm3, angleType)
     do iRosen = 1, nRosenTrials(nType)
-      call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r2, prob_r)
-      call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bond_ang, prob_ang)
-      probgen = prob_r * prob_ang
+      call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r2, prob)
+      call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bond_ang, prob)
       call Generate_UnitCone(v1, r2, bond_ang, v2)
       self%tempcoords(1, iRosen) = v2(1) + disp(Atm2)%x_new
       self%tempcoords(2, iRosen) = v2(2) + disp(Atm2)%y_new
       self%tempcoords(3, iRosen) = v2(3) + disp(Atm2)%z_new
     enddo
-    nRegrown = nRegrown + 1
-    self%grown(Atm3) = .true.
+!      E_Max = minval(E_Trial)
+!      ProbRosen = 0d0
+!      do iRosen = 1, nRosenTrials(nType)
+!        ProbRosen(iRosen) = exp(-beta*(E_Trial(iRosen)-E_Max))         
+!      enddo
+!      if(all(ProbRosen .le. 0d0)) then
+!        rejMove = .true.
+!        return
+!      endif
 
-
-    if(natoms == 3) then
-      return
-    endif
-
-    do while(nRegrown < nAtoms)
+      nRegrown = 3
+      do while(nRegrown < nAtoms)
         nRegrown = nRegrown + 1
-        atm4 = regrowOrder(nRegrown) 
-        call self%FindAtomsFromPath(Atm4, Atm1, Atm2, Atm3)
-        call FindBond(Atm3, Atm4, bondType)
-        call FindAngle(Atm2, Atm3, Atm4, bendType)
-        call FindTorsion(Atm1, Atm2, Atm3, Atm4, torsType)
-        v1(1) = disp(Atm1)%x_new - disp(Atm3)%x_new
-        v1(2) = disp(Atm1)%y_new - disp(Atm3)%y_new
-        v1(3) = disp(Atm1)%z_new - disp(Atm3)%z_new
+        atm4 = regrowOrder(nType, nRegrown) 
+        call FindAtomsFromPath(nType, regrown, 1, Atm4, Atm1, Atm2, Atm3)
+        call FindBond(nType, Atm3, Atm4, bondType)
+        k_bond = bondData(bondType)%k_eq
+        r_eq = bondData(bondType)%r_eq
+        call FindAngle(nType, Atm2, Atm3, Atm4, bendType)
+        call FindTorsion(nType, Atm1, Atm2, Atm3, Atm4, torsType)
+        v1%x = newMol%x(Atm1) - newMol%x(Atm3)
+        v1%y = newMol%y(Atm1) - newMol%y(Atm3)
+        v1%z = newMol%z(Atm1) - newMol%z(Atm3)
 
-        v2(1) = disp(Atm2)%x_new - disp(Atm3)%x_new
-        v2(2) = disp(Atm2)%y_new - disp(Atm3)%y_new
-        v2(3) = disp(Atm2)%z_new - disp(Atm3)%z_new
+        v2%x = newMol%x(Atm2) - newMol%x(Atm3)
+        v2%y = newMol%y(Atm2) - newMol%y(Atm3)
+        v2%z = newMol%z(Atm2) - newMol%z(Atm3)
         overlap = .false.
-        E_Trial = 0E0_dp
+        E_Trial = 0d0
         do iRosen = 1, nRosenTrials(nType)
           call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r2, prob)
           call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bond_ang, prob)
-          call TorsionData(torsType) % torsFF % GenerateDist(trialBox%beta, tors_ang, prob)
+          call GenerateBondLength(r, k_bond, r_eq, Prob)
+          call GenerateBendAngle(bend_angle, bendType, Prob)
+          call GenerateTorsAngle(tors_angle, torsType, Prob)
           call Generate_UnitTorsion(v1, v2, r, bend_angle, tors_angle, v3)
-
-          self%tempcoords(1, iRosen)  = v3(1) + disp(Atm3)%x_new 
-          self%tempcoords(2, iRosen)  = v3(2) + disp(Atm3)%y_new 
-          self%tempcoords(3, iRosen)  = v3(3) + disp(Atm3)%z_new 
+          trialPos(iRosen)%x = v3%x + newMol%x(Atm3) 
+          trialPos(iRosen)%y = v3%y + newMol%y(Atm3)
+          trialPos(iRosen)%z = v3%z + newMol%z(Atm3)
+          call Rosen_BoltzWeight_Atom_New(nType, Atm4, trialPos(iRosen), isIncluded,  E_Trial(iRosen), overlap(iRosen))
         enddo
+        E_Max = minval(E_Trial)
+        ProbRosen = 0d0
+        do iRosen = 1, nRosenTrials(nType)
+          ProbRosen(iRosen) = exp(-beta*(E_Trial(iRosen)-E_Max))         
+        enddo
+!        if(all(ProbRosen .le. 0d0)) then
+!          rejMove = .true.
+!          return
+!        endif
+        rosenNorm = sum(ProbRosen)
+        ranNum = grnd() * rosenNorm
+        sumInt = ProbRosen(1)
+        nSel = 1
+        do while(sumInt .lt. ranNum)
+          nSel = nSel + 1
+          sumInt = sumInt + ProbRosen(nSel)
+        enddo
+        if(overlap(nSel) .eqv. .true.) then
+          rejMove = .true.
+          return
+        endif
+        rosenRatio = rosenRatio*ProbRosen(nSel)*dble(nRosenTrials(nType))/rosenNorm
+        regrown(Atm4) = .true.
+        nRegrown = nRegrown + 1
+        newMol%x(Atm4) = trialPos(nSel)%x 
+        newMol%y(Atm4) = trialPos(nSel)%y 
+        newMol%z(Atm4) = trialPos(nSel)%z
+      enddo
 
-        self%grown(Atm4) = .true.
-        disp(Atm4)%x_new =  self%tempcoords(1, nSel) 
-        disp(Atm4)%y_new =  self%tempcoords(2, nSel) 
-        disp(Atm4)%z_new =  self%tempcoords(3, nSel) 
-    enddo
+      if(overlap(nSel) .eqv. .true.) then
+        rejMove = .true.
+        return
+      endif
+      rosenRatio = rosenRatio*ProbRosen(nSel)*dble(nRosenTrials(nType))/rosenNorm
+      regrown(Atm3) = .true.
+      nRegrown = nRegrown + 1
 
-    rosenRatio = rosenRatio*ProbRosen(nSel)*dble(self%nRosenTrials)/rosenNorm
+
 
   end subroutine
 !======================================================================================
@@ -357,62 +365,12 @@ module MolCon_LinearCBMC
 !==========================================================================================
   subroutine LinearCBMC_GasConfig(self,  probGas)
     implicit none
-    class(LinearCBMC), intent(inout) :: self
+    class(MolConstructor), intent(inout) :: self
     real(dp), intent(out) :: probGas
 
 
     probGas = 1E0_dp
   end subroutine
-!=======================================================================
-  subroutine LinearCBMC_FindAtomsFromPath(self, Atm4, Atm1, Atm2, Atm3)
-    use Forcefield
-    use SimParameters
-    use Coords
-    use CBMC_Variables
-    implicit none
-    class(LinearCBMC), intent(inout) :: self
-    integer, intent(in) :: Atm4
-    integer, intent(out) ::  Atm1, Atm2, Atm3
-
-    integer :: i, atm4Pos
-    integer :: atm4plus1, atm4minus1
-
-    atm4Pos = self%pathposition(atm4)
-
-    atm4plus1 = atm4Pos + 1
-    atm4minus1 = atm4Pos - 1
-    if( atm4plus1 > natoms ) then
-        Atm3 = self%patharray(atm4Pos+1)
-        Atm2 = self%patharray(atm4Pos+2)
-        Atm1 = self%patharray(atm4Pos+3)
-    else if( atm4minus1 < 1 ) then
-        Atm3 = self%patharray(atm4Pos-1)
-        Atm2 = self%patharray(atm4Pos-2)
-        Atm1 = self%patharray(atm4Pos-3)
-    endif
-
-    if( self%grown(atm4plus1) ) then
-        Atm3 = self%patharray(atm4Pos+1)
-        Atm2 = self%patharray(atm4Pos+2)
-        Atm1 = self%patharray(atm4Pos+3)
-    else if( self%grown(atmminus1) ) then
-        Atm3 = self%patharray(atm4Pos-1)
-        Atm2 = self%patharray(atm4Pos-2)
-        Atm1 = self%patharray(atm4Pos-3)
-    else
-        write(0,*) "ERROR in FindAtomsFromPath subroutine! The atom is being regrown before any neighboring atoms have! "
-        write(0,*) "Atom ID:", Atm4
-        error stop
-    endif
-
-    if( (.not. self%grown(Atm3)) .or.
-        (.not. self%grown(Atm2)) .or.
-        (.not. self%grown(Atm1)) ) then
-        write(0,*) "ERROR in FindAtomsFromPath subroutine! The atom used for torsional selection has not be grown yet!"
-        write(0,*) "Atom ID:", Atm4
-        error stop
-    endif
-  end subroutine 
 !==========================================================================================
 end module
 !==========================================================================================

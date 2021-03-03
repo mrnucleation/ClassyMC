@@ -16,6 +16,7 @@ module Constrain_Python
   use forpy_mod, only: dict,get_sys_path, list, call_py, module_py, import_py, &
                        object, call_py_noret, tuple, &
                        tuple_create, list_create, cast, err_print
+
   type, public, extends(constraint) :: PythonConstraint
     class(SimBox), pointer :: parent => null()
     contains
@@ -26,6 +27,7 @@ module Constrain_Python
       procedure, pass :: Maintenance => PythonConstraint_Maintenance
       procedure, pass :: Update => PythonConstraint_Update
       procedure, pass :: Epilogue => PythonConstraint_Epilogue
+
   end type
 !=====================================================================
   contains

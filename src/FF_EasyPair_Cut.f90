@@ -316,8 +316,6 @@ module FF_EasyPair_Cut
 
 
     E_Diff = 0E0_dp
-
-!    globIndx = curBox % MolGlobalIndx(disp(1)%molType, disp(1)%molIndx)
     call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
 
     do iAtom = molStart, molEnd
@@ -326,8 +324,6 @@ module FF_EasyPair_Cut
         jAtom = neighlist(jNei, iAtom)
 
         atmType2 = curbox % AtomType(jAtom)
-!        rmin_ij = self % rMinTable(atmType1, atmType2)          
-
         rx = atoms(1, iAtom) - atoms(1, jAtom)
         ry = atoms(2, iAtom) - atoms(2, jAtom)
         rz = atoms(3, iAtom) - atoms(3, jAtom)
@@ -335,7 +331,6 @@ module FF_EasyPair_Cut
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
           E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
-!          write(*,*) iAtom, jAtom, rsq, E_Pair
           E_Diff = E_Diff - E_Pair
           curbox % dETable(iAtom) = curbox % dETable(iAtom) - E_Pair
           curbox % dETable(jAtom) = curbox % dETable(jAtom) - E_Pair
@@ -477,6 +472,27 @@ module FF_EasyPair_Cut
     real(dp) :: rCut
 
     rCut = self%rCut
+  end function
+!=============================================================================+
+  function SinglePair(self, atmtype1, atmtype2, rsq) result(E_Pair)
+    implicit none
+    class(EasyPair_Cut), intent(inout) :: self
+    integer, intent(in) :: atmtype1, atmtype2
+    real(dp), intent(in) :: rsq
+    real(dp) :: E_Pair
+
+    E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
+  end function
+!=============================================================================+
+  function SinglePair_Approx(self, atmtype1, atmtype2, rsq) result(E_Pair)
+    implicit none
+    class(EasyPair_Cut), intent(inout) :: self
+    integer, intent(in) :: atmtype1, atmtype2
+    real(dp), intent(in) :: rsq
+    real(dp) :: E_Pair
+
+    E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
+
   end function
   !=====================================================================
   subroutine ProcessIO_EasyPair_Cut(self, line)
