@@ -176,7 +176,7 @@ module ClassyPyObj
           ierror = dispdict(iDisp)%setitem("type", "displacement")
           ierror = dispdict(iDisp)%setitem("moltype", disp(iDisp)%molType)
           ierror = dispdict(iDisp)%setitem("molindex", disp(iDisp)%molIndx)
-          ierror = dispdict(iDisp)%setitem("atomsubindex", disp(iDisp)%atmSubIndx)
+!          ierror = dispdict(iDisp)%setitem("atomsubindex", disp(iDisp)%atmSubIndx)
           ierror = dispdict(iDisp)%setitem("atomindex", disp(iDisp)%atmIndx)
           ierror = dispdict(iDisp)%setitem("x_new", disp(iDisp)%x_new)
           ierror = dispdict(iDisp)%setitem("y_new", disp(iDisp)%y_new)

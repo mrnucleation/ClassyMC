@@ -262,7 +262,7 @@ use VarPrecision
     real(dp) :: E_Inter, E_Intra
     real(dp) :: ProbSel = 1E0_dp
     real(dp) :: Prob = 1E0_dp
-    real(dp) :: Probconstruct = 1E0_dp
+    real(dp) :: ProbSub
 
     self % atmps = self % atmps + 1E0_dp
     self % outatmps = self % outatmps + 1E0_dp
@@ -321,7 +321,7 @@ use VarPrecision
       return
     endif
 
-
+    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), trialBox, ProbSub, accept)
 
 !    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
     Prob = real(trialBox%nMolTotal, dp)/ProbSel
