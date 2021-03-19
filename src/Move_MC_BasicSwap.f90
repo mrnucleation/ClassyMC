@@ -112,6 +112,7 @@ use VarPrecision
     real(dp) :: insPoint(1:3)
     real(dp) :: dx, dy, dz, vol
     real(dp) :: E_Diff, biasE, radius
+    real(dp) :: E_Inter, E_Intra
     real(dp) :: Prob = 1E0_dp
     real(dp) :: ProbSub
 
@@ -164,8 +165,17 @@ use VarPrecision
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%newPart(1:nAtoms), self%tempList, &
-                                              self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%newPart(1:nAtoms), self%tempList, &
+!                                              self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%newpart(1:nAtoms),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.true.)
+
     if(.not. accept) then
       return
     endif
@@ -203,6 +213,7 @@ use VarPrecision
     integer :: CalcIndex, nNei, nCount
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, vol
+    real(dp) :: E_Inter, E_Intra
     real(dp) :: Prob = 1E0_dp
     real(dp) :: Probconstruct = 1E0_dp
 
@@ -237,13 +248,21 @@ use VarPrecision
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%oldpart(1:1),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.true.)
     if(.not. accept) then
 !      write(*,*) "Energy Rejection"
       return
     endif
 
-    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
+!    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
 
     vol = trialBox % GetThermo(5)
     Prob = real(trialBox%nMolTotal, dp)/vol

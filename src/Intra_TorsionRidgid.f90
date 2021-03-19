@@ -30,10 +30,11 @@ module IntraTorsion_Ridgid
 
   end subroutine
 !=============================================================================+
-  subroutine RidgidTorsion_DetailedECalc(self, curbox, E_T, accept)
+  subroutine RidgidTorsion_DetailedECalc(self, curbox, atompos, E_T, accept)
     implicit none
     class(RidgidTorsion), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
+    real(dp), intent(in) :: atompos(:,:)
     real(dp), intent(inout) :: E_T
     logical, intent(out) :: accept
 
@@ -54,15 +55,19 @@ module IntraTorsion_Ridgid
 
   end subroutine
 !==========================================================================
-  subroutine RidgidTorsion_GenerateDist(self, beta, val, probgen)
+  subroutine RidgidTorsion_GenerateDist(self, beta, val, probgen, E_T)
     implicit none
     class(RidgidTorsion), intent(inout) :: self
     real(dp), intent(in) :: beta
     real(dp), intent(out) :: val
     real(dp), intent(out) :: probgen
+    real(dp), intent(out), optional :: E_T
 
     val = self%ang0
     probgen = 1E0_dp
+    if(present(E_T)) then
+      E_T = 0E0_dp
+    endif
 
   end subroutine
 !=============================================================================+

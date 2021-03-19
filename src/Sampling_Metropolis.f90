@@ -1,4 +1,6 @@
 !====================================================================
+! Basic Metropolis Rule for molecular systems. 
+!====================================================================
 module MetropolisRule
   use VarPrecision
   use CoordinateTypes, only: Perturbation, Addition, Deletion, VolChange
@@ -51,12 +53,12 @@ module MetropolisRule
     elseif(present(logProb)) then
       probTerm = logProb
     else
-      write(*,*) "Coding Error! Probability has not been passed into Sampling "
-      stop
+      write(0,*) "Coding Error! Probability has not been passed into Sampling "
+      error stop
     endif
 
     biasE = -trialBox%beta * E_Diff + probTerm + extraTerms
-!    write(*,*) biasE, E_Diff, probTerm, extraTerms
+!    write(*,*) biasE, trialBox%beta, E_Diff 
     if(biasE >= 0.0E0_dp) then
       accept = .true.
     elseif( biasE > log(grnd()) ) then

@@ -127,6 +127,7 @@ use VarPrecision
     real(dp) :: insPoint(1:3)
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, radius, extraTerms
+    real(dp) :: E_Inter, E_Intra
     real(dp) :: Prob = 1E0_dp
     real(dp) :: ProbSub, ProbSel
 
@@ -192,8 +193,20 @@ use VarPrecision
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%newPart(1:nAtoms), self%tempList, &
-                                              self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%newpart(1:nAtoms),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.true.)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, &
+!                                              self%newPart(1:nAtoms), &
+!                                              self%tempList, &
+!                                              self%tempNNei, &
+!                                              E_Diff, &
+!                                              accept)
     if(.not. accept) then
       return
     endif
@@ -212,6 +225,7 @@ use VarPrecision
     !Compute the generation probability
     Prob = real(trialBox%nMolTotal, dp) * self%avbmcVol
     Prob = Prob*ProbSel/real(trialBox%nMolTotal+1, dp)
+    Prob = Prob/ProbSub
 !    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1, ProbSel
 
     !Get the chemical potential term for GCMC
@@ -245,6 +259,7 @@ use VarPrecision
     integer :: CalcIndex, nCount
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, extraTerms
+    real(dp) :: E_Inter, E_Intra
     real(dp) :: ProbSel = 1E0_dp
     real(dp) :: Prob = 1E0_dp
     real(dp) :: Probconstruct = 1E0_dp
@@ -285,7 +300,16 @@ use VarPrecision
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%oldpart(1:1),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.true.)
+
     if(.not. accept) then
 !      write(*,*) "Energy Rejection"
       return
@@ -299,9 +323,10 @@ use VarPrecision
 
 
 
-    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
+!    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
     Prob = real(trialBox%nMolTotal, dp)/ProbSel
     Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%avbmcVol)
+    Prob = Prob*ProbSub
 !    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%avbmcVol, trialBox%nMolTotal-1, ProbSel
 
     !Get chemical potential term

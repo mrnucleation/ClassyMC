@@ -63,7 +63,7 @@ module AnaylsisClassDef
 
     write(*,*) "The Allocated Analysis Type does not have it's CastCommonType defined."
 
-    stop
+    error stop
 
     if(.not. allocated(anaVar) ) then
       allocate(anaVar, source=def)

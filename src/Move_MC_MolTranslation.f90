@@ -108,7 +108,7 @@ use VarPrecision
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex, molStart, molEnd, molType
     real(dp) :: dx, dy, dz
-    real(dp) :: E_Diff, biasE
+    real(dp) :: E_Diff, E_Inter, E_Intra, biasE
     real(dp), parameter :: Prob = 1E0_dp
 
     boxID = trialBox % boxID
@@ -159,7 +159,15 @@ use VarPrecision
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:nAtoms), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:nAtoms), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%disp(1:nAtoms),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.false.)
     if(.not. accept) then
       self%ovlaprej = self%ovlaprej + 1
       return

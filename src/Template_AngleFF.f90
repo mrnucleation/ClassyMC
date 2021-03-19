@@ -10,9 +10,10 @@ module Template_IntraAngle
     real(dp) :: theta0
     contains
       procedure, pass :: Constructor 
+      procedure, pass :: EFunc
+      procedure, pass :: ComputeAngle
       procedure, pass :: DetailedECalc 
-      procedure, pass :: DiffECalc
-!      procedure, pass :: GenerateDist
+!      procedure, pass :: DiffECalc
       procedure, pass :: ProcessIO
   end type
 
@@ -26,27 +27,69 @@ module Template_IntraAngle
 
   end subroutine
 !=============================================================================+
-  subroutine DetailedECalc(self, curbox, E_T, accept)
+  function EFunc(self, angle) result(E_Angle)
+    implicit none
+    class(Angle_FF), intent(inout) :: self
+    real(dp), intent(in) :: angle
+    real(dp) :: E_Angle
+
+    E_Angle = 0E0_dp
+  end function
+!=============================================================================+
+  function ComputeAngle(self, curbox, atompos) result(theta)
+    implicit none
+    class(Angle_FF), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    real(dp), intent(in) :: atompos(:, :)
+    real(dp) :: theta
+    
+    real(dp) :: r1, rx1, ry1, rz1
+    real(dp) :: r2, rx2, ry2, rz2
+    rx1 = atompos(1, 1) - atompos(1, 2)
+    ry1 = atompos(2, 1) - atompos(2, 2)
+    rz1 = atompos(3, 1) - atompos(3, 2)
+    call curbox % Boundary(rx1, ry1, rz1)
+    r1 = sqrt(rx1*rx1 + ry1*ry1 + rz1*rz1)
+
+    rx2 = atompos(1, 3) - atompos(1, 2)
+    ry2 = atompos(2, 3) - atompos(2, 2)
+    rz2 = atompos(3, 3) - atompos(3, 2)
+    call curbox % Boundary(rx2, ry2, rz2)
+    r2 = sqrt(rx2*rx2 + ry2*ry2 + rz2*rz2)
+     
+    theta = rx1*rx2 + ry1*ry2 + rz1*rz2
+    theta = acos(theta/(r1*r2))
+
+  end function
+!=============================================================================+
+  subroutine DetailedECalc(self, curbox, atompos, E_T, accept)
     implicit none
     class(Angle_FF), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
+    real(dp), intent(in) :: atompos(:, :)
     logical, intent(out) :: accept
 
-    accept = .true.
-  end subroutine
-!============================================================================
-  subroutine DiffECalc(self, curbox, disp, E_Diff, accept)
-    implicit none
-    class(Angle_FF), intent(inout) :: self
-    class(SimBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
+    real(dp) :: theta
 
     accept = .true.
-    curbox % dETable = 0E0_dp
-    E_Diff = 0E0_dp
+    theta = self%ComputeAngle(curbox, atompos)
+    E_T = self%EFunc(theta)
+
+!    rx1 = atompos(1, 1) - atompos(1, 2)
+!    ry1 = atompos(2, 1) - atompos(2, 2)
+!    rz1 = atompos(3, 1) - atompos(3, 2)
+!    call curbox % Boundary(rx1, ry1, rz1)
+!    r1 = sqrt(rx1*rx1 + ry1*ry1 + rz1*rz1)
+
+!    rx2 = atompos(1, 3) - atompos(1, 2)
+!    ry2 = atompos(2, 3) - atompos(2, 2)
+!    rz2 = atompos(3, 3) - atompos(3, 2)
+!    call curbox % Boundary(rx2, ry2, rz2)
+!    r2 = sqrt(rx2*rx2 + ry2*ry2 + rz2*rz2)
+     
+!    theta = rx1*rx2 + ry1*ry2 + rz1*rz2
+!    theta = acos(theta/(r1*r2))
 
   end subroutine
 !==========================================================================

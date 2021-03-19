@@ -331,7 +331,7 @@ module CubicBoxDef
           write(nout, *) "Particle Number:", iAtom
           write(nout, *) "Box Length:", self%boxL
           write(nout, *) self%atoms(:, iAtom)
-          stop
+          error stop
         endif
       enddo
     enddo
@@ -343,7 +343,7 @@ module CubicBoxDef
       enddo
       if(.not. accept) then
         write(nout,*) "Initial Constraints are not statisfied!"
-        stop
+        error stop
       endif
     endif
 

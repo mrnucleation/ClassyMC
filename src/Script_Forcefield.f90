@@ -210,7 +210,7 @@ module Input_Forcefield
     use ParallelVar, only: nout
     use Input_Format, only: maxLineLen, LoadFile
     use Input_RegrowType, only: Script_RegrowType
-    use Common_MolInfo, only: MolData
+    use Common_MolInfo, only: MolData, mostAtoms
     implicit none
     character(len=maxLineLen), intent(in) :: cmdBlock(:)
     integer, intent(in) :: molType
@@ -244,6 +244,9 @@ module Input_Forcefield
              call FindCommandBlock(iLine, cmdBlock, "end_atoms", lineBuffer)
              nItems = lineBuffer - 1
              MolData(molType)%nAtoms = nItems
+             if(nItems > mostAtoms) then
+               mostAtoms = nItems
+             endif
              allocate(MolData(molType)%atomType(1:nItems), stat = AllocateStat)
              do i = 1, nItems
                curLine = iLine + i

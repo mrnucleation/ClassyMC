@@ -48,6 +48,7 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: IntegrityCheck => CellRSqList_IntegrityCheck
       procedure, pass :: ProcessIO => CellRSqList_ProcessIO
 !      procedure, pass :: TransferList
+      procedure, pass :: PrintList => CellRSqList_PrintList
       procedure, pass :: DeleteMol => CellRSqList_DeleteMol
       procedure, pass :: Prologue => CellRSqList_Prologue
       procedure, pass :: Epilogue => CellRSqList_Epilogue
@@ -101,7 +102,7 @@ use Template_NeighList, only: NeighListDef
  
     write(nout,*) "Neighbor List CutOff:", self%rCut
     if(self%maxNei > self%parent%nMaxAtoms) then
-      self%maxNei = self%parent%nMaxAtoms
+      self%maxNei = self%parent%nMaxAtoms+1
     endif
     write(nout,*) "Neighbor List Maximum Neighbors:", self%maxNei
 
@@ -121,7 +122,7 @@ use Template_NeighList, only: NeighListDef
     self%nNeigh = 0 
     IF (AllocateStatus /= 0) then
         write(0,*) "Error Code:", AllocateStatus
-        STOP "*** CellNeighRSQList: Memory Allocation Error! ***"
+        error STOP "*** CellNeighRSQList: Memory Allocation Error! ***"
     endif
 
 
@@ -140,6 +141,8 @@ use Template_NeighList, only: NeighListDef
   subroutine CellRSqList_Epilogue(self)
     implicit none
     class(CellRSqList), intent(inout) :: self
+
+    call self%IntegrityCheck(1)
 
 !    call self%DumpList(2)
   end subroutine
@@ -371,6 +374,8 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
+! Used to generate a neighborlist for a newly added molecule.  Primarily used
+! To give a temporary neighborlist to addition type Monte Carlo Moves.
   subroutine CellRSqList_GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
     use Common_MolInfo, only: nMolTypes
     use SearchSort, only: QSort
@@ -678,9 +683,16 @@ use Template_NeighList, only: NeighListDef
 !      write(2, *) "JAtom:", jAtom
 !      write(2,"(999(1x, I3))") self%list(1:nNeigh, jAtom)
       neiIndx = BinarySearch(atmIndx1, self%list(1:nNeigh, jAtom))
+      if(neiIndx == 0) then
+        error stop "Neighborlist Error! Index of neighbor atom not found!"
+      endif
       if(nNeigh > 1) then
-        self%list(1:nNeigh-1, jAtom) = [self%list(1:neiIndx-1, jAtom), &
-                                        self%list(neiIndx+1:nNeigh, jAtom)]
+!        self%list(1:nN-1, jAtom) = self%list(1:neiIndx-1, jAtom), &
+!        write(*,*) self%list(1:nNeigh, jAtom)
+        if(neiIndx /= nNeigh) then
+          self%list(neiIndx:nNeigh-1, jAtom) = self%list(neiIndx+1:nNeigh, jAtom)
+        endif
+!        write(*,*) self%list(1:nNeigh, jAtom)
         self%nNeigh(jAtom) = self%nNeigh(jAtom) - 1
         nNeigh = nNeigh - 1
         call QSort(self%list(1:nNeigh, jAtom))
@@ -762,7 +774,6 @@ use Template_NeighList, only: NeighListDef
     real(dp) :: boxdim(1:2, 1:3)
 
 
-    write(*,*) "Add"
     select type(disp)
       class is(Addition)
         call self%parent%GetDimensions(boxdim)
@@ -779,16 +790,20 @@ use Template_NeighList, only: NeighListDef
 
            self%nNeigh(iAtom) = tempNNei(iDisp)
            self%list(1:tempNNei(iDisp), iAtom ) = templist(1:tempNNei(iDisp), iDisp)
-!           do iNei = 1, tempNNei(iDisp)
-!               neiIndx = tempList(iNei, iDisp)
-!               self % list(iNei, iAtom) =  neiIndx
-!               self % list( self%nNeigh(neiIndx)+1, neiIndx ) = iAtom
-!               self%nNeigh(neiIndx)= self%nNeigh(neiIndx) + 1
-!           enddo
+!           write(*,*) self%list(1:tempNNei(iDisp), iAtom )
+           do iNei = 1, tempNNei(iDisp)
+               neiIndx = tempList(iNei, iDisp)
+               self%nNeigh(neiIndx)= self%nNeigh(neiIndx) + 1
+               self % list( self%nNeigh(neiIndx), neiIndx ) = iAtom
+!               write(*,*) neiIndx,"|",self % list( 1:self%nNeigh(neiIndx), neiIndx )
+           enddo
        enddo
 
    end select
 
+   call self%sortlist
+!   call self%PrintList
+!   call self%IntegrityCheck(1)
 
 
   end subroutine
@@ -1153,9 +1168,6 @@ use Template_NeighList, only: NeighListDef
     integer :: templist(1:self%maxnei, 1:self%maxAtoms)
     integer :: tempNNeigh(1:self%maxAtoms)
 
-
-
-
     !This first loop scans the neighborlist to see if somehow
     !an atom's index ended up on it's own neighborlist.
     !This usually indicates a transfer error.
@@ -1176,7 +1188,7 @@ use Template_NeighList, only: NeighListDef
       enddo
     enddo atomloop
 
-
+    call self%sortlist
     templist = self%list
     tempNNeigh = self%nNeigh
 
@@ -1208,6 +1220,27 @@ use Template_NeighList, only: NeighListDef
       enddo
     enddo atomloop2
 
+  end subroutine
+!====================================================================
+  subroutine CellRSqList_PrintList(self, writeunit)
+    use ParallelVar, only: nout
+    implicit none
+    class(CellRSqList), intent(inout) :: self
+    integer, intent(in), optional :: writeunit
+    integer :: j, iAtom, outunit
+
+    if(present(writeunit)) then
+      outunit = writeunit
+    else
+      outunit = nout
+    endif
+
+
+    write(outunit,*) "----------------------------"
+    do iAtom = 1, self%parent%nMaxatoms
+      write(outunit,"(I3,A,1000(I3,1x))") iAtom,"|", (self%list(j, iAtom) ,j=1,self%nNeigh(iAtom))
+    enddo
+    write(outunit,*) "Sorted?:", self%sorted
   end subroutine
 !====================================================================
   subroutine CellRSqList_ProcessIO(self, line, lineStat)

@@ -92,6 +92,8 @@ use VarPrecision
     real(dp) :: reduced(1:3)
     real(dp) :: insPoint(1:3)
     real(dp) :: E_Diff1, E_Diff2, scaleFactor
+    real(dp) :: E_Inter1, E_Intra1
+    real(dp) :: E_Inter2, E_Intra2
     real(dp) :: rescale(1:size(self%boxprob))
 
 
@@ -190,15 +192,31 @@ use VarPrecision
     endif
 
     !Box1's Energy Calculation
-    call box1 % EFunc % Method % DiffECalc(box1, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff1, accept)
+!    call box1 % EFunc % Method % DiffECalc(box1, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff1, accept)
+    call box1%ComputeEnergyDelta(self%oldpart(1:1),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter1, &
+                                     E_Intra1, &
+                                     E_Diff1, &
+                                     accept, &
+                                     computeintra=.true.)
     if(.not. accept) then
 !      write(*,*) "Energy Rejection"
       return
     endif
 
     !Box2's Energy Calculation
-    call box2% EFunc % Method % DiffECalc(box2, self%newPart(1:nAtoms), self%tempList, &
-                                              self%tempNNei, E_Diff2, accept)
+!    call box2% EFunc % Method % DiffECalc(box2, self%newPart(1:nAtoms), self%tempList, &
+!                                              self%tempNNei, E_Diff2, accept)
+    call box2%ComputeEnergyDelta(self%newpart(1:nAtoms),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter2, &
+                                     E_Intra2, &
+                                     E_Diff2, &
+                                     accept, &
+                                     computeintra=.true.)
     if(.not. accept) then
       return
     endif

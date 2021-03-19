@@ -63,7 +63,7 @@ module MCMove_Anisovol
     real(dp) :: dimensions(1:2, 1:3)
     real(dp) :: dV
     real(dp) :: OldProb, NewProb, Prob, extraTerms
-    real(dp) :: E_Diff, scaleFactor
+    real(dp) :: E_Diff, E_Inter, E_Intra, scaleFactor
 
     self % atmps = self % atmps + 1E0_dp
     select case(self%style)
@@ -77,7 +77,7 @@ module MCMove_Anisovol
         self%disp(1)%volNew = trialBox%volume + dV
         self%disp(1)%volOld = trialBox%volume
       case default
-        stop
+        error stop "Invalid Scale style given"
 
     end select
     if(self%disp(1)%volNew < 0E0_dp) then
@@ -102,7 +102,7 @@ module MCMove_Anisovol
         end select
 
       class default
-        stop "This type of box is not compatible with aniso volume change moves."
+        error stop "This type of box is not compatible with aniso volume change moves."
     end select
 
 
@@ -113,7 +113,16 @@ module MCMove_Anisovol
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%disp(1:1),&
+                                     self%templist, &
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.false.)
+
     if(.not. accept) then
       return
     endif

@@ -52,6 +52,8 @@ module Template_SimBox
       procedure, public, pass :: LoadDimension
       procedure, public, pass :: GetCoordinates
       procedure, public, pass :: GetAtomTypes
+      procedure, public, pass :: GetAtomData
+      procedure, public, pass :: GetMolData
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
       procedure, public, pass :: BoundaryNew
@@ -65,7 +67,6 @@ module Template_SimBox
       procedure, public, pass :: UpdatePosition
       procedure, public, pass :: UpdateVol
       procedure, public, pass :: UpdateNeighLists
-      procedure, public, pass :: GetMolData
 
   end type
 !==========================================================================================
@@ -84,13 +85,23 @@ module Template_SimBox
     lineStat = 0
   end subroutine
 !==========================================================================================
-  subroutine GetCoordinates(self, atoms)
+  subroutine GetCoordinates(self, atoms, slice)
+    ! Used to return a pointer array to the atoms(:,:) array within the box.
+    ! Can also be used to simply return a subset of the atoms(:,:) such as a single
+    ! molecule's coordinates
     implicit none
     class(SimBox), intent(inout), target :: self
     real(dp), pointer :: atoms(:,:)
+    integer, optional :: slice(1:2)
+    integer :: lb, ub
 
-
-    atoms => self%atoms
+    if(present(slice)) then
+        lb = slice(1)
+        ub = slice(2)
+        atoms => self%atoms(1:3, lb:ub)
+    else
+        atoms => self%atoms
+    endif
 
   end subroutine
 !==========================================================================================
@@ -176,14 +187,24 @@ module Template_SimBox
     lineStat = 0
   end subroutine
 !==========================================================================================
-  subroutine GetMolData(self, globalIndx, molStart, molEnd, molType, atomSubIndx)
+  subroutine GetMolData(self, globalIndx, nAtoms, molStart, molEnd, molType, atomSubIndx)
     implicit none
     class(SimBox), intent(inout) :: self
     integer, intent(in)  :: globalIndx
-    integer, intent(inout), optional :: molStart, molEnd, molType, atomSubIndx
+    integer, intent(inout), optional :: nAtoms, molStart, molEnd, molType, atomSubIndx
 
 
   end subroutine
+!==========================================================================================
+  subroutine GetAtomData(self, atomglobalIndx, molIndx, atomSubIndx, atomtype)
+    implicit none
+    class(SimBox), intent(inout) :: self
+    integer, intent(in)  :: atomglobalIndx
+    integer, intent(inout), optional :: molIndx, atomSubIndx, atomtype
+
+
+  end subroutine
+
 !==========================================================================================
 !  Checks to see if the atom is present in the box.  This is required 
   function IsActive(self, atmIndx) result(active)

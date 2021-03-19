@@ -108,7 +108,7 @@ module UmbrellaWHAMRule
         write(nout, *) "invalid Analysis fucntion"
         write(nout, *) "Chosen Function:", indx
         write(nout, *) "Number of Analysis Functions:", size(AnalysisArray)
-        stop "Error dectected in Umbrella Sampling"
+        error stop "Error dectected in Umbrella Sampling"
       endif
     enddo
 
@@ -118,7 +118,7 @@ module UmbrellaWHAMRule
         write(nout,*) "Smallest bin is larger than the largest bin" 
         write(nout,*) "Minimum Value:", self%valMin(i)
         write(nout,*) "Maximum Value:", self%valMax(i)
-        stop
+        error stop
       endif
     enddo
 
@@ -158,7 +158,7 @@ module UmbrellaWHAMRule
 
     call self%GetUIndexArray(self%refVals, i, stat)
     if(stat /= 0) then
-      stop
+      error stop
     endif
     self%refBin = i
 

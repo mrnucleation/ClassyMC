@@ -69,7 +69,7 @@ module MCMove_Isovol
     integer :: i
     real(dp) :: dV
     real(dp) :: OldProb, NewProb, Prob, extraTerms
-    real(dp) :: E_Diff, scaleFactor
+    real(dp) :: E_Diff, E_Inter, E_Intra, scaleFactor
 
     self % atmps = self % atmps + 1E0_dp
     select case(self%style)
@@ -117,7 +117,15 @@ module MCMove_Isovol
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%disp(1:1),&
+                                     self%templist, &
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.false.)
     if(.not. accept) then
       self%ovlaprej = self%ovlaprej + 1
       return

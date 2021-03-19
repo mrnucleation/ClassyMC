@@ -9,6 +9,8 @@ contains
     use AnalysisData, only: AnalysisArray
     use ParallelVar, only: nout
 
+    use Analysis_AngleDistribution, only: AngleDistribution
+    use Analysis_BondDistribution, only: BondDistribution
     use Anaylsis_BlockAverage, only: BlockAverage
     use Anaylsis_ClusterSize, only: ClusterSize
     use Anaylsis_DensityOfStates, only: DensityOfStates
@@ -33,6 +35,13 @@ contains
 
     !Safety check to ensure that the index number is within proper bounds
     select case(trim(adjustl(command)))
+
+      case("angledistribution")
+        allocate(AngleDistribution::AnalysisArray(AnaNum) % func)
+
+      case("bonddistribution")
+        allocate(BondDistribution::AnalysisArray(AnaNum) % func)
+
       case("blockaverage")
         allocate(blockAverage::AnalysisArray(AnaNum) % func)
 
@@ -61,7 +70,9 @@ contains
 
      case default
         lineStat = -1
-        return
+        write(0,*) "ERROR! Unknown Analysis Type Given in Input File!!!"
+        error stop
+
     end select
 
     if(lineStat == -1) then

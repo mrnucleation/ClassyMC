@@ -9,8 +9,9 @@ module Template_Intra_FF
     contains
       procedure, pass :: Constructor 
       procedure, pass :: DetailedECalc 
-      procedure, pass :: DiffECalc
       procedure, pass :: GenerateDist
+      procedure, pass :: GenerateReverseDist
+      procedure, pass :: ComputeProb
       procedure, pass :: ProcessIO
   end type
 
@@ -23,40 +24,52 @@ module Template_Intra_FF
 
   end subroutine
 !=============================================================================+
-  subroutine DetailedECalc(self, curbox, E_T, accept)
+  subroutine DetailedECalc(self, curbox, atompos, E_T, accept)
     implicit none
     class(Intra_FF), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     real(dp), intent(inout) :: E_T
+    real(dp), intent(in) :: atompos(:, :)
     logical, intent(out) :: accept
 
     accept = .true.
-  end subroutine
-!============================================================================
-  subroutine DiffECalc(self, curbox, disp, E_Diff, accept)
-    implicit none
-    class(Intra_FF), intent(inout) :: self
-    class(SimBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
-
-    accept = .true.
-    curbox % dETable = 0E0_dp
-    E_Diff = 0E0_dp
-
   end subroutine
 !==========================================================================
-  subroutine GenerateDist(self, beta, val, probgen)
+  subroutine GenerateDist(self, beta, val, probgen, E_T)
     implicit none
     class(Intra_FF), intent(inout) :: self
     real(dp), intent(in) :: beta
     real(dp), intent(out) :: val
     real(dp), intent(out) :: probgen
+    real(dp), intent(out), optional :: E_T
 
     val = 0E0_dp
     probgen = 1E0_dp
+    E_T = 0E0_dp
 
+  end subroutine
+!==========================================================================
+  subroutine GenerateReverseDist(self, curbox, atompos, probgen)
+    implicit none
+    class(Intra_FF), intent(inout) :: self
+    class(SimBox), intent(inout) :: curBox
+    real(dp), intent(in) :: atompos(:, :)
+    real(dp), intent(out) :: probgen
+
+
+    probgen = 1E0_dp
+
+  end subroutine
+
+!==========================================================================
+  subroutine ComputeProb(self, beta, val, probgen)
+    implicit none
+    class(Intra_FF), intent(inout) :: self
+    real(dp), intent(in) :: beta
+    real(dp), intent(in) :: val
+    real(dp), intent(out) :: probgen
+
+    probgen = 0E0_dp
   end subroutine
 !=============================================================================+
   subroutine ProcessIO(self, line)

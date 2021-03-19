@@ -25,11 +25,11 @@ OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
 OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 #OPTIMIZE_FLAGS_GFORT += -pg
-OPTIMIZE_FLAGS_GFORT += -lblas -llapack
+#OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic
 
-DETAILEDDEBUG_GFORT:= -fbacktrace -fcheck=all -g -ffree-line-length-512 -Og -cpp -ffpe-trap=overflow,invalid,zero 
+DETAILEDDEBUG_GFORT:=  -cpp -fbacktrace -fcheck=all -g -ffree-line-length-512 -Og -ffpe-trap=overflow,invalid,zero 
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
@@ -106,11 +106,14 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_IsoVol.f90\
         		$(SRC)/Move_MC_PlaneRotate.f90\
         		$(SRC)/Move_MC_PlaneTranslate.f90\
+        		$(SRC)/Move_MC_PlaneAtomTranslate.f90\
         		$(SRC)/Move_MC_ThermoLambda.f90\
         		$(SRC)/Move_MC_UBSwap.f90\
         		$(SRC)/Move_MC_VolExchange.f90\
         		$(SRC)/ExeptionHandling.f90\
         		$(SRC)/MolSearch.f90\
+        		$(SRC)/Analysis_AngleDistribution.f90\
+        		$(SRC)/Analysis_BondDistribution.f90\
         		$(SRC)/Analysis_BlockAverage.f90\
         		$(SRC)/Analysis_DensityOfStates.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
@@ -137,11 +140,13 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_Tersoff.f90\
         		$(SRC)/FF_ThermoInt.f90\
+        		$(SRC)/Intra_AngleHarmonic.f90\
         		$(SRC)/Intra_AngleRidgid.f90\
         		$(SRC)/Intra_BondRidgid.f90\
         		$(SRC)/Intra_BondHarmonic.f90\
+        		$(SRC)/Intra_TorsionTrappe.f90\
+        		$(SRC)/Intra_TorsionHarmonic.f90\
         		$(SRC)/Intra_TorsionRidgid.f90\
-        		$(SRC)/MolCon_LinearCBMC.f90\
         		$(SRC)/MolCon_RidgidRegrowth.f90\
         		$(SRC)/MolCon_SimpleRegrowth.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
@@ -245,6 +250,7 @@ debugaenet: startUP classyMCAENet  modout finale
 
 
 debug_gfortran: COMPFLAGS := $(DETAILEDDEBUG_GFORT) $(PACKAGE_FLAGS)
+debug_gfortran: COMPFLAGS += $(DEBUGFLAGS) -cpp
 debug_gfortran: startUP_debug classyMC_debug  modout finale
 
 #neat: startUP classyMC removeObject finale
@@ -303,7 +309,7 @@ classyMC_debug: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
-		@$(FC) $(DETAILEDDEBUG) $(MODFLAGS)  $^ -o $@ 	
+		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
 		
 startUP:
 		@echo ==================================================================
@@ -385,7 +391,7 @@ $(OBJ)/Box_Presets.o: $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 
 
 $(OBJ)/Move_MC_AVBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o
-$(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o $(OBJ)/Common_Sampling.o
+$(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o $(OBJ)/Common_Sampling.o $(OBJ)/Move_MC_MolTranslation.o
 $(OBJ)/Move_MC_IsoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_AnisoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Box_Ultility.o
@@ -411,7 +417,7 @@ $(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 
 $(OBJ)/FF_EP_LJ_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
-
+$(OBJ)Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o
 

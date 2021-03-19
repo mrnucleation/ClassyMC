@@ -63,11 +63,11 @@ module Template_MolConstructor
 
     probconstruct = 1E0_dp
   end subroutine
-!==========================================================================================
-  subroutine ReverseConfig(self, trialBox, probconstruct, accept)
+!=======================================================================================
+  subroutine ReverseConfig(self, disp, trialBox, probconstruct, accept)
     implicit none
     class(MolConstructor), intent(inout) :: self
-!    class(Perturbation), intent(inout) :: disp(:)
+    class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(out) :: probconstruct 
     logical, intent(out) :: accept

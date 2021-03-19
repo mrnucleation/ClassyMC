@@ -7,7 +7,8 @@ contains
   use BoxData, only: BoxArray
   implicit none
   integer :: iBox
-  character(len=50) :: fileName, format_string
+  character(len=50) :: format_string
+  character(len=500) :: fileName
 
   if (myid .lt. 10) then
     format_string = "(A,I1,A,I1,A)"

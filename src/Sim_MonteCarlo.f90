@@ -337,7 +337,7 @@ contains
       write(__StdErr__,*) "*******************************************************************************"
       write(__StdErr__,*) "  CRITICAL ERROR! Molecular Topology Information has not been defined!"
       write(__StdErr__,*) "*******************************************************************************"
-      stop
+      error stop
     endif
     do i = 1, size(MolData)
       if(.not. allocated(MolData(i)%molConstruct)) then
@@ -359,7 +359,7 @@ contains
       write(__StdErr__, *) "*******************************************************************************"
       write(__StdErr__, *) "  CRITICAL ERROR! Sampling Rule has not been defined!"
       write(__StdErr__, *) "*******************************************************************************"
-      stop
+      error stop
     endif
 
     call Sampling % SafetyCheck
@@ -384,7 +384,7 @@ contains
       write(__StdErr__,*) "*******************************************************************************"
       write(__StdErr__,*) "  CRITICAL ERROR! No Simulation Boxes have not been defined!"
       write(__StdErr__,*) "*******************************************************************************"
-      stop
+      error stop
     endif
 
     if( allocated(BoxArray) ) then

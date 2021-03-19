@@ -42,7 +42,7 @@ use VarPrecision
     integer, parameter :: delVal = 1
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex
-    real(dp) :: E_Diff
+    real(dp) :: E_Diff, E_Intra, E_Inter
 
 
     self % atmps = self % atmps + 1E0_dp
@@ -67,7 +67,15 @@ use VarPrecision
     endif
 
 
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%disp(1:1),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.true.)
 
     write(*,*) "Delete", delVal
 

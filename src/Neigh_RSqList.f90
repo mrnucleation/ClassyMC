@@ -51,7 +51,7 @@ use Template_NeighList, only: NeighListDef
 
     self%parent => BoxArray(parentID)%box
     if(.not. allocated(self%parent%atoms) ) then
-      stop
+      error stop
     endif
 
 !     If no rCut value is given by the subroutine call attempt to pull
@@ -89,7 +89,7 @@ use Template_NeighList, only: NeighListDef
 
     self%list = 0
     self%nNeigh = 0 
-    IF (AllocateStatus /= 0) STOP "*** NeighRSQList: Not enough memory ***"
+    IF (AllocateStatus /= 0) error STOP "*** NeighRSQList: Not enough memory ***"
 
     self%restrictType = .false.
   end subroutine

@@ -45,7 +45,7 @@ module StructureTypes
   end type
 
   type MolDef 
-    logical :: ridgid = .false.
+    logical :: ridgid = .true.
     integer :: nAtoms = 1
 
     class(MolConstructor), allocatable :: molConstruct
@@ -86,7 +86,6 @@ module Common_MolInfo
   type(AngleDef), allocatable :: AngleData(:)
   type(TorsionDef), allocatable :: TorsionData(:)
   type(MiscDef), allocatable :: MiscData(:)
-
 
 end module
 !================================================================

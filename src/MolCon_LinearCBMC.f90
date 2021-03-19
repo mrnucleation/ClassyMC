@@ -152,7 +152,7 @@ module MolCon_LinearCBMC
       else
         write(0,*) "Linear CBMC: DEAD END ERROR! There is a problem in the molecule definition!"
         write(0,*) "Ensure your molecule's bonds are properly connected."
-        stop
+        error stop
       endif
     enddo
 
@@ -160,7 +160,7 @@ module MolCon_LinearCBMC
     if(any(self%patharray == 0)) then
       write(0,*) "LINEAR CBMC: ERROR! There are atoms which are unaccounted for by the path building algorithm."
       write(0,*) "Ensure your molecule's bonds are properly connected."
-      stop
+      error stop "User input error!"
     endif
 
 
@@ -339,7 +339,7 @@ module MolCon_LinearCBMC
         disp(Atm4)%z_new =  self%tempcoords(3, nSel) 
     enddo
 
-    rosenRatio = rosenRatio*ProbRosen(nSel)*dble(self%nRosenTrials)/rosenNorm
+    probconstruct = probconstruct*ProbRosen(nSel)*dble(self%nRosenTrials)/rosenNorm
 
   end subroutine
 !======================================================================================
@@ -351,10 +351,164 @@ module MolCon_LinearCBMC
     real(dp), intent(out) :: probconstruct 
     logical, intent(out) :: accept
 
+      integer :: i, iRosen, iAtom, nSel, nIndx, nTargetMol
+      integer :: Atm1, Atm2, Atm3, Atm4
+      integer :: atom1_Pos
+      integer :: bondType, bendType, torsType, cnt
+      logical :: overlap
+      logical :: isIncluded(1:maxMol)
+      logical :: regrown(1:maxAtoms)
+      real(dp) :: E_Trial(1:maxRosenTrial)
+      real(dp) :: grnd,rotang
+      real(dp) :: E_Max, ProbRosen(1:maxRosenTrial), rosenNorm
+      real(dp) :: ranNum, sumInt
+      real(dp) :: k_bond, r_eq, r, Prob
+      real(dp) :: k_bend, ang_eq, bend_angle, tors_angle
+      real(dp) :: dx, dy, dz 
+      type(SimpleAtomCoords) :: trialPos
+      type(SimpleAtomCoords) :: v1, v2, v3
+      
+      ProbRosen = 0d0      
+      E_Trial = 0d0      
+      nTargetMol = subIndxList(nTarget)
+      nIndx = molArray(nType)%mol(nMol)%indx
+      regrown = .false.
+
+!      Begin the regrowth process by choosing an insertion site for the first atom in the chain
+      E_Trial = 0d0
+!      E_Complete = 0d0
+      probconstruct = 1d0
+!      call Rosen_BoltzWeight_Atom_Old(nType, nMol, 1, isIncluded,  E_Trial(1))
+      do iRosen = 2, nRosenTrials(nType)
+          !ComputeWeight
+      enddo
+      E_Max = minval(E_Trial)
+      ProbRosen = 0d0
+      do iRosen = 1, nRosenTrials(nType)
+        ProbRosen(iRosen) = exp(-beta*(E_Trial(iRosen)-E_Max))         
+      enddo
+      rosenNorm = sum(ProbRosen)
+      probconstruct = probconstruct*ProbRosen(1)*dble(nRosenTrials(nType))/rosenNorm
+      regrown(1) = .true.
+
+
+!      Having inserted the first atom, when we go to insert the second atom we must account for the fact that
+!      the second atom must be inserted at the correct bond distance from the first atom.
+      Atm1 = 1
+      Atm2 = regrowOrder(nType, 2) 
+      call FindBond(nType,Atm1, Atm2, bondType)
+      k_bond = bondData(bondType)%k_eq
+      r_eq = bondData(bondType)%r_eq
+!      call Rosen_BoltzWeight_Atom_Old(nType, nMol, Atm2, isIncluded,  E_Trial(1))
+      do iRosen = 2, nRosenTrials(nType)
+        call GenerateBondLength(r, k_bond, r_eq, Prob)
+        call Generate_UnitSphere(dx, dy, dz)
+        trialPos%x = r*dx + molArray(nType)%mol(nMol)%x(Atm1)
+        trialPos%y = r*dy + molArray(nType)%mol(nMol)%y(Atm1)
+        trialPos%z = r*dz + molArray(nType)%mol(nMol)%z(Atm1)
+        call Rosen_BoltzWeight_Atom_New(nType, Atm2, trialPos, isIncluded,  E_Trial(iRosen), overlap)
+      enddo
+      E_Max = minval(E_Trial)
+      ProbRosen = 0d0
+      do iRosen = 1, nRosenTrials(nType)
+        ProbRosen(iRosen) = exp(-beta*(E_Trial(iRosen)-E_Max))         
+      enddo
+      rosenNorm = sum(ProbRosen)
+      probconstruct = probconstruct*ProbRosen(1)*dble(nRosenTrials(nType))/rosenNorm
+      regrown(Atm2) = .true.
+
+!       For the third atom we must begin to include the bending angle in choosing its trial positions. The first thing
+!       we must consider is if the second regrown atom was a terminal atom or a linker atom. If it was a terminal atom 
+!       then the bending angle must use the 1st atom as the central atom for the angle generation.  However if it was a link in the chain then the 2nd 
+!       atom regrown should be used as the central atom.
+      if(topolArray(nType)%atom(Atm2) .eq. 2) then
+        Atm1 = regrowOrder(nType, 1) 
+        Atm2 = regrowOrder(nType, 2) 
+        Atm3 = regrowOrder(nType, 3) 
+      else
+        Atm1 = regrowOrder(nType, 2) 
+        Atm2 = regrowOrder(nType, 1) 
+        Atm3 = regrowOrder(nType, 3) 
+      endif
+
+      v1%x = molArray(nType)%mol(nMol)%x(Atm1) - molArray(nType)%mol(nMol)%x(Atm2)
+      v1%y = molArray(nType)%mol(nMol)%y(Atm1) - molArray(nType)%mol(nMol)%y(Atm2)
+      v1%z = molArray(nType)%mol(nMol)%z(Atm1) - molArray(nType)%mol(nMol)%z(Atm2)
+      call FindBond(nType, Atm2, Atm3, bondType)
+      k_bond = bondData(bondType)%k_eq
+      r_eq = bondData(bondType)%r_eq
+      call FindAngle(nType, Atm1, Atm2, Atm3, bendType)
+!      k_bend = bendData(bendType)%k_eq
+!      ang_eq = bendData(bendType)%ang_eq
+
+      call Rosen_BoltzWeight_Atom_Old(nType, nMol, Atm3, isIncluded,  E_Trial(1))
+      do iRosen = 2, nRosenTrials(nType)
+        call GenerateBondLength(r, k_bond, r_eq, Prob)
+!        call GenerateBendAngle(bend_angle, k_bend, ang_eq, Prob)
+        call GenerateBendAngle(bend_angle, bendType, Prob)
+        call Generate_UnitCone(v1, r, bend_angle, v2)
+        trialPos%x = v2%x + molArray(nType)%mol(nMol)%x(Atm2)
+        trialPos%y = v2%y + molArray(nType)%mol(nMol)%y(Atm2)
+        trialPos%z = v2%z + molArray(nType)%mol(nMol)%z(Atm2)
+        call Rosen_BoltzWeight_Atom_New(nType, Atm3, trialPos, isIncluded,  E_Trial(iRosen), overlap)
+      enddo
+
+      E_Max = minval(E_Trial)
+      ProbRosen = 0d0
+      do iRosen = 1, nRosenTrials(nType)
+        ProbRosen(iRosen) = exp(-beta*(E_Trial(iRosen)-E_Max))         
+      enddo
+      rosenNorm = sum(ProbRosen)
+      probconstruct = probconstruct*ProbRosen(1)*dble(nRosenTrials(nType))/rosenNorm
+      regrown(Atm3) = .true.
+
+!      Now that three atoms have been regrown, all remaining atoms must take the torsional angles into account.
+      cnt = 3
+      do while(any(regrown .eqv. .false.))
+        cnt = cnt + 1
+        atm4 = regrowOrder(nType, cnt) 
+        call FindAtomsFromPath(nType, regrown, 1, Atm4, Atm1, Atm2, Atm3)
+        call FindBond(nType, Atm3, Atm4, bondType)
+        k_bond = bondData(bondType)%k_eq
+        r_eq = bondData(bondType)%r_eq
+        call FindAngle(nType, Atm2, Atm3, Atm4, bendType)
+        call FindTorsion(nType, Atm1, Atm2, Atm3, Atm4, torsType)
+        v1%x = molArray(nType)%mol(nMol)%x(Atm1) - molArray(nType)%mol(nMol)%x(Atm3)
+        v1%y = molArray(nType)%mol(nMol)%y(Atm1) - molArray(nType)%mol(nMol)%y(Atm3)
+        v1%z = molArray(nType)%mol(nMol)%z(Atm1) - molArray(nType)%mol(nMol)%z(Atm3)
+
+        v2%x = molArray(nType)%mol(nMol)%x(Atm2) - molArray(nType)%mol(nMol)%x(Atm3)
+        v2%y = molArray(nType)%mol(nMol)%y(Atm2) - molArray(nType)%mol(nMol)%y(Atm3)
+        v2%z = molArray(nType)%mol(nMol)%z(Atm2) - molArray(nType)%mol(nMol)%z(Atm3)
+        overlap = .false.
+        call Rosen_BoltzWeight_Atom_Old(nType, nMol, Atm4, isIncluded,  E_Trial(1))
+        do iRosen = 2, nRosenTrials(nType)
+          call GenerateBondLength(r, k_bond, r_eq, Prob)
+!          call GenerateBendAngle(bend_angle, k_bend, ang_eq, Prob)
+          call GenerateBendAngle(bend_angle, bendType, Prob)
+          call GenerateTorsAngle(tors_angle, torsType, Prob)
+          call Generate_UnitTorsion(v1, v2, r, bend_angle, tors_angle, v3)
+          trialPos%x = v3%x + molArray(nType)%mol(nMol)%x(Atm3)
+          trialPos%y = v3%y + molArray(nType)%mol(nMol)%y(Atm3)
+          trialPos%z = v3%z + molArray(nType)%mol(nMol)%z(Atm3)
+          call Rosen_BoltzWeight_Atom_New(nType, Atm4, trialPos, isIncluded,  E_Trial(iRosen), overlap)
+        enddo
+        E_Max = minval(E_Trial)
+        ProbRosen = 0d0
+        do iRosen = 1, nRosenTrials(nType)
+          ProbRosen(iRosen) = exp(-beta*(E_Trial(iRosen)-E_Max))         
+        enddo
+        rosenNorm = sum(ProbRosen)
+        probconstruct = probconstruct*ProbRosen(1)*dble(nRosenTrials(nType))/rosenNorm
+        regrown(Atm4) = .true.
+      enddo
+
     accept = .true.
     probconstruct = 1E0_dp
   end subroutine
-!==========================================================================================
+!======================================================================
+!  Routine for simulating the probability of an isolated molecule in the gas phase
+!  
   subroutine LinearCBMC_GasConfig(self,  probGas)
     implicit none
     class(LinearCBMC), intent(inout) :: self
@@ -385,10 +539,12 @@ module MolCon_LinearCBMC
         Atm3 = self%patharray(atm4Pos+1)
         Atm2 = self%patharray(atm4Pos+2)
         Atm1 = self%patharray(atm4Pos+3)
+        return
     else if( atm4minus1 < 1 ) then
         Atm3 = self%patharray(atm4Pos-1)
         Atm2 = self%patharray(atm4Pos-2)
         Atm1 = self%patharray(atm4Pos-3)
+        return
     endif
 
     if( self%grown(atm4plus1) ) then

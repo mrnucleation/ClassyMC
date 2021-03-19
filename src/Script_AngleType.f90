@@ -10,7 +10,7 @@ contains
     use ParallelVar, only: nout
     use Common_MolInfo, only: AngleData
     use IntraAngle_Ridgid, only: RidgidAngle 
-!    use IntraAngle_Harmonic, only: HarmonicAngle
+    use IntraAngle_Harmonic, only: HarmonicAngle
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: AngleNum
@@ -31,9 +31,9 @@ contains
       case("ridgid")
         allocate(RidgidAngle :: AngleData(AngleNum)%angleFF)
 
-!      case("harmonic")
-!        allocate(HarmonicAngle :: AngleData(AngleNum)%angleFF)
-!        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
+      case("harmonic")
+        allocate(HarmonicAngle :: AngleData(AngleNum)%angleFF)
+
       case default
         write(*,*) Angle_Type
         lineStat = -1

@@ -8,7 +8,7 @@ module CoordinateTypes
 
   !Move type where a single particle's position is changed.
   type, extends(Perturbation) :: Displacement
-    integer(kind=atomIntType) :: molType, atmSubIndx
+    integer(kind=atomIntType) :: molType, atomsubIndx
     integer(kind=atomIntType) :: molIndx, atmIndx   
     real(dp) :: x_new, y_new, z_new
     logical :: newList = .false.

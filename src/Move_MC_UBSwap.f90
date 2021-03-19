@@ -91,8 +91,9 @@ use VarPrecision
     real(dp) :: insPoint(1:3)
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, radius, extraTerms
+    real(dp) :: E_Inter, E_Intra
     real(dp) :: Prob = 1E0_dp
-    real(dp) :: ProbSub
+    real(dp) :: ProbSub, GenProb
 
     self % atmps = self % atmps + 1E0_dp
     self % inatmps = self % inatmps + 1E0_dp
@@ -119,7 +120,6 @@ use VarPrecision
     call trialBox % GetMolData(nTarget, molStart=targStart)
 
 
-!    call MolData(molType) % molConstruct % ReverseConfig( trialBox, ProbSub, accept)
 
     !Choose the position relative to the target atom 
     call Generate_UnitSphere(dx, dy, dz)
@@ -143,6 +143,8 @@ use VarPrecision
 
     call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%newPart(1:nAtoms), ProbSub , insPoint)
 
+    GenProb = ProbSub
+
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))
@@ -161,8 +163,20 @@ use VarPrecision
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%newPart(1:nAtoms), self%tempList, &
-                                              self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%newPart(1:nAtoms), self%tempList, &
+!                                              self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%newpart(1:nAtoms),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.true.)
+
+!    call MolData(molType) % molConstruct % ReverseConfig( trialBox, ProbSub, accept)
+!    GenProb = GenProb*ProbSub
+
     if(.not. accept) then
       return
     endif
@@ -181,7 +195,11 @@ use VarPrecision
     !Compute the generation probability
     Prob = real(trialBox%nMolTotal, dp) * self%ubVol
     Prob = Prob/(real(nCount, dp) * real(trialBox%nMolTotal+1, dp))
-!    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%ubVol, nCount, trialBox%nMolTotal+1
+!    write(*,*) "Prob In", trialBox%nMolTotal, self%ubVol, nCount
+!    write(*,*) "Prob In", Prob, GenProb, E_Inter, E_Intra, E_Diff
+!    write(*,*) "Ratio:", exp(-trialBox%beta*E_Intra)/GenProb
+!    write(*,*) 
+    Prob = Prob/GenProb
 
     !Get the chemical potential term for GCMC
     extraTerms = sampling % GetExtraTerms(self%newpart(1:nAtoms), trialBox)
@@ -213,6 +231,8 @@ use VarPrecision
     integer :: CalcIndex, nNei, nCount
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, extraTerms
+    real(dp) :: E_Inter, E_Intra
+    real(dp) :: GenProb, ProbSub
     real(dp) :: Prob = 1E0_dp
     real(dp) :: Probconstruct = 1E0_dp
 
@@ -245,7 +265,16 @@ use VarPrecision
     endif
 
     !Energy Calculation
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%oldpart(1:1),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.true.)
+
     if(.not. accept) then
 !      write(*,*) "Energy Rejection"
       return
@@ -259,7 +288,9 @@ use VarPrecision
 
 
 
-    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
+    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), trialBox, ProbSub, accept)
+    GenProb = ProbSub
+
     call self % CountSites(trialBox, &
                            trialBox%atoms(1,molStart), &
                            trialBox%atoms(2,molStart), &
@@ -270,7 +301,12 @@ use VarPrecision
 
     Prob = real(nNei, dp) * real(trialBox%nMolTotal, dp)
     Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%ubVol)
-!    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%ubVol, nNei, trialBox%nMolTotal-1
+!    write(*,*) "Prob Out", trialBox%nMolTotal, self%ubVol, nNei
+!    write(*,*) "Prob Out", Prob, GenProb, E_Inter, E_Intra, E_Diff
+!    write(*,*) "Ratio:", exp(-trialBox%beta*E_Intra)*GenProb
+!    write(*,*) 
+    Prob = Prob*GenProb
+!    write(*,*) "Prob Out:", Prob, GenProb, E_Intra, E_Inter
 
     !Get chemical potential term
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), trialBox)

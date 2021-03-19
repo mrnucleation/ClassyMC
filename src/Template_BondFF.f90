@@ -10,13 +10,40 @@ module Template_IntraBond
     real(dp) :: r0
     contains
       procedure, pass :: Constructor 
+      procedure, pass :: ComputeBond
+      procedure, pass :: EFunc
       procedure, pass :: DetailedECalc 
-      procedure, pass :: DiffECalc
 !      procedure, pass :: GenerateDist
+!      procedure, pass :: GenerateReverseDist
       procedure, pass :: ProcessIO
   end type
 
   contains
+!=============================================================================+
+  function ComputeBond(self, curbox, atompos) result(r)
+!    use Common_MolInfo, only: nMolTypes
+    implicit none
+    class(Bond_FF), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    real(dp), intent(in) :: atompos(:, :)
+    real(dp) :: rx, ry, rz, r
+
+    rx = atompos(1, 1) - atompos(1, 2)
+    ry = atompos(2, 1) - atompos(2, 2)
+    rz = atompos(3, 1) - atompos(3, 2)
+    call curbox % Boundary(rx, ry, rz)
+    r = sqrt(rx*rx + ry*ry + rz*rz)
+  end function
+!=============================================================================+
+  function EFunc(self, dist) result(E_Bond)
+!    use Common_MolInfo, only: nMolTypes
+    implicit none
+    class(Bond_FF), intent(inout) :: self
+    real(dp), intent(in) :: dist
+    real(dp) :: E_Bond
+
+    E_Bond = 0E0_dp
+  end function
 !=============================================================================+
   subroutine Constructor(self)
 !    use Common_MolInfo, only: nMolTypes
@@ -26,27 +53,18 @@ module Template_IntraBond
 
   end subroutine
 !=============================================================================+
-  subroutine DetailedECalc(self, curbox, E_T, accept)
+  subroutine DetailedECalc(self, curbox, atompos, E_T, accept)
     implicit none
     class(Bond_FF), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
+    real(dp), intent(in) :: atompos(:, :)
     real(dp), intent(inout) :: E_T
     logical, intent(out) :: accept
+    real(dp) :: r
 
     accept = .true.
-  end subroutine
-!============================================================================
-  subroutine DiffECalc(self, curbox, disp, E_Diff, accept)
-    implicit none
-    class(Bond_FF), intent(inout) :: self
-    class(SimBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
-    real(dp), intent(inOut) :: E_Diff
-    logical, intent(out) :: accept
-
-    accept = .true.
-    curbox % dETable = 0E0_dp
-    E_Diff = 0E0_dp
+    r = self%ComputeBond(curbox, atompos)
+    E_T = self%EFunc(r)
 
   end subroutine
 !==========================================================================

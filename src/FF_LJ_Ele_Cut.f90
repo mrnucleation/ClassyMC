@@ -69,7 +69,7 @@ module FF_Pair_LJ_Q_Cut
     self%rLJCutSq = 5E0_dp**2
     self%rQCut = 5E0_dp
     self%rQCutSq = 5E0_dp**2
-    IF (AllocateStat /= 0) STOP "Allocation in the LJ/Cut Pair Style"
+    IF (AllocateStat /= 0) error STOP "Allocation in the LJ/Cut Pair Style"
 
   end subroutine
 !============================================================================

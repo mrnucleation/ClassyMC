@@ -73,7 +73,7 @@ module Units
        case default
          write(__StdErr__, *) "Error! Invalid Energy Unit Type!"
          write(__StdErr__, *) unitName
-         stop
+         error stop
        end select
         
      end function
@@ -99,7 +99,7 @@ module Units
        case default
          write(__StdErr__, *) "Error! Invalid Length Unit Type!"
          write(__StdErr__, *) unitName
-         stop
+         error stop
       end select
 
       

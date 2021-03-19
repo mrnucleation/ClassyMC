@@ -14,51 +14,135 @@ module SimpleSimBox
 
 
   !Sim Box Definition
+  !Commented variables are inherieted from the parent class. Listed here for
+  !convience.
   type, public, extends(SimBox) :: SimpleBox
 !    ----------------------------
 !   Inherited Variables from SimBox are shown as commented variables
-!    character(len=15) :: boxStr = "Empty"
-!    integer :: boxID
-!    integer :: nAtoms, nMaxAtoms
-!    integer :: nMolTotal
-!    integer :: nDimension = 3
+!      integer :: boxID => This box's array index within the BoxArray
+!      integer :: nAtoms => Number of current atoms within this box
+!      integer :: nMaxAtoms => Largest number of atoms allowed within this box. 
+!                              The box is full when nAtoms == nMaxAtoms
+!      integer :: nMolTotal => Number of total molecules currently in the box
+!      integer :: nDimension => Number of coordinates per atom. Default 
+!                               is 3 for a 3-dimensional box with (x,y,z) 
+!                               coordinates for each atom. 
+!
+!    character(len=15) :: boxStr = "Empty" => Box Type String used for output purposes.
 !
 !    !Thermodynamic Variables
-!    real(dp) :: ETotal, HTotal
-!    real(dp) :: pressure = 0E0_dp
-!    real(dp) :: beta, temperature, volume
-!    real(dp), allocatable :: chempot(:)
-!
-!    real(dp), allocatable :: ETable(:), dETable(:)
-!    real(dp), allocatable :: atoms(:,:)
-!
-!    logical :: forceoutofdate = .true.
-!    real(dp) :: forcedelta = 1E-6_dp
-!    real(dp), allocatable :: forces(:,:)
+!    real(dp) :: ETotal => Total Energy of the box, the sum of all intra and inter contributions
+!    real(dp) :: HTotal => Total Enthalpy of the Box
 
+!    real(dp) :: pressure => Pressure of the current simulation box. Constant for NPT 
+!                            and computed for NVT
+!    real(dp) :: beta => 1/kT value precomputed for convience
+!    real(dp) :: temperature => Simulation temperature
+!    real(dp) :: volume =>  Total volume of the box. 
+!    real(dp), allocatable :: chempot(:) => Chemical potential of each molecule type 
+!
+!    real(dp), allocatable :: ETable(:) => Table of inter-molecular energies per molecule
+!    real(dp), allocatable :: dETable(:) => Temporary Placeholder Array. Contains Change in 
+!                                           ETable as a result of a given move.
+!    real(dp), allocatable :: atoms(:,:) => Positional array of all the atoms including
+!                                           placeholders for molecules that can be added.
+!                                           First index is for the atom-subcoorindate (x,y,z..)
+!                                           Second index is for the atom index
+!                                           Atoms of a given molecule are sequential
+!                                           Information for how to access a given
+!                                           molecules positions are kept in the other arrays.
+!                                                  
+!                                           
+!
+!    logical :: forceoutofdate (default:.true.) => Used for when the system has changed
+!                                                  to signal that the forces must be recomputed
+!    real(dp) :: forcedelta => (Force delta used for finite difference method)
+!    real(dp), allocatable :: forces(:,:) => Similar to the atoms(:,:) array, but keeps
+!                                            the force gradient instead of the positional
+!                                            components. 
+
+    !forceERecompute => Forces the box to recompute the energy of the system.
+    !                   Setting this to true is expensive and should only be used for debug
+    !                   purposes when there's an error with the delta calculations of a system.
     logical :: forceERecompute = .false.
+
+    !rebuilds => Book keeping array which tracks the number of times a neighbor list has
+    !            been rebuilt
+    !dangerbuilds => Keeps track of the number of times an atom moved a much larger distance
+    !                than expected and as such an incorrect neighborlist might have been
+    !                tabulated. It's bit buggy at the moment so this number may not be
+    !                accurate.
+    !dr => Tracks how much an atom has moved since the last neighborlist update.
+    !      Used to determine if a neighborlist should be recomputed.
+    !largestdr => Used for holding the largest displacement found in the dr array. 
     integer, private :: rebuilds = 0
     integer, private :: dangerbuilds = 0
     real(dp), allocatable, private :: dr(:,:)
     real(dp), private :: largestdr = 0E0_dp
+
+    ! Temporary Molecule Position Storage Arrays. 
+    real(dp), allocatable, private :: newpos(:,:)
+    real(dp), allocatable, private :: temppos(:,:)
+
 !
 !    Molecule Based Indexing and Census Arrays 
-!    integer, allocatable :: NMolMin(:), NMolMax(:)
-!    integer, allocatable :: NMol(:), MolStartIndx(:), MolEndIndx(:)
+!    These arrays are used to quickly look up location and informatics
+!    in arrays such as the atoms(:,:), forces(:,:), dr(:,:), etc.
+!    in order to get the spacial information required to perform
+!    all manners of
+! 
+!     - Count and Bounds arrays for the number of
+!     - (Indexing is based on number of molecule types)
+!    NMolMin => Lower Bound for a molecule type. System is not allowed to go below this
+!    NMolMax => Upper Bound for a molecule type. System is not allowed to go above this
+!    NMol => Current molecule count current in the system of a given molecule type
+!    integer, allocatable :: NMol(:), NMolMin(:), NMolMax(:)
 !
-!    Atom Based Indexing Arrays 
+!     - Quick look up for finding the location of a molecule in the atoms(:,:) arrays.
+!     - (Indexing is based on global molecule index for this box)
+!    MolStartIndx => atom(:,:) array index of the first atom of this molecule  
+!    MolEndIndx => atom(:,:) array index of the last atom of this molecule 
+!    integer, allocatable :: MolStartIndx(:), MolEndIndx(:)
+!
+!     -Reverse Look up array for molecules
+!     -(First index is the molecule's type number and second is the molecule relative
+!       position index)
+!    MolGlobalIndx => Finds a molecule's global index from the Molecule Type (first index)
+!                     and relative molecule index (second index)
+!    integer, allocatable :: MolGlobalIndx(:, :)
+!
+!
+!    - Look up for information about this Atom's type and what molecule it is part of.
+!    - (Indexing is based on global atom index for this box)
+!    MolType => Contains the type of molecule this atom belongs to. 
+!    AtomType => Contains the type of an atom in the system.
+!    MolIndx => Global Mol Index for the molecule this atom belongs to.
+!    MolSubIndx => Relative Mol Index for the molecule this atom belongs to.
+!    AtomSubIndx => Relative Atom Index of this atom.  This gives information about it's
+!                   position with respect to it's parent molecule.  For example
+!                   the first defined atom in the molecule will have Relative Index of 1,
+!                   the second atom defined will have a relative index of 2, etc.
 !    integer, allocatable :: AtomType(:), MolType(:)
 !    integer, allocatable :: MolIndx(:), MolSubIndx(:), AtomSubIndx(:)
 !
-!      
-!    integer, allocatable :: MolGlobalIndx(:, :)
+!
+!     -Molecule Type look up
+!     -(Indexing is based on molecule type ID)
+!    TypeFirst => The atom global index of the first atom of the first molecule of this type
+!    TypeLast => The atom global index of the kast atom of the last molecule of this type
 !    integer, allocatable :: TypeFirst(:), TypeLast(:)
 !
+!     nLists => Number of neighborlists, depreciated.
 !    integer :: nLists
 !    ----------------------------
 !    
     integer :: volnum
     integer :: nTotal
+
+    ! Constraint Class Array, used to reject configurations that
+    ! deviate from the user specified criterias. 
+    ! See Constraint object types for more info.
+    ! This only contains constraints applied to this specific box.
     type(constrainArray), allocatable :: Constrain(:)
  
     class(ECalcArray), pointer :: EFunc
@@ -74,6 +158,10 @@ module SimpleSimBox
       procedure, pass :: Boundary => SimpleBox_Boundary
       procedure, pass :: ComputeCM => SimpleBox_ComputeCM
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
+      procedure, pass :: ComputeMolIntra => SimpleBox_ComputeMolIntra
+      procedure, pass :: ComputeIntraEnergy => SimpleBox_ComputeIntraEnergy
+      procedure, pass :: ComputeIntraEnergyDelta => SimpleBox_ComputeIntraEnergyDelta
+      procedure, pass :: ComputeEnergyDelta => SimpleBox_ComputeEnergyDelta
       procedure, pass :: ComputeForces => SimpleBox_ComputeForces
       procedure, pass :: EnergySafetyCheck => SimpleBox_EnergySafetyCheck
 
@@ -95,6 +183,7 @@ module SimpleSimBox
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetForceArray => SimpleBox_GetForceArray
       procedure, pass :: GetIndexData => Simplebox_GetIndexData
+      procedure, pass :: GetAtomData => SimpleBox_GetAtomData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMolEnergy => SimpleBox_GetMolEnergy
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
@@ -156,7 +245,7 @@ module SimpleSimBox
     if( .not. allocated(self%NMolMin) ) then
       write(0,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
       write(0,*) "prior to box initialization!"
-      stop 
+      error stop 
     endif
     AllocateStatus = 0
     self%boxStr = "NoBox"
@@ -465,6 +554,7 @@ module SimpleSimBox
     integer :: iAtom
     real(dp), allocatable :: tempETable(:)
     real(dp) :: ECul, ECalc, EDiff
+    real(dp) :: E_Intra, E_Inter
 
     if(present(tablecheck))then
       if(tablecheck) then
@@ -473,7 +563,12 @@ module SimpleSimBox
       tempETable = self%ETable
     endif
 
-    call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
+    call self % ComputeIntraEnergy(E_Intra, accept)
+    if(.not. accept) then
+      return
+    endif
+    call self % EFunc % Method % DetailedECalc( self, E_Inter, accept )
+    self%ETotal = E_Inter + E_Intra
 
     if(present(tablecheck))then
       do iAtom = 1, self%nMaxAtoms
@@ -498,6 +593,261 @@ module SimpleSimBox
       endif
       write(nout,*) "Energy Table Check complete!"
     endif
+  end subroutine
+
+!==========================================================================================
+! This subroutine recomputes the intra contribution of entire system 
+! energy from scratch. 
+  subroutine SimpleBox_ComputeIntraEnergyDelta(self, disp, E_Intra)
+    use Common_MolInfo, only:MolData
+    use ParallelVar, only: nout
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    class(Perturbation), intent(in) :: disp(:)
+    real(dp), intent(out) :: E_Intra
+    logical :: accept
+    integer :: iType, iMol, iAtom, iBond, iAngle, iTors
+    integer :: iDisp
+    integer :: molStart, molEnd, molIndx, molType
+    integer :: intraType, nAtoms
+    integer :: atomsubindx
+    integer :: mem1, mem2, mem3, mem4
+    logical, allocatable :: changed
+    real(dp) :: E_Temp
+
+    select type(disp)
+      class is(Displacement)
+         molType = disp(1)%molType 
+         molIndx = disp(1)%molIndx 
+         call self % GetMolData(molIndx, nAtoms=nAtoms, molStart=molStart, molEnd=molEnd)
+         self%newpos(1:3, 1:nAtoms) = self%atoms(1:3, molStart:molEnd)
+         do iDisp = 1, size(disp)
+             atomsubindx = self%AtomSubIndx(disp(iDisp)%atmIndx)
+             self%newpos(1,atomsubindx) = disp(iDisp)%x_new
+             self%newpos(2,atomsubindx) = disp(iDisp)%y_new
+             self%newpos(3,atomsubindx) = disp(iDisp)%z_new
+         enddo
+         call self%ComputeMolIntra(molType, molIndx, E_Temp, accept, self%newpos)
+         if(.not. accept) then
+           return
+         endif
+         E_Intra = E_Temp
+         call self%ComputeMolIntra(molType, molIndx, E_Temp, accept)
+         E_Intra = E_Intra - E_Temp
+
+      class is(Addition)
+         molType = disp(1)%molType 
+         molIndx = disp(1)%molIndx 
+         call self % GetMolData(molIndx, nAtoms=nAtoms, molStart=molStart, molEnd=molEnd)
+         self%newpos(1:3, 1:nAtoms) = self%atoms(1:3, molStart:molEnd)
+         do iDisp = 1, size(disp)
+             atomsubindx = self%AtomSubIndx(disp(iDisp)%atmIndx)
+             self%newpos(1,atomsubindx) = disp(iDisp)%x_new
+             self%newpos(2,atomsubindx) = disp(iDisp)%y_new
+             self%newpos(3,atomsubindx) = disp(iDisp)%z_new
+         enddo
+         call self%ComputeMolIntra(molType, molIndx, E_Temp, accept, self%newpos)
+         E_Intra = E_Temp
+
+
+      class is(Deletion)
+         molType = disp(1)%molType 
+         molIndx = disp(1)%molIndx 
+         call self%ComputeMolIntra(molType, molIndx, E_Intra, accept)
+         E_Intra = -E_Intra
+
+      class is(OrthoVolChange)
+         !Vol Change does not modify internal degrees of freedom
+         !As the molecules are all translated by their center of mass.
+         return
+
+      class is(AtomExchange)
+         !Atom Exchange assumes mono-atomic system
+         return
+    end select
+
+  end subroutine
+!==========================================================================================
+! This subroutine computes the intra contribution of a single molecule
+  subroutine SimpleBox_ComputeMolIntra(self, molType, molIndx, E_Intra, accept, newpos)
+    use Common_MolInfo, only: nMolTypes, MolData, BondData, AngleData, &
+                              TorsionData, MiscData, mostAtoms
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    integer, intent(in) :: molType, molIndx
+    real(dp), intent(out) :: E_Intra
+    logical, intent(out) :: accept
+    real(dp), intent(in), optional, target :: newpos(:,:)
+    real(dp), pointer :: molpos(:,:)
+    integer :: iAtom, iBond, iAngle, iTors
+    integer :: molStart, molEnd
+    integer :: intraType, nAtoms
+    integer :: mem1, mem2, mem3, mem4
+    real(dp) :: E_Bond, E_Angle, E_Torsion
+
+
+    E_Intra = 0E0_dp
+    if(MolData(molType)%ridgid) then
+      return
+    endif
+    if( .not. allocated(self%temppos) ) then
+      allocate( self%newpos(1:3, 1:mostAtoms)  )
+      allocate( self%temppos(1:3, 1:mostAtoms) )
+    endif
+    nAtoms = MolData(molType)%nAtoms
+    call self % GetMolData(molIndx, molStart=molStart, molEnd=molEnd)
+    if(present(newpos)) then
+        molpos => newpos(1:3, 1:nAtoms)
+    else
+        molpos => self%atoms(1:3, molStart:molEnd)
+    endif
+
+    do iBond = 1, MolData(molType)%nBonds
+       intraType = MolData(molType)%bond(iBond)%bondType
+
+       mem1 = MolData(molType)%bond(iBond)%mem1
+       mem2 = MolData(molType)%bond(iBond)%mem2
+       self % temppos(1:3, 1) = molpos(1:3, mem1)
+       self % temppos(1:3, 2) = molpos(1:3, mem2)
+
+       call BondData(intraType) % bondFF % DetailedECalc(self, self%temppos(1:3, 1:2), &
+                                                         E_Bond, accept)
+       if(.not. accept) then
+         return
+       endif
+       E_Intra = E_Intra + E_Bond
+     enddo
+
+     do iAngle = 1, MolData(molType)%nAngles
+       intraType = MolData(molType)%angle(iAngle)%angleType
+
+       mem1 = MolData(molType)%angle(iAngle)%mem1
+       mem2 = MolData(molType)%angle(iAngle)%mem2
+       mem3 = MolData(molType)%angle(iAngle)%mem3
+       self%temppos(1:3, 1) = molpos(1:3, mem1)
+       self%temppos(1:3, 2) = molpos(1:3, mem2)
+       self%temppos(1:3, 3) = molpos(1:3, mem3)
+
+       call AngleData(intraType) % angleFF % DetailedECalc(self, self%temppos(1:3,1:3), &
+                                                         E_Angle, accept)
+       if(.not. accept) then
+         return
+       endif
+       E_Intra = E_Intra + E_Angle
+     enddo
+
+     do iTors = 1, MolData(molType)%nTors
+       intraType = MolData(molType)%torsion(iTors)%torsType
+
+       mem1 = MolData(molType)%torsion(iTors)%mem1
+       mem2 = MolData(molType)%torsion(iTors)%mem2
+       mem3 = MolData(molType)%torsion(iTors)%mem3
+       mem4 = MolData(molType)%torsion(iTors)%mem4
+       self%temppos(1:3, 1) = molpos(1:3, mem1)
+       self%temppos(1:3, 2) = molpos(1:3, mem2)
+       self%temppos(1:3, 3) = molpos(1:3, mem3)
+       self%temppos(1:3, 4) = molpos(1:3, mem4)
+
+       call TorsionData(intraType) % torsionFF % DetailedECalc(self, &
+                                                         self%temppos(1:3,1:4), &
+                                                         E_Torsion, &
+                                                         accept)
+       if(.not. accept) then
+         return
+       endif
+       E_Intra = E_Intra + E_Torsion
+    enddo
+
+  end subroutine
+
+!==========================================================================================
+! This subroutine recomputes the intra contribution of entire system 
+! energy from scratch. 
+  subroutine SimpleBox_ComputeIntraEnergy(self, E_Intra, accept)
+    use Common_MolInfo, only: nMolTypes, MolData, BondData, AngleData, &
+                              TorsionData, MiscData
+    use ParallelVar, only: nout
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    real(dp), intent(out) :: E_Intra
+    logical, intent(out) :: accept
+    integer :: iType, iMol, iAtom, iBond, iAngle, iTors
+    integer :: molStart, molEnd, molIndx, molType
+    real(dp) :: E_Mol
+
+    E_Intra = 0E0_dp
+    do iType = 1, nMolTypes
+      if(MolData(iType)%ridgid) then
+        cycle
+      endif
+      do iMol = 1, self%NMol(iType)
+         molIndx = self % MolGlobalIndx(iType, iMol)
+         call self%ComputeMolIntra(iType, molIndx, E_Mol, accept)
+         if(.not. accept) then
+           return
+         endif
+         E_Intra = E_Intra + E_Mol
+      enddo
+    enddo
+    write(nout,*) "Intra Energy:", E_Intra
+
+  end subroutine
+!==========================================================================================
+! This subroutine computes the energy delta of a system primarily used to compute
+! The change in the system that is a result of the various Monte Carlo moves.
+!
+!  Input
+!    disp => Displacement vector which describes the result of the MC Move
+!    templist => Temporary Neighborlist
+!    tempNNei => Number of
+!  Output
+!    E_Inter => The energy of interaction between molecules
+!    E_Itra => The energy of interaction within a molecule
+!    accept => Rejection flag used for early rejection.
+!    computeintra (Optional) => If true the intramolecular components
+!                               will be recomputed.  For moves
+!                               that do not change internal degrees of freedom
+!                               set this to false or omit it. 
+!     
+  subroutine SimpleBox_ComputeEnergyDelta(self, disp, templist, tempNNei, E_Inter, E_Intra, E_Total, accept, computeintra)
+
+    use Common_MolInfo, only: mostAtoms
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    class(Perturbation), intent(in) :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    logical, intent(in), optional :: computeintra
+    real(dp), intent(inout) :: E_Inter, E_Intra, E_Total
+    logical, intent(out) :: accept
+    integer :: iAtom
+
+    accept = .true.
+    if( .not. allocated(self%temppos) ) then
+      allocate(self%newpos(1:3, 1:mostAtoms))
+      allocate(self%temppos(1:3, 1:mostAtoms))
+    endif
+    E_Intra = 0E0_dp
+
+    if(present(computeintra)) then
+      if(computeintra) then
+        call self%ComputeIntraEnergyDelta(disp, E_Intra)
+      endif
+      if(.not. accept) then
+        return
+      endif
+    endif
+
+    call self % EFunc % Method % DiffECalc(self, &
+                                           disp, &
+                                           tempList, &
+                                           tempNNei, &
+                                           E_Inter, &
+                                           accept)
+
+
+
+    E_Total = E_Inter + E_Intra
+
   end subroutine
 !==========================================================================================
 ! This subroutine recomputes the forces for the system.
@@ -803,11 +1153,14 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_GetMolData(self, globalIndx, molStart, molEnd, molType, atomSubIndx)
+  subroutine SimpleBox_GetMolData(self, globalIndx, nAtoms, molStart, molEnd, molType, &
+                                  atomSubIndx)
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer, intent(in)  :: globalIndx
     integer, intent(inout), optional :: molStart, molEnd, molType, atomSubIndx
+    integer, intent(inout), optional :: nAtoms
+
 
 
     if((size(self%molStartIndx) < globalIndx) .or. (globalIndx < 1)) then
@@ -818,6 +1171,10 @@ module SimpleSimBox
 
     if( present(molStart) ) then
       molStart = self % MolStartIndx(globalIndx)
+    endif
+
+    if( present(nAtoms) ) then
+      nAtoms = self % MolEndIndx(globalIndx) - self % MolStartIndx(globalIndx) + 1
     endif
 
     if( present(molEnd) ) then
@@ -833,6 +1190,38 @@ module SimpleSimBox
     endif
 
   end subroutine
+!====================================================================================
+! Returns various indexing information 
+  subroutine SimpleBox_GetAtomData(self, atomglobalIndx, molIndx, atomSubIndx, atomtype)
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(in)  :: atomglobalIndx
+    integer, intent(inout), optional :: molIndx, atomSubIndx, atomtype
+
+!    integer, allocatable :: AtomType(:), MolType(:)
+!    integer, allocatable :: MolIndx(:), MolSubIndx(:), AtomSubIndx(:)
+
+    if((self%nMaxAtoms < atomglobalIndx) .or. (atomglobalIndx < 1)) then
+      write(__StdErr__, *) "Error in Sim Box class: GetAtomData has been given an invalid index"
+      write(__StdErr__, *) "Given Index:", atomglobalIndx 
+      write(__StdErr__, *) "Array Size:", self%nMaxAtoms
+      error stop
+    endif
+
+    if( present(molIndx) ) then
+      molIndx = self % MolIndx(atomglobalindx)
+    endif
+
+    if( present(atomSubIndx) ) then
+      atomSubIndx = self%AtomSubIndx(atomglobalindx)
+    endif
+
+    if( present(atomtype) ) then
+      atomtype = self%AtomType(atomglobalindx)
+    endif
+
+  end subroutine
+
 !==========================================================================================
 function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) result(molstartindx)
     !------------------------------------------------------------------------------
@@ -1021,8 +1410,6 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     if(present(dETable)) then
       dETable => self%dETable
     endif
-
-
 
   end subroutine
 !==========================================================================================
@@ -1465,15 +1852,16 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
-
-    if( size(self%Constrain) > 0 ) then
-      do iConstrain = 1, size(self%Constrain)
-        call self%Constrain(iConstrain) % method % Prologue
-        call self%Constrain(iConstrain) % method % CheckInitialConstraint(self, accept)
-      enddo
-      if(.not. accept) then
-        write(nout,*) "Initial Constraints are not statisfied!"
-        error stop
+    if( allocated(self%Constrain) ) then
+      if( size(self%Constrain) > 0 ) then
+        do iConstrain = 1, size(self%Constrain)
+          call self%Constrain(iConstrain) % method % Prologue
+          call self%Constrain(iConstrain) % method % CheckInitialConstraint(self, accept)
+        enddo
+        if(.not. accept) then
+          write(nout,*) "Initial Constraints are not statisfied!"
+          error stop
+        endif
       endif
     endif
 

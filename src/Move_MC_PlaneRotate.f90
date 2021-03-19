@@ -85,7 +85,7 @@ use ClassyConstants, only: pi
     integer :: CalcIndex, molStart, molEnd, molType
     integer :: nPlane
     real(dp) :: dx, dy, dz
-    real(dp) :: E_Diff, biasE
+    real(dp) :: E_Diff, E_Inter, E_Intra, biasE
     real(dp) :: s_term, c_term, cnt, angle
     real(dp) :: x_scale, y_scale, z_scale
     real(dp) :: xcm, ycm, zcm
@@ -225,7 +225,15 @@ use ClassyConstants, only: pi
 
     !Energy Calculation
 !    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
-    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:nAtoms), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:nAtoms), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%disp(1:nAtoms),&
+                                     self%templist,&
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.false.)
     if(.not. accept) then
       return
     endif

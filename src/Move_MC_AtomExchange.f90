@@ -52,7 +52,7 @@ use VarPrecision
     integer :: nAtom, nAtomNew, reduIndx, newtype, oldtype
     integer :: nTarget
     real(dp) :: OldProb, NewProb, Prob
-    real(dp) :: E_Diff
+    real(dp) :: E_Diff, E_Inter, E_Intra
     real(dp) :: extraTerms
 
 
@@ -99,7 +99,15 @@ use VarPrecision
       return
     endif
 
-    call trialbox % EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+!    call trialbox % EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox%ComputeEnergyDelta(self%disp(1:1),&
+                                     self%templist, &
+                                     self%tempNNei, &
+                                     E_Inter, &
+                                     E_Intra, &
+                                     E_Diff, &
+                                     accept, &
+                                     computeintra=.false.)
     if(.not. accept) then
       return
     endif

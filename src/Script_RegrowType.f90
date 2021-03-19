@@ -8,7 +8,7 @@ contains
   subroutine Script_RegrowType(line, molNum, lineStat)
     use Common_MolInfo, only: MolData
     use ForcefieldData, only: nForceFields
-    use MolCon_LinearCBMC, only: LinearCBMC
+!    use MolCon_LinearCBMC, only: LinearCBMC
     use MolCon_SimpleRegrowth, only: SimpleRegrowth
     use MolCon_RidgidRegrowth, only: RidgidRegrowth
     use ParallelVar, only: nout
@@ -31,15 +31,19 @@ contains
     select case(trim(adjustl(Regrow_Type)))
       case("ridgid")
         allocate(RidgidRegrowth :: MolData(molNum)%molConstruct )
+        MolData(molNum)%ridgid = .true.
         write(nout,*) "Molecule uses ridgid regrowth"
 
       case("simple")
         allocate(SimpleRegrowth :: MolData(molNum)%molConstruct )
+        MolData(molNum)%ridgid = .false.
         write(nout,*) "Molecule uses simple regrowth"
 
-      case("linearcbmc")
-        allocate(LinearCBMC :: MolData(molNum)%molConstruct )
-        write(nout,*) "Molecule uses Linear CBMC"
+!      case("linearcbmc")
+!        allocate(LinearCBMC :: MolData(molNum)%molConstruct )
+!        MolData(molNum)%ridgid = .false.
+!        write(nout,*) "Molecule uses Linear CBMC"
+
       case default
         lineStat = -1
         return

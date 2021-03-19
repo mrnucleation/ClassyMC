@@ -10,6 +10,8 @@ contains
     use ParallelVar, only: nout
     use Common_MolInfo, only: TorsionData
     use IntraTorsion_Ridgid, only: RidgidTorsion 
+    use IntraTorsion_TRAPPE, only: TRAPPETorsion
+    use IntraTorsion_Ridgid, only: RidgidTorsion 
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: TorsionNum

@@ -82,7 +82,7 @@ module MolCon_RidgidRegrowth
 
   end subroutine
 !==========================================================================================
-  subroutine RidgidRegrowth_GenerateConfig(self, trialBox, disp, probconstruct, insPoint)
+  subroutine RidgidRegrowth_GenerateConfig(self, trialBox, disp, probconstruct, insPoint, insProb)
     use ClassyConstants, only: two_pi
     use Common_MolInfo, only: MolData
     use RandomGen, only: grnd
@@ -91,9 +91,10 @@ module MolCon_RidgidRegrowth
     class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(in), optional :: insProb(:)
+    real(dp), intent(out) :: probconstruct 
 
     integer :: iDisp, iAtom
-    real(dp), intent(out) :: probconstruct
     real(dp) :: c_term, s_term, rotang
     real(dp) :: x_shift, y_shift, z_shift
     real(dp) :: x1, y1, z1
