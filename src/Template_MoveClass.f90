@@ -43,7 +43,7 @@ module MoveClassDef
     logical, intent(out) :: accept
 
     write(0,*) "FullMove for this move type has not been defined!"
-    stop
+    error stop
     accept = .true.
   end subroutine
 !=========================================================================

@@ -47,9 +47,9 @@ use VarPrecision
     enddo
 
     if(self%ECalc < 1) then
-      write(*,*) "ERROR! The ThermoIntegration Analysis function must be used"
-      write(*,*) "with the corresponding energy function!"
-      stop
+      write(0,*) "ERROR! The ThermoIntegration Analysis function must be used"
+      write(0,*) "with the corresponding energy function!"
+      error stop
     endif
 
   end subroutine

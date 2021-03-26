@@ -11,7 +11,6 @@ contains
     use Common_MolInfo, only: TorsionData
     use IntraTorsion_Ridgid, only: RidgidTorsion 
     use IntraTorsion_TRAPPE, only: TRAPPETorsion
-    use IntraTorsion_Ridgid, only: RidgidTorsion 
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: TorsionNum
@@ -32,10 +31,15 @@ contains
       case("ridgid")
         allocate(RidgidTorsion :: TorsionData(TorsionNum)%torsionFF)
 
+      case("trappe")
+        allocate(TRAPPETorsion :: TorsionData(TorsionNum)%torsionFF)
+
       case default
+        write(0,*) "Unknown Torsional Angle Type Given in the Forcefield File!"
         write(0,*) Torsion_Type
         lineStat = -1
-        return
+        error stop
+
     end select
     call TorsionData(TorsionNum)%torsionFF%ProcessIO(line)
 

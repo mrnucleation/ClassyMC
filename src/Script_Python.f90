@@ -43,14 +43,14 @@
         nLines = 0
         call LoadFile(lineStore, nLines, lineNumber, fileName)
         if(nLines == 0) then
-          write(*,*) "ERROR! Input file is empty or could not be read!"
-          stop
+          write(0,*) "ERROR! Input file is empty or could not be read!"
+          error stop
         else
           write(nout, *) "File successfully loaded!"
         endif
       elseif(nArgs == 0) then
-        write(*,*) "ERROR! No Input File has been given!"
-        stop
+        write(0,*) "ERROR! No Input File has been given!"
+        error stop
       endif
 
 !      This block counts the number of lines in the input file to determine how large the lineStorage array needs to be.
@@ -103,17 +103,17 @@
 
             
           case default
-            write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
-            write(*,*) trim(adjustl(lineStore(iLine)))
-            stop 
+            write(0,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
+            write(0,*) trim(adjustl(lineStore(iLine)))
+            error stop 
         end select
 
         ! Ensure that the called processes exited properly.
         if(lineStat .eq. -1) then
-          write(*,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
-          write(*, "(A)") "could not be understood. Please check command for accuracy and try again."
-          write(*,*) trim(adjustl(lineStore(iLine)))
-          stop 
+          write(0,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
+          write(0, "(A)") "could not be understood. Please check command for accuracy and try again."
+          write(0,*) trim(adjustl(lineStore(iLine)))
+          error stop 
         endif
         
       enddo
@@ -250,8 +250,8 @@
              enddo   
 
            else
-             write(*,*) "ERROR! The create analysis command has already been used and can not be called twice"
-             stop
+             write(0,*) "ERROR! The create analysis command has already been used and can not be called twice"
+             error stop
            endif
 
          !-------------------------------------------------------------------------------------
@@ -276,14 +276,14 @@
                BoxArray(i)%box%boxID = i 
              enddo             
            else
-             write(*,*) "ERROR! The create box command has already been used and can not be called twice"
-             stop
+             write(0,*) "ERROR! The create box command has already been used and can not be called twice"
+             error stop
            endif
 
          !-------------------------------------------------------------------------------------
         case("constraint")
            if( .not. allocated(BoxArray) ) then
-             stop "Box array not allocated!"
+             error stop "Box array not allocated!"
            endif
            call GetXCommand(lineStore(iLine), command2, 3, lineStat)
            read(command2,*) intValue
@@ -301,7 +301,7 @@
 !             enddo   
 !           else
 !             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
-!             stop
+!             error stop
 !           endif
 !
          !-------------------------------------------------------------------------------------
@@ -316,7 +316,7 @@
              enddo   
            else
              write(*,*) "ERROR! The create moves command has already been used and can not be called twice"
-             stop
+             error stop
            endif
 
          !-------------------------------------------------------------------------------------
@@ -328,8 +328,8 @@
                call Script_TrajType(linestore(curLine), i, lineStat)
              enddo   
            else
-             write(*,*) "ERROR! The create trajectory command has already been used and can not be called twice"
-             stop
+             write(0,*) "ERROR! The create trajectory command has already been used and can not be called twice"
+             error stop
            endif
  
         case default
@@ -338,8 +338,8 @@
       end select
 
       IF (AllocateStat /= 0) then
-        write(*,*) AllocateStat
-        STOP "Allocation Error in Create Command"
+        write(0,*) AllocateStat
+        error STOP "Allocation Error in Create Command"
       endif
      
       end subroutine   
@@ -385,7 +385,7 @@
            lineStat = -1
       end select
 
-      IF (AllocateStat /= 0) STOP "Allocation Error in the Modify Command"
+      IF (AllocateStat /= 0) error STOP "Allocation Error in the Modify Command"
      
       end subroutine
 !========================================================            
@@ -397,9 +397,9 @@
       character(len=maxLineLen), intent(in) :: lineStore(:)
 
       if(lineStat .eq. -1) then
-        write(*,"(A,2x,I10)") "ERROR! Unknown Variable Name on Line", lineNumber(iLine)
-        write(*,*) lineStore(iLine)
-        stop 
+        write(0,"(A,2x,I10)") "ERROR! Unknown Variable Name on Line", lineNumber(iLine)
+        write(0,*) lineStore(iLine)
+        error stop 
       endif
 
       end subroutine

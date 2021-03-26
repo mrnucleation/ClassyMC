@@ -37,7 +37,7 @@ module MolCon_RidgidRegrowth
     nAtoms = MolData(self%molType)%nAtoms
     if(nAtoms < 1) then
       write(0,*) "ERROR! Regrowth Type defined before the molecular topology is defined!"
-      stop
+      error stop
     endif
     self%nAtoms = nAtoms
     allocate( self%tempcoords(1:3, 1:nAtoms) )
@@ -66,7 +66,7 @@ module MolCon_RidgidRegrowth
       write(0,*) "INPUT ERROR! The an invalid configuration file has been given"
       write(0,*) "Expected number of lines:", nAtoms+2
       write(0,*) "Received number of lines:", nLines
-      stop
+      error stop
     endif
 
     read(_IOINDEX, *)

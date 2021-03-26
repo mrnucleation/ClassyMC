@@ -76,18 +76,18 @@ module Input_LoadCoords
             nAtoms = nAtoms + 1
           else
             write(nout,*) "ERROR! Boxed must be defined before loading atomic coorindates!"
-            stop
+            error stop
           endif
       end select
 
-      IF (AllocateStat /= 0) STOP "*** Unable to read coordinate file ***"
+      IF (AllocateStat /= 0) error STOP "*** Unable to read coordinate file ***"
 
       ! Ensure that the called processes exited properly.
       if(lineStat .eq. -1) then
-        write(*,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
-        write(*, "(A)") "could not be understood. Please check command for accuracy and try again."
-        write(*,*) trim(adjustl(lineStore(iLine)))
-        stop
+        write(0,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
+        write(0, "(A)") "could not be understood. Please check command for accuracy and try again."
+        write(0,*) trim(adjustl(lineStore(iLine)))
+        error stop
       endif
 
     enddo

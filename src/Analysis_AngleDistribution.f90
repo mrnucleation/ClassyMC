@@ -135,7 +135,7 @@ use VarPrecision
       write(__StdErr__, "(A)") tempStr
       write(__StdErr__, "(A)") trim(adjustl(line))
       write(__StdErr__, "(A)") "Format: AngleDistribution (UpdateFreq) (Write Freq) (MolType) (Angle Number) (dtheta) (FileName)"
-      stop
+      error stop
     endif
     !Format =  BoxNum (UpdateFreq) (Write Freq) (MolType) (Angle Number) (dtheta) (FileName)
     call GetXCommand(line, command, 2, lineStat)

@@ -398,7 +398,7 @@ module UmbrellaWHAMRule
     open(unit=36, file=trim(adjustl(self%filename)) )
 
     allocate(varValue(1:self%nBiasVar), STAT = AllocateStatus )
-    IF (AllocateStatus /= 0) STOP "*** UmbrellaWHAM: Allocation Error ***"
+    IF (AllocateStatus /= 0) error STOP "*** UmbrellaWHAM: Allocation Error ***"
 
     self%UBias = 0E0_dp
     biasIndx = 0

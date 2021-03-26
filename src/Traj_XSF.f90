@@ -105,7 +105,7 @@ module Traj_XSF
 
 
       class default
-        stop "Traj_XSF does not know how to handle this box type"
+        error stop "Traj_XSF does not know how to handle this box type"
 
     end select
 

@@ -114,6 +114,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/MolSearch.f90\
         		$(SRC)/Analysis_AngleDistribution.f90\
         		$(SRC)/Analysis_BondDistribution.f90\
+        		$(SRC)/Analysis_TorsionDistribution.f90\
         		$(SRC)/Analysis_BlockAverage.f90\
         		$(SRC)/Analysis_DensityOfStates.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
@@ -147,6 +148,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Intra_TorsionTrappe.f90\
         		$(SRC)/Intra_TorsionHarmonic.f90\
         		$(SRC)/Intra_TorsionRidgid.f90\
+        		$(SRC)/MolCon_LinearCBMC.f90\
         		$(SRC)/MolCon_RidgidRegrowth.f90\
         		$(SRC)/MolCon_SimpleRegrowth.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
@@ -186,6 +188,7 @@ SRC_TEMPLATE := $(SRC)/Template_Master.f90\
 				$(SRC)/Template_BondFF.f90\
 				$(SRC)/Template_AngleFF.f90\
 				$(SRC)/Template_TorsionFF.f90\
+				$(SRC)/Template_MiscIntra.f90\
 				$(SRC)/Template_Constraint.f90\
 				$(SRC)/Template_Forcefield.f90\
 	            $(SRC)/Template_SimBox.f90\

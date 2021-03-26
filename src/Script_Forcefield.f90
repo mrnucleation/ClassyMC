@@ -57,8 +57,8 @@ module Input_Forcefield
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
           read(val, *) intValue
           if( .not. allocated(EnergyCalculator) ) then
-            write(*,*) "ERROR! The forcefield type must be defined before parameters can be modifed."
-            stop
+            write(0,*) "ERROR! The forcefield type must be defined before parameters can be modifed."
+            error stop
           endif
           nItems = lineBuffer - 1
           do i = 1, nItems
@@ -76,14 +76,14 @@ module Input_Forcefield
               curLine = iLine + i
               call Script_FieldType(linestore(curLine), i, lineStat)
               if(lineStat < 0) then
-                write(*,*) "ERROR! Unknown forcefield type."
-                stop
+                write(0,*) "ERROR! Unknown forcefield type."
+                error stop
               endif
               call EnergyCalculator(i)%Method%Constructor
             enddo   
           else
-            write(*,*) "ERROR! The forcefieldtype has already been used and can not be called twice"
-            stop
+            write(0,*) "ERROR! The forcefieldtype has already been used and can not be called twice"
+            error stop
           endif
 
 !        -----------------------------------------------------------------------------
@@ -98,8 +98,8 @@ module Input_Forcefield
               read(lineStore(curLine), *) AtomData(i)%symb, AtomData(i)%mass
             enddo   
           else
-            write(*,*) "ERROR! The atomdef has already been used and can not be called twice"
-            stop
+            write(0,*) "ERROR! The atomdef has already been used and can not be called twice"
+            error stop
           endif
 
 !        -----------------------------------------------------------------------------
@@ -116,8 +116,8 @@ module Input_Forcefield
 !              write(*,*) lineStat
             enddo   
           else
-            write(*,*) "ERROR! The BondDef has already been used and can not be called twice"
-            stop
+            write(0,*) "ERROR! The BondDef has already been used and can not be called twice"
+            error stop
           endif
 !        -----------------------------------------------------------------------------
         case("angledef")
@@ -133,8 +133,8 @@ module Input_Forcefield
 !              write(*,*) lineStat
             enddo   
           else
-            write(*,*) "ERROR! The AngleDef has already been used and can not be called twice"
-            stop
+            write(0,*) "ERROR! The AngleDef has already been used and can not be called twice"
+            error stop
           endif
 
 !        -----------------------------------------------------------------------------
@@ -149,8 +149,8 @@ module Input_Forcefield
               call Script_TorsionType(lineStore(curLine), i, lineStat)
             enddo   
           else
-            write(*,*) "ERROR! The TorsionDef has already been used and can not be called twice"
-            stop
+            write(0,*) "ERROR! The TorsionDef has already been used and can not be called twice"
+            error stop
           endif
 
 
@@ -160,9 +160,9 @@ module Input_Forcefield
           call GetXCommand(lineStore(iLine), val, 2, lineStat)
           read(val, *) intValue
           if(intValue > nMolTypes) then
-            write(*,*) "ERROR! Molecule index out of bounds in the forcefield file!"
-            write(*,*) "Index Called: ", intValue
-            stop
+            write(0,*) "ERROR! Molecule index out of bounds in the forcefield file!"
+            write(0,*) "Index Called: ", intValue
+            error stop
           endif
           call Script_ReadMolDef( lineStore(iLine+1:iLine+lineBuffer-1), intValue, lineStat )
 
@@ -183,19 +183,19 @@ module Input_Forcefield
 
 !        -----------------------------------------------------------------------------
         case default
-          write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
-          write(*,*) trim(adjustl(lineStore(iLine)))
-          stop
+          write(0,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
+          write(0,*) trim(adjustl(lineStore(iLine)))
+          error stop
       end select
 
-      IF (AllocateStat /= 0) STOP "*** Unable to read forcefield file ***"
+      IF (AllocateStat /= 0) error STOP "*** Unable to read forcefield file ***"
 
       ! Ensure that the called processes exited properly.
       if(lineStat .eq. -1) then
-        write(*,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
-        write(*, "(A)") " could not be understood. Please check command for accuracy and try again."
-        write(*,*) trim(adjustl(lineStore(iLine)))
-        stop
+        write(0,"(A,1x,I10)") "ERROR! Parameters for command on line:", lineNumber(iLine)
+        write(0, "(A)") " could not be understood. Please check command for accuracy and try again."
+        write(0,*) trim(adjustl(lineStore(iLine)))
+        error stop
       endif
 
     enddo
@@ -254,8 +254,8 @@ module Input_Forcefield
                MolData(molType)%atomType(i) = intValue(1)
              enddo   
            else
-             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
-             stop
+             write(0,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             error stop
            endif
 
 !        -----------------------------------------------------------------------------
@@ -273,8 +273,8 @@ module Input_Forcefield
                MolData(molType)%bond(i)%mem2 = intValue(3)
              enddo   
            else
-             write(*,*) "ERROR! The bonds for this molecule has already been defined."
-             stop
+             write(0,*) "ERROR! The bonds for this molecule has already been defined."
+             error stop
            endif 
 
 !        -----------------------------------------------------------------------------
@@ -293,8 +293,8 @@ module Input_Forcefield
                MolData(molType)%angle(i)%mem3 = intValue(4)
              enddo   
            else
-             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
-             stop
+             write(0,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             error stop
            endif
 !        -----------------------------------------------------------------------------
         case("torsion")
@@ -313,15 +313,15 @@ module Input_Forcefield
                MolData(molType)%torsion(i)%mem4 = intValue(5)
              enddo   
            else
-             write(*,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
-             stop
+             write(0,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             error stop
            endif
 
 !        -----------------------------------------------------------------------------
         case default
-          write(*,"(A,2x,I10)") "ERROR! Unknown Command on Line"
-          write(*,*) trim(adjustl(cmdBlock(iLine)))
-          stop
+          write(0,"(A,2x,I10)") "ERROR! Unknown Command on Line"
+          write(0,*) trim(adjustl(cmdBlock(iLine)))
+          error stop
       end select
 
     enddo

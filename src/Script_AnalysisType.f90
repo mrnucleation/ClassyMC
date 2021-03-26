@@ -11,6 +11,7 @@ contains
 
     use Analysis_AngleDistribution, only: AngleDistribution
     use Analysis_BondDistribution, only: BondDistribution
+    use Analysis_TorsionDistribution, only: TorsionDistribution
     use Anaylsis_BlockAverage, only: BlockAverage
     use Anaylsis_ClusterSize, only: ClusterSize
     use Anaylsis_DensityOfStates, only: DensityOfStates
@@ -59,6 +60,9 @@ contains
 
       case("thermointegration")
         allocate(ThermoIntegration::AnalysisArray(AnaNum) % func)
+
+      case("torsiondistribution")
+        allocate(TorsionDistribution::AnalysisArray(AnaNum) % func)
 
       case("rdf")
         allocate(rdf::AnalysisArray(AnaNum) % func)

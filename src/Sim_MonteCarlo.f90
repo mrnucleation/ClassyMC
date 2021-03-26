@@ -39,6 +39,13 @@ contains
     iCycle = 0
     iMove = 0
 
+    if(nCycles < 1) then
+      write(nout,*) "Run Command was issued, but nothing is done"
+      write(nout,*) "Number of Cycles is less than 1!"
+      error stop
+    endif
+
+    write(nout,*) "Starting Pre-Simulation Checks...."
     call Prologue
     call SafetyCheck
     nBoxes = size(BoxArray)
@@ -53,6 +60,7 @@ contains
     write(nout, *) "============================================"
 
     flush(nout)
+
 
     call ScreenOut(iCycle, iMove)
     do iCycle = 1, nCycles
@@ -109,6 +117,9 @@ contains
     write(nout,*) "======================================="
     write(nout,*) "     Simulation End"
     write(nout,*) "======================================="
+
+    write(nout,*) "     Beginning Epilogue....."
+
 
     call Epilogue
 
@@ -425,27 +436,27 @@ contains
     endif
 
     call Sampling % Prologue
-!    write(nout, *) "Traj"
+    write(nout, *) "Traj"
     if( allocated(TrajArray) ) then
       do i = 1, size(TrajArray)
         call TrajArray(i) % traj % Prologue
       enddo
     endif
 
-!    write(nout,*) "ECalc"
+    write(nout,*) "ECalc"
     do i = 1, size(EnergyCalculator)
       call EnergyCalculator(i)%method%Prologue
     enddo
 
 
-!    write(nout,*) "Box"
+    write(nout,*) "Box"
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % Prologue
 
     enddo
 
-!    write(nout,*) "Moves"
-!    flush(nout)
+    write(nout,*) "Moves"
+    flush(nout)
     do i = 1, size(Moves)
       call Moves(i) % move % Prologue
     enddo

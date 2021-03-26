@@ -189,6 +189,7 @@ module SimpleSimBox
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
       procedure, pass :: CountAtoms => SimpleBox_CountAtoms
 !      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
+      procedure, pass :: GetEFunc => SimpleBox_GetEFunc
 
       !New Property Gathering Functions
       procedure, pass :: GetNewEnergy => Simplebox_GetNewEnergy
@@ -447,6 +448,17 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
+  subroutine GetEFunc(self, epointer)
+    ! Used to return a pointer array to the atoms(:,:) array within the box.
+    ! Can also be used to simply return a subset of the atoms(:,:) such as a single
+    ! molecule's coordinates
+    implicit none
+    class(SimBox), intent(inout), target :: self
+    class(ECalcArray), pointer :: epointer
+
+    epointer => self%EFunc
+  end subroutine
+!==========================================================================================
   subroutine Simplebox_GetDimensions(self, list)
     use Input_Format, only: GetXCommand
     implicit none
@@ -567,6 +579,8 @@ module SimpleSimBox
     if(.not. accept) then
       return
     endif
+
+    write(nout,*) "Intra Energy:", E_Intra
     call self % EFunc % Method % DetailedECalc( self, E_Inter, accept )
     self%ETotal = E_Inter + E_Intra
 
@@ -783,13 +797,13 @@ module SimpleSimBox
       do iMol = 1, self%NMol(iType)
          molIndx = self % MolGlobalIndx(iType, iMol)
          call self%ComputeMolIntra(iType, molIndx, E_Mol, accept)
+         write(*,*) E_Mol
          if(.not. accept) then
            return
          endif
          E_Intra = E_Intra + E_Mol
       enddo
     enddo
-    write(nout,*) "Intra Energy:", E_Intra
 
   end subroutine
 !==========================================================================================

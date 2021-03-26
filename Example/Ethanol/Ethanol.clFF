@@ -1,3 +1,5 @@
+#Forcefield file for the Trappe Model of Ethanol.
+
 moleculetypes 1
 
 atomdef
@@ -8,21 +10,22 @@ atomdef
   "H"  1.008
 end_atomdef
 
-bonddef
-  ridgid 1.540  #CHx-CH3
-  ridgid 1.430  #CHx-OH
-  ridgid 0.945  #O-H
-end_bonddef
-
+units energy kb
 units angle deg
 
+bonddef
+  harmonic 1.540  70400 #CHx-CH3
+  harmonic 1.430  70400 #CHx-OH
+  harmonic 0.945  70400 #O-H
+end_bonddef
+
 AngleDef
-  ridgid 109.50 #CHx-CHy-OH
-  ridgid 108.50 #CHx-O-H
+  harmonic 109.50 50400 #CHx-CHy-OH
+  harmonic 108.50 55400 #CHx-O-H
 End_AngleDef
 
 TorsionDef
-  ridgid 109.50 #CHx-CHy-O-H
+  trappe   0.00    209.82  -29.17  187.93 #CHx-CHy-O-H
 End_TorsionDef
 
 
@@ -55,7 +58,6 @@ forcefieldtype
   LJ_Q_Cut
 end_forcefieldtype
 
-units energy kb
 # type epsilon sigma q rmin
 forcefield 1
   LJRCut 15.5

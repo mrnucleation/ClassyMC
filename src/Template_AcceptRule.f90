@@ -40,7 +40,7 @@ module Template_AcceptRule
     real(dp), intent(in), optional :: inProb, logProb, extraIn
     logical :: accept
 
-    stop "This Sampling Procedure does not have a 2box acceptance rule defined"
+    error stop "This Sampling Procedure does not have a 2box acceptance rule defined"
     accept = .true.
   end function
 !====================================================================

@@ -108,15 +108,16 @@ module IntraTorsion_TRAPPE
     allocate(self%k(0:self%nParameters-1))
 !    allocate(self%delta(1:nParameter-1))
 
-    do iPar = 2, self%nParameters
-        call GetXCommand(line, command, iPar, lineStat)
+    do iPar = 1, self%nParameters
+        call GetXCommand(line, command, iPar+1, lineStat)
         if(lineStat /= 0) then
           write(0,*) "Missing input rquired for the Trappe Torsion style"
           error stop
         endif
-        read(command, *) self%k(iPar-2)
-        self%k(iPar-2) = self%k(iPar-2)*inEngUnit
+        read(command, *) self%k(iPar-1)
+        self%k(iPar-1) = self%k(iPar-1)*inEngUnit
     enddo
+    write(*,*) self%k(0: self%nParameters-1)
   end subroutine
 !=============================================================================+
 end module

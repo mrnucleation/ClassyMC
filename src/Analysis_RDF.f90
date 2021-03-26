@@ -147,7 +147,7 @@ use VarPrecision
       write(__StdErr__, "(A)") tempStr
       write(__StdErr__, "(A)") trim(adjustl(line))
       write(__StdErr__, "(A)") "Format: RDF (BoxNumber) (UpdateFreq) (Write Freq) (Type 1) (Type 2) (rMin) (rMax) (nBins) (FileName)"
-      stop
+      error stop
     endif
     !Format =  BoxNum (UpdateFreq) (Write Freq) (Type 1) (Type 2) (rMin) (rMax) (nBins) (FileName)
     call GetXCommand(line, command, 2, lineStat)
@@ -185,7 +185,7 @@ use VarPrecision
       write(__StdErr__, *) "ERROR! The RDF module was given an r-max smaller than the corresponding r-min!"
       write(__StdErr__, *) "r-min:", self%rMin
       write(__StdErr__, *) "r-max:", self%rMax
-      stop
+      error stop
     endif
 
     self%bins = 0

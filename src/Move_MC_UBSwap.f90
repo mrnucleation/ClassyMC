@@ -288,7 +288,7 @@ use VarPrecision
 
 
 
-    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), trialBox, ProbSub, accept)
+!    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), trialBox, ProbSub, accept)
     GenProb = ProbSub
 
     call self % CountSites(trialBox, &

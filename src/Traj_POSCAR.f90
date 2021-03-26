@@ -80,7 +80,7 @@ module Traj_POSCAR
         write(self%fileUnit, *) 0.0, 0.0, Lz
 
       class default
-        stop "Traj_POSCAR does not know how to handle this box type"
+        error stop "Traj_POSCAR does not know how to handle this box type"
 
     end select
 

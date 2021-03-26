@@ -9,6 +9,7 @@ module Template_IntraTorsion
   type, public, extends(Intra_FF) :: Torsion_FF
     contains
       procedure, pass :: Constructor 
+      procedure, pass :: ComputeTors
       procedure, pass :: EFunc
       procedure, pass :: DetailedECalc 
       procedure, pass :: GenerateDist
@@ -25,22 +26,13 @@ module Template_IntraTorsion
 
   end subroutine
 !=============================================================================+
-  function EFunc(self, angle) result(E_Torsion)
-    implicit none
-    class(Torsion_FF), intent(inout) :: self
-    real(dp), intent(in) :: angle
-    real(dp) :: E_Torsion
-
-    E_Torsion = 0E0_dp
-  end function
-!=============================================================================+
-  subroutine DetailedECalc(self, curbox, atompos, E_T, accept)
+  function ComputeTors(self, curbox, atompos) result(angle)
     implicit none
     class(Torsion_FF), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    real(dp), intent(inout) :: E_T
     real(dp), intent(in) :: atompos(:, :)
-    logical, intent(out) :: accept
+    real(dp) :: angle
+
     real(dp) :: x12, y12, z12
     real(dp) :: x23, y23, z23
     real(dp) :: x34, y34, z34
@@ -49,9 +41,7 @@ module Template_IntraTorsion
     real(dp) :: vx3, vy3, vz3
     real(dp) :: r1, r3
     real(dp) :: dot1, dot2
-    real(dp) :: angle
 
-    accept = .true.
     !Our goal here is to construct a sequence of vectors that are orthogonal
     !to each other with one of the vectors lined up along the central bond, the 2-3 bond,
     !and one of the orthoganal vectors lined up on top of the 1-2 bond. 
@@ -60,14 +50,17 @@ module Template_IntraTorsion
     x12 = atompos(1, 2) - atompos(1, 1)
     y12 = atompos(2, 2) - atompos(2, 1)
     z12 = atompos(3, 2) - atompos(3, 1)
+    call curbox % Boundary(x12, y12, z12)
  
     x23 = atompos(1, 3) - atompos(1, 2)
     y23 = atompos(2, 3) - atompos(2, 2)
     z23 = atompos(3, 3) - atompos(3, 2)
+    call curbox % Boundary(x23, y23, z23)
 
     x34 = atompos(1, 4) - atompos(1, 3)
     y34 = atompos(2, 4) - atompos(2, 3)
     z34 = atompos(3, 4) - atompos(3, 3)
+    call curbox % Boundary(x34, y34, z34)
 
 !   Calculate the vector, v1 = <r12 x r23>
     vx1 =   y12*z23 - z12*y23
@@ -99,6 +92,29 @@ module Template_IntraTorsion
     dot2 = dot2/(r3)    
     angle = atan2(dot2,dot1)
 
+
+  end function
+!=============================================================================+
+  function EFunc(self, angle) result(E_Torsion)
+    implicit none
+    class(Torsion_FF), intent(inout) :: self
+    real(dp), intent(in) :: angle
+    real(dp) :: E_Torsion
+
+    E_Torsion = 0E0_dp
+  end function
+!=============================================================================+
+  subroutine DetailedECalc(self, curbox, atompos, E_T, accept)
+    implicit none
+    class(Torsion_FF), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    real(dp), intent(inout) :: E_T
+    real(dp), intent(in) :: atompos(:, :)
+    logical, intent(out) :: accept
+    real(dp) :: angle
+
+    accept = .true.
+    angle = self%ComputeTors(curbox, atompos)
     E_T = self%EFunc(angle)
   end subroutine
 !==========================================================================

@@ -71,7 +71,7 @@ module OrthoBoxDef
       enddo
       if(.not. accept) then
         write(nout,*) "Initial Constraints are not statisfied!"
-        stop
+        error stop
       endif
     endif
 

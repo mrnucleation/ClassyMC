@@ -36,7 +36,7 @@ module CubicBoxDef
 !    if( .not. allocated(self%NMolMin) ) then
 !      write(*,*) "ERROR! The maximum and minimum molecules allowed in the box must be defined"
 !      write(*,*) "prior to box initialization!"
-!      stop 
+!      error stop 
 !    endif
 !
 !    !First begin by computing the maximium number of atoms that the box can potentially contain
@@ -58,7 +58,7 @@ module CubicBoxDef
 !    allocate(self%SubIndx(1:self%nMaxAtoms), stat=AllocateStatus)
 !    allocate(self%MolStartIndx(1:self%nMaxAtoms), stat=AllocateStatus)
 !
-!    IF (AllocateStatus /= 0) STOP "*** Not enough memory ***"!
+!    IF (AllocateStatus /= 0) error STOP "*** Not enough memory ***"!
 !
 !    self%AtomType = 0
 !    self%MolIndx = 0

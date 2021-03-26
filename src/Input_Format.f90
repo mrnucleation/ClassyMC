@@ -32,7 +32,7 @@ contains
         write(*,*) "Please double check to ensure the file exists and the name in the input is accurate."
         write(*,*) "Attempted to open file:", trim(adjustl(modfileName))
       endif
-      stop
+      error stop
     endif
 
 !      This block counts the number of lines in the input file to determine how large the lineStorage array needs to be.
@@ -48,13 +48,13 @@ contains
 
     if(nRawLines == 0) then
       write(*,*) "ERROR! Inputfile is empty!"
-      stop
+      error stop
     endif
 
 
 !      Read in the file line by line
     allocate(rawLines(1:nRawLines), stat = AllocateStat)
-    IF (AllocateStat /= 0) STOP "*** Unable to load input script ***"
+    IF (AllocateStat /= 0) error STOP "*** Unable to load input script ***"
 
 !    write(*,*) nRawLines
 
@@ -78,7 +78,7 @@ contains
       endif
     enddo
 
-    IF (AllocateStat /= 0) STOP "*** Input_Format: Not enough memory ***"
+    IF (AllocateStat /= 0) error STOP "*** Input_Format: Not enough memory ***"
 
     allocate( lineArray(1:nLines), stat = AllocateStat )
     allocate( lineNumber(1:nLines), stat = AllocateStat )
@@ -95,7 +95,7 @@ contains
       endif 
     enddo
 
-    IF (AllocateStat /= 0) STOP "*** Input_Format: Not enough memory ***"
+    IF (AllocateStat /= 0) error STOP "*** Input_Format: Not enough memory ***"
 
     if(allocated(rawLines)) then
       deallocate(rawLines)
@@ -394,9 +394,9 @@ contains
       enddo
 
       if(.not. found) then
-        write(*,*) "ERROR! A command block was opened in the input script, but no closing END statement found!"
-        write(*,*) lineStore(iLine)
-        stop
+        write(0,*) "ERROR! A command block was opened in the input script, but no closing END statement found!"
+        write(0,*) lineStore(iLine)
+        error stop
       endif
 
       end subroutine

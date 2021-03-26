@@ -38,7 +38,7 @@ module MetropolisRule
       if(inProb <= 0E0_dp) then
         return
 !      write(nout,*) "Probability:", inProb
-!      stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is zero or negative!"
+!      error stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is zero or negative!"
       endif
     endif
 
@@ -90,7 +90,7 @@ module MetropolisRule
       if(inProb <= 0E0_dp) then
         return
 !      write(nout,*) "Probability:", inProb
-!      stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is zero or negative!"
+!      error stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is zero or negative!"
       endif
     endif
 

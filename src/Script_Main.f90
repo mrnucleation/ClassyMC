@@ -46,13 +46,13 @@
             call LoadFile(lineStore, nLines, lineNumber, fileName)
             if(nLines == 0) then
               write(__StdErr__,*) "ERROR! Input file is empty or could not be read!"
-              stop
+              error stop
             else
               write(nout, *) "File successfully loaded!"
             endif
           elseif(nArgs == 0) then
             write(__StdErr__,*) "ERROR! No Input File has been given!"
-            stop
+            error stop
           endif
       endif
 
@@ -125,7 +125,7 @@
           case default
             write(__StdErr__,"(A,2x,I10)") "ERROR! Unknown Command on Line", lineNumber(iLine)
             write(__StdErr__,*) trim(adjustl(lineStore(iLine)))
-            stop 
+            error stop 
         end select
 
         ! Ensure that the called processes exited properly.
@@ -133,7 +133,7 @@
           write(__StdErr__,"(A,1x,I10)") "ERROR! Command on line:", lineNumber(iLine)
           write(__StdErr__, "(A)") "could not be understood. Please check command for accuracy and try again."
           write(__StdErr__,*) trim(adjustl(lineStore(iLine)))
-          stop 
+          error stop 
         endif
         
       enddo
@@ -309,7 +309,7 @@
 
            else
              write(*,*) "ERROR! The create analysis command has already been used and can not be called twice"
-             stop
+             error stop
            endif
 
          !-------------------------------------------------------------------------------------
@@ -336,13 +336,13 @@
              enddo             
            else
              write(*,*) "ERROR! The create box command has already been used and can not be called twice"
-             stop
+             error stop
            endif
 
          !-------------------------------------------------------------------------------------
         case("constraint")
            if( .not. allocated(BoxArray) ) then
-             stop "Box array not allocated!"
+             error stop "Box array not allocated!"
            endif
            call GetXCommand(lineStore(iLine), command2, 3, lineStat)
            read(command2,*) intValue
@@ -375,7 +375,7 @@
              enddo   
            else
              write(*,*) "ERROR! The create moves command has already been used and can not be called twice"
-             stop
+             error stop
            endif
 
          !-------------------------------------------------------------------------------------
@@ -388,7 +388,7 @@
              enddo   
            else
              write(*,*) "ERROR! The create trajectory command has already been used and can not be called twice"
-             stop
+             error stop
            endif
  
         case default
@@ -398,7 +398,7 @@
 
       IF (AllocateStat /= 0) then
         write(*,*) AllocateStat
-        STOP "Allocation Error in Create Command"
+        error STOP "Allocation Error in Create Command"
       endif
      
       end subroutine   
@@ -494,7 +494,7 @@
            lineStat = -1
       end select
 
-      IF (AllocateStat /= 0) STOP "CRITICAL ERROR! Allocation Error in the Modify Command"
+      IF (AllocateStat /= 0) error STOP "CRITICAL ERROR! Allocation Error in the Modify Command"
      
       end subroutine
 !========================================================            
@@ -507,7 +507,7 @@
       if(lineStat .eq. -1) then
         write(*,"(A,2x,I10)") "ERROR! Unknown Variable Name on Line", lineNumber(iLine)
         write(*,*) lineStore(iLine)
-        stop 
+        error stop 
       endif
 
       end subroutine

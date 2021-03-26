@@ -52,7 +52,7 @@ module NestedSampling
           write(0,*) "In order to use moves that changes volume or particle counts"
           write(0,*) "the flag canonical must be set to false"
           write(0,*) "Command => modify sampling canonical .false."
-          stop
+          error stop
       end select
     endif
 
@@ -120,7 +120,7 @@ module NestedSampling
     integer :: iDisp
     real(dp) :: biasE, chemPot, extraTerms, probTerm
 
-    stop "Two Box Ensembles are not currently implimented for NestedSampling"
+    error stop "Two Box Ensembles are not currently implimented for NestedSampling"
 
 
 
@@ -129,7 +129,7 @@ module NestedSampling
       if(inProb <= 0E0_dp) then
         return
 !      write(nout,*) "Probability:", inProb
-!      stop "CRITICAL ERROR! Probability passed to the Nested Sampling Function is zero or negative!"
+!      error stop "CRITICAL ERROR! Probability passed to the Nested Sampling Function is zero or negative!"
       endif
     endif
 
@@ -145,7 +145,7 @@ module NestedSampling
       probTerm = logProb
     else
       write(0,*) "Coding Error! Probability has not been passed into Sampling "
-      stop
+      error stop
     endif
 
     biasE = -trialBox1%beta*E_Diff1 - trialBox2%beta*E_Diff2 + probTerm + extraTerms
@@ -267,8 +267,7 @@ module NestedSampling
           if(norm == 0.0E0_dp) then
             write(nout,*) "Zero norm encountered in Nested Sampling"
             write(nout,*) "Simulation is likely Trapped"
-            stop
-
+            error stop
           endif
           sumint = 0.0E0_dp
           nMedian = -1
@@ -357,7 +356,7 @@ module NestedSampling
              potTerms = potTerms + trialBox%chempot(typeNew)*trialBox%NMol(typeNew)
              potTerms = potTerms - trialBox%chempot(typeOld)*trialBox%NMol(typeOld)
            class is(VolChange)
-             stop "Volume change moves are not allowed in Grand Ensemble Mode!"
+             error stop "Volume change moves are not allowed in Grand Ensemble Mode!"
          end select
 
      elseif(trim(adjustl(self%ensemble)) == 'isobaric') then
@@ -367,10 +366,10 @@ module NestedSampling
          class is(Displacement)
            extraTerms = 0E0_dp
          class default
-           stop "Moves besides volume change and translation moves are not allowed in isobaric mode!"
+           error stop "Moves besides volume change and translation moves are not allowed in isobaric mode!"
        end select
      else
-       stop "Invalid Ensemble was given to the Nested Sampling Algorimth!!"
+       error stop "Invalid Ensemble was given to the Nested Sampling Algorimth!!"
      endif
     extraTerms = extraTerms + potTerms
 

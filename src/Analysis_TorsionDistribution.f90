@@ -1,14 +1,13 @@
 !=========================================================================
 #define __StdErr__ 0
 !=========================================================================
-module Analysis_BondDistribution
+module Analysis_TorsionDistribution
 
 use AnaylsisClassDef, only: Analysis
 use SimpleSimBox, only: SimpleBox
-use ClassyConstants, only: pi
 use VarPrecision
 
-  type, public, extends(Analysis) :: bonddistribution
+  type, public, extends(Analysis) :: Torsiondistribution
 !    integer :: maintFreq = 100
 !    integer :: IOUnit = -1
 !    integer :: UpdateFreq = -1
@@ -17,48 +16,48 @@ use VarPrecision
 
 
     !molType => Molecule Type ID
-    !bondNum => The bond index as it appears in the MolData bond array
-    !mem1 => Atom Relative index for the first member of the bond
-    !mem2 => Atom Relative index for the second member of the bond
+    !TorsionNum => The Torsion index as it appears in the MolData Torsion array
+    !mem1 => Atom Relative index for the first member of the Torsion
+    !mem2 => Atom Relative index for the second member of the Torsion
+    !mem3 => Atom Relative index for the third member of the Torsion
+    !mem4 => Atom Relative index for the fourth member of the Torsion
     !bins => Number of histogram bins
     !nSamples => Total number of 
-    !rMax => Upper bound of the histogram, values above this will be ignored
-    !dr => Bin size
-    integer, private :: molType, bondNum
-    integer, private :: bondType, mem1, mem2
+    !dangle => Bin size
+    integer, private :: molType, TorsionNum
+    integer, private :: TorsionType, mem1, mem2, mem3, mem4
     integer, private :: bins = 10
     integer, private:: nSamples = 0
-    real(dp), private :: rMax
-    real(dp), private :: dr = 0.01E0_dp
-    real(dp), private :: temppos(1:3,1:2)
+    real(dp), private :: dphi = 0.01E0_dp
+    real(dp), private :: temppos(1:3, 1:4)
 
     !fileUnit => Fortran File ID Unit
     !fileName => Name of the file to write the output to.
     integer, private :: fileUnit
     character(len=80), private :: fileName = ""
 
-    !hist => Local Histogram for Bond Distance
-    !temphist => Temporary Placeholder Histogram for Bond Distance 
+    !hist => Local Histogram for Torsion Distance
+    !temphist => Temporary Placeholder Histogram for Torsion Distance 
     !            used when gathering data across MPI instances of the simulation.
         !simbox => Pointer to the Simulation Box that data is being collected from
     real(dp), allocatable, private :: hist(:)
     real(dp), allocatable, private :: tempHist(:)
-    class(SimpleBox), pointer :: simbox => null()
+    class(SimpleBox), pointer, private :: simbox => null()
     contains
-      procedure, pass :: Prologue => BondDistribution_Prologue
-      procedure, pass :: Compute => BondDistribution_Compute
-      procedure, pass :: ProcessIO => BondDistribution_ProcessIO
-      procedure, pass :: Maintenance => BondDistribution_Maintenance
-!      procedure, pass :: WriteInfo => BondDistribution_WriteInfo
-      procedure, pass :: CastCommonType => BondDistribution_CastCommonType
+      procedure, pass :: Prologue => TorsionDistribution_Prologue
+      procedure, pass :: Compute => TorsionDistribution_Compute
+      procedure, pass :: ProcessIO => TorsionDistribution_ProcessIO
+      procedure, pass :: Maintenance => TorsionDistribution_Maintenance
+!      procedure, pass :: WriteInfo => TorsionDistribution_WriteInfo
+      procedure, pass :: CastCommonType => TorsionDistribution_CastCommonType
   end type
 
 
  contains
 !=========================================================================
-  subroutine BondDistribution_Prologue(self)
+  subroutine TorsionDistribution_Prologue(self)
     implicit none
-    class(BondDistribution), intent(inout) :: self
+    class(TorsionDistribution), intent(inout) :: self
 
     if(allocated(self%hist)) then
       deallocate(self%hist)
@@ -78,10 +77,11 @@ use VarPrecision
 
   end subroutine
 !===============================================================
-  subroutine BondDistribution_Compute(self, accept)
-    use Common_MolInfo, only: MolData, BondData
+  subroutine TorsionDistribution_Compute(self, accept)
+    use Common_MolInfo, only: MolData, TorsionData
+    use ClassyConstants, only: two_pi, pi
     implicit none
-    class(BondDistribution), intent(inout) :: self
+    class(TorsionDistribution), intent(inout) :: self
     logical, intent(in) :: accept
  
     real(dp), pointer :: atoms(:,:) => null()
@@ -90,7 +90,7 @@ use VarPrecision
     integer :: bin, molIndx
     integer :: molStart, molEnd
     integer :: slice(1:2)
-    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: theta
 
     nMolecules = self%simbox%NMol(self%molType)
     do iMol = 1, nMolecules
@@ -102,24 +102,28 @@ use VarPrecision
 
       self%temppos(1:3, 1) = atoms(1:3, self%mem1)
       self%temppos(1:3, 2) = atoms(1:3, self%mem2)
-      r = BondData(self%bondtype) % bondFF % ComputeBond(self%simbox, self%temppos(1:3,1:2))
-      if(r < self%rMax) then
-        bin = floor(r/self%dR) 
-        self%hist(bin) = self%hist(bin) + 1.0E0_dp
+      self%temppos(1:3, 3) = atoms(1:3, self%mem3)
+      self%temppos(1:3, 4) = atoms(1:3, self%mem4)
+      theta = TorsionData(self%Torsiontype) % TorsionFF % ComputeTors(self%simbox, self%temppos(1:3,1:4))
+      if(theta < 0E0_dp) then
+        theta = theta + two_pi
       endif
+      bin = floor(theta/self%dphi) 
+      self%hist(bin) = self%hist(bin) + 1.0E0_dp
       self%nSamples = self%nSamples + 1
     enddo
 
 
   end subroutine
 !=========================================================================
-  subroutine BondDistribution_ProcessIO(self, line)
+  subroutine TorsionDistribution_ProcessIO(self, line)
     use BoxData, only: BoxArray
     use Common_MolInfo, only: MolData, nMolTypes
     use Input_Format, only: maxLineLen, GetXCommand, ReplaceText, CountCommands
     use ParallelVar, only: myid
+    use ClassyConstants, only: two_pi
     implicit none
-    class(BondDistribution), intent(inout) :: self
+    class(TorsionDistribution), intent(inout) :: self
     character(len=maxLineLen), intent(in) :: line
     integer :: lineStat = 0
     integer :: intVal, iCharacter, nPar
@@ -128,16 +132,16 @@ use VarPrecision
     character(len=80) :: tempStr, intStr
 
     call CountCommands(line, nPar)
-    if(nPar /= 9) then
-      write(tempStr, "(A)") "ERROR! The BondDistribution module was expecting 8 arguments, but received %s."
+    if(nPar /= 8) then
+      write(tempStr, "(A)") "ERROR! The TorsionDistribution module was expecting 8 arguments, but received %s."
       write(intStr, *) nPar-1
       tempStr = ReplaceText(tempStr, "%s", trim(adjustl(intStr)))
       write(__StdErr__, "(A)") tempStr
       write(__StdErr__, "(A)") trim(adjustl(line))
-      write(__StdErr__, "(A)") "Format: BondDistribution (UpdateFreq) (Write Freq) (MolType) (Bond Number) (dr) (nBins) (FileName)"
+      write(__StdErr__, "(A)") "Format: TorsionDistribution (UpdateFreq) (Write Freq) (MolType) (Torsion Number) (dphi) (FileName)"
       error stop
     endif
-    !Format =  BoxNum (UpdateFreq) (Write Freq) (MolType) (Bond Number) (dr) (nBins) (FileName)
+    !Format =  BoxNum (UpdateFreq) (Write Freq) (MolType) (Torsion Number) (dphi) (FileName)
     call GetXCommand(line, command, 2, lineStat)
     read(command, *) intVal
     self%boxNum = intVal
@@ -154,39 +158,22 @@ use VarPrecision
     call GetXCommand(line, command, 5, lineStat)
     read(command, *) intVal
     self%molType = intVal
-    if( (self%molType > nMolTypes) .or. (self%molType < 1) ) then
-      write(0,*) "Invalid Molecule ID given in input"
-      write(0,*) "ID Given: ", self%molType
-      write(0,*) line
-      error stop
-    endif
 
     call GetXCommand(line, command, 6, lineStat)
     read(command, *) intVal
-    self%bondNum = intVal
-    if(MolData(self%molType)%nBonds < self%bondnum) then
-      write(0,*) "Invalid Bond ID given in input"
-      write(0,*) "ID Given: ", self%bondNum
-      write(0,*) line
-      error stop
-    endif
-
-    self%bondType = MolData(self%molType)%bond(self%bondNum)%bondType
-    self%mem1 = MolData(self%molType)%bond(self%bondNum)%mem1
-    self%mem2 = MolData(self%molType)%bond(self%bondNum)%mem2
+    self%TorsionNum = intVal
+    self%TorsionType = MolData(self%molType)%Torsion(self%TorsionNum)%TorsType
+    self%mem1 = MolData(self%molType)%Torsion(self%TorsionNum)%mem1
+    self%mem2 = MolData(self%molType)%Torsion(self%TorsionNum)%mem2
+    self%mem3 = MolData(self%molType)%Torsion(self%TorsionNum)%mem3
+    self%mem4 = MolData(self%molType)%Torsion(self%TorsionNum)%mem4
 
     call GetXCommand(line, command, 7, lineStat)
     read(command, *) realVal
-    self%dr = realVal
+    self%dphi = realVal
+    self%bins = ceiling(two_pi/self%dphi)
 
-    self%bins = 0
     call GetXCommand(line, command, 8, lineStat)
-    read(command, *) intVal
-    self%bins = intVal
-
-    self%rMax = self%bins * self%dr
-
-    call GetXCommand(line, command, 9, lineStat)
     read(command, *) self%fileName
     do iCharacter = 1, len(self%filename)
       if(self%filename(iCharacter:iCharacter) == "&") then
@@ -208,18 +195,18 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
-  subroutine BondDistribution_Maintenance(self)
-    use ClassyConstants, only: pi
+  subroutine TorsionDistribution_Maintenance(self)
+    use ClassyConstants, only: two_pi
 #ifdef PARALLEL
     use MPI
 #endif
     use ParallelVar, only: myid, nout, p_size
     implicit none
-    class(BondDistribution), intent(inout) :: self
+    class(TorsionDistribution), intent(inout) :: self
     integer :: ierror
     integer :: iBin, nProc, nAtoms, nTotal
     integer :: nSamples
-    real(dp) :: r, binVol, norm, volume
+    real(dp) :: theta, binVol, norm, volume
 
 #ifdef PARALLEL
     
@@ -248,15 +235,15 @@ use VarPrecision
 
     rewind(self%fileunit)
     do iBin = 0, self%bins-1
-      r = real(iBin, dp)*self%dR
-      write(self%fileunit, *) r, self%temphist(iBin)/(real(nSamples, dp) * self%dr)
+      theta = real(iBin, dp)*self%dphi
+      write(self%fileunit, *) theta, self%temphist(iBin)/(real(nSamples, dp) * self%dphi)
     enddo
 
   end subroutine
 !=========================================================================
-  subroutine BondDistribution_CastCommonType(self, anaVar)
+  subroutine TorsionDistribution_CastCommonType(self, anaVar)
     implicit none
-    class(BondDistribution), intent(inout) :: self
+    class(TorsionDistribution), intent(inout) :: self
     class(*), allocatable, intent(inout) :: anaVar
     real(dp) :: def
 

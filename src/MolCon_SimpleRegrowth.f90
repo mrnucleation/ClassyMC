@@ -98,7 +98,7 @@ module MolCon_SimpleRegrowth
       class is(Addition)
         molType = disp(1)%molType
       class default
-        stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
+        error stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
     end select
 
     select case( MolData(molType)%nAtoms )
@@ -189,7 +189,7 @@ module MolCon_SimpleRegrowth
 !          rosenTrial(iRosen)%y(atm4) = rosenTrial(iRosen)%y(atm2) + v3%y
 !          rosenTrial(iRosen)%z(atm4) = rosenTrial(iRosen)%z(atm2) + v3%z
       case default
-        stop "Simple regrowth is not valid for this many atoms"
+        error stop "Simple regrowth is not valid for this many atoms"
     end select
 
     select type(disp)
@@ -213,7 +213,7 @@ module MolCon_SimpleRegrowth
 
   end subroutine
 !=================================================================================
-  subroutine SimpleRegrowth_ReverseConfig(self, disp, trialBox, probconstruct, accept)
+  subroutine SimpleRegrowth_ReverseConfig(self, disp, trialBox, probconstruct, insPoint, insProb, accept)
     use Common_MolInfo, only: MolData, BondData, AngleData, nMolTypes
     use MolSearch, only: FindBond, FindAngle
     implicit none
@@ -221,6 +221,9 @@ module MolCon_SimpleRegrowth
     class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(out) :: probconstruct 
+
+    real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(in), optional :: insProb(:)
     logical, intent(out) :: accept
 
     integer :: bondType, angleType, molType
@@ -241,7 +244,7 @@ module MolCon_SimpleRegrowth
         molIndx = disp(1)%molIndx
 
       class default
-        stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
+        error stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
     end select
     call trialBox%GetMolData(molindx, molStart=molStart, molEnd=molEnd)
     slice(1) = molStart
@@ -291,7 +294,7 @@ module MolCon_SimpleRegrowth
                                                                   prob)              
         probconstruct = prob*probconstruct    
       case default
-        stop "Simple regrowth is not valid for this many atoms"
+        error stop "Simple regrowth is not valid for this many atoms"
     end select
 
   end subroutine

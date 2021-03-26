@@ -127,7 +127,7 @@ module Units
       case default
         write(__StdErr__, *) "Error! Invalid Angular Unit Type!"
         write(__StdErr__, *) unitName
-        stop
+        error stop
       end select
    
   end function          
@@ -156,7 +156,7 @@ module Units
        case default
          write(__StdErr__,*) "Error! Invalid Pressure Unit Type!"
          write(__StdErr__,*) unitName
-         stop
+         error stop
       end select
 
       
