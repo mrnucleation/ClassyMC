@@ -5,7 +5,7 @@
   set moves 50
   set cycles 1000000
 #  SamplingType AcceptAll
-  set screenfrequency 10000
+  set screenfrequency 1000
   SamplingType Metropolis
 #  SamplingType UmbrellaWHAM
 #  SamplingType Umbrella
