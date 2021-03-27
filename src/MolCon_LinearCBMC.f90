@@ -1,9 +1,12 @@
 !==========================================================================================
-! Simple Regrowth Object
+! CBMC style regrowth algorithm for molecules which are only straight chained
+! with only one major branch.  Examples are united atom alkanes like the Trappe
+! forcefield. 
 !==========================================================================================
 module MolCon_LinearCBMC
-  use CoordinateTypes, only: Perturbation, Addition, Displacement
+  use CoordinateTypes, only: Perturbation, Addition, Displacement, SingleMol, Deletion
   use Template_SimBox, only: SimBox
+  use SimpleSimBox, only: SimpleBox
   use Template_MolConstructor, only: MolConstructor
   use VarPrecision
 
@@ -44,6 +47,9 @@ module MolCon_LinearCBMC
     integer, private, allocatable :: pathposition(:) 
     integer, private, allocatable :: schedule(:) 
     integer, private, allocatable :: scratchschedule(:) 
+    integer, private, allocatable :: tempList(:,:), tempNNei(:)
+    integer, private, allocatable :: atomtypes(:)
+    real(dp), private, allocatable :: posN(:,:)
 
     integer, private, allocatable :: freq(:) 
     !freq => The number of bonds each atom has.  This will be used to classify the atom
@@ -60,6 +66,7 @@ module MolCon_LinearCBMC
       procedure, public, pass :: GenerateConfig => LinearCBMC_GenerateConfig
       procedure, public, pass :: ReverseConfig => LinearCBMC_ReverseConfig
       procedure, public, pass :: RosenBluth => LinearCBMC_RosenBluth
+      procedure, public, pass :: GetPath => LinearCBMC_GetPath
       procedure, public, pass :: FindAtomsFromPath => LinearCBMC_FindAtomsFromPath
 !      procedure, public, pass :: GetNInsertPoints
   end type
@@ -228,7 +235,7 @@ module MolCon_LinearCBMC
   subroutine LinearCBMC_GenerateConfig(self, trialBox, disp, probconstruct, insPoint, insProb)
     use Common_MolInfo, only: MolData, BondData, AngleData, TorsionData, nMolTypes
     use MolSearch, only: FindBond, FindAngle, FindTorsion
-    use RandomGen, only: Generate_UnitSphere, Generate_UnitCone, Generate_UnitTorsion
+    use RandomGen, only: Generate_UnitSphere, Generate_UnitCone, Generate_UnitTorsion, ListRNG
     use ForcefieldData, only: ECalcArray
 
     implicit none
@@ -239,20 +246,19 @@ module MolCon_LinearCBMC
     real(dp), intent(in), optional :: insProb(:)
     real(dp), intent(out) :: probconstruct 
 
-    class(ECalcArray), pointer :: EFunc => null()
+    integer :: dispsubindx(1:self%nAtoms), atmdispindx(1:self%nAtoms)
     integer :: bondType, angleType, torsType, molType
-    integer :: molindx, molStart
-    integer :: atm1, atm2,atm3,atm4, iDisp, iRosen
-    integer :: lastGrown, nSel
+    integer :: molindx, molStart, nSel
+    integer :: atm1, atm2,atm3,atm4, atmindx, iDisp, iRosen
+    integer :: lastGrown
     real(dp), dimension(1:3) :: v1, v2, v3
     real(dp) :: dx, dy, dz, r
-    real(dp) :: r1, r2
+    real(dp) :: r1, r2, norm
     real(dp) :: bend_angle,tors_angle
     real(dp) :: prob_r, prob_ang, prob_tors, probgen
 
 
 
-    call trialbox%GetEFunc(EFunc)
 
     probconstruct = 1E0_dp
     select type(disp)
@@ -263,6 +269,8 @@ module MolCon_LinearCBMC
         call trialbox%GetMolData(molindx, molStart=molStart)
         do iDisp = 1, size(disp)
           atm1 = disp(iDisp)%atmindx - molStart + 1
+          dispsubindx(iDisp) = atm1
+          atmdispindx(atm1) = iDisp
           self%grown(atm1) = .false.
           self%nGrown = self%nGrown - 1
         enddo
@@ -277,7 +285,7 @@ module MolCon_LinearCBMC
     end select
 
     call self%CreateSchedule
-    if(present(insPont)) then
+    if(present(insPoint)) then
       if(size(insPoint) /= self%nRosenTrials) then
         write(0,*) "ERROR! Linear CBMC Regrowth received a different number of insertion points"
         write(0,*) "than it was expecting!"
@@ -381,10 +389,19 @@ module MolCon_LinearCBMC
             error stop "nGrown is some invalid number."
         endif
 
+        iDisp = atmdispindx(lastGrown)
+        call self%RosenBluth(trialBox, lastGrown, iDisp, disp)
+        norm = 0E0_dp
+        !For this method we leave off the prob term since we can generate the angles and such
+        !directly. 
+        do iRosen = 1, self%nRosenTrials
+          norm = norm + self%RosenProb(iRosen)
+        enddo
+        nSel = ListRNG(self%RosenProb, norm)
+        probconstruct = probconstruct * self%RosenProb(nSel)/norm
+        self%newconfig(1:3, lastGrown) = self%tempcoords(1:3, nSel)
         self%grown(lastGrown) = .true.
         self%nGrown = self%nGrown + 1
-
-
      enddo
 
      do iDisp = 1, size(disp)
@@ -402,11 +419,12 @@ module MolCon_LinearCBMC
        end select
     enddo
 
-!    probconstruct = probconstruct*ProbRosen(nSel)*dble(self%nRosenTrials)/rosenNorm
-
   end subroutine
 !======================================================================================
-  subroutine LinearCBMC_ReverseConfig(self, disp, trialBox, probconstruct, insPoint, insProb, accept)
+  subroutine LinearCBMC_ReverseConfig(self, disp, trialBox, probconstruct, accept, insPoint, insProb)
+    use Common_MolInfo, only: MolData, BondData, AngleData, TorsionData, nMolTypes
+    use MolSearch, only: FindBond, FindAngle, FindTorsion
+    use RandomGen, only: Generate_UnitSphere, Generate_UnitCone, Generate_UnitTorsion, ListRNG
     implicit none
     class(LinearCBMC), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
@@ -416,6 +434,173 @@ module MolCon_LinearCBMC
     real(dp), intent(in), optional :: insPoint(:)
     real(dp), intent(in), optional :: insProb(:)
     logical, intent(out) :: accept
+
+
+    integer :: dispsubindx(1:self%nAtoms), atmdispindx(1:self%nAtoms)
+    integer :: bondType, angleType, torsType, molType
+    integer :: molindx, molStart, molEnd, nSel
+    integer :: atm1, atm2,atm3,atm4, iDisp, iRosen
+    integer :: lastGrown
+    real(dp), dimension(1:3) :: v1, v2, v3
+    real(dp) :: dx, dy, dz, r
+    real(dp) :: r1, r2, norm
+    real(dp) :: bend_angle,tors_angle
+    real(dp) :: prob_r, prob_ang, prob_tors, probgen
+    integer :: slice(1:2)
+    real(dp), pointer :: atoms(:,:) => null()
+
+    probconstruct = 1E0_dp
+
+    select type(disp)
+      class is(Displacement)
+        self%grown = .true.
+        self%nGrown = self%nAtoms
+        molindx = disp(1)%molindx
+
+        call trialbox%GetMolData(molindx, molStart=molStart, molEnd=molEnd)
+        slice(1) = molStart
+        slice(2) = molEnd
+        call trialbox%GetCoordinates(atoms, slice=slice)
+        do iDisp = 1, size(disp)
+          atm1 = disp(iDisp)%atmindx - molStart + 1
+          dispsubindx(iDisp) = atm1
+          atmdispindx(atm1) = iDisp
+          self%grown(atm1) = .false.
+          self%nGrown = self%nGrown - 1
+        enddo
+
+      class is(Deletion)
+        self%grown = .false.
+        self%nGrown = 0
+        self%schedule = self%scratchschedule
+
+      class default
+        error stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
+    end select
+
+    call self%CreateSchedule
+    if(present(insPoint)) then
+      if(size(insPoint) /= self%nRosenTrials) then
+        write(0,*) "ERROR! Linear CBMC Regrowth received a different number of insertion points"
+        write(0,*) "than it was expecting!"
+        error stop
+      endif
+    endif
+
+
+    do while(self%nGrown < self%nAtoms)
+        !Weight Insertion Points and chose one of them.
+      if(self%nGrown == 0) then
+          Atm1 = self%schedule(1)
+          if(present(inspoint) .and. present(insProb)) then
+            do iRosen = 1, self%nRosenTrials-1
+              self%tempcoords(1, iRosen) = insPoint(3*iRosen-2)
+              self%tempcoords(2, iRosen) = insPoint(3*iRosen-1)
+              self%tempcoords(3, iRosen) = insPoint(3*iRosen-0)
+              self%GenProb(iRosen) = insProb(iRosen)
+            enddo
+            self%tempcoords(1:3, self%nRosenTrials) = atoms(1:3, Atm1)
+
+          else
+            error stop "Full Regrowth has been requsted without passing in insertion points"
+          endif 
+          lastGrown = Atm1
+
+      elseif(self%nGrown == 1) then
+        !Starting from the first inserted atom, begin growing the second atom by
+        Atm1 = self%schedule(1)
+        Atm2 = self%schedule(2)
+        call FindBond(self%molType, Atm1, Atm2, bondType)
+        do iRosen = 1, self%nRosenTrials-1
+          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r2, prob_r)
+          probgen = prob_r
+          call Generate_UnitSphere(dx, dy, dz)
+          self%tempcoords(1, iRosen) = r2*dx + self%newconfig(1, Atm1)
+          self%tempcoords(2, iRosen) = r2*dy + self%newconfig(2, Atm1)
+          self%tempcoords(3, iRosen) = r2*dz + self%newconfig(3, Atm1)
+          self%GenProb(iRosen) = prob_r
+        enddo
+        self%tempcoords(1:3, self%nRosenTrials) = atoms(1:3, Atm2)
+        lastGrown = Atm2
+
+      elseif(self%nGrown == 2) then
+    !    For the third atom we must begin to include the bending angle 
+    !    in choosing its trial positions. The first thing
+    !    we must consider is if the second regrown atom was a terminal atom or a linker atom. 
+    !    If it was a terminal atom  then the bending angle must use the 
+    !    1st atom as the central atom for the angle generation.  
+    !    However if it was a link in the chain then the 2nd atom 
+    !    regrown should be used as the central atom.
+        Atm3 = self%schedule(3) 
+        if(self%freq(Atm2) == 2) then
+            Atm1 = self%schedule(1) 
+            Atm2 = self%schedule(2) 
+        else
+            Atm1 = self%schedule(2) 
+            Atm2 = self%schedule(1) 
+        endif
+        v1(1) = self%newconfig(1, Atm1) - self%newconfig(1, Atm2)
+        v1(2) = self%newconfig(2, Atm1) - self%newconfig(2, Atm2)
+        v1(3) = self%newconfig(3, Atm1) - self%newconfig(3, Atm2)
+        call FindBond(self%molType, Atm2, Atm3, bondType)
+        call FindAngle(self%molType, Atm1, Atm2, Atm3, angleType)
+        do iRosen = 1, self%nRosenTrials-1
+          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r2, prob_r)
+          call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bend_angle, prob_ang)
+          probgen = prob_r * prob_ang
+          call Generate_UnitCone(v1, r2, bend_angle, v2)
+          self%tempcoords(1, iRosen) = v2(1) + self%newconfig(1, Atm2)
+          self%tempcoords(2, iRosen) = v2(2) + self%newconfig(2, Atm2)
+          self%tempcoords(3, iRosen) = v2(3) + self%newconfig(3, Atm2)
+          self%GenProb(iRosen) = probgen
+        enddo
+        self%tempcoords(1:3, self%nRosenTrials) = atoms(1:3, Atm3)
+        lastGrown = Atm3
+
+      elseif(self%nGrown < self%nAtoms) then
+            Atm4 = self%schedule(self%nGrown+1) 
+            call self%FindAtomsFromPath(Atm4, Atm1, Atm2, Atm3)
+            call FindBond(self%molType, Atm3, Atm4, bondType)
+            call FindAngle(self%molType, Atm2, Atm3, Atm4, angleType)
+            call FindTorsion(self%molType, Atm1, Atm2, Atm3, Atm4, torsType)
+            v1(1) = self%newconfig(1, Atm1) - self%newconfig(1, Atm3)
+            v1(2) = self%newconfig(2, Atm1) - self%newconfig(2, Atm3)
+            v1(3) = self%newconfig(3, Atm1) - self%newconfig(3, Atm3)
+
+
+            v1(1) = self%newconfig(1, Atm2) - self%newconfig(1, Atm3)
+            v1(2) = self%newconfig(2, Atm2) - self%newconfig(2, Atm3)
+            v1(3) = self%newconfig(2, Atm2) - self%newconfig(3, Atm3)
+            do iRosen = 1, self%nRosenTrials-1
+              call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r2, prob_r)
+              call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bend_angle, prob_ang)
+              call TorsionData(torsType) % torsionFF % GenerateDist(trialBox%beta, tors_angle, prob_tors)
+              probgen = prob_r*prob_ang*prob_tors
+              call Generate_UnitTorsion(v1, v2, r, bend_angle, tors_angle, v3)
+              self%tempcoords(1, iRosen)  = v3(1) + self%newconfig(1, Atm3)
+              self%tempcoords(2, iRosen)  = v3(2) + self%newconfig(2, Atm3)
+              self%tempcoords(3, iRosen)  = v3(3) + self%newconfig(3, Atm3)
+              self%GenProb(iRosen) = probgen
+            enddo
+            self%tempcoords(1:3, self%nRosenTrials) = atoms(1:3, Atm4)
+            lastGrown = Atm4
+        else
+            error stop "nGrown is some invalid number."
+        endif
+
+        iDisp = atmdispindx(lastGrown)
+        call self%RosenBluth(trialBox, lastGrown, iDisp, disp)
+        norm = 0E0_dp
+        !For this method we leave off the prob term since we can generate the angles and such
+        !directly. 
+        do iRosen = 1, self%nRosenTrials
+          norm = norm + self%RosenProb(iRosen)
+        enddo
+        probconstruct = probconstruct * self%RosenProb(self%nRosenTrials)/norm
+        self%newconfig(1:3, lastGrown) = self%tempcoords(1:3, self%nRosenTrials)
+        self%grown(lastGrown) = .true.
+        self%nGrown = self%nGrown + 1
+     enddo
 
   end subroutine
 !======================================================================
@@ -524,24 +709,106 @@ module MolCon_LinearCBMC
     endif
   end subroutine 
 !=======================================================================
-  subroutine LinearCBMC_RosenBluth(self, trialBox, disp)
-    ! Figures out which atoms
+  subroutine LinearCBMC_RosenBluth(self, trialBox, atmsubindx, iDisp, disp)
+    ! Computes the Rosenbluth Weight of each trial position.  This is used
+    ! to select which trial position should be used to regrow.
+    use ForcefieldData, only: ECalcArray
     implicit none
-    class(LinearCBMC), intent(inout) :: self
+    class(LinearCBMC), intent(inout), target :: self
     class(Perturbation), intent(inout) :: disp(:)
+    integer, intent(in) :: iDisp, atmsubindx
     class(SimBox), intent(inout) :: trialBox
     type(Displacement) :: tempdisp(1:1)
 
-    integer :: tempList(1:100,1:self%nAtoms), tempNNei(1:self%nAtoms)
+    class(ECalcArray), pointer :: EFunc => null()
+    integer, pointer :: nNeigh(:) => null()
+    integer, pointer :: neighlist(:,:) => null()
+    real(dp), pointer :: atoms(:,:) => null()
+    integer :: molIndx, molType, atmIndx
+    integer :: iRosen, jAtom, jNei
+    integer :: atmtype1
+    real(dp) :: E_Atom, E_Max, norm
+    real(dp) :: pos1(1:3)
 
-    tempdisp
+
+    select type(trialbox)
+      class is(SimpleBox)
+        call trialbox%GetCoordinates(atoms)
+        call trialbox%GetEFunc(EFunc)
+        call trialBox%GetNeighborList(self%rosenNeighList, neighlist, nNeigh)
+    end select
+
+    if(.not. allocated(self%tempList)) then
+      allocate(self%tempList(1:size(neighlist, 1) , 1:1))
+      allocate(self%tempNNei(1:size(nNeigh)))
+      allocate(self%atomtypes(1:size(neighlist, 1)))
+      allocate(self%posN(1:3, 1:size(neighlist, 1)))
+    endif
+
+    select type(disp)
+      class is(SingleMol)
+        tempdisp(1)%molType = disp(iDisp)%molType
+        tempdisp(1)%molindx = disp(iDisp)%molindx
+        tempdisp(1)%atmindx = disp(iDisp)%atmindx
+    end select
 
 
-    call trialbox%GetNewList(self%rosenNeighList, 1, tempList, tempNNei, disp)
+    call trialBox%GetAtomData(tempdisp(1)%atmindx, atomtype=atmtype1)
+    select type(disp)
+      class is(Addition)
+        select type(trialbox)
+          class is(SimpleBox)
+            call trialbox%GetNewNeighborList(self%rosenNeighList, 1, self%tempList, self%tempNNei, tempdisp(1))
+        end select
+        neighlist => self%tempList
+        nNeigh => self%tempNNei 
+    end select
 
+    E_Max = -huge(dp)
+    do iRosen = 1, self%nRosenTrials
+      tempdisp(1)%x_new = self%tempcoords(1, iRosen)
+      tempdisp(1)%y_new = self%tempcoords(2, iRosen)
+      tempdisp(1)%z_new = self%tempcoords(3, iRosen)
+
+      pos1(1:3) = self%tempcoords(1:3, atmsubindx)
+      do jNei = 1, nNeigh(1)
+        jAtom = neighlist(jNei, 1)
+        call trialBox%GetAtomData(jAtom, atomtype=self%atomtypes(jAtom))
+        self%posN(1:3, jNei) = atoms(1:3, jAtom)
+      enddo
+      !Add 1-5 terms later.
+
+      E_Atom = EFunc % Method % ManyBody(trialbox, atmtype1, pos1, self%atomtypes, self%posN  )
+      if(E_Atom > E_Max) then
+        E_Max = E_Atom
+      endif
+      self%RosenProb(iRosen) = E_Atom
+    enddo
+
+    !We now compute the weight of the Rosenbluth trial.  P(E_i) = exp(-E_i/kt)/N. 
+    !All trials are normalized by E_Max to prevent floating point overflow, but the
+    !extra term cancels out in probability leaving the result unchanged. 
+    norm = 0E0_dp
+    do iRosen = 1, self%nRosenTrials
+      self%RosenProb(iRosen) = self%RosenProb(iRosen)-E_Max
+      self%RosenProb(iRosen) = exp(-trialbox%beta*self%RosenProb(iRosen))
+    enddo
 
 
   end subroutine 
+!==========================================================================================
+  subroutine LinearCBMC_GetPath(self, pathout)
+    implicit none
+    class(LinearCBMC), intent(inout) :: self
+    integer, intent(out) :: pathout(1:self%nAtoms)
+    integer :: iPath
+
+    do iPath = 1, size(self%patharray)
+      pathout(iPath) = self%patharray(iPath)
+    enddo
+
+
+  end subroutine
 !=======================================================================
 end module
 !==========================================================================================

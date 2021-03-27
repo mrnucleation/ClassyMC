@@ -57,48 +57,7 @@ module Template_ForceField
     curbox % dETable = 0E0_dp
     E_Diff = 0E0_dp
 
-!    select type(disp)
-!      class is(DisplacementNew)
-!         call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
-!
-!      class is(Displacement)
-!
-!        if(disp(1)%newAtom .and. disp(1)%oldAtom) then
-!          if(disp(1)%oldAtmIndx == disp(1)%atmIndx) then
-    !      if(.false.) then
-!            call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
-!            if(.not. accept) then
-!              return
-!            endif
-!          else
-!            E_Diff = 0E0_dp
-!            call self % NewECalc(curbox, disp, tempList, tempNNei, E_Half, accept)
-!            if(.not. accept) then
-!              return
-!            endif
-!
-!            E_Diff = E_Diff + E_Half
-!            call self % OldECalc(curbox, disp, E_Half)
-!            E_Diff = E_Diff + E_Half
-!          endif
-!
-!          return
-!        endif
-!
-!        if(disp(1)%newAtom) then
-!          call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
-!          return
-!        endif
-!
-!        if(disp(1)%oldAtom) then
-!          call self % OldECalc(curbox, disp, E_Diff)
-!          return
-!        endif
-!      class default
-!        write(*,*) "Unknown Perturbation Type."
-!    end select
-!
-!
+
   end subroutine
 !=============================================================================+
   function SinglePair(self, atmtype1, atmtype2, rsq) result(E_Pair)
@@ -121,7 +80,7 @@ module Template_ForceField
 !=============================================================================+
   function ManyBody(self, curbox, atmtype1, pos1, atmtypes, posN  ) result(E_Atom)
     implicit none
-    class(forcefield), intent(in) :: self
+    class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     integer, intent(in) :: atmtype1
     integer, intent(in) :: atmtypes(:)

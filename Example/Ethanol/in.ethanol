@@ -31,7 +31,8 @@
   NeighList 1 rsqlist 1
 
   Create Moves
-    AtomTranslation 1.0
+#    AtomTranslation 1.0
+     CBMC 1.0
 #    MolTranslation 1.0
 #    PlaneRotate 1.0
 #    UBSwap 1.0

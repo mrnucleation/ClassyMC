@@ -213,7 +213,7 @@ module MolCon_SimpleRegrowth
 
   end subroutine
 !=================================================================================
-  subroutine SimpleRegrowth_ReverseConfig(self, disp, trialBox, probconstruct, insPoint, insProb, accept)
+  subroutine SimpleRegrowth_ReverseConfig(self, disp, trialBox, probconstruct, accept, insPoint, insProb)
     use Common_MolInfo, only: MolData, BondData, AngleData, nMolTypes
     use MolSearch, only: FindBond, FindAngle
     implicit none
@@ -221,10 +221,9 @@ module MolCon_SimpleRegrowth
     class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(out) :: probconstruct 
-
+    logical, intent(out) :: accept
     real(dp), intent(in), optional :: insPoint(:)
     real(dp), intent(in), optional :: insProb(:)
-    logical, intent(out) :: accept
 
     integer :: bondType, angleType, molType
     integer :: atm1, atm2,atm3, iDisp, iAtom

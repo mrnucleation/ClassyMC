@@ -448,12 +448,12 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-  subroutine GetEFunc(self, epointer)
+  subroutine SimpleBox_GetEFunc(self, epointer)
     ! Used to return a pointer array to the atoms(:,:) array within the box.
     ! Can also be used to simply return a subset of the atoms(:,:) such as a single
     ! molecule's coordinates
     implicit none
-    class(SimBox), intent(inout), target :: self
+    class(SimpleBox), intent(inout) :: self
     class(ECalcArray), pointer :: epointer
 
     epointer => self%EFunc

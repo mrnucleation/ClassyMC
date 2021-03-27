@@ -20,6 +20,8 @@ module MoveClassDef
       procedure, pass :: GetAcceptRate
       procedure, pass :: GetBoxProb
       procedure, pass :: ProcessIO
+      procedure, pass :: UniformMoleculeSelect
+      procedure, pass :: UniformAtomSelect
 !      procedure, pass :: Maintenance 
   end type
 
@@ -73,6 +75,60 @@ module MoveClassDef
 
 
   end subroutine
+!=========================================================================
+! Pulls a random atom's index from the box. This is used when all atoms can be
+! targeted by this move.
+!
+  function UniformAtomSelect(self, trialBox) result(nAtom)
+    use Box_Utility, only: FindAtom
+    use RandomGen, only: grnd
+    implicit none
+    class(MCMove), intent(inout) :: self
+    class(SimpleBox), intent(in) :: trialBox
+    integer :: nAtom
+    integer :: rawIndx
+
+    rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp )
+    call FindAtom(trialbox, rawIndx, nAtom)
+
+  end function
+!=========================================================================
+! Pulls a random molecule's index from the box. This is used when all molecules can be
+! targeted by this move.
+!
+  function UniformMoleculeSelect(self, trialBox, restrict) result(nMol)
+    use Box_Utility, only: FindMolecule
+    use RandomGen, only: grnd, ListRNG
+    use Common_MolInfo, only: nMolTypes
+    implicit none
+    class(MCMove), intent(in) :: self
+    class(SimpleBox), intent(in) :: trialBox
+    logical, intent(in), optional :: restrict(1:nMolTypes)
+    integer :: nMol, nType, iType, nActive
+    integer :: rawIndx
+    real(dp) :: weights(1:nMolTypes), norm
+
+    if(.not. present(restrict)) then
+      rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp )
+      call FindMolecule(trialbox, rawIndx, nMol)
+    else
+      nActive = 0
+      do iType = 1, nMolTypes
+        if( restrict(iType) ) then
+          nActive = nActive + 1
+          weights(iType) = real(trialBox%NMol(iType), dp)
+          norm = norm + weights(iType)
+        else
+          weights(iType) = 0E0_dp
+        endif
+        nType = ListRng(weights, norm)
+        nMol = floor( trialBox%NMol(nType) * grnd() + 1E0_dp )
+        nMol = trialBox%MolGlobalIndx(nType, nMol)
+      enddo
+    endif
+
+  end function
+
 !=========================================================================
   subroutine ProcessIO(self, line, lineStat)
     use Input_Format, only: maxLineLen

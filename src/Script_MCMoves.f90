@@ -9,6 +9,7 @@ module Input_Moves
   use MCMove_AnisoVol, only: AnisoVol
   use MCMove_AtomTranslation, only: AtomTranslate
   use MCMove_Basic_Swap, only: Basic_Swap
+  use MCMove_CBMC, only: CBMC
   use MCMove_Delete, only: MoveDelete
   use MCMove_MolTranslation, only: MolTranslate
   use MCMove_ParticleExchange, only: ParticleExchange
@@ -55,6 +56,9 @@ module Input_Moves
 
       case("basicswap")
         allocate(Basic_Swap::Moves(moveNum)%move)
+
+      case("cbmc")
+        allocate(CBMC::Moves(moveNum)%move)
 
       case("debugdelete")
         allocate(MoveDelete::Moves(moveNum)%move)

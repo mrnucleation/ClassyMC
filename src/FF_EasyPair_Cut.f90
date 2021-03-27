@@ -495,19 +495,19 @@ module FF_EasyPair_Cut
 
   end function
 !=============================================================================+
-  function EasyPair_ManyBody(self, curbox, atmtype1, pos1, atmtypes, posN  ) result(E_Atom)
+  function EasyPair_ManyBody(self, curbox, atmtype1, pos1, atmtypes, posN  ) result(E_Many)
     implicit none
-    class(EasyPair_Cut), intent(in) :: self
+    class(EasyPair_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     integer, intent(in) :: atmtype1
     integer, intent(in) :: atmtypes(:)
     real(dp), intent(in) :: pos1(:)
     real(dp), intent(in) :: posN(:,:)
-    real(dp) :: E_Atom
+    real(dp) :: E_Many
 
 
     integer :: iDisp, iAtom, jAtom, remLen, jNei
-    integer :: atmType1, atmType2
+    integer :: atmType2
     integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: E_Pair, E_Pair2
@@ -515,14 +515,14 @@ module FF_EasyPair_Cut
    
     E_Many = 0E0_dp
     do jAtom = 1, size(posN)
-      atmtypes = curbox % AtomType(jAtom)
-      rx = atoms(1, iAtom) - atoms(1, jAtom)
-      ry = atoms(2, iAtom) - atoms(2, jAtom)
-      rz = atoms(3, iAtom) - atoms(3, jAtom)
+      atmType2 = atmtypes(jAtom)
+      rx = pos1(1) - posN(1, jAtom)
+      ry = pos1(2) - posN(2, jAtom)
+      rz = pos1(3) - posN(3, jAtom)
       call curbox%Boundary(rx, ry, rz)
       rsq = rx*rx + ry*ry + rz*rz
       if(rsq < self%rCutSq) then
-        E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
+        E_Pair = self % PairFunction(rsq, atmtype1, atmtype2)
         E_Many = E_Many + E_Pair
       endif
     enddo

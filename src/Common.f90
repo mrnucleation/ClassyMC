@@ -6,26 +6,28 @@ module CoordinateTypes
   type :: Perturbation
   end type
 
-  !Move type where a single particle's position is changed.
-  type, extends(Perturbation) :: Displacement
-    integer(kind=atomIntType) :: molType, atomsubIndx
+
+  !Move type for moves which only involve a single molecule.
+  !Serves as the base class for Displacement, Addition, Deletion
+  type, extends(Perturbation) :: SingleMol
+    integer(kind=atomIntType) :: molType
     integer(kind=atomIntType) :: molIndx, atmIndx   
+  end type
+
+  !Move type where a single particle's position is changed.
+  type, extends(SingleMol) :: Displacement
+    integer(kind=atomIntType) :: atomsubIndx
     real(dp) :: x_new, y_new, z_new
     logical :: newList = .false.
     integer :: listIndex = -1
   end type
 
-
   !Move type where one particle is removed 
-  type, extends(Perturbation) :: Deletion
-    integer(kind=atomIntType) :: molType
-    integer(kind=atomIntType) :: molIndx, atmIndx   
+  type, extends(SingleMol) :: Deletion
   end type
   
   !Move type where one particle is created
-  type, extends(Perturbation) :: Addition
-    integer(kind=atomIntType) :: molType
-    integer(kind=atomIntType) :: molIndx, atmIndx   
+  type, extends(SingleMol) :: Addition
     real(dp) :: x_new, y_new, z_new
     integer :: listIndex = -1
   end type

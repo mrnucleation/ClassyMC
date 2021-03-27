@@ -96,7 +96,6 @@ module Common_MolInfo
   integer :: nAngleTypes = -1
   integer :: nTorsionTypes = -1
   integer :: nMiscTypes = -1
-
   integer :: mostAtoms = -1
 
   type(MolDef), allocatable :: MolData(:)
