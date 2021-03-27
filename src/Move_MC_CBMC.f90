@@ -237,7 +237,7 @@ use VarPrecision
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
-      call trialBox % UpdatePosition(self%disp(1:nAtoms), self%tempList, self%tempNNei)
+      call trialBox % UpdatePosition(self%disp(1:nRegrow), self%tempList, self%tempNNei)
     else
       self%detailedrej = self%detailedrej + 1
 !      write(*,*) E_Diff, trialBox%beta, Prob
