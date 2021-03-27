@@ -179,7 +179,13 @@ use VarPrecision
     write(*,*) nRegrow
     call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%disp(1:nRegrow), ProbSub)
     Prob = 1E0_dp/ProbSub
-    write(*,*) prob
+    write(*,*) "Prob:", prob
+    iDisp = 0
+    do iAtom = lowIndx, highIndx
+      iDisp = iDisp + 1
+      write(*,*) self%disp(iDisp)%x_new, self%disp(iDisp)%y_new, self%disp(iDisp)%z_new 
+    enddo
+
 
     !If the particle moved a large distance get a temporary neighborlist
 !    if(any([dx,dy,dz] > neighSkin)) then
@@ -205,7 +211,7 @@ use VarPrecision
                                      E_Diff, &
                                      accept, &
                                      computeintra=.true.)
-    write(*,*) E_Diff
+    write(*,*) "E_Diff", E_Diff
     if(.not. accept) then
       self%ovlaprej = self%ovlaprej + 1
       return

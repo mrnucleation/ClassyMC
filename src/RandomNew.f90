@@ -214,7 +214,7 @@
 
       v3(1) = coeff1*v2(1) - coeff2*c_Term*v2(2) - coeff3*s_Term*v2(1)*v2(3)
       v3(2) = coeff1*v2(2) + coeff2*c_Term*v2(1) - coeff3*s_Term*v2(2)*v2(3)
-      v3(3) = coeff1*v2(3)                      + coeff3*s_Term*(r_proj*r_proj)
+      v3(3) = coeff1*v2(3)                       + coeff3*s_Term*(r_proj*r_proj)
 
          
       end subroutine
