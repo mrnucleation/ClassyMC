@@ -124,7 +124,6 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Analysis_ThermoAverage.f90\
         		$(SRC)/Analysis_ThermoIntegration.f90\
         		$(SRC)/Box_Presets.f90\
-        		$(SRC)/Box_SimpleBox.f90\
         		$(SRC)/Box_CubicBox.f90\
         		$(SRC)/Box_OrthoBox.f90\
         		$(SRC)/RandomNew.f90\
@@ -172,7 +171,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Traj_LAMMPSDump.f90\
 	        	$(SRC)/Traj_XYZFormat.f90\
 	        	$(SRC)/Traj_XSF.f90\
-						$(SRC)/Input_Format.f90\
+				$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_CellRSqList.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
@@ -192,7 +191,8 @@ SRC_TEMPLATE := $(SRC)/Template_Master.f90\
 				$(SRC)/Template_Constraint.f90\
 				$(SRC)/Template_Forcefield.f90\
 				$(SRC)/Template_SimBox.f90\
-        $(SRC)/Box_Ultility.f90\
+        		$(SRC)/Box_SimpleBox.f90\
+				$(SRC)/Box_Ultility.f90\
 				$(SRC)/Template_IntraFF.f90\
 				$(SRC)/Template_NeighList.f90\
 				$(SRC)/Template_Trajectory.f90\

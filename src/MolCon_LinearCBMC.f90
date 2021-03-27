@@ -25,7 +25,7 @@ module MolCon_LinearCBMC
     integer,private :: nAtoms 
     integer,private :: firstAtom = 1 
     integer, private :: rosenNeighList = 1
-    integer,private :: nRosenTrials = 8 
+    integer,private :: nRosenTrials = 4
 
     !GenProb => Weight array for chosing which trial position to use
     !RosenProb => Weight array for chosing which trial position to use
@@ -136,6 +136,7 @@ module MolCon_LinearCBMC
 
     !Create the path array which is used to determine regrowth order.
     if(.not. allocated(self%patharray) ) then
+      allocate( self%newconfig(1:3, 1:self%nAtoms) )
       allocate( self%grown(1:self%nAtoms) )  
       allocate( self%patharray(1:self%nAtoms) )  
       allocate( self%pathposition(1:self%nAtoms) )  
@@ -228,6 +229,7 @@ module MolCon_LinearCBMC
     endif
 
 
+!    write(*,*) self%patharray(1:self%nAtoms)
 
 
   end subroutine
@@ -278,10 +280,13 @@ module MolCon_LinearCBMC
       class is(Addition)
         self%grown = .false.
         self%nGrown = 0
+        molindx = disp(1)%molindx
+        call trialbox%GetMolData(molindx, molStart=molStart)
         self%schedule = self%scratchschedule
 
       class default
-        error stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
+        write(0,*) "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
+        error stop 
     end select
 
     call self%CreateSchedule
@@ -295,6 +300,7 @@ module MolCon_LinearCBMC
 
 
     do while(self%nGrown < self%nAtoms)
+      write(*,*) self%nGrown
         !Weight Insertion Points and chose one of them.
       if(self%nGrown == 0) then
           Atm1 = self%schedule(1)
@@ -335,6 +341,7 @@ module MolCon_LinearCBMC
     !    However if it was a link in the chain then the 2nd atom 
     !    regrown should be used as the central atom.
         Atm3 = self%schedule(3) 
+        Atm2 = self%schedule(2) 
         if(self%freq(Atm2) == 2) then
             Atm1 = self%schedule(1) 
             Atm2 = self%schedule(2) 
@@ -404,6 +411,7 @@ module MolCon_LinearCBMC
         self%nGrown = self%nGrown + 1
      enddo
 
+     write(*,*) "blah"
      do iDisp = 1, size(disp)
       select type(disp)
        class is(Displacement)
@@ -510,6 +518,11 @@ module MolCon_LinearCBMC
         !Starting from the first inserted atom, begin growing the second atom by
         Atm1 = self%schedule(1)
         Atm2 = self%schedule(2)
+        if(.not. self%grown(Atm1) ) then
+          write(0,*)  Atm1, Atm2
+          write(0,*) self%grown(1:self%nAtoms)
+          error stop "Unexpected gap in Linear CBMC!"
+        endif
         call FindBond(self%molType, Atm1, Atm2, bondType)
         do iRosen = 1, self%nRosenTrials-1
           call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r2, prob_r)
@@ -539,6 +552,12 @@ module MolCon_LinearCBMC
             Atm1 = self%schedule(2) 
             Atm2 = self%schedule(1) 
         endif
+        if(.not. self%grown(Atm1) .or. &
+           .not. self%grown(Atm2) ) then
+          write(0,*)  Atm1, Atm2
+          write(0,*) self%grown(1:self%nAtoms)
+          error stop "Unexpected gap in Linear CBMC!"
+        endif
         v1(1) = self%newconfig(1, Atm1) - self%newconfig(1, Atm2)
         v1(2) = self%newconfig(2, Atm1) - self%newconfig(2, Atm2)
         v1(3) = self%newconfig(3, Atm1) - self%newconfig(3, Atm2)
@@ -560,6 +579,14 @@ module MolCon_LinearCBMC
       elseif(self%nGrown < self%nAtoms) then
             Atm4 = self%schedule(self%nGrown+1) 
             call self%FindAtomsFromPath(Atm4, Atm1, Atm2, Atm3)
+            if(.not. self%grown(Atm1) .or. &
+               .not. self%grown(Atm2) .or. &
+               .not. self%grown(Atm3) ) then
+              write(0,*)  Atm1, Atm2, Atm3
+              write(0,*) self%grown(1:self%nAtoms)
+              error stop "Unexpected gap in Linear CBMC!"
+            endif
+
             call FindBond(self%molType, Atm3, Atm4, bondType)
             call FindAngle(self%molType, Atm2, Atm3, Atm4, angleType)
             call FindTorsion(self%molType, Atm1, Atm2, Atm3, Atm4, torsType)
@@ -675,14 +702,14 @@ module MolCon_LinearCBMC
     atm4plus1 = atm4Pos + 1
     atm4minus1 = atm4Pos - 1
     if( atm4plus1 > self%nAtoms ) then
-        Atm3 = self%patharray(atm4Pos+1)
-        Atm2 = self%patharray(atm4Pos+2)
-        Atm1 = self%patharray(atm4Pos+3)
-        return
-    else if( atm4minus1 < 1 ) then
         Atm3 = self%patharray(atm4Pos-1)
         Atm2 = self%patharray(atm4Pos-2)
         Atm1 = self%patharray(atm4Pos-3)
+        return
+    else if( atm4minus1 < 1 ) then
+        Atm3 = self%patharray(atm4Pos+1)
+        Atm2 = self%patharray(atm4Pos+2)
+        Atm1 = self%patharray(atm4Pos+3)
         return
     endif
 
@@ -727,7 +754,7 @@ module MolCon_LinearCBMC
     integer :: molIndx, molType, atmIndx
     integer :: iRosen, jAtom, jNei
     integer :: atmtype1
-    real(dp) :: E_Atom, E_Max, norm
+    real(dp) :: E_Atom, E_Min, norm
     real(dp) :: pos1(1:3)
 
 
@@ -753,6 +780,7 @@ module MolCon_LinearCBMC
     end select
 
 
+    write(*,*) "blah"
     call trialBox%GetAtomData(tempdisp(1)%atmindx, atomtype=atmtype1)
     select type(disp)
       class is(Addition)
@@ -764,23 +792,25 @@ module MolCon_LinearCBMC
         nNeigh => self%tempNNei 
     end select
 
-    E_Max = -huge(dp)
+    E_Min = huge(dp)
     do iRosen = 1, self%nRosenTrials
       tempdisp(1)%x_new = self%tempcoords(1, iRosen)
       tempdisp(1)%y_new = self%tempcoords(2, iRosen)
       tempdisp(1)%z_new = self%tempcoords(3, iRosen)
 
       pos1(1:3) = self%tempcoords(1:3, atmsubindx)
-      do jNei = 1, nNeigh(1)
-        jAtom = neighlist(jNei, 1)
-        call trialBox%GetAtomData(jAtom, atomtype=self%atomtypes(jAtom))
-        self%posN(1:3, jNei) = atoms(1:3, jAtom)
-      enddo
-      !Add 1-5 terms later.
+      if(nNeigh(1) /= 0) then
+        do jNei = 1, nNeigh(1)
+          jAtom = neighlist(jNei, 1)
+          call trialBox%GetAtomData(jAtom, atomtype=self%atomtypes(jAtom))
+          self%posN(1:3, jNei) = atoms(1:3, jAtom)
+        enddo
+        !Add 1-5 terms later.
+        E_Atom = EFunc % Method % ManyBody(trialbox, atmtype1, pos1, self%atomtypes, self%posN  )
+      endif
 
-      E_Atom = EFunc % Method % ManyBody(trialbox, atmtype1, pos1, self%atomtypes, self%posN  )
-      if(E_Atom > E_Max) then
-        E_Max = E_Atom
+      if(E_Atom < E_Min) then
+        E_Min = E_Atom
       endif
       self%RosenProb(iRosen) = E_Atom
     enddo
@@ -790,7 +820,7 @@ module MolCon_LinearCBMC
     !extra term cancels out in probability leaving the result unchanged. 
     norm = 0E0_dp
     do iRosen = 1, self%nRosenTrials
-      self%RosenProb(iRosen) = self%RosenProb(iRosen)-E_Max
+      self%RosenProb(iRosen) = self%RosenProb(iRosen)-E_Min
       self%RosenProb(iRosen) = exp(-trialbox%beta*self%RosenProb(iRosen))
     enddo
 

@@ -30,6 +30,7 @@ module FF_Pair_LJ_Q_Cut
 !      procedure, pass :: ShiftECalc_Multi => Shift_LJ_Q_Cut_Multi
       procedure, pass :: NewECalc => New_LJ_Q_Cut
       procedure, pass :: OldECalc => Old_LJ_Q_Cut
+      procedure, pass :: ManyBody => ManyBody_LJ_Q_Cut
       procedure, pass :: AtomExchange => AtomExchange_LJ_Q_Cut
       procedure, pass :: ProcessIO => ProcessIO_LJ_Q_Cut
       procedure, pass :: Prologue => Prologue_LJ_Q_Cut
@@ -507,6 +508,56 @@ module FF_Pair_LJ_Q_Cut
         endif
     enddo
   end subroutine
+!=============================================================================+
+  function ManyBody_LJ_Q_Cut(self, curbox, atmtype1, pos1, atmtypes, posN  ) result(E_Many)
+    implicit none
+    class(Pair_LJ_Q_Cut), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    integer, intent(in) :: atmtype1
+    integer, intent(in) :: atmtypes(:)
+    real(dp), intent(in) :: pos1(:)
+    real(dp), intent(in) :: posN(:,:)
+    real(dp) :: E_Many
+
+
+    integer :: iDisp, iAtom, jAtom, remLen, jNei
+    integer :: atmType2
+    integer :: molEnd, molStart
+    real(dp) :: rx, ry, rz, rsq, r
+    real(dp) :: sig_sq, ep, q
+    real(dp) :: E_Pair, Ele, LJ
+    real(dp) :: rmin_ij      
+   
+    E_Many = 0E0_dp
+    do jAtom = 1, size(posN)
+      atmType2 = atmtypes(jAtom)
+      rx = pos1(1) - posN(1, jAtom)
+      ry = pos1(2) - posN(2, jAtom)
+      rz = pos1(3) - posN(3, jAtom)
+      call curbox%Boundary(rx, ry, rz)
+      rsq = rx*rx + ry*ry + rz*rz
+      if(rsq < self%rLJCutSq) then
+         ep = self%epsTable(atmType2, atmType1)
+         if(ep /= 0E0_dp) then
+            sig_sq = self%sigTable(atmType2, atmType1)          
+            LJ = (sig_sq/rsq)
+            LJ = LJ * LJ * LJ
+            LJ = ep * LJ * (LJ-1E0_dp)
+            E_Many = E_Many + LJ
+         endif
+       endif
+
+       if(rsq < self%rQCutSq) then
+         q = self%qTable(atmType2, atmType1)
+         if(q /= 0E0_dp) then
+           r = sqrt(rsq)
+           Ele = q/r
+           E_Many = E_Many + Ele
+         endif
+       endif
+    enddo
+
+  end function
 
   !=====================================================================
   subroutine ProcessIO_LJ_Q_Cut(self, line)

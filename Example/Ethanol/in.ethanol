@@ -28,7 +28,7 @@
 #  modify box 1 chempotential 1 -9.210340372
 #  modify box 1 chempotential 1 -18.420680744
   modify box 1 chempotential 1 58.420680744
-  NeighList 1 rsqlist 1
+  NeighList 1 cellrsqlist 1
 
   Create Moves
 #    AtomTranslation 1.0

@@ -117,7 +117,7 @@ module IntraTorsion_TRAPPE
         read(command, *) self%k(iPar-1)
         self%k(iPar-1) = self%k(iPar-1)*inEngUnit
     enddo
-    write(*,*) self%k(0: self%nParameters-1)
+!    write(*,*) self%k(0: self%nParameters-1)
   end subroutine
 !=============================================================================+
 end module

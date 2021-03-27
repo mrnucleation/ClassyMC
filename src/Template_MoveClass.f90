@@ -121,7 +121,7 @@ module MoveClassDef
         else
           weights(iType) = 0E0_dp
         endif
-        nType = ListRng(weights, norm)
+        nType = ListRng(weights(1:nMolTypes), norm)
         nMol = floor( trialBox%NMol(nType) * grnd() + 1E0_dp )
         nMol = trialBox%MolGlobalIndx(nType, nMol)
       enddo

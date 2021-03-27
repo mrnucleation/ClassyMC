@@ -44,13 +44,13 @@ use VarPrecision
  contains
 !========================================================
   subroutine CBMC_Constructor(self)
-    use Template_MolConstructor, only: MolConstructor
-    use Common_MolInfo, only: MolData, nMolTypes
     use BoxData, only: BoxArray
+    use Common_MolInfo, only: MolData, nMolTypes
     use MolCon_LinearCBMC, only: LinearCBMC
+    use Template_MolConstructor, only: MolConstructor
+    use ParallelVar, only: nout
     implicit none
     class(CBMC), intent(inout) :: self
-    class(MolConstructor), pointer :: molcon
     integer :: iType, maxAtoms, nAtoms, nBoxes
 
     nBoxes = size(boxArray)
@@ -79,17 +79,24 @@ use VarPrecision
     allocate( self%disp(1:maxAtoms) )
     allocate( self%patharrays(1:maxAtoms, 1:nMolTypes) )
     self%patharrays = 0
-    self%validtype = .false.
+    self%validtype = .true.
 
     do iType = 1, nMolTypes
       select type(molcon => MolData(iType)%molConstruct)
         class is(LinearCBMC)
           nAtoms = MolData(iType)%nAtoms 
-          call molcon%GetPath(self%patharrays(1:nAtoms, iType))
+          call molcon % GetPath( self%patharrays(1:nAtoms, iType) )
+
         class default
           self%validtype(iType) = .false.
+          error stop
       end select
     enddo
+
+    write(nout,*) "CBMC Valid Molecule Types: ", self%validtype(1:nMolTypes)
+    if( all(.not. self%validtype) ) then
+      stop "CBMC Moves have been specified on molecules which do not use a CBMC regrowth style"
+    endif
 
 
   end subroutine
@@ -135,11 +142,19 @@ use VarPrecision
 
  
     if(reverse) then
-      lowIndx = cutpoint
+      if(cutpoint /= 1) then
+        lowIndx = cutpoint
+      else
+        lowIndx = 2
+      endif
       highIndx = nAtoms
     else
       lowIndx = 1
-      highIndx = cutpoint
+      if(cutpoint /= nAtoms) then
+        highIndx = cutpoint
+      else
+        highIndx = nAtoms - 1
+      endif     
     endif
 
     iDisp = 0
@@ -149,21 +164,22 @@ use VarPrecision
       atomIndx = molStart + iAtom - 1
       nRegrow = nRegrow + 1
 
-      self%disp(iAtom)%molType = molType
-      self%disp(iAtom)%molIndx = nMove
-      self%disp(iAtom)%atmIndx = atomIndx
+      self%disp(iDisp)%molType = molType
+      self%disp(iDisp)%molIndx = nMove
+      self%disp(iDisp)%atmIndx = self%patharrays(iAtom, molType)
 
-      self%disp(iAtom)%x_new = 0E0_dp
-      self%disp(iAtom)%y_new = 0E0_dp
-      self%disp(iAtom)%z_new = 0E0_dp
+      self%disp(iDisp)%x_new = 0E0_dp
+      self%disp(iDisp)%y_new = 0E0_dp
+      self%disp(iDisp)%z_new = 0E0_dp
 
-      self%disp(iAtom)%newlist = .false.
-      self%disp(iAtom)%listIndex = iAtom
+      self%disp(iDisp)%newlist = .false.
+      self%disp(iDisp)%listIndex = iDisp
     enddo
 
+    write(*,*) nRegrow
     call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%disp(1:nRegrow), ProbSub)
     Prob = 1E0_dp/ProbSub
-!    write(*,*) dx, dy, dz
+    write(*,*) prob
 
     !If the particle moved a large distance get a temporary neighborlist
 !    if(any([dx,dy,dz] > neighSkin)) then
@@ -189,6 +205,7 @@ use VarPrecision
                                      E_Diff, &
                                      accept, &
                                      computeintra=.true.)
+    write(*,*) E_Diff
     if(.not. accept) then
       self%ovlaprej = self%ovlaprej + 1
       return
@@ -204,7 +221,9 @@ use VarPrecision
 
 
     call MolData(molType) % molConstruct % ReverseConfig(self%disp(1:nRegrow), trialBox, ProbSub, accept)
+
     Prob = Prob * ProbSub
+    write(*,*) Prob
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:nRegrow), inProb=Prob)

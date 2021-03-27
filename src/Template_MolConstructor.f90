@@ -76,6 +76,7 @@ module Template_MolConstructor
 
     accept = .true.
     probconstruct = 1E0_dp
+    write(*,*) "Default"
   end subroutine
 !==========================================================================================
   subroutine GasConfig(self,  probGas)

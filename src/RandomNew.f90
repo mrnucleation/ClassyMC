@@ -291,6 +291,7 @@
     implicit none
     real(dp), intent(in) :: list(:)
     real(dp), intent(in), optional :: norm
+    integer :: nElements
     integer :: bin, nSel
     real(dp) :: ran_num, intSum
 
@@ -298,6 +299,11 @@
       ran_num = grnd()*norm
     else
       ran_num = grnd()
+    endif
+    nElements = size(list)
+    if(nElements == 1) then
+      bin = 1
+      return
     endif
 
     nSel = 1 

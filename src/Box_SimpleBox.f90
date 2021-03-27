@@ -797,7 +797,6 @@ module SimpleSimBox
       do iMol = 1, self%NMol(iType)
          molIndx = self % MolGlobalIndx(iType, iMol)
          call self%ComputeMolIntra(iType, molIndx, E_Mol, accept)
-         write(*,*) E_Mol
          if(.not. accept) then
            return
          endif
@@ -1181,6 +1180,7 @@ module SimpleSimBox
       write(__StdErr__, *) "Error in Sim Box class: GetMolData has been given an invalid index"
       write(__StdErr__, *) "Given Index:", globalIndx 
       write(__StdErr__, *) "Array Size:", size(self%molStartIndx)
+      error stop
     endif
 
     if( present(molStart) ) then

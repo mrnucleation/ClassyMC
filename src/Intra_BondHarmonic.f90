@@ -108,7 +108,7 @@ module IntraBond_Harmonic
     self%k0 = self%k0*inEngUnit
 
     if(lineStat /= 0) then
-      write(*,*) "Missing input rquired for the harmonic bond style"
+      write(0,*) "Missing input rquired for the harmonic bond style"
     endif
   end subroutine
 !=============================================================================+

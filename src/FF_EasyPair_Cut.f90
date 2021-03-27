@@ -510,7 +510,7 @@ module FF_EasyPair_Cut
     integer :: atmType2
     integer :: molEnd, molStart
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: E_Pair, E_Pair2
+    real(dp) :: E_Pair
     real(dp) :: rmin_ij      
    
     E_Many = 0E0_dp

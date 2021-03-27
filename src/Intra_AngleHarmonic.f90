@@ -103,7 +103,7 @@ module IntraAngle_Harmonic
     read(command, *) self%k0
     self%k0 = self%k0*inEngUnit
 
-    write(*,*) self%theta0, self%k0
+!    write(*,*) self%theta0, self%k0
 
     if(lineStat /= 0) then
       write(*,*) "Missing input required for the haromic Angle style"
