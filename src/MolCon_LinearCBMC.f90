@@ -424,14 +424,14 @@ module MolCon_LinearCBMC
       select type(disp)
        class is(Displacement)
           atmindx = disp(iDisp)%atmindx - molStart + 1
-          disp(iDisp)%x_new = self%tempcoords(1, atmindx) 
-          disp(iDisp)%y_new = self%tempcoords(2, atmindx) 
-          disp(iDisp)%z_new = self%tempcoords(3, atmindx) 
+          disp(iDisp)%x_new = self%newconfig(1, atmindx) 
+          disp(iDisp)%y_new = self%newconfig(2, atmindx) 
+          disp(iDisp)%z_new = self%newconfig(3, atmindx) 
        class is(Addition)
           atmindx = disp(iDisp)%atmindx - molStart + 1
-          disp(iDisp)%x_new = self%tempcoords(1, atmindx) 
-          disp(iDisp)%y_new = self%tempcoords(2, atmindx) 
-          disp(iDisp)%z_new = self%tempcoords(3, atmindx) 
+          disp(iDisp)%x_new = self%newconfig(1, atmindx) 
+          disp(iDisp)%y_new = self%newconfig(2, atmindx) 
+          disp(iDisp)%z_new = self%newconfig(3, atmindx) 
        end select
     enddo
 
@@ -803,7 +803,7 @@ module MolCon_LinearCBMC
       tempdisp(1)%y_new = self%tempcoords(2, iRosen)
       tempdisp(1)%z_new = self%tempcoords(3, iRosen)
 
-      pos1(1:3) = self%tempcoords(1:3, atmsubindx)
+      pos1(1:3) = self%tempcoords(1:3, iRosen)
       if(nNeigh(1) /= 0) then
         do jNei = 1, nNeigh(1)
           jAtom = neighlist(jNei, 1)

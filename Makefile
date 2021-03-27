@@ -23,7 +23,7 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 
 OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
-#OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
+OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 #OPTIMIZE_FLAGS_GFORT += -pg
 #OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
