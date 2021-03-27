@@ -177,6 +177,10 @@
 
       r2 = v2(1)*v2(1) + v2(2)*v2(2) + v2(3)*v2(3)
       r2 = sqrt(r2)
+      if(r2 < 1E-100_dp) then
+        write(0,*) v1(1:3)
+        error stop "Vector of zero length passed into UnitTorsion routine!"
+      endif
       r_proj = sqrt(v2(1)*v2(1) + v2(2)*v2(2))
 
 !            
