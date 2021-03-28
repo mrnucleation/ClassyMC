@@ -21,7 +21,7 @@ module IntraBond_Harmonic
 !=============================================================================+
   function HarmonicBond_EFunc(self, dist) result(E_Bond)
     implicit none
-    class(HarmonicBond), intent(inout) :: self
+    class(HarmonicBond), intent(in) :: self
     real(dp), intent(in) :: dist
     real(dp) :: E_Bond
 

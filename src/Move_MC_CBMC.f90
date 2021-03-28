@@ -120,7 +120,7 @@ use VarPrecision
     integer :: lowIndx, highIndx, iDisp
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, E_Inter, E_Intra, biasE
-    real(dp) :: Prob, ProbSub
+    real(dp) :: Prob, ProbFor, ProbRev
 
     boxID = trialBox % boxID
     self % atmps = self % atmps + 1E0_dp
@@ -176,9 +176,8 @@ use VarPrecision
       self%disp(iDisp)%listIndex = iDisp
     enddo
 
-!    write(*,*) nRegrow
-    call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%disp(1:nRegrow), ProbSub)
-    Prob = 1E0_dp/ProbSub
+    call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%disp(1:nRegrow), ProbFor)
+    Prob = 1E0_dp/ProbFor
 
 
     !If the particle moved a large distance get a temporary neighborlist
@@ -219,20 +218,31 @@ use VarPrecision
 
 
 
-    call MolData(molType) % molConstruct % ReverseConfig(self%disp(1:nRegrow), trialBox, ProbSub, accept)
+    call MolData(molType) % molConstruct % ReverseConfig(self%disp(1:nRegrow), trialBox, ProbRev, accept)
 
-    Prob = Prob * ProbSub
+    Prob = Prob * ProbRev
+
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:nRegrow), inProb=Prob)
     if(accept) then
+!      write(*,*) "Accept", nRegrow
+!      write(*,*) "forward", -log(ProbFor)/trialbox%beta, E_diff+trialBox%ETotal
+!      write(*,*) "reverse", -log(ProbRev)/trialbox%beta, trialBox%ETotal
+!      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
+!      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
+
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:nRegrow), self%tempList, self%tempNNei)
     else
+      write(*,*) "Reject", nRegrow
+      write(*,*) "forward", -log(ProbFor/ProbRev)/trialbox%beta, E_diff
+!      write(*,*) "reverse", -log(ProbRev)/trialbox%beta, trialBox%ETotal
+      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
+      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
       self%detailedrej = self%detailedrej + 1
-!      write(*,*) E_Diff, trialBox%beta, Prob
     endif
 
   end subroutine

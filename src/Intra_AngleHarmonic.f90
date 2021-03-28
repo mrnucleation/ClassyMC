@@ -22,7 +22,7 @@ module IntraAngle_Harmonic
 !=============================================================================+
   function HarmonicAngle_EFunc(self, angle) result(E_Angle)
     implicit none
-    class(HarmonicAngle), intent(inout) :: self
+    class(HarmonicAngle), intent(in) :: self
     real(dp), intent(in) :: angle
     real(dp) :: E_Angle
 

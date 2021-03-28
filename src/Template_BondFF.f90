@@ -10,6 +10,7 @@ module Template_IntraBond
     real(dp) :: r0
     contains
       procedure, pass :: Constructor 
+      procedure, pass :: ComputeProb
       procedure, pass :: ComputeBond
       procedure, pass :: EFunc
       procedure, pass :: DetailedECalc 
@@ -23,8 +24,8 @@ module Template_IntraBond
   function ComputeBond(self, curbox, atompos) result(r)
 !    use Common_MolInfo, only: nMolTypes
     implicit none
-    class(Bond_FF), intent(inout) :: self
-    class(simBox), intent(inout) :: curbox
+    class(Bond_FF), intent(in) :: self
+    class(simBox), intent(in) :: curbox
     real(dp), intent(in) :: atompos(:, :)
     real(dp) :: rx, ry, rz, r
 
@@ -34,11 +35,23 @@ module Template_IntraBond
     call curbox % Boundary(rx, ry, rz)
     r = sqrt(rx*rx + ry*ry + rz*rz)
   end function
+!==========================================================================
+  function ComputeProb(self, beta, val) result(probgen)
+    implicit none
+    class(Bond_FF), intent(in) :: self
+    real(dp), intent(in) :: beta
+    real(dp), intent(in) :: val
+    real(dp) :: probgen
+    real(dp) :: E_Val
+
+    E_Val = self%EFunc(val)
+    probgen = exp(-beta*E_Val)
+  end function
 !=============================================================================+
   function EFunc(self, dist) result(E_Bond)
 !    use Common_MolInfo, only: nMolTypes
     implicit none
-    class(Bond_FF), intent(inout) :: self
+    class(Bond_FF), intent(in) :: self
     real(dp), intent(in) :: dist
     real(dp) :: E_Bond
 

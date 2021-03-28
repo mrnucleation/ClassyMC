@@ -10,6 +10,7 @@ module Template_IntraTorsion
     contains
       procedure, pass :: Constructor 
       procedure, pass :: ComputeTors
+      procedure, pass :: ComputeProb
       procedure, pass :: EFunc
       procedure, pass :: DetailedECalc 
       procedure, pass :: GenerateDist
@@ -97,11 +98,23 @@ module Template_IntraTorsion
 !=============================================================================+
   function EFunc(self, angle) result(E_Torsion)
     implicit none
-    class(Torsion_FF), intent(inout) :: self
+    class(Torsion_FF), intent(in) :: self
     real(dp), intent(in) :: angle
     real(dp) :: E_Torsion
 
     E_Torsion = 0E0_dp
+  end function
+!==========================================================================
+  function ComputeProb(self, beta, val) result(probgen)
+    implicit none
+    class(Torsion_FF), intent(in) :: self
+    real(dp), intent(in) :: beta
+    real(dp), intent(in) :: val
+    real(dp) :: probgen
+    real(dp) :: E_Val
+
+    E_Val = self%EFunc(val)
+    probgen = exp(-beta*E_Val)
   end function
 !=============================================================================+
   subroutine DetailedECalc(self, curbox, atompos, E_T, accept)
