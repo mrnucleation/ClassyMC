@@ -22,10 +22,13 @@ end_bonddef
 AngleDef
   harmonic 109.50 50400 #CHx-CHy-OH
   harmonic 108.50 55400 #CHx-O-H
+#  ridgid 109.50 50400 #CHx-CHy-OH
+#  ridgid 108.50 55400 #CHx-O-H
 End_AngleDef
 
 TorsionDef
   trappe   0.00    209.82  -29.17  187.93 #CHx-CHy-O-H
+#  ridgid   0.00   #CHx-CHy-O-H
 End_TorsionDef
 
 
@@ -40,13 +43,13 @@ molecule 1
 
   bonds
     1   1 2
-    1   2 3
-    1   3 4
+    2   2 3
+    3   3 4
   end_bonds
 
   angles
     1    1 2 3
-    1    2 3 4
+    2    2 3 4
   end_angles
 
   torsion

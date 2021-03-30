@@ -53,6 +53,7 @@ module Input_Sampling
         allocate(UmbrellaWHAM::sampling)
 
       case default
+        write(0,*) "Sampling Type is not valid!"
         lineStat = -1
     end select
 

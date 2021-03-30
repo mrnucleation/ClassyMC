@@ -13,6 +13,7 @@ module Template_IntraAngle
       procedure, pass :: EFunc
       procedure, pass :: ComputeProb
       procedure, pass :: ComputeAngle
+      procedure, pass :: GenerateReverseDist
       procedure, pass :: DetailedECalc 
 !      procedure, pass :: DiffECalc
       procedure, pass :: ProcessIO
@@ -39,6 +40,32 @@ module Template_IntraAngle
     E_Val = self%EFunc(val)
     probgen = exp(-beta*E_Val)
   end function
+!==========================================================================
+! Takes the coordinates of a set of three atoms and uses it to compute
+! what the probability of generating that angle would be.
+  subroutine GenerateReverseDist(self, curbox, atompos, probgen)
+    use RandomGen, only: grnd, Gaussian
+    use ClassyConstants, only: two_pi
+    implicit none
+    class(Angle_FF), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    real(dp), intent(in) :: atompos(:, :)
+    real(dp), intent(out) :: probgen
+
+    logical :: accept
+    integer :: iAtom
+    real(dp) :: beta
+    real(dp) :: E_Angle, reducepos(1:3,1:3)
+
+    do iAtom = 1,3
+      reducepos(1:3, iAtom) = atompos(1:3, iAtom) - atompos(1:3, 1)
+      call curbox%Boundary(reducepos(1, iAtom), reducepos(2, iAtom), reducepos(3, iAtom))
+    enddo
+
+    beta = curbox%beta
+    call self%DetailedECalc(curbox, reducepos(1:3,1:3), E_Angle, accept)
+    probgen = exp(-beta*E_Angle)
+  end subroutine
 !=============================================================================+
   function EFunc(self, angle) result(E_Angle)
     implicit none

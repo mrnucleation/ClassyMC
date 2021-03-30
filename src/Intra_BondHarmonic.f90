@@ -13,7 +13,7 @@ module IntraBond_Harmonic
       procedure, pass :: Constructor => HarmonicBond_Constructor
 !      procedure, pass :: DetailedECalc => HarmonicBond_DetailedECalc
       procedure, pass :: GenerateDist => HarmonicBond_GenerateDist
-      procedure, pass :: GenerateReverseDist => HarmonicBond_GenerateReverseDist
+!      procedure, pass :: GenerateReverseDist => HarmonicBond_GenerateReverseDist
       procedure, pass :: ProcessIO => HarmonicBond_ProcessIO
   end type
 
@@ -56,7 +56,7 @@ module IntraBond_Harmonic
         cycle
       endif
       probgen = (val/rMax)**2
-      if(probgen < grnd()) then
+      if(probgen > grnd()) then
         exit
       endif
     enddo

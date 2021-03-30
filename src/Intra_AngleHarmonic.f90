@@ -14,7 +14,7 @@ module IntraAngle_Harmonic
       procedure, pass :: Constructor => HarmonicAngle_Constructor
 !      procedure, pass :: DetailedECalc => HarmonicAngle_DetailedECalc
       procedure, pass :: GenerateDist => HarmonicAngle_GenerateDist
-      procedure, pass :: GenerateReverseDist => HarmonicAngle_GenerateReverseDist
+!      procedure, pass :: GenerateReverseDist => HarmonicAngle_GenerateReverseDist
       procedure, pass :: ProcessIO => HarmonicAngle_ProcessIO
   end type
 
@@ -55,7 +55,7 @@ module IntraAngle_Harmonic
         cycle
       endif
       probgen = sin(val)
-      if(probgen < grnd()) then
+      if(probgen > grnd()) then
         exit
       endif
     enddo
@@ -67,24 +67,6 @@ module IntraAngle_Harmonic
       E_T = EGen
     endif
 
-  end subroutine
-!==========================================================================
-  subroutine HarmonicAngle_GenerateReverseDist(self, curbox, atompos, probgen)
-    use RandomGen, only: grnd, Gaussian
-    use ClassyConstants, only: two_pi
-    implicit none
-    class(HarmonicAngle), intent(inout) :: self
-    class(SimBox), intent(inout) :: curbox
-    real(dp) :: beta
-    real(dp), intent(in) :: atompos(:, :)
-    real(dp), intent(out) :: probgen
-
-    logical :: accept
-    real(dp) :: E_Angle
-
-    beta = curbox%beta
-    call self%DetailedECalc(curbox, atompos, E_Angle, accept)
-    probgen = exp(-beta*E_Angle)
   end subroutine
 !=============================================================================+
   subroutine HarmonicAngle_ProcessIO(self, line)

@@ -126,7 +126,6 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Box_Presets.f90\
         		$(SRC)/Box_CubicBox.f90\
         		$(SRC)/Box_OrthoBox.f90\
-        		$(SRC)/RandomNew.f90\
         		$(SRC)/FF_AENet.f90\
         		$(SRC)/FF_EasyPair_Cut.f90\
         		$(SRC)/FF_Einstein.f90\
@@ -182,6 +181,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Units.f90
 
 SRC_TEMPLATE := $(SRC)/Template_Master.f90\
+        		$(SRC)/RandomNew.f90\
 				$(SRC)/Template_AcceptRule.f90\
 				$(SRC)/Template_Analysis.f90\
 				$(SRC)/Template_BondFF.f90\

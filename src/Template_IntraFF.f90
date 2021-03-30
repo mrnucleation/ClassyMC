@@ -60,7 +60,6 @@ module Template_Intra_FF
     probgen = 1E0_dp
 
   end subroutine
-
 !==========================================================================
   function ComputeProb(self, beta, val) result(probgen)
     implicit none

@@ -21,6 +21,7 @@ use VarPrecision
     integer, private, allocatable :: patharrays(:, :)
 
     type(Displacement), allocatable :: disp(:)
+    real(dp), private , allocatable:: newpos(:, :)
 
     !Rejection Counters
     integer, private :: ovlaprej = 0 
@@ -121,6 +122,9 @@ use VarPrecision
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, E_Inter, E_Intra, biasE
     real(dp) :: Prob, ProbFor, ProbRev
+    
+    integer :: slice(1:2)
+    real(dp), pointer :: atoms(:,:) => null()
 
     boxID = trialBox % boxID
     self % atmps = self % atmps + 1E0_dp
@@ -134,39 +138,40 @@ use VarPrecision
     nAtoms = MolData(molType)%nAtoms
 
     cutpoint = floor( nAtoms * grnd() + 1E0_dp )
-    if( grnd() < 0.5E0_dp) then
+!    cutpoint = 3
+!    reverse = .true.
+    
+    if(cutpoint == 1) then
+      reverse = .true.
+    elseif(cutpoint == nAtoms) then
       reverse = .false.
     else
-      reverse = .true.
+      if( grnd() < 0.5E0_dp) then
+        reverse = .false.
+      else
+        reverse = .true.
+      endif
     endif
 
  
     if(reverse) then
-      if(cutpoint /= 1) then
-        lowIndx = cutpoint
-      else
-        lowIndx = 2
-      endif
-      highIndx = nAtoms
-    else
       lowIndx = 1
-      if(cutpoint /= nAtoms) then
-        highIndx = cutpoint
-      else
-        highIndx = nAtoms - 1
-      endif     
+      highIndx = cutpoint
+    else
+      lowIndx = cutpoint
+      highIndx = nAtoms
     endif
 
     iDisp = 0
     nRegrow = 0
     do iAtom = lowIndx, highIndx
       iDisp = iDisp + 1
-      atomIndx = molStart + iAtom - 1
+      atomIndx = molStart + self%patharrays(iAtom, molType) - 1
       nRegrow = nRegrow + 1
 
       self%disp(iDisp)%molType = molType
       self%disp(iDisp)%molIndx = nMove
-      self%disp(iDisp)%atmIndx = self%patharrays(iAtom, molType)
+      self%disp(iDisp)%atmIndx = atomIndx
 
       self%disp(iDisp)%x_new = 0E0_dp
       self%disp(iDisp)%y_new = 0E0_dp
@@ -237,11 +242,25 @@ use VarPrecision
       call trialBox % UpdateEnergy(E_Diff)
       call trialBox % UpdatePosition(self%disp(1:nRegrow), self%tempList, self%tempNNei)
     else
-      write(*,*) "Reject", nRegrow
-      write(*,*) "forward", -log(ProbFor/ProbRev)/trialbox%beta, E_diff
+!      slice(1) = molStart
+!      slice(2) = molEnd
+!      call trialbox%GetCoordinates(atoms, slice=slice)
+!      write(*,*) "Reject", nRegrow, ProbFor, ProbRev
+!      write(*,*) reverse, cutpoint
+!      write(*,*) self%patharrays(lowIndx:highIndx, molType)
+!        write(2,*) nAtoms
+!         write(2,*) -log(ProbFor)/trialBox%beta, -log(ProbRev)/trialBox%beta, self%patharrays(lowIndx:highIndx, molType)
+!         do iDisp = 1, nAtoms
+!            write(2,*) "C", atoms(1:3, iDisp)
+!         enddo
+!         do iDisp = 1, nRegrow
+!            write(2,*) "P", self%disp(iDisp)%x_new, self%disp(iDisp)%y_new, self%disp(iDisp)%z_new
+!         enddo
+!         write(2,*)
+!      write(*,*) "forward", trialBox%ETotal-log(ProbFor)/trialbox%beta, trialBox%ETotal+E_diff
 !      write(*,*) "reverse", -log(ProbRev)/trialbox%beta, trialBox%ETotal
-      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
-      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
+!      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), Prob 
+!      write(*,*) exp(-trialBox%beta * E_Diff)/Prob 
       self%detailedrej = self%detailedrej + 1
     endif
 

@@ -251,7 +251,7 @@ module MolCon_LinearCBMC
     integer :: lastGrown
     real(dp), dimension(1:3) :: v1, v2, v3
     real(dp) :: dx, dy, dz, r
-    real(dp) :: r1, r2, norm
+    real(dp) :: norm
     real(dp) :: bend_angle,tors_angle
     real(dp) :: prob_r, prob_ang, prob_tors, probgen
 
@@ -273,6 +273,7 @@ module MolCon_LinearCBMC
           self%grown(atm1) = .false.
           self%nGrown = self%nGrown - 1
         enddo
+        call self%CreateSchedule
         slice(1) = molStart
         slice(2) = molEnd
         call trialbox%GetCoordinates(atoms, slice=slice)
@@ -290,7 +291,6 @@ module MolCon_LinearCBMC
         error stop 
     end select
 
-    call self%CreateSchedule
     if(present(insPoint)) then
       if(size(insPoint) /= self%nRosenTrials) then
         write(0,*) "ERROR! Linear CBMC Regrowth received a different number of insertion points"
@@ -322,13 +322,16 @@ module MolCon_LinearCBMC
         Atm2 = self%schedule(2)
         call FindBond(self%molType, Atm1, Atm2, bondType)
         do iRosen = 1, self%nRosenTrials
-          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r2, prob_r)
+          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r, prob_r)
           probgen = prob_r
           call Generate_UnitSphere(dx, dy, dz)
-          self%tempcoords(1, iRosen) = r2*dx + self%newconfig(1, Atm1)
-          self%tempcoords(2, iRosen) = r2*dy + self%newconfig(2, Atm1)
-          self%tempcoords(3, iRosen) = r2*dz + self%newconfig(3, Atm1)
-          self%GenProb(iRosen) = prob_r
+          self%tempcoords(1, iRosen) = r*dx + self%newconfig(1, Atm1)
+          self%tempcoords(2, iRosen) = r*dy + self%newconfig(2, Atm1)
+          self%tempcoords(3, iRosen) = r*dz + self%newconfig(3, Atm1)
+          call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                 self%tempcoords(2, iRosen),&
+                                 self%tempcoords(3, iRosen))
+          self%GenProb(iRosen) = probgen
         enddo
         lastGrown = Atm2
 
@@ -349,19 +352,20 @@ module MolCon_LinearCBMC
             Atm1 = self%schedule(2) 
             Atm2 = self%schedule(1) 
         endif
-        v1(1) = self%newconfig(1, Atm1) - self%newconfig(1, Atm2)
-        v1(2) = self%newconfig(2, Atm1) - self%newconfig(2, Atm2)
-        v1(3) = self%newconfig(3, Atm1) - self%newconfig(3, Atm2)
+        v1(1:3) = self%newconfig(1:3, Atm1) - self%newconfig(1:3, Atm2)
+        call trialBox%Boundary(v1(1), v1(2), v1(3))
         call FindBond(self%molType, Atm2, Atm3, bondType)
         call FindAngle(self%molType, Atm1, Atm2, Atm3, angleType)
         do iRosen = 1, self%nRosenTrials
-          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r2, prob_r)
+          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r, prob_r)
           call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bend_angle, prob_ang)
           probgen = prob_r * prob_ang
-          call Generate_UnitCone(v1, r2, bend_angle, v2)
-          self%tempcoords(1, iRosen) = v2(1) + self%newconfig(1, Atm2)
-          self%tempcoords(2, iRosen) = v2(2) + self%newconfig(2, Atm2)
-          self%tempcoords(3, iRosen) = v2(3) + self%newconfig(3, Atm2)
+          call Generate_UnitCone(v1, r, bend_angle, v2)
+          self%tempcoords(1:3, iRosen) = v2(1:3) + self%newconfig(1:3, Atm2)
+          call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                 self%tempcoords(2, iRosen),&
+                                 self%tempcoords(3, iRosen))
+
           self%GenProb(iRosen) = probgen
         enddo
         lastGrown = Atm3
@@ -369,11 +373,15 @@ module MolCon_LinearCBMC
       elseif(self%nGrown < self%nAtoms) then
             Atm4 = self%schedule(self%nGrown+1) 
             call self%FindAtomsFromPath(Atm4, Atm1, Atm2, Atm3)
+
             call FindBond(self%molType, Atm3, Atm4, bondType)
             call FindAngle(self%molType, Atm2, Atm3, Atm4, angleType)
             call FindTorsion(self%molType, Atm1, Atm2, Atm3, Atm4, torsType)
+
             v1(1:3) = self%newconfig(1:3, Atm1) - self%newconfig(1:3, Atm3)
+            call trialBox%Boundary(v1(1), v1(2), v1(3))
             v2(1:3) = self%newconfig(1:3, Atm2) - self%newconfig(1:3, Atm3)
+            call trialBox%Boundary(v2(1), v2(2), v2(3))
             do iRosen = 1, self%nRosenTrials
               call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r, prob_r)
               call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bend_angle, prob_ang)
@@ -381,6 +389,9 @@ module MolCon_LinearCBMC
               probgen = prob_r*prob_ang*prob_tors
               call Generate_UnitTorsion(v1, v2, r, bend_angle, tors_angle, v3)
               self%tempcoords(1:3, iRosen)  = v3(1:3) + self%newconfig(1:3, Atm3)
+              call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                     self%tempcoords(2, iRosen),&
+                                     self%tempcoords(3, iRosen))
               self%GenProb(iRosen) = probgen
             enddo
             lastGrown = Atm4
@@ -402,6 +413,11 @@ module MolCon_LinearCBMC
         self%grown(lastGrown) = .true.
         self%nGrown = self%nGrown + 1
      enddo
+
+
+
+
+
 
      do iDisp = 1, size(disp)
       select type(disp)
@@ -442,7 +458,7 @@ module MolCon_LinearCBMC
     integer :: lastGrown
     real(dp), dimension(1:3) :: v1, v2, v3
     real(dp) :: dx, dy, dz, r
-    real(dp) :: r1, r2, norm
+    real(dp) :: norm
     real(dp) :: bend_angle,tors_angle
     real(dp) :: prob_r, prob_ang, prob_tors, probgen
     integer :: slice(1:2)
@@ -469,6 +485,7 @@ module MolCon_LinearCBMC
           self%nGrown = self%nGrown - 1
         enddo
         self%newconfig(1:3, 1:self%nAtoms) = atoms(1:3, 1:self%nAtoms)
+        call self%CreateSchedule
 
       class is(Deletion)
         self%grown = .false.
@@ -479,7 +496,6 @@ module MolCon_LinearCBMC
         error stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
     end select
 
-    call self%CreateSchedule
     if(present(insPoint)) then
       if(size(insPoint) /= self%nRosenTrials) then
         write(0,*) "ERROR! Linear CBMC Regrowth received a different number of insertion points"
@@ -499,7 +515,7 @@ module MolCon_LinearCBMC
               self%tempcoords(3, iRosen) = insPoint(3*iRosen-0)
               self%GenProb(iRosen) = insProb(iRosen)
             enddo
-            self%tempcoords(1:3, self%nRosenTrials) = atoms(1:3, Atm1)
+            self%tempcoords(1:3, self%nRosenTrials) = self%newconfig(1:3, Atm1)
 
           else
             error stop "Full Regrowth has been requsted without passing in insertion points"
@@ -516,23 +532,28 @@ module MolCon_LinearCBMC
         endif
         call FindBond(self%molType, Atm1, Atm2, bondType)
         do iRosen = 1, self%nRosenTrials-1
-          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r2, prob_r)
+          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r, prob_r)
           probgen = prob_r
           call Generate_UnitSphere(dx, dy, dz)
-          self%tempcoords(1, iRosen) = r2*dx + self%newconfig(1, Atm1)
-          self%tempcoords(2, iRosen) = r2*dy + self%newconfig(2, Atm1)
-          self%tempcoords(3, iRosen) = r2*dz + self%newconfig(3, Atm1)
+          self%tempcoords(1, iRosen) = r*dx + self%newconfig(1, Atm1)
+          self%tempcoords(2, iRosen) = r*dy + self%newconfig(2, Atm1)
+          self%tempcoords(3, iRosen) = r*dz + self%newconfig(3, Atm1)
+          call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                 self%tempcoords(2, iRosen),&
+                                 self%tempcoords(3, iRosen))
           self%GenProb(iRosen) = prob_r
         enddo
         !Compute the generation probability of the old position
 
-        oldpos(1:3, 1) = atoms(1:3, Atm1) 
-        oldpos(1:3, 2) = atoms(1:3, Atm2) 
-        r2 = BondData(bondType) % bondFF % ComputeBond(trialBox, oldpos(1:3,1:2))
-        prob_r = BondData(bondType) % bondFF % ComputeProb(trialBox%beta, r2)
-        self%GenProb(iRosen) = prob_r
+        oldpos(1:3, 1) = atoms(1:3, Atm1)
+        oldpos(1:3, 2) = atoms(1:3, Atm2)   
 
-        self%tempcoords(1:3, self%nRosenTrials) = atoms(1:3, Atm2)
+        call BondData(bondType) % bondFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,1:2), &
+                                                     prob_r)
+!        write(*,*) "2", prob_r
+        self%GenProb(self%nRosenTrials) = prob_r
+        self%tempcoords(1:3, self%nRosenTrials) = self%newconfig(1:3, Atm2)
         lastGrown = Atm2
 
       elseif(self%nGrown == 2) then
@@ -551,34 +572,39 @@ module MolCon_LinearCBMC
           write(0,*) self%grown(1:self%nAtoms)
           error stop "Unexpected gap in Linear CBMC!"
         endif
-        v1(1) = self%newconfig(1, Atm1) - self%newconfig(1, Atm2)
-        v1(2) = self%newconfig(2, Atm1) - self%newconfig(2, Atm2)
-        v1(3) = self%newconfig(3, Atm1) - self%newconfig(3, Atm2)
+        v1(1:3) = self%newconfig(1:3, Atm1) - self%newconfig(1:3, Atm2)
+        call trialBox%Boundary(v1(1), v1(2), v1(3))
+
         call FindBond(self%molType, Atm2, Atm3, bondType)
         call FindAngle(self%molType, Atm1, Atm2, Atm3, angleType)
         do iRosen = 1, self%nRosenTrials-1
-          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r2, prob_r)
+          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r, prob_r)
           call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bend_angle, prob_ang)
           probgen = prob_r * prob_ang
-          call Generate_UnitCone(v1, r2, bend_angle, v2)
-          self%tempcoords(1, iRosen) = v2(1) + self%newconfig(1, Atm2)
-          self%tempcoords(2, iRosen) = v2(2) + self%newconfig(2, Atm2)
-          self%tempcoords(3, iRosen) = v2(3) + self%newconfig(3, Atm2)
+          call Generate_UnitCone(v1, r, bend_angle, v2)
+          self%tempcoords(1:3, iRosen) = v2(1:3) + self%newconfig(1:3, Atm2)
+          call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                 self%tempcoords(2, iRosen),&
+                                 self%tempcoords(3, iRosen))
+
           self%GenProb(iRosen) = probgen
         enddo
-        oldpos(1:3, 1) = atoms(1:3, Atm1) 
-        oldpos(1:3, 2) = atoms(1:3, Atm2) 
-        oldpos(1:3, 3) = atoms(1:3, Atm3) 
+        oldpos(1:3, 1) = atoms(1:3, Atm1)
+        oldpos(1:3, 2) = atoms(1:3, Atm2)
+        oldpos(1:3, 3) = atoms(1:3, Atm3)
+        call BondData(bondType) % bondFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,2:3), &
+                                                     prob_r)
 
-        r2 = BondData(bondType) % bondFF % ComputeBond(trialBox, oldpos(1:3,2:3))
-        prob_r = BondData(bondType) % bondFF % ComputeProb(trialBox%beta, r2)
 
-        bend_angle = AngleData(angleType) % angleFF % ComputeAngle(trialbox, oldpos(1:3,1:3))
-        prob_ang = AngleData(angleType) % angleFF % ComputeProb(trialbox%beta, bend_angle)
+        call AngleData(angleType) % angleFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,1:3), &
+                                                     prob_ang)
 
+!        write(*,*) "3", prob_r, prob_ang
         probgen = prob_r * prob_ang
-        self%GenProb(iRosen) = probgen
-        self%tempcoords(1:3, self%nRosenTrials) = atoms(1:3, Atm3)
+        self%GenProb(self%nRosenTrials) = probgen
+        self%tempcoords(1:3, self%nRosenTrials) = self%newconfig(1:3, Atm3)
         lastGrown = Atm3
 
       elseif(self%nGrown < self%nAtoms) then
@@ -595,36 +621,46 @@ module MolCon_LinearCBMC
             call FindBond(self%molType, Atm3, Atm4, bondType)
             call FindAngle(self%molType, Atm2, Atm3, Atm4, angleType)
             call FindTorsion(self%molType, Atm1, Atm2, Atm3, Atm4, torsType)
+
             v1(1:3) = self%newconfig(1:3, Atm1) - self%newconfig(1:3, Atm3)
+            call trialBox%Boundary(v1(1), v1(2), v1(3))
             v2(1:3) = self%newconfig(1:3, Atm2) - self%newconfig(1:3, Atm3)
+            call trialBox%Boundary(v2(1), v2(2), v2(3))
+
             do iRosen = 1, self%nRosenTrials-1
               call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r, prob_r)
               call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bend_angle, prob_ang)
               call TorsionData(torsType) % torsionFF % GenerateDist(trialBox%beta, tors_angle, prob_tors)
               probgen = prob_r*prob_ang*prob_tors
               call Generate_UnitTorsion(v1, v2, r, bend_angle, tors_angle, v3)
-              self%tempcoords(1, iRosen)  = v3(1) + self%newconfig(1, Atm3)
-              self%tempcoords(2, iRosen)  = v3(2) + self%newconfig(2, Atm3)
-              self%tempcoords(3, iRosen)  = v3(3) + self%newconfig(3, Atm3)
+              self%tempcoords(1:3, iRosen)  = v3(1:3) + self%newconfig(1:3, Atm3)
+              call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                     self%tempcoords(2, iRosen),&
+                                     self%tempcoords(3, iRosen))
+
               self%GenProb(iRosen) = probgen
             enddo
-            oldpos(1:3, 1) = atoms(1:3, Atm1) 
-            oldpos(1:3, 2) = atoms(1:3, Atm2) 
-            oldpos(1:3, 3) = atoms(1:3, Atm3) 
-            oldpos(1:3, 4) = atoms(1:3, Atm4) 
+            oldpos(1:3, 1) = atoms(1:3, Atm1)
+            oldpos(1:3, 2) = atoms(1:3, Atm2)
+            oldpos(1:3, 3) = atoms(1:3, Atm3)
+            oldpos(1:3, 4) = atoms(1:3, Atm4)
 
-            r2 = BondData(bondType) % bondFF % ComputeBond(trialBox, oldpos(1:3,3:4))
-            prob_r = BondData(bondType) % bondFF % ComputeProb(trialBox%beta, r2)
+            call BondData(bondType) % bondFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,3:4), &
+                                                     prob_r)
 
-            bend_angle = AngleData(angleType) % angleFF % ComputeAngle(trialbox, oldpos(1:3,2:4))
-            prob_ang = AngleData(angleType) % angleFF % ComputeProb(trialbox%beta, bend_angle)
 
-            tors_angle = TorsionData(torsType) % torsionFF % ComputeTors(trialBox, oldpos(1:3,1:4))
-            prob_tors = TorsionData(torsType) % torsionFF % ComputeProb(trialBox%beta, tors_angle)
+            call AngleData(angleType) % angleFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,2:4), &
+                                                     prob_ang)
 
+            call TorsionData(torsType) % torsionFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,1:4), &
+                                                     prob_tors)
+!            write(*,*) "4", prob_r, prob_ang, prob_tors
             probgen = prob_r * prob_ang * prob_tors
-            self%GenProb(iRosen) = probgen
-            self%tempcoords(1:3, self%nRosenTrials) = atoms(1:3, Atm4)
+            self%GenProb(self%nRosenTrials) = probgen
+            self%tempcoords(1:3, self%nRosenTrials) = self%newconfig(1:3, Atm4)
             lastGrown = Atm4
         else
             error stop "nGrown is some invalid number."
@@ -638,8 +674,8 @@ module MolCon_LinearCBMC
         do iRosen = 1, self%nRosenTrials
           norm = norm + self%RosenProb(iRosen)
         enddo
+!        write(*,*) self%RosenProb(1:self%nRosenTrials)
         probconstruct = probconstruct * self%GenProb(self%nRosenTrials) * self%RosenProb(self%nRosenTrials)/norm
-        self%newconfig(1:3, lastGrown) = self%tempcoords(1:3, self%nRosenTrials)
         self%grown(lastGrown) = .true.
         self%nGrown = self%nGrown + 1
      enddo

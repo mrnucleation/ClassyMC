@@ -14,6 +14,7 @@ module Template_IntraTorsion
       procedure, pass :: EFunc
       procedure, pass :: DetailedECalc 
       procedure, pass :: GenerateDist
+      procedure, pass :: GenerateReverseDist
       procedure, pass :: ProcessIO
   end type
 
@@ -34,6 +35,8 @@ module Template_IntraTorsion
     real(dp), intent(in) :: atompos(:, :)
     real(dp) :: angle
 
+    integer :: iAtom
+    real(dp) :: p1(1:3)
     real(dp) :: x12, y12, z12
     real(dp) :: x23, y23, z23
     real(dp) :: x34, y34, z34
@@ -43,19 +46,23 @@ module Template_IntraTorsion
     real(dp) :: r1, r3
     real(dp) :: dot1, dot2
 
+
     !Our goal here is to construct a sequence of vectors that are orthogonal
     !to each other with one of the vectors lined up along the central bond, the 2-3 bond,
     !and one of the orthoganal vectors lined up on top of the 1-2 bond. 
     !Once we have that we can simply take the dot product between this new
     !vector system and the remaining 3-4 vector to get the torsional angle. 
+
+
+
     x12 = atompos(1, 2) - atompos(1, 1)
     y12 = atompos(2, 2) - atompos(2, 1)
     z12 = atompos(3, 2) - atompos(3, 1)
     call curbox % Boundary(x12, y12, z12)
  
-    x23 = atompos(1, 3) - atompos(1, 2)
-    y23 = atompos(2, 3) - atompos(2, 2)
-    z23 = atompos(3, 3) - atompos(3, 2)
+    x23 = atompos(1, 3) - atompos(1, 2) 
+    y23 = atompos(2, 3) - atompos(2, 2) 
+    z23 = atompos(3, 3) - atompos(3, 2) 
     call curbox % Boundary(x23, y23, z23)
 
     x34 = atompos(1, 4) - atompos(1, 3)
@@ -143,6 +150,33 @@ module Template_IntraTorsion
     E_T = 0E0_dp
     probgen = 1E0_dp
 
+  end subroutine
+!==========================================================================
+  subroutine GenerateReverseDist(self, curbox, atompos, probgen)
+    use RandomGen, only: grnd, Gaussian
+    use ClassyConstants, only: two_pi
+    implicit none
+    class(Torsion_FF), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    real(dp), intent(in) :: atompos(:, :)
+    real(dp), intent(out) :: probgen
+
+    logical :: accept
+    integer :: iAtom
+    real(dp) :: E_Torsion
+    real(dp) :: beta
+    real(dp) :: reducepos(1:3,1:4)
+
+    do iAtom = 1,4
+      reducepos(1:3, iAtom) = atompos(1:3, iAtom) - atompos(1:3, 1)
+      call curbox%Boundary(reducepos(1, iAtom), reducepos(2, iAtom), reducepos(3, iAtom))
+    enddo
+
+
+
+    beta = curbox%beta
+    call self%DetailedECalc(curbox, reducepos(1:3,1:4), E_Torsion, accept)
+    probgen = exp(-beta*E_Torsion)
   end subroutine
 !=============================================================================+
   subroutine ProcessIO(self, line)

@@ -15,7 +15,7 @@ module Template_IntraBond
       procedure, pass :: EFunc
       procedure, pass :: DetailedECalc 
 !      procedure, pass :: GenerateDist
-!      procedure, pass :: GenerateReverseDist
+      procedure, pass :: GenerateReverseDist
       procedure, pass :: ProcessIO
   end type
 
@@ -91,6 +91,30 @@ module Template_IntraBond
 !    probgen = 1E0_dp
 !
 !  end subroutine
+!==========================================================================
+  subroutine GenerateReverseDist(self, curbox, atompos, probgen)
+    use RandomGen, only: grnd, Gaussian
+    use ClassyConstants, only: two_pi
+    implicit none
+    class(Bond_FF), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    real(dp), intent(in) :: atompos(:, :)
+    real(dp), intent(out) :: probgen
+
+    logical :: accept
+    integer :: iAtom
+    real(dp) :: beta
+    real(dp) :: E_Bond, reducepos(1:3,1:2)
+
+    do iAtom = 1,2
+      reducepos(1:3, iAtom) = atompos(1:3, iAtom) - atompos(1:3, 1)
+      call curbox%Boundary(reducepos(1, iAtom), reducepos(2, iAtom), reducepos(3, iAtom))
+    enddo
+
+    beta = curbox%beta
+    call self%DetailedECalc(curbox, reducepos(1:3,1:2), E_Bond, accept)
+    probgen = exp(-beta*E_Bond)
+  end subroutine
 !=============================================================================+
   subroutine ProcessIO(self, line)
     use Input_Format, only: maxLineLen
