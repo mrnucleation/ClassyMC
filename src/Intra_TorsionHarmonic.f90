@@ -71,7 +71,7 @@ module IntraTorsion_Harmonic
   function HarmonicTorsion_EFunc(self, angle) result(E_Tors)
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(HarmonicTorsion), intent(inout) :: self
+    class(HarmonicTorsion), intent(in) :: self
     real(dp), intent(in) :: angle
     real(dp) :: E_Tors
 

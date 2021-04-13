@@ -90,7 +90,7 @@ use VarPrecision
     real(dp) :: vol
 
     real(dp) :: reduced(1:3)
-    real(dp) :: insPoint(1:3)
+    real(dp) :: insPoint(1:3, 1), insProb(1)
     real(dp) :: E_Diff1, E_Diff2, scaleFactor
     real(dp) :: E_Inter1, E_Intra1
     real(dp) :: E_Inter2, E_Intra2
@@ -177,7 +177,10 @@ use VarPrecision
     enddo
 
 
-    call MolData(molType) % molConstruct % GenerateConfig(box2, self%newPart(1:nAtoms), ProbSub , insPoint)
+    call MolData(molType) % molConstruct % GenerateConfig(box2, self%newPart(1:nAtoms), ProbSub, accept ,insPoint, insProb)
+    if(.not. accept) then
+      return
+    endif
 
     do iAtom = 1, nAtoms
       call box2 % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &

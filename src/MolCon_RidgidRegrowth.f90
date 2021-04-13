@@ -82,7 +82,7 @@ module MolCon_RidgidRegrowth
 
   end subroutine
 !==========================================================================================
-  subroutine RidgidRegrowth_GenerateConfig(self, trialBox, disp, probconstruct, insPoint, insProb)
+  subroutine RidgidRegrowth_GenerateConfig(self, trialBox, disp, probconstruct, accept, insPoint, insProb)
     use ClassyConstants, only: two_pi
     use Common_MolInfo, only: MolData
     use RandomGen, only: grnd
@@ -90,9 +90,10 @@ module MolCon_RidgidRegrowth
     class(RidgidRegrowth), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
-    real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(in), optional :: insPoint(:,:)
     real(dp), intent(in), optional :: insProb(:)
     real(dp), intent(out) :: probconstruct 
+    logical, intent(out) :: accept
 
     integer :: iDisp, iAtom
     real(dp) :: c_term, s_term, rotang
@@ -100,6 +101,7 @@ module MolCon_RidgidRegrowth
     real(dp) :: x1, y1, z1
     real(dp) :: x_rid_cm, y_rid_cm, z_rid_cm
 
+    accept = .true.
     probconstruct = 1E0
     self%tempcoords(1:3,1:self%nAtoms) = self%ridgidconfig(1:3, 1:self%nAtoms)
 
@@ -154,9 +156,9 @@ module MolCon_RidgidRegrowth
       class is(Addition)
         do iDisp = 1, self%nAtoms
           if( present(insPoint) ) then
-            disp(iDisp)%x_new = self%tempcoords(1, iDisp) + insPoint(1)
-            disp(iDisp)%y_new = self%tempcoords(2, iDisp) + insPoint(2)
-            disp(iDisp)%z_new = self%tempcoords(3, iDisp) + insPoint(3)
+            disp(iDisp)%x_new = self%tempcoords(1, iDisp) + insPoint(1,1)
+            disp(iDisp)%y_new = self%tempcoords(2, iDisp) + insPoint(2,1)
+            disp(iDisp)%z_new = self%tempcoords(3, iDisp) + insPoint(3,1)
           else
             disp(iDisp)%x_new = self%tempcoords(1, iDisp)
             disp(iDisp)%y_new = self%tempcoords(2, iDisp)

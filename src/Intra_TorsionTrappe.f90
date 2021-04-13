@@ -59,7 +59,7 @@ module IntraTorsion_TRAPPE
       val = two_pi * grnd()
       E_Tors = self%EFunc(val)
       probgen = exp(-beta*E_Tors)
-      if(probgen < grnd()) then
+      if(probgen > grnd()) then
         exit
       endif
     enddo
@@ -72,7 +72,7 @@ module IntraTorsion_TRAPPE
   function TRAPPETorsion_EFunc(self, angle) result(E_Tors)
     use Common_MolInfo, only: nMolTypes
     implicit none
-    class(TRAPPETorsion), intent(inout) :: self
+    class(TRAPPETorsion), intent(in) :: self
     real(dp), intent(in) :: angle
     real(dp) :: E_Tors
     integer :: iTerm

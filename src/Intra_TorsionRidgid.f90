@@ -1,6 +1,6 @@
 !=============================================================================+
-! Ridgid Torsion Angle Forcefield.  Not sure why you might need it, but it's
-! here if you do.  Fixes a Torsion angle to an exact value. May not work
+! Ridgid Torsion Angle Forcefield. Not sure why you might need it, but it's
+! here if you do. Fixes a Torsion angle to an exact value. May not work
 ! well with Improper Torsion Angles.
 !=============================================================================+
 module IntraTorsion_Ridgid

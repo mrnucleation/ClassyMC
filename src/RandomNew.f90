@@ -189,6 +189,7 @@
       z1_u =  v1(3) - v2(3)
 
 !     Calculate the v1 vector's w2 and w3 components in the new orthonormal framework.
+!     We don't need the x1_s as we'll be effectly ignoring that axis.
 !      x1_s =  ( v2(1)*x1_u + v2(2)*y1_u + v2(3) * z1_u)/(r2)
       y1_s =  (-v2(2)*x1_u + v2(1)*y1_u) / r_proj
       z1_s =  (-v2(1)*v2(3)*x1_u - v2(2)*v2(3)*y1_u + r_proj*r_proj*z1_u) / (r_proj*r2)

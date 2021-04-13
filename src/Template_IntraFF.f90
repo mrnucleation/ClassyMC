@@ -11,7 +11,7 @@ module Template_Intra_FF
       procedure, pass :: DetailedECalc 
       procedure, pass :: GenerateDist
       procedure, pass :: GenerateReverseDist
-      procedure, pass :: ComputeProb
+!      procedure, pass :: ComputeProb
       procedure, pass :: ProcessIO
   end type
 
@@ -60,17 +60,18 @@ module Template_Intra_FF
     probgen = 1E0_dp
 
   end subroutine
-
 !==========================================================================
-  subroutine ComputeProb(self, beta, val, probgen)
+  function ComputeProb(self, beta, val) result(probgen)
     implicit none
-    class(Intra_FF), intent(inout) :: self
+    class(Intra_FF), intent(in) :: self
     real(dp), intent(in) :: beta
     real(dp), intent(in) :: val
-    real(dp), intent(out) :: probgen
+    real(dp) :: probgen
+!    real(dp) :: E_Val
 
-    probgen = 0E0_dp
-  end subroutine
+!    E_Val = self%EFunc(val)
+!    probgen = exp(-beta*E_Val)
+  end function
 !=============================================================================+
   subroutine ProcessIO(self, line)
     use Input_Format, only: maxLineLen

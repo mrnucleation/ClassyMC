@@ -109,7 +109,7 @@ use VarPrecision
     integer :: molType, molStart, molEnd, atomIndx, nAtoms
     integer :: targStart
     real(dp) :: reduced(1:3)
-    real(dp) :: insPoint(1:3)
+    real(dp) :: insPoint(1:3, 1)
     real(dp) :: dx, dy, dz, vol
     real(dp) :: E_Diff, biasE, radius
     real(dp) :: E_Inter, E_Intra
@@ -150,7 +150,10 @@ use VarPrecision
     enddo
 
 
-    call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%newPart(1:nAtoms), ProbSub , insPoint)
+    call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%newPart(1:nAtoms), ProbSub,accept,  insPoint)
+    if(.not. accept) then
+      return
+    endif
 
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &

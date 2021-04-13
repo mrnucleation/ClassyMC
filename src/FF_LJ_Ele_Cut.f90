@@ -93,7 +93,6 @@ module FF_Pair_LJ_Q_Cut
          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
 
       class is(Addition)
-!         write(*,*) size(tempList)
          call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
 
       class is(Deletion)
@@ -103,7 +102,8 @@ module FF_Pair_LJ_Q_Cut
          call self % AtomExchange( curbox, disp, E_Diff, accept)
 
       class default
-        write(*,*) "Unknown Perturbation Type Encountered by the LJ_Q_Cut Pair Style."
+        write(0,*) "Unknown Perturbation Type Encountered by the LJ_Q_Cut Pair Style."
+        error stop
     end select
 
 
@@ -152,20 +152,18 @@ module FF_Pair_LJ_Q_Cut
           atmType2 = curbox % AtomType(jAtom)
           rmin_ij = self % rMinTable(atmType1, atmType2)          
           if(rsq < rmin_ij) then
-            write(*,*) sqrt(rsq)
-            write(*,*) iAtom, jAtom
-            write(*,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
-            write(*,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
-            write(*,*) "ERROR! Overlaping atoms found in the current configuration!"
+            write(0,*) sqrt(rsq)
+            write(0,*) iAtom, jAtom
+            write(0,*) curbox%atoms(1,iAtom), curbox%atoms(2,iAtom), curbox%atoms(3,iAtom)
+            write(0,*) curbox%atoms(1,jAtom), curbox%atoms(2,jAtom), curbox%atoms(3,jAtom)
+            write(0,*) "ERROR! Overlaping atoms found in the current configuration!"
           endif 
 
           if(rsq < self%rLJCutSq) then
             ep = self % epsTable(atmType1, atmType2)
             sig_sq = self % sigTable(atmType1, atmType2)          
-!            write(*,*) ep, sig_sq, rsq
             LJ = (sig_sq/rsq)**3
             LJ = ep * LJ * (LJ-1E0_dp)
-!            write(*,*) LJ
             E_LJ = E_LJ + LJ
             curbox%ETable(iAtom) = curbox%ETable(iAtom) + LJ
             curbox%ETable(jAtom) = curbox%ETable(jAtom) + LJ 
@@ -213,8 +211,6 @@ module FF_Pair_LJ_Q_Cut
       iAtom = disp(iDisp)%atmIndx
       atmType1 = curbox % AtomType(iAtom)
 
-!      write(*,*) iAtom, curbox%NeighList(1)%nNeigh(iAtom)
-!      write(*,*) iAtom, curbox%NeighList(1)%list(:, iAtom)
       do jNei = 1, curbox%NeighList(1)%nNeigh(iAtom)
         jAtom = curbox%NeighList(1)%list(jNei, iAtom)
         atmType2 = curbox % AtomType(jAtom)
@@ -227,7 +223,6 @@ module FF_Pair_LJ_Q_Cut
         rz = disp(iDisp)%z_new  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-!        write(*,*) sqrt(rsq)
         if(rsq < self%rCutSq) then
           rmin_ij = self % rMinTable(atmType2, atmType1)          
           if(rsq < rmin_ij) then
@@ -262,11 +257,8 @@ module FF_Pair_LJ_Q_Cut
         rz = curbox % atoms(3, iAtom)  -  curbox % atoms(3, jAtom)
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
-!        write(*,*) sqrt(rsq)
         if(rsq < self%rCutSq) then
-!          if(iAtom == jAtom) then
-!            write(*,*) "NeighborList Error!", iAtom, jAtom
-!          endif
+
           if(rsq < self%rLJCutSq) then
             if(ep /= 0E0_dp) then
               sig_sq = self % sigTable(atmType2, atmType1)  
@@ -315,12 +307,8 @@ module FF_Pair_LJ_Q_Cut
     E_Diff = 0E0_dp
     accept = .true.
 
-!    write(*,*) "Length:", size(tempNNei)
-!    write(*,*) "Length:", size(tempList)
-!    write(*,*)
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
-!      write(*,*) iAtom
       atmType1 = curbox % AtomType(iAtom)
 
       listIndx = disp(iDisp)%listIndex
@@ -431,7 +419,6 @@ module FF_Pair_LJ_Q_Cut
         endif
       enddo
     enddo
-!    write(*,*) E_Diff
   end subroutine
   !=====================================================================
   subroutine AtomExchange_LJ_Q_Cut(self, curbox, disp, E_Diff, accept)
@@ -456,15 +443,11 @@ module FF_Pair_LJ_Q_Cut
 
     E_Diff = 0E0_dp
 
-!    write(*,*) disp(1)%molType, disp(1)%molIndx
-!    globIndx = curBox % MolGlobalIndx(disp(1)%molType, )
-!    call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
 
     iAtomNew = disp(1) % newAtmIndx
     iAtomOld = disp(1) % oldAtmIndx
     newType1 = curbox % AtomType(iAtomNew)
     oldType1 = curbox % AtomType(iAtomOld) 
-!    write(*,*) iAtomNew, iAtomOld, newType1, oldType1
     do jNei = 1, curbox%NeighList(1)%nNeigh(iAtomOld)
       jAtom = curbox%NeighList(1)%list(jNei, iAtomOld)
       atmType2 = curbox % AtomType(jAtom)
@@ -509,7 +492,7 @@ module FF_Pair_LJ_Q_Cut
     enddo
   end subroutine
 !=============================================================================+
-  function ManyBody_LJ_Q_Cut(self, curbox, atmtype1, pos1, atmtypes, posN  ) result(E_Many)
+  subroutine ManyBody_LJ_Q_Cut(self, curbox, atmtype1, pos1, atmtypes, posN, E_Many, accept) 
     implicit none
     class(Pair_LJ_Q_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
@@ -517,7 +500,8 @@ module FF_Pair_LJ_Q_Cut
     integer, intent(in) :: atmtypes(:)
     real(dp), intent(in) :: pos1(:)
     real(dp), intent(in) :: posN(:,:)
-    real(dp) :: E_Many
+    logical, intent(out) :: accept
+    real(dp), intent(out) :: E_Many
 
 
     integer :: iDisp, iAtom, jAtom, remLen, jNei
@@ -527,15 +511,35 @@ module FF_Pair_LJ_Q_Cut
     real(dp) :: sig_sq, ep, q
     real(dp) :: E_Pair, Ele, LJ
     real(dp) :: rmin_ij      
-   
+
+    if( size(posN,2) /= size(atmtypes) ) then
+      write(0,*) "ERROR! Size of posN does not match the atmtypes array!"
+      error stop
+    endif
+
+    if(any(atmtypes < 1))then
+      write(0,*) "Bad Array Error! Zero elements detected in atom type array!"
+      write(0,*) atmtypes(1:size(atmtypes))
+      write(0,*) size(atmtypes)
+      error stop
+    endif
+
+
+    accept = .true.
     E_Many = 0E0_dp
-    do jAtom = 1, size(posN)
+    do jAtom = 1, size(posN, 2)
+!      write(*,*) jAtom
       atmType2 = atmtypes(jAtom)
       rx = pos1(1) - posN(1, jAtom)
       ry = pos1(2) - posN(2, jAtom)
       rz = pos1(3) - posN(3, jAtom)
       call curbox%Boundary(rx, ry, rz)
+      rmin_ij = self % rMinTable(atmType2, atmType1)          
       rsq = rx*rx + ry*ry + rz*rz
+      if(rsq < rmin_ij) then
+        accept = .false.
+        return
+      endif 
       if(rsq < self%rLJCutSq) then
          ep = self%epsTable(atmType2, atmType1)
          if(ep /= 0E0_dp) then
@@ -557,8 +561,7 @@ module FF_Pair_LJ_Q_Cut
        endif
     enddo
 
-  end function
-
+  end subroutine
   !=====================================================================
   subroutine ProcessIO_LJ_Q_Cut(self, line)
     use Common_MolInfo, only: nAtomTypes

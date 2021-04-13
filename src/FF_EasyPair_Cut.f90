@@ -495,7 +495,7 @@ module FF_EasyPair_Cut
 
   end function
 !=============================================================================+
-  function EasyPair_ManyBody(self, curbox, atmtype1, pos1, atmtypes, posN  ) result(E_Many)
+  subroutine EasyPair_ManyBody(self, curbox, atmtype1, pos1, atmtypes, posN, E_Many, accept )
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
@@ -503,7 +503,8 @@ module FF_EasyPair_Cut
     integer, intent(in) :: atmtypes(:)
     real(dp), intent(in) :: pos1(:)
     real(dp), intent(in) :: posN(:,:)
-    real(dp) :: E_Many
+    logical, intent(out) :: accept
+    real(dp), intent(out) :: E_Many
 
 
     integer :: iDisp, iAtom, jAtom, remLen, jNei
@@ -512,7 +513,7 @@ module FF_EasyPair_Cut
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: E_Pair
     real(dp) :: rmin_ij      
-   
+    accept = .true.
     E_Many = 0E0_dp
     do jAtom = 1, size(posN)
       atmType2 = atmtypes(jAtom)
@@ -527,7 +528,7 @@ module FF_EasyPair_Cut
       endif
     enddo
 
-  end function
+  end subroutine
   !=====================================================================
   subroutine ProcessIO_EasyPair_Cut(self, line)
     use Input_Format, only: maxLineLen

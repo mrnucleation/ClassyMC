@@ -14,7 +14,7 @@ use VarPrecision
     logical :: verbose = .true.
     logical :: proportional = .true.
     logical :: tuneMax = .true.
-    real(dp) :: limit = 3.00E0_dp
+    real(dp) :: limit = 5.00E0_dp
     real(dp) :: targAccpt = 50E0_dp
     real(dp) :: max_dist = 0.05E0_dp
     real(dp), allocatable :: boxlimit(:)

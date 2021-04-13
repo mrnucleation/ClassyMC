@@ -1,19 +1,20 @@
 #======================================
-  set rng_seed -6
-#  set rng_seed 4272
-  set NeighSkin 2.0  
+#  set rng_seed -6
+  set rng_seed 5604
+  set NeighSkin 12.0  
   set moves 50
   set cycles 1000000
 #  SamplingType AcceptAll
-  set screenfrequency 1000
+  set screenfrequency 2000
+#  SamplingType AcceptNone
   SamplingType Metropolis
 #  SamplingType UmbrellaWHAM
 #  SamplingType Umbrella
 #  modify Sampling biasvariables 1
 #  modify Sampling analysis 1
-#  modify Sampling bounds 1 4 1.0 5.0
+#  modify Sampling bounds 1 1 1.0 2.0
 #  modify Sampling reference 1.0
-#  modify Sampling whamfreq 100000
+#  modify Sampling whamfreq 200000
 
   ForceField "Ethanol.clFF"
 
@@ -22,34 +23,51 @@
   End_Create
 
   modify box 1 energycalc 1
-  modify box 1 temperature 1000
-  modify box 1 buildfreq 100
+  modify box 1 temperature 300
+  modify box 1 buildfreq 1
 
 #  modify box 1 chempotential 1 -9.210340372
+  modify box 1 chempotential 1 -12.023751088
+#  modify box 1 chempotential 1 0.0
 #  modify box 1 chempotential 1 -18.420680744
-  modify box 1 chempotential 1 58.420680744
-  NeighList 1 cellrsqlist 1
+#  modify box 1 chempotential 1 58.420680744
+  NeighList 1 rsqlist 1
 
   Create Moves
-#    AtomTranslation 1.0
-     CBMC 1.0
-#    MolTranslation 1.0
-#    PlaneRotate 1.0
-#    UBSwap 1.0
+    AtomTranslation 1.0
+#    MolTranslation 3.0
+#    MolTranslation 3.0
+#    PlaneRotate 6.0
+#    IsoVol 0.20
+#    CBMC 1.0
+#    UBSwap 0.5
   End_Create
 
-#  Create constraint 1
-#    distancecriteria 1 4.0 1
-#  End_Create
+  modify move 1 tunemax .true.
+  modify move 1 maxdisplace 2.0
+  modify move 1 dynamiclimit 12.0
+
+#  modify move 2 tunemax .true.
+#  modify move 2 maxdisplace 5.0
+#  modify move 2 dynamiclimit 15.0
+#  modify move 2 maxdisplace 7.0
+
+  modify move 2 tunemax .true.
+
+  modify move 5 radius 6.0
+
+  Create constraint 1
+    distancecriteria 1 6.0 1 3
+  End_Create
 
   Create Analysis
-#    clustersize 1 1 
-    BondDistribution  1 1 100 1 1 0.001 3000 'bond1.dat'
-    BondDistribution  1 1 100 1 2 0.001 3000 'bond2.dat'
-    BondDistribution  1 1 100 1 3 0.001 3000 'bond3.dat'
-    AngleDistribution 1 1 100 1 1 0.001 'angle1.dat'
-    AngleDistribution 1 1 100 1 2 0.001 'angle2.dat'
-    TorsionDistribution 1 1 100 1 1 0.1 'tors1.dat'
+    clustersize 1 1 
+#    BondDistribution  1 1 100 1 1 0.001 3000 'bond1.dat'
+#    BondDistribution  1 1 100 1 2 0.001 3000 'bond2.dat'
+#    BondDistribution  1 1 100 1 3 0.001 3000 'bond3.dat'
+#    AngleDistribution 1 1 100 1 1 0.001 'angle1.dat'
+#    AngleDistribution 1 1 100 1 2 0.001 'angle2.dat'
+    TorsionDistribution 1 1 100 1 1 0.01 'tors1.dat'
   End_Create
 
 

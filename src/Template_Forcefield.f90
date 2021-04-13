@@ -78,7 +78,7 @@ module Template_ForceField
 
   end function
 !=============================================================================+
-  function ManyBody(self, curbox, atmtype1, pos1, atmtypes, posN  ) result(E_Atom)
+  subroutine ManyBody(self, curbox, atmtype1, pos1, atmtypes, posN, E_Many, accept)
     implicit none
     class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
@@ -86,9 +86,13 @@ module Template_ForceField
     integer, intent(in) :: atmtypes(:)
     real(dp), intent(in) :: pos1(:)
     real(dp), intent(in) :: posN(:,:)
-    real(dp) :: E_Atom
+    logical, intent(out) :: accept
+    real(dp), intent(out) :: E_Many
 
-  end function
+    E_Many = 0E0_dp
+    accept = .true.
+
+  end subroutine
 !=============================================================================+
   subroutine ProcessIO(self, line)
     use Input_Format, only: maxLineLen
