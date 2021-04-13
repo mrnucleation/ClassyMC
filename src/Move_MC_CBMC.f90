@@ -181,7 +181,10 @@ use VarPrecision
       self%disp(iDisp)%listIndex = iDisp
     enddo
 
-    call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%disp(1:nRegrow), ProbFor)
+    call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%disp(1:nRegrow), ProbFor, accept)
+    if(.not. accept) then
+      return
+    endif
     Prob = 1E0_dp/ProbFor
 
 
@@ -229,13 +232,18 @@ use VarPrecision
 
 
     !Accept/Reject
+!    if(abs(log(Prob) -trialBox%beta * E_Intra) > 1E-10) then
+!      write(0,*) "?", log(Prob) -trialBox%beta * E_Intra
+!      write(0,*) "reverse", -log(ProbRev)/trialbox%beta, trialBox%ETotal
+!      write(0,*) "reverse", -log(ProbRev)/trialbox%beta, trialBox%ETotal
+!      write(0,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
+!      write(0,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
+!      error stop
+!    endif
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:nRegrow), inProb=Prob)
+
     if(accept) then
 !      write(*,*) "Accept", nRegrow
-!      write(*,*) "forward", -log(ProbFor)/trialbox%beta, E_diff+trialBox%ETotal
-!      write(*,*) "reverse", -log(ProbRev)/trialbox%beta, trialBox%ETotal
-!      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
-!      write(*,*) nRegrow, E_Diff, exp(-trialBox%beta * E_Diff), 1E0_dp/Prob 
 
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp

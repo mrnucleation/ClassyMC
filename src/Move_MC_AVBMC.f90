@@ -34,6 +34,9 @@ use VarPrecision
     type(Addition), allocatable :: newPart(:)
     type(Deletion) :: oldPart(1:1)
 
+    real(dp), allocatable :: insPoint(:,:)
+    real(dp), allocatable :: insProb(:)
+
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
 
@@ -41,6 +44,7 @@ use VarPrecision
       procedure, pass :: Constructor => AVBMC_Constructor
 !      procedure, pass :: GeneratePosition => AVBMC_GeneratePosition
       procedure, pass :: FullMove => AVBMC_FullMove
+      procedure, pass :: AllocateProb => UB_Swap_AllocateProb
       procedure, pass :: SwapIn => AVBMC_SwapIn
       procedure, pass :: SwapOut => AVBMC_SwapOut
       procedure, pass :: CountSites => AVBMC_CountSites
@@ -106,6 +110,49 @@ use VarPrecision
     endif
 
   end subroutine
+!========================================================
+  subroutine AVBMC_AllocateProb(self, nInsPoints)
+    implicit none
+    class(UB_Swap), intent(inout) :: self
+    integer, intent(in) :: nInsPoints
+
+    if(.not. allocated(self%insPoint) ) then
+      allocate(self%insPoint(1:3, 1:nInsPoints))
+      allocate(self%insProb(1:nInsPoints))
+    else if(size(self%insPoint, 2) < nInsPoints) then
+      deallocate(self%insPoint)
+      deallocate(self%insProb)
+      allocate(self%insPoint(1:3, 1:nInsPoints))
+      allocate(self%insProb(1:nInsPoints))
+    endif
+
+
+
+
+  end subroutine
+!========================================================
+  subroutine AVBMC_CreateForward(self, targetatoms, inspoint)
+    use BoxData, only: BoxArray
+    use Common_MolInfo, only: MolData, nMolTypes
+    use RandomGen, only: grnd, Generate_UnitSphere
+    implicit none
+    class(UB_Swap), intent(inout) :: self
+    real(dp), intent(in) :: targetatoms(:,:) 
+    real(dp), intent(out) :: inspoint(1:3)
+
+    real(dp) :: dx, dy, dz, radius
+
+
+    call Generate_UnitSphere(dx, dy, dz)
+    radius = self % avbmcRad * grnd()**(1.0E0_dp/3.0E0_dp)
+    dx = radius * dx
+    dy = radius * dy
+    dz = radius * dz
+    insPoint(1) = targetatoms(1,1) + dx
+    insPoint(2) = targetatoms(2,1) + dy
+    insPoint(3) = targetatoms(3,1) + dz
+
+  end subroutine
 !===============================================
   subroutine AVBMC_SwapIn(self, trialBox, accept) 
     use Box_Utility, only: FindMolecule
@@ -124,7 +171,6 @@ use VarPrecision
     integer :: iAtom, iDisp
     integer :: molType, molStart, molEnd, atomIndx, nAtoms
     integer :: targStart
-    real(dp) :: insPoint(1:3)
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, radius, extraTerms
     real(dp) :: E_Inter, E_Intra
@@ -159,6 +205,14 @@ use VarPrecision
 !    call MolData(molType) % molConstruct % ReverseConfig( trialBox, ProbSub, accept)
 
     !Choose the position relative to the target atom 
+    nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
+    call self%AllocateProb(nInsPoints)
+    do iIns = 1, nInsPoints
+      call self%CreateForward(targetatoms, self%inspoint(1:3, iIns))
+      self%insprob(iIns) = 1E0_dp 
+    enddo
+
+
     call Generate_UnitSphere(dx, dy, dz)
     radius = self % avbmcRad * grnd()**(1.0E0_dp/3.0E0_dp)
     dx = radius * dx
@@ -177,8 +231,17 @@ use VarPrecision
       self%newPart(iAtom)%atmIndx = atomIndx
     enddo
 
+    call MolData(molType) % molConstruct % GenerateConfig(trialBox, &
+                                                      self%newPart(1:nAtoms),&
+                                                      ProbSub, &
+                                                      accept, &
+                                                      self%insPoint, &
+                                                      self%insProb)
+    if(.not. accept) then
+        return
+    endif
+    GenProb = ProbSub
 
-    call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%newPart(1:nAtoms), ProbSub , insPoint)
 
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
@@ -201,12 +264,7 @@ use VarPrecision
                                      E_Diff, &
                                      accept, &
                                      computeintra=.true.)
-!    call trialbox% EFunc % Method % DiffECalc(trialBox, &
-!                                              self%newPart(1:nAtoms), &
-!                                              self%tempList, &
-!                                              self%tempNNei, &
-!                                              E_Diff, &
-!                                              accept)
+
     if(.not. accept) then
       return
     endif
@@ -222,10 +280,16 @@ use VarPrecision
     call self%SelectNeighReverse(trialBox, nTarget, ProbSel)
 
 
+
+
+
     !Compute the generation probability
     Prob = real(trialBox%nMolTotal, dp) * self%avbmcVol
     Prob = Prob*ProbSel/real(trialBox%nMolTotal+1, dp)
     Prob = Prob/ProbSub
+
+    call MolData(molType) % molConstruct % GasConfig(GasProb)
+    Prob = GasProb*Prob/GenProb
 !    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1, ProbSel
 
     !Get the chemical potential term for GCMC
@@ -294,13 +358,10 @@ use VarPrecision
     !Check Constraint
     accept = trialBox % CheckConstraint( self%oldPart(1:1) )
     if(.not. accept) then
-!      write(*,*) "Constraint Rejection"
-!      write(*,*) "============================================"
       return
     endif
 
     !Energy Calculation
-!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff, accept)
     call trialBox%ComputeEnergyDelta(self%oldpart(1:1),&
                                      self%templist,&
                                      self%tempNNei, &
@@ -311,7 +372,6 @@ use VarPrecision
                                      computeintra=.true.)
 
     if(.not. accept) then
-!      write(*,*) "Energy Rejection"
       return
     endif
 
@@ -321,14 +381,21 @@ use VarPrecision
       return
     endif
 
-!    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), trialBox, ProbSub, accept)
+    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), &
+                                                         trialBox, &
+                                                         ProbSub, &
+                                                         accept, &
+                                                         self%insPoint(1:3, 1:nInsPoints), &
+                                                         self%insProb(1:nInsPoints)) 
 
-!    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
+
+
+    call MolData(molType) % molConstruct % GasConfig(GasProb)
+
+    !Compute Acceptance Probability  P_Gen = (N_mol 
     Prob = real(trialBox%nMolTotal, dp)/ProbSel
     Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%avbmcVol)
-    Prob = Prob*ProbSub
-!    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%avbmcVol, trialBox%nMolTotal-1, ProbSel
-
+    Prob = Prob*GenProb/GasProb
     !Get chemical potential term
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), trialBox)
     !Accept/Reject

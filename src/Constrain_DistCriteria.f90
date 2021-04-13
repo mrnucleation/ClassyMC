@@ -467,6 +467,10 @@ module Constrain_DistanceCriteria
     read(command, *) intVal
     self%neighList = intVal
 
+    call GetXCommand(line, command, 5, lineStat)
+    read(command, *) intVal
+    self%atomnum = intVal
+
   end subroutine
 !====================================================================
   subroutine DistCrit_Maintenance(self)

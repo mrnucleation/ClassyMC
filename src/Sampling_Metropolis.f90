@@ -18,6 +18,7 @@ module MetropolisRule
 !====================================================================
   function Metropolis_MakeDecision(self, trialBox, E_Diff, disp, inProb, logProb, extraIn) result(accept)
     use Template_SimBox, only: SimBox
+    use ErrorChecking, only: IsNan, IsInf
     use RandomGen, only: grnd
     use ParallelVar, only: nout
     implicit none
@@ -32,6 +33,11 @@ module MetropolisRule
     real(dp) :: biasE, chemPot, extraTerms, probTerm
 
 
+    if(IsNan(E_Diff)) then
+      write(0,*) "ERROR! Invalid energy has been passed to the sampling routine!"
+      write(0,*) E_Diff
+      error stop
+    endif
 
     accept = .false.
     if(present(inProb)) then

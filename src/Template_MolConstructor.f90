@@ -41,15 +41,16 @@ module Template_MolConstructor
     self % molType = molType
   end subroutine
 !==========================================================================================
-  subroutine GenerateConfig(self, trialBox, disp, probconstruct, insPoint, insProb)
+  subroutine GenerateConfig(self, trialBox, disp, probconstruct, accept, insPoint, insProb)
     implicit none
     class(MolConstructor), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
-    real(dp), intent(in), optional :: insPoint(:)
-    real(dp), intent(in), optional :: insProb(:)
+    logical, intent(out) :: accept
     real(dp), intent(out) :: probconstruct 
-
+    real(dp), intent(in), optional :: insPoint(:,:)
+    real(dp), intent(in), optional :: insProb(:)
+    accept = .true.
     probconstruct = 1E0_dp
   end subroutine
 !==========================================================================================
@@ -58,7 +59,7 @@ module Template_MolConstructor
     class(MolConstructor), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
-    real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(in), optional :: insPoint(:,:)
     real(dp), intent(out) :: probconstruct 
 
     probconstruct = 1E0_dp
@@ -71,7 +72,7 @@ module Template_MolConstructor
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(out) :: probconstruct 
     logical, intent(out) :: accept
-    real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(in), optional :: insPoint(:, :)
     real(dp), intent(in), optional :: insProb(:)
 
     accept = .true.

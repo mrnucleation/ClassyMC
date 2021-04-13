@@ -17,6 +17,9 @@ bonddef
   harmonic 1.540  70400 #CHx-CH3
   harmonic 1.430  70400 #CHx-OH
   harmonic 0.945  70400 #O-H
+#  ridgid 1.540   #CHx-CH3
+#  ridgid 1.430   #CHx-OH
+#  ridgid 0.945   #O-H
 end_bonddef
 
 AngleDef
@@ -33,7 +36,7 @@ End_TorsionDef
 
 
 molecule 1
-  RegrowthType LinearCBMC
+  RegrowthType LinearCBMC 12
   atoms
     1
     2
@@ -58,16 +61,17 @@ molecule 1
 end_molecule
 
 forcefieldtype
-  LJ_Q_Cut
+  EP_LJ_Ele_Cut
+#  LJ_Q_Cut
 end_forcefieldtype
 
 # type epsilon sigma q rmin
 forcefield 1
-  LJRCut 15.5
-  QRCut 15.5
-  1  98.0    3.750   0.000   1.5
-  2  46.0    3.950   0.265   0.6
-  3  93.0    3.020  -0.700   0.6
-  4  0.0     0.000   0.434   0.6
+  LJRCut 19.5
+  QRCut 49.5
+  1  98.0    3.750   0.000   0.4 #CH3
+  2  46.0    3.950   0.265   0.4 #CH2
+  3  93.0    3.020  -0.700   0.4 #O
+  4  0.0     0.000   0.435   0.4 #H
 end_forcefield
 

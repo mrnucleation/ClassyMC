@@ -17,13 +17,14 @@ OPTIMIZE_FLAGS_IFORT += -no-wrap-margin
 OPTIMIZE_FLAGS_IFORT += -fpp
 #OPTIMIZE_FLAGS_IFORT += -fpe0
 #OPTIMIZE_FLAGS_IFORT += -pg
-OPTIMIZE_FLAGS_IFORT += -traceback
+OPTIMIZE_FLAGS_IFORT += -traceback 
 #OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
 #OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
 
-OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g
+OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g 
+#OPTIMIZE_FLAGS_GFORT += -DDETAILED
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
-OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
+#OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 #OPTIMIZE_FLAGS_GFORT += -pg
 #OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
@@ -72,6 +73,7 @@ PYTHON := $(CUR_DIR)/python
 # ====================================
 
 SRC_MAIN := $(SRC)/Common.f90\
+        		$(SRC)/ErrorChecking.f90\
         		$(SRC)/C_To_Fotran.f90\
         		$(SRC)/Common_BoxData.f90\
         		$(SRC)/Common_TrajData.f90\
@@ -131,6 +133,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Einstein.f90\
         		$(SRC)/FF_HardSphere.f90\
         		$(SRC)/FF_Hybrid.f90\
+        		$(SRC)/FF_EP_LJ_Ele_Cut.f90\
         		$(SRC)/FF_EP_LJ_Cut.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJWall.f90\

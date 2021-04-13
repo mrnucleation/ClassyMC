@@ -72,7 +72,7 @@ module MolCon_SimpleRegrowth
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct, insPoint, insProb)
+  subroutine SimpleRegrowth_GenerateConfig(self, trialBox, disp, probconstruct, accept, insPoint, insProb)
     use Common_MolInfo, only: MolData, BondData, AngleData, nMolTypes
     use MolSearch, only: FindBond, FindAngle
     use RandomGen, only: Generate_UnitSphere, Generate_UnitCone
@@ -80,9 +80,10 @@ module MolCon_SimpleRegrowth
     class(SimpleRegrowth), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
     class(SimBox), intent(inout) :: trialBox
-    real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(in), optional :: insPoint(:,:)
     real(dp), intent(in), optional :: insProb(:)
     real(dp), intent(out) :: probconstruct 
+    logical, intent(out) :: accept
 
 
     integer :: bondType, angleType, molType
@@ -93,6 +94,7 @@ module MolCon_SimpleRegrowth
     real(dp) :: prob
     real(dp) :: ang1, ang2
 
+    accept = .true.
     probconstruct = 1E0_dp
     select type(disp)
       class is(Addition)
@@ -198,9 +200,9 @@ module MolCon_SimpleRegrowth
       class is(Addition)
         do iDisp = 1, MolData(molType)%nAtoms
           if( present(insPoint) ) then
-            disp(iDisp)%x_new = self%tempcoords(1, iDisp) + insPoint(1)
-            disp(iDisp)%y_new = self%tempcoords(2, iDisp) + insPoint(2)
-            disp(iDisp)%z_new = self%tempcoords(3, iDisp) + insPoint(3)
+            disp(iDisp)%x_new = self%tempcoords(1, iDisp) + insPoint(1,1)
+            disp(iDisp)%y_new = self%tempcoords(2, iDisp) + insPoint(2,1)
+            disp(iDisp)%z_new = self%tempcoords(3, iDisp) + insPoint(3,1)
           else
             disp(iDisp)%x_new = self%tempcoords(1, iDisp)
             disp(iDisp)%y_new = self%tempcoords(2, iDisp)
@@ -222,7 +224,7 @@ module MolCon_SimpleRegrowth
     class(SimBox), intent(inout) :: trialBox
     real(dp), intent(out) :: probconstruct 
     logical, intent(out) :: accept
-    real(dp), intent(in), optional :: insPoint(:)
+    real(dp), intent(in), optional :: insPoint(:,:)
     real(dp), intent(in), optional :: insProb(:)
 
     integer :: bondType, angleType, molType

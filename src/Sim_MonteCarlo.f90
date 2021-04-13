@@ -39,11 +39,7 @@ contains
     iCycle = 0
     iMove = 0
 
-    if(nCycles < 1) then
-      write(nout,*) "Run Command was issued, but nothing is done"
-      write(nout,*) "Number of Cycles is less than 1!"
-      error stop
-    endif
+
 
     write(nout,*) "Starting Pre-Simulation Checks...."
     call Prologue
@@ -54,6 +50,14 @@ contains
 
     call Analyze(iCycle, iMove, accept, .true.)
     call Analyze(iCycle, iMove, accept, .false.)
+
+    if(nCycles < 1) then
+      write(nout, *) "============================================"
+      write(nout,*) "Number of Cycles is less than 1!"
+      write(nout,*) "Run Command was issued, but nothing is done"
+      write(nout, *) "============================================"
+      return
+    endif
     !-------Main Monte Carlo Simulation Loop-------
     write(nout, *) "============================================"
     write(nout, *) "       Simulation Start!"
