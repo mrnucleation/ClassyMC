@@ -147,7 +147,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
     else
       self%detailedrej = self%detailedrej + 1
@@ -164,6 +164,7 @@ use VarPrecision
     real(dp) :: accptRate
  
 
+    write(nout,*) 
     write(nout,"(1x,A,I15)") "Atom Translation Moves Accepted: ", nint(self%accpt)
     write(nout,"(1x,A,I15)") "Atom Translation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()

@@ -247,7 +247,7 @@ use VarPrecision
 
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%disp(1:nRegrow), self%tempList, self%tempNNei)
     else
 !      slice(1) = molStart
@@ -292,6 +292,7 @@ use VarPrecision
     class(CBMC), intent(inout) :: self
     real(dp) :: accptRate
       
+    write(nout,*) 
     write(nout,"(1x,A,I15)") "CBMC Moves Accepted: ", nint(self%accpt)
     write(nout,"(1x,A,I15)") "CBMC Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()

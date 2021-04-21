@@ -44,10 +44,11 @@ use VarPrecision
       procedure, pass :: Constructor => AVBMC_Constructor
 !      procedure, pass :: GeneratePosition => AVBMC_GeneratePosition
       procedure, pass :: FullMove => AVBMC_FullMove
-      procedure, pass :: AllocateProb => UB_Swap_AllocateProb
+      procedure, pass :: AllocateProb => AVBMC_AllocateProb
       procedure, pass :: SwapIn => AVBMC_SwapIn
       procedure, pass :: SwapOut => AVBMC_SwapOut
       procedure, pass :: CountSites => AVBMC_CountSites
+      procedure, pass :: CreateForward => AVBMC_CreateForward
       procedure, pass :: SelectNeigh => AVBMC_SelectNeigh
       procedure, pass :: SelectNeighReverse => AVBMC_SelectNeighReverse
 !      procedure, pass :: Maintenance => AVBMC_Maintenance
@@ -113,7 +114,7 @@ use VarPrecision
 !========================================================
   subroutine AVBMC_AllocateProb(self, nInsPoints)
     implicit none
-    class(UB_Swap), intent(inout) :: self
+    class(AVBMC), intent(inout) :: self
     integer, intent(in) :: nInsPoints
 
     if(.not. allocated(self%insPoint) ) then
@@ -136,7 +137,7 @@ use VarPrecision
     use Common_MolInfo, only: MolData, nMolTypes
     use RandomGen, only: grnd, Generate_UnitSphere
     implicit none
-    class(UB_Swap), intent(inout) :: self
+    class(AVBMC), intent(inout) :: self
     real(dp), intent(in) :: targetatoms(:,:) 
     real(dp), intent(out) :: inspoint(1:3)
 
@@ -166,16 +167,20 @@ use VarPrecision
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
     logical :: relative
+    integer :: nInsPoints, iIns
     integer :: nTarget, nType, rawIndx, iConstrain
     integer :: CalcIndex, nMove, nCount
     integer :: iAtom, iDisp
     integer :: molType, molStart, molEnd, atomIndx, nAtoms
-    integer :: targStart
+    integer :: targStart, targEnd
     real(dp) :: dx, dy, dz
     real(dp) :: E_Diff, biasE, radius, extraTerms
     real(dp) :: E_Inter, E_Intra
     real(dp) :: Prob = 1E0_dp
-    real(dp) :: ProbSub, ProbSel
+    real(dp) :: ProbSub, ProbSel, GenProb, GasProb
+
+    integer :: slice(1:2)
+    real(dp), pointer :: targetatoms(:,:) => null()
 
     self % atmps = self % atmps + 1E0_dp
     self % inatmps = self % inatmps + 1E0_dp
@@ -195,15 +200,13 @@ use VarPrecision
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart, &
                                molEnd=molEnd)
     !Choose an atom to serve as the target for the new molecule.
-!    rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp)
-!    call FindAtom(trialbox, rawIndx, nTarget)
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
     call FindMolecule(trialbox, rawIndx, nTarget)
-    call trialBox % GetMolData(nTarget, molStart=targStart)
 
-
-!    call MolData(molType) % molConstruct % ReverseConfig( trialBox, ProbSub, accept)
-
+    call trialBox % GetMolData(nTarget, molStart=targStart, molEnd=targEnd)
+    slice(1) = targStart
+    slice(2) = targEnd
+    call trialbox%GetCoordinates(targetatoms, slice=slice)
     !Choose the position relative to the target atom 
     nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
     call self%AllocateProb(nInsPoints)
@@ -213,14 +216,14 @@ use VarPrecision
     enddo
 
 
-    call Generate_UnitSphere(dx, dy, dz)
-    radius = self % avbmcRad * grnd()**(1.0E0_dp/3.0E0_dp)
-    dx = radius * dx
-    dy = radius * dy
-    dz = radius * dz
-    insPoint(1) = trialBox%atoms(1, targStart) + dx
-    insPoint(2) = trialBox%atoms(2, targStart) + dy
-    insPoint(3) = trialBox%atoms(3, targStart) + dz
+!    call Generate_UnitSphere(dx, dy, dz)
+!    radius = self % avbmcRad * grnd()**(1.0E0_dp/3.0E0_dp)
+!    dx = radius * dx
+!    dy = radius * dy
+!    dz = radius * dz
+!    insPoint(1) = trialBox%atoms(1, targStart) + dx
+!    insPoint(2) = trialBox%atoms(2, targStart) + dy
+!    insPoint(3) = trialBox%atoms(3, targStart) + dz
 
 
     nAtoms = MolData(molType)%nAtoms
@@ -299,7 +302,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList, self%tempNNei)
     endif
 
@@ -318,7 +321,8 @@ use VarPrecision
     class(AVBMC), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
-    integer :: molType, molStart, molEnd
+    integer :: iIns, nInsPoints
+    integer :: molType, molStart, molEnd, targStart, targEnd
     integer :: nTarget, nMove, rawIndx, iConstrain
     integer :: CalcIndex, nCount
     real(dp) :: dx, dy, dz
@@ -326,7 +330,10 @@ use VarPrecision
     real(dp) :: E_Inter, E_Intra
     real(dp) :: ProbSel = 1E0_dp
     real(dp) :: Prob = 1E0_dp
-    real(dp) :: ProbSub
+    real(dp) :: ProbSub, GenProb, GasProb
+
+    integer :: slice(1:2)
+    real(dp), pointer :: targetatoms(:,:) => null()
 
     self % atmps = self % atmps + 1E0_dp
     self % outatmps = self % outatmps + 1E0_dp
@@ -381,6 +388,20 @@ use VarPrecision
       return
     endif
 
+    call trialBox % GetMolData(nTarget, molStart=targStart, molEnd=targEnd)
+    slice(1) = targStart
+    slice(2) = targEnd
+    call trialbox%GetCoordinates(targetatoms, slice=slice)
+
+
+    nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
+    call self%AllocateProb(nInsPoints)
+    do iIns = 1, nInsPoints
+      call self%CreateForward(targetatoms, self%inspoint(1:3, iIns))
+      self%insprob(iIns) = 1E0_dp 
+    enddo
+
+
     call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), &
                                                          trialBox, &
                                                          ProbSub, &
@@ -404,7 +425,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 

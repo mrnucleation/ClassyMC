@@ -142,7 +142,6 @@ module FF_EasyPair_Cut
          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
 
       class is(Addition)
-!         write(*,*) size(tempList)
          call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
 
       class is(Deletion)
@@ -523,6 +522,11 @@ module FF_EasyPair_Cut
       call curbox%Boundary(rx, ry, rz)
       rsq = rx*rx + ry*ry + rz*rz
       if(rsq < self%rCutSq) then
+          rmin_ij = self%rMinTable(atmType2, atmtype1)
+          if(rsq < rmin_ij) then
+            accept = .false.
+            return
+          endif
         E_Pair = self % PairFunction(rsq, atmtype1, atmtype2)
         E_Many = E_Many + E_Pair
       endif

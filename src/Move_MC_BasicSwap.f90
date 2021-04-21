@@ -193,7 +193,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList, self%tempNNei)
     endif
 
@@ -276,7 +276,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 

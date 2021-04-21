@@ -50,9 +50,9 @@
       
       u_12_sq = 2E0_dp
       do while(u_12_sq .ge. 1E0_dp)
-       u1 = 2E0_dp * grnd() - 1E0_dp
-       u2 = 2E0_dp * grnd() - 1E0_dp
-       u_12_sq = u1 * u1 + u2 * u2
+        u1 = 2E0_dp * grnd() - 1E0_dp
+        u2 = 2E0_dp * grnd() - 1E0_dp
+        u_12_sq = u1 * u1 + u2 * u2
       enddo
  
       x = 2E0_dp * u1 * sqrt(1E0_dp - u_12_sq)

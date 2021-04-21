@@ -249,7 +249,7 @@ use ClassyConstants, only: pi
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:nAtoms), inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter)
       call trialBox % UpdatePosition(self%disp(1:nAtoms), self%tempList, self%tempNNei)
     endif
 
@@ -295,6 +295,7 @@ use ClassyConstants, only: pi
     class(PlaneRotate), intent(inout) :: self
     real(dp) :: accptRate
       
+    write(nout,*) 
     write(nout,"(1x,A,I15)") "Molecule Rotation Moves Accepted: ", nint(self%accpt)
     write(nout,"(1x,A,I15)") "Molecule Rotation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()

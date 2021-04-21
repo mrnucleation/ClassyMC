@@ -126,7 +126,7 @@ module Move_ThermoLambda
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:1),inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       select type(eng => EnergyCalculator(self%EFunc)%Method)
         class is(Pair_ThermoIntegration)
           call eng%UpdateLambda(lambdaNew)

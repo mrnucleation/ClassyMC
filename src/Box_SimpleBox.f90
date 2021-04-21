@@ -96,19 +96,20 @@ module SimpleSimBox
 !    NMolMin => Lower Bound for a molecule type. System is not allowed to go below this
 !    NMolMax => Upper Bound for a molecule type. System is not allowed to go above this
 !    NMol => Current molecule count current in the system of a given molecule type
-!    integer, allocatable :: NMol(:), NMolMin(:), NMolMax(:)
 !
 !     - Quick look up for finding the location of a molecule in the atoms(:,:) arrays.
 !     - (Indexing is based on global molecule index for this box)
 !    MolStartIndx => atom(:,:) array index of the first atom of this molecule  
 !    MolEndIndx => atom(:,:) array index of the last atom of this molecule 
-!    integer, allocatable :: MolStartIndx(:), MolEndIndx(:)
 !
 !     -Reverse Look up array for molecules
 !     -(First index is the molecule's type number and second is the molecule relative
 !       position index)
 !    MolGlobalIndx => Finds a molecule's global index from the Molecule Type (first index)
 !                     and relative molecule index (second index)
+!
+!    integer, allocatable :: NMol(:), NMolMin(:), NMolMax(:)
+!    integer, allocatable :: MolStartIndx(:), MolEndIndx(:)
 !    integer, allocatable :: MolGlobalIndx(:, :)
 !
 !
@@ -122,6 +123,7 @@ module SimpleSimBox
 !                   position with respect to it's parent molecule.  For example
 !                   the first defined atom in the molecule will have Relative Index of 1,
 !                   the second atom defined will have a relative index of 2, etc.
+!
 !    integer, allocatable :: AtomType(:), MolType(:)
 !    integer, allocatable :: MolIndx(:), MolSubIndx(:), AtomSubIndx(:)
 !
@@ -130,10 +132,11 @@ module SimpleSimBox
 !     -(Indexing is based on molecule type ID)
 !    TypeFirst => The atom global index of the first atom of the first molecule of this type
 !    TypeLast => The atom global index of the kast atom of the last molecule of this type
-!    integer, allocatable :: TypeFirst(:), TypeLast(:)
 !
 !     nLists => Number of neighborlists, depreciated.
-!    integer :: nLists
+!
+!     integer, allocatable :: TypeFirst(:), TypeLast(:)
+!     integer :: nLists
 !    ----------------------------
 !    
     integer :: volnum
@@ -291,6 +294,9 @@ module SimpleSimBox
     self%chempot = 0E0_dp
     IF (AllocateStatus /= 0) error STOP "Allocation Error in Simulation Box Def"
 
+    self%volume = 0E0_dp
+    self%pressure = 0E0_dp
+    self%HTotal = 0E0_dp
     self%atoms = 0.0E0_dp
     self%dr = 0E0_dp
     self%maxMol = maxMol
@@ -579,9 +585,11 @@ module SimpleSimBox
     if(.not. accept) then
       return
     endif
+    self%E_Intra = E_Intra
 
     write(nout,*) "Intra Energy:", E_Intra
     call self % EFunc % Method % DetailedECalc( self, E_Inter, accept )
+    self%E_Inter = E_Inter
     self%ETotal = E_Inter + E_Intra
 
     if(present(tablecheck))then
@@ -607,8 +615,8 @@ module SimpleSimBox
       endif
       write(nout,*) "Energy Table Check complete!"
     endif
-  end subroutine
 
+  end subroutine
 !==========================================================================================
 ! This subroutine recomputes the intra contribution of entire system 
 ! energy from scratch. 
@@ -629,6 +637,8 @@ module SimpleSimBox
     logical, allocatable :: changed
     real(dp) :: E_Temp
 
+    E_Temp = 0E0_dp
+    E_Intra = 0E0_dp
     select type(disp)
       class is(Displacement)
          molType = disp(1)%molType 
@@ -752,7 +762,6 @@ module SimpleSimBox
 
      do iTors = 1, MolData(molType)%nTors
        intraType = MolData(molType)%torsion(iTors)%torsType
-
        mem1 = MolData(molType)%torsion(iTors)%mem1
        mem2 = MolData(molType)%torsion(iTors)%mem2
        mem3 = MolData(molType)%torsion(iTors)%mem3
@@ -761,7 +770,6 @@ module SimpleSimBox
        self%temppos(1:3, 2) = molpos(1:3, mem2)
        self%temppos(1:3, 3) = molpos(1:3, mem3)
        self%temppos(1:3, 4) = molpos(1:3, mem4)
-
        call TorsionData(intraType) % torsionFF % DetailedECalc(self, &
                                                          self%temppos(1:3,1:4), &
                                                          E_Torsion, &
@@ -840,6 +848,7 @@ module SimpleSimBox
       allocate(self%temppos(1:3, 1:mostAtoms))
     endif
     E_Intra = 0E0_dp
+    E_Inter = 0E0_dp
 
     if(present(computeintra)) then
       if(computeintra) then
@@ -923,10 +932,12 @@ module SimpleSimBox
     implicit none
     class(SimpleBox), intent(inout) :: self
     logical :: accept
-    real(dp) :: E_Current
+    real(dp) :: E_Current, E_InterCur, E_IntraCur
 
 
     E_Current = self%ETotal
+    E_InterCur = self%E_Inter
+    E_IntraCur = self%E_Intra
     call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
 
     if(self%ETotal > 1E0_dp) then
@@ -935,7 +946,11 @@ module SimpleSimBox
         write(nout, *) "!!!!!!!!!!!!!!!!!!ERROR! Large energy drift detected!!!!!!!!!!!!!!!!!!!!!!!!!!"
         write(nout, *) "Box: ", self%boxID
         write(nout, *) "Culmative Energy: ", E_Current/outEngUnit, engStr
+        write(nout, *) "Culmative (Inter) Energy: ", E_InterCur/outEngUnit, engStr
+        write(nout, *) "Culmative (Intra) Energy: ", E_IntraCur/outEngUnit, engStr
         write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
+        write(nout, *) "Final Energy(Inter): ", self%E_Inter/outEngUnit, engStr
+        write(nout, *) "Final Energy(Intra): ", self%E_Intra/outEngUnit, engStr
         write(nout, *) "Difference: ", (self%ETotal-E_Current)/outEngUnit, engStr
       endif
     else
@@ -943,7 +958,11 @@ module SimpleSimBox
         write(nout, *) "!!!!!!!!!!!!!!!!!!ERROR! Large energy drift detected!!!!!!!!!!!!!!!!!!!!!!!!!!"
         write(nout, *) "Box: ", self%boxID
         write(nout, *) "Culmative Energy: ", E_Current/outEngUnit, engStr
+        write(nout, *) "Culmative (Inter) Energy: ", E_InterCur/outEngUnit, engStr
+        write(nout, *) "Culmative (Intra) Energy: ", E_IntraCur/outEngUnit, engStr
         write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
+        write(nout, *) "Final Energy(Inter): ", self%E_Inter/outEngUnit, engStr
+        write(nout, *) "Final Energy(Intra): ", self%E_Intra/outEngUnit, engStr
         write(nout, *) "Difference: ", (self%ETotal-E_Current)/outEngUnit, engStr
       endif
     endif
@@ -952,14 +971,19 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_UpdateEnergy(self, E_Diff)
+  subroutine SimpleBox_UpdateEnergy(self, E_Diff, E_Inter, E_Intra)
     implicit none
     class(SimpleBox), intent(inout) :: self
-    real(dp), intent(in) :: E_Diff
+    real(dp), intent(in) :: E_Diff, E_Inter
+    real(dp), intent(in), optional :: E_Intra
 
     self % ETotal = self % ETotal + E_Diff
     self % ETable = self % ETable + self % dETable
     self % dETable = 0E0_dp
+    self % E_Inter = self % E_Inter + E_Inter
+    if(present(E_Intra)) then
+      self % E_Intra = self % E_Intra + E_Intra
+    endif
 
   end subroutine
 !==========================================================================================
@@ -1900,9 +1924,12 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer :: iConstrain, iList
-    real(dp) :: E_Culm
+    real(dp) :: E_Culm, E_Culm_Inter, E_Culm_Intra
 
     E_Culm = self%ETotal
+    E_Culm_Inter = self%E_Inter
+    E_Culm_Intra = self%E_Intra
+
 
 
     write(nout,*) "--------Box", self%boxID , "Energy---------"
@@ -1920,7 +1947,11 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
         write(nout, *) "ERROR! Large energy drift detected!"
         write(nout, *) "Box: ", self%boxID
         write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit, engStr
+        write(nout, *) "Culmative (Inter) Energy: ", E_Culm_Inter/outEngUnit, engStr
+        write(nout, *) "Culmative (Intra) Energy: ", E_Culm_Intra/outEngUnit, engStr
         write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
+        write(nout, *) "Final (Inter) Energy: ", self%E_Inter/outEngUnit, engStr
+        write(nout, *) "Final (Intra) Energy: ", self%E_Intra/outEngUnit, engStr
         write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit, engStr
       endif
     else
@@ -1928,7 +1959,11 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
         write(nout, *) "ERROR! Large energy drift detected!"
         write(nout, *) "Box: ", self%boxID
         write(nout, *) "Culmative Energy: ", E_Culm/outEngUnit, engStr
+        write(nout, *) "Culmative (Inter) Energy: ", E_Culm_Inter/outEngUnit, engStr
+        write(nout, *) "Culmative (Intra) Energy: ", E_Culm_Intra/outEngUnit, engStr
         write(nout, *) "Final Energy: ", self%ETotal/outEngUnit, engStr
+        write(nout, *) "Final (Inter) Energy: ", self%E_Inter/outEngUnit, engStr
+        write(nout, *) "Final (Intra) Energy: ", self%E_Intra/outEngUnit, engStr
         write(nout, *) "Difference: ", (self%ETotal-E_Culm)/outEngUnit, engStr
       endif
     endif

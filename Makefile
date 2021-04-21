@@ -24,7 +24,7 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g 
 #OPTIMIZE_FLAGS_GFORT += -DDETAILED
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
-#OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
+OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 #OPTIMIZE_FLAGS_GFORT += -pg
 #OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
@@ -43,7 +43,7 @@ DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug 
 
 
 
-#PACKAGE_FLAGS := -DPARALLEL
+PACKAGE_FLAGS := -DPARALLEL
 
 
 #PACKAGEMAKEFILES = $(shell find . -name "*.Makefile")
@@ -110,7 +110,6 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_PlaneRotate.f90\
         		$(SRC)/Move_MC_PlaneTranslate.f90\
         		$(SRC)/Move_MC_PlaneAtomTranslate.f90\
-        		$(SRC)/Move_MC_ThermoLambda.f90\
         		$(SRC)/Move_MC_UBSwap.f90\
         		$(SRC)/Move_MC_VolExchange.f90\
         		$(SRC)/ExeptionHandling.f90\

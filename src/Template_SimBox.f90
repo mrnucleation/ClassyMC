@@ -23,6 +23,7 @@ module Template_SimBox
 
     !Thermodynamic Variables
     real(dp) :: ETotal, HTotal
+    real(dp) :: E_Inter, E_Intra
     real(dp) :: pressure = 0E0_dp
     real(dp) :: beta, temperature, volume
 
@@ -63,7 +64,7 @@ module Template_SimBox
       procedure, public, pass :: GetThermo
       procedure, public, pass :: ThermoLookUp
       procedure, public, pass :: IsActive
-      procedure, public, pass :: UpdateEnergy
+!      procedure, public, pass :: UpdateEnergy
       procedure, public, pass :: UpdatePosition
       procedure, public, pass :: UpdateVol
       procedure, public, pass :: UpdateNeighLists
@@ -143,12 +144,12 @@ module Template_SimBox
     real(dp), intent(inout), optional :: rx, ry, rz 
 
   end subroutine
-!==========================================================================================
-  subroutine UpdateEnergy(self, E_Diff)
-    implicit none
-    class(SimBox), intent(inout) :: self
-    real(dp), intent(in) :: E_Diff
-  end subroutine
+!!==========================================================================================
+!  subroutine UpdateEnergy(self, E_Diff)
+!    implicit none
+!    class(SimBox), intent(inout) :: self
+!    real(dp), intent(in) :: E_Diff
+!  end subroutine
 !==========================================================================================
   subroutine UpdatePosition(self, disp, tempList, tempNNei)
     implicit none
@@ -204,7 +205,6 @@ module Template_SimBox
 
 
   end subroutine
-
 !==========================================================================================
 !  Checks to see if the atom is present in the box.  This is required 
   function IsActive(self, atmIndx) result(active)

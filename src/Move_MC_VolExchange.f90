@@ -64,6 +64,8 @@ module MCMove_VolExchange
     real(dp) :: dV, vTotal
     real(dp) :: Prob, Norm, extraTerms, half
     real(dp) :: E_Diff1, E_Diff2, scaleFactor
+    real(dp) :: E_Inter1, E_Inter2
+    real(dp) :: E_Intra1, E_Intra2
     real(dp) :: rescale(1:size(self%boxprob))
 
 
@@ -179,7 +181,14 @@ module MCMove_VolExchange
 
 
     !Energy Calculation for Box 1
-    call box1 % EFunc % Method % DiffECalc(box1, self%disp1(1:1), self%tempList, self%tempNNei, E_Diff1, accept)
+    call Box1 % ComputeEnergyDelta(self%disp1(1:1),&
+                                     self%templist, &
+                                     self%tempNNei, &
+                                     E_Inter1, &
+                                     E_Intra1, &
+                                     E_Diff1, &
+                                     accept, &
+                                     computeintra=.false.)
     if(.not. accept) then
       return
     endif
@@ -190,7 +199,15 @@ module MCMove_VolExchange
     endif
 
     !Energy Calculation for Box 2
-    call box2 % EFunc % Method % DiffECalc(box2, self%disp2(1:1), self%tempList, self%tempNNei, E_Diff2, accept)
+    call Box2 % ComputeEnergyDelta(self%disp1(1:1),&
+                                     self%templist, &
+                                     self%tempNNei, &
+                                     E_Inter2, &
+                                     E_Intra2, &
+                                     E_Diff2, &
+                                     accept, &
+                                     computeintra=.false.)
+
     if(.not. accept) then
       return
     endif
@@ -235,10 +252,10 @@ module MCMove_VolExchange
 
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call box1 % UpdateEnergy(E_Diff1)
+      call Box1 % UpdateEnergy(E_Diff1, E_Inter1)
       call box1 % UpdatePosition(self%disp1(1:1), self%tempList, self%tempNNei)
 
-      call box2 % UpdateEnergy(E_Diff2)
+      call Box2 % UpdateEnergy(E_Diff2, E_Inter2)
       call box2 % UpdatePosition(self%disp2(1:1), self%tempList, self%tempNNei)
     endif
 

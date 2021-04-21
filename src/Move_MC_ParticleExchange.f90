@@ -247,10 +247,10 @@ use VarPrecision
                             extraIn=extraTerms )
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call box1 % UpdateEnergy(E_Diff1)
+      call Box1 % UpdateEnergy(E_Diff1, E_Inter1, E_Intra1)
       call box1 % DeleteMol(self%oldPart(1)%molIndx)
 
-      call box2 % UpdateEnergy(E_Diff2)
+      call Box2 % UpdateEnergy(E_Diff2, E_Inter2, E_Intra2)
       call box2 % UpdatePosition(self%newpart(1:nAtoms), self%tempList, self%tempNNei)
     endif
 

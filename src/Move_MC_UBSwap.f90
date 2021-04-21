@@ -158,7 +158,6 @@ use VarPrecision
     P21 = log(A21) - trialBox%beta*(E1-E2)
     if(P21 > 0E0_dp) P21 = 0E0_dp
 
-!    write(*,*) "BLAH"
 
     !Our A12 and A21 in this case are actually the ratio of the two
 
@@ -166,13 +165,13 @@ use VarPrecision
 !    detailbalance = A21*detailbalance*exp(-trialBox%beta*(E1-E2))
 
     detailbalance = log(A21) + P12 - P21 - trialBox%beta*(E1-E2)
-    if(abs(detailbalance) > 1E-8_dp) then
+    if(abs(detailbalance) > 1E-6_dp) then
       write(nout,*) "E1, E2:", E1, E2
       write(nout,*) "A12, A21, A12*A21:", A12, A21, A12*A21
       write(nout,*) "ln(P12), ln(P21):", P12, P21
       write(nout,*) "Detailed:", detailbalance
       write(nout,*) "Violation of Detailed Balance Detected!"
-!      error stop
+      error stop
     endif
 
 
@@ -328,7 +327,6 @@ use VarPrecision
 !    write(*,*) 
 
     call MolData(molType) % molConstruct % GasConfig(GasProb)
-!    write(*,*) GasProb
     Prob = GasProb*Prob/GenProb
 
     !Get the chemical potential term for GCMC
@@ -345,7 +343,8 @@ use VarPrecision
       self % inaccpt = self % inaccpt + 1E0_dp
       if( present(moveid) )  moveid = self%newPart(1)%molIndx
       if( present(ProbIn) )  ProbIn = Prob 
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
+!      write(*,*) E_Diff, E_Inter, E_Intra
       call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList, self%tempNNei)
     endif
 
@@ -486,7 +485,9 @@ use VarPrecision
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp
       if( present(ProbOut) )  ProbOut = Prob
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
+!      write(*,*) E_Diff, E_Inter, E_Intra
+!      write(*,*) 
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 
@@ -553,7 +554,6 @@ use VarPrecision
 
     self%ubVol = (4E0_dp/3E0_dp)*pi*self%ubRad**3
     self%ubRadSq = self%ubRad * self%ubRad
-!    write(*,*) self%ubVol
 
     allocate( self%tempNNei(maxAtoms) )
     allocate( self%tempList(2000,maxAtoms ) )

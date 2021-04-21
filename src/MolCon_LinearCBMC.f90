@@ -419,6 +419,10 @@ module MolCon_LinearCBMC
           norm = norm + self%RosenProb(iRosen)
         enddo
         nSel = ListRNG(self%RosenProb, norm)
+        if(norm <= 0E0_dp) then
+          accept = .false.
+          return
+        endif
         probconstruct = probconstruct * self%GenProb(nSel) * self%RosenProb(nSel)/norm
 !        write(*,*) nSel, self%GenProb(nSel), self%RosenProb(nSel)/norm, probconstruct
         self%newconfig(1:3, lastGrown) = self%tempcoords(1:3, nSel)
@@ -883,6 +887,7 @@ module MolCon_LinearCBMC
 
 
     E_Min = huge(dp)
+    E_Atom = 0E0_dp
     do iRosen = 1, self%nRosenTrials
       tempdisp(1)%x_new = self%tempcoords(1, iRosen)
       tempdisp(1)%y_new = self%tempcoords(2, iRosen)
@@ -900,15 +905,11 @@ module MolCon_LinearCBMC
       pos1(1:3) = self%tempcoords(1:3, iRosen)
       accept = .true.
       if(nNeigh(atmNeiIndx) > 0) then
-!        write(*,*) "Size:", nNeigh(atmNeiIndx)
-!        write(*,*) neighlist(1:nNeigh(atmNeiIndx), atmNeiIndx)
         do jNei = 1, nNeigh(atmNeiIndx)
           jAtom = neighlist(jNei, atmNeiIndx)
           call trialBox%GetAtomData(jAtom, atomtype=self%atomtypes(jNei))
-!          write(*,*) jNei, self%atomtypes(jAtom)
           self%posN(1:3, jNei) = atoms(1:3, jAtom)
         enddo
-!        write(*,*) self%atomtypes(1:nNeigh(atmNeiIndx))
         !Add 1-5 terms later.
         call EFunc % Method % ManyBody(trialbox,& 
                            atmtype1,& 
@@ -917,6 +918,8 @@ module MolCon_LinearCBMC
                            self%posN(1:3,1:nNeigh(atmNeiIndx)),&
                            E_Atom,&
                            accept)
+      else
+        E_Atom = 0E0_dp
       endif
       if(accept) then
           if(E_Atom < E_Min) then

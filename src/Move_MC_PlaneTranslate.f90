@@ -198,7 +198,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter)
       call trialBox % UpdatePosition(self%disp(1:nAtoms), self%tempList, self%tempNNei)
     endif
 

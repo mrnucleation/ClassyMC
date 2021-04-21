@@ -82,7 +82,7 @@ use VarPrecision
     !Accept/Reject
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % DeleteMol(delVal)
 !      call trialBox % UpdatePosition(self%disp(1:1))
     endif
