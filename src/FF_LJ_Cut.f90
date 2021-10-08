@@ -60,7 +60,6 @@ module FF_Pair_LJ_Cut
   end subroutine
   !===================================================================================
   subroutine Detailed_LJ_Cut(self, curbox, E_T, accept)
-    use ParallelVar, only: nout
     use Common_MolInfo, only: nMolTypes
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self

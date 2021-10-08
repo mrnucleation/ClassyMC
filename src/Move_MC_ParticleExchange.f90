@@ -8,8 +8,11 @@ use VarPrecision
   type, public, extends(MCMultiBoxMove) :: ParticleExchange
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    type(Addition), allocatable :: newPart(:)
-    type(Deletion) :: oldPart(1:1)
+    type(Addition), allocatable, private :: newPart(:)
+    type(Deletion), private :: oldPart(1:1)
+
+    real(dp), private, allocatable :: insPoint(:, :)
+    real(dp), private, allocatable :: insProb(:)
 
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
@@ -18,6 +21,7 @@ use VarPrecision
       procedure, pass :: SafetyCheck => ParticleExchange_SafetyCheck
       procedure, pass :: Constructor => ParticleExchange_Constructor
       procedure, pass :: MultiBox => ParticleExchange_MultiBox
+      procedure, pass :: AllocateProb => ParticleExchange_AllocateProb
 !      procedure, pass :: GeneratePosition => ParticleExchange_GeneratePosition
 !      procedure, pass :: FullMove => ParticleExchange_FullMove
 !      procedure, pass :: Maintenance => ParticleExchange_Maintenance
@@ -70,6 +74,23 @@ use VarPrecision
 !      dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
 !      dz = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
 !  end subroutine
+!========================================================
+  subroutine  ParticleExchange_AllocateProb(self, nInsPoints)
+    implicit none
+    class(ParticleExchange), intent(inout) :: self
+    integer, intent(in) :: nInsPoints
+
+    if(.not. allocated(self%insPoint) ) then
+      allocate(self%insPoint(1:3, 1:nInsPoints))
+      allocate(self%insProb(1:nInsPoints))
+    else if(size(self%insPoint, 2) < nInsPoints) then
+      deallocate(self%insPoint)
+      deallocate(self%insProb)
+      allocate(self%insPoint(1:3, 1:nInsPoints))
+      allocate(self%insProb(1:nInsPoints))
+    endif
+
+  end subroutine
 !=========================================================================
   subroutine ParticleExchange_MultiBox(self, accept)
     use Box_Utility, only: FindMolecule
@@ -82,19 +103,19 @@ use VarPrecision
     implicit none
     class(ParticleExchange), intent(inout) :: self
     logical, intent(out) :: accept
-    integer :: i, iAtom, boxNum, nAtoms
+    integer :: i, iAtom, iPoint, boxNum, nAtoms
     integer :: rawIndx, atomIndx, nMoveOut, nMoveIn
     integer :: molType, molStart, molEnd
+    integer :: nInsPoints
     class(SimpleBox), pointer :: box1, box2
-    real(dp) :: Prob, ProbSub, Norm, extraTerms, half
+    real(dp) :: Prob, ProbSubIn, ProbSubOut, Norm, extraTerms, half
     real(dp) :: vol
-
     real(dp) :: reduced(1:3)
-    real(dp) :: insPoint(1:3, 1), insProb(1)
-    real(dp) :: E_Diff1, E_Diff2, scaleFactor
+    real(dp) :: E_Diff1, E_Diff2
     real(dp) :: E_Inter1, E_Intra1
     real(dp) :: E_Inter2, E_Intra2
     real(dp) :: rescale(1:size(self%boxprob))
+    character(len=30), parameter :: volume="volume"
 
 
 
@@ -153,20 +174,21 @@ use VarPrecision
       return
     endif
 
-
-
     !Get the first empty molecule position for box2
     nMoveIn = box2%NMol(molType) + 1
     nMoveIn = box2%MolGlobalIndx(molType, nMoveIn)
     call box2 % GetMolData(nMoveIn, molStart=molStart, molEnd=molEnd)
 
-
     !Generate an Insertion Point for the new particle
-    do i = 1, 3
-      reduced(i) = grnd()
+    nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
+    do iPoint = 1, nInsPoints
+      call self%AllocateProb(nInsPoints)
+      do i = 1, 3
+        reduced(i) = grnd()
+      enddo
+      call box2%GetRealCoords(reduced, self%insPoint(1:3, iPoint))
+      self%insProb(iPoint) = 1E0_dp
     enddo
-    call box2%GetRealCoords(reduced, insPoint)
-
 
     nAtoms = MolData(molType)%nAtoms
     do iAtom = 1, nAtoms
@@ -177,7 +199,7 @@ use VarPrecision
     enddo
 
 
-    call MolData(molType) % molConstruct % GenerateConfig(box2, self%newPart(1:nAtoms), ProbSub, accept ,insPoint, insProb)
+    call MolData(molType) % molConstruct % GenerateConfig(box2, self%newPart(1:nAtoms), ProbSubIn, accept ,self%insPoint, self%insProb)
     if(.not. accept) then
       return
     endif
@@ -210,8 +232,6 @@ use VarPrecision
     endif
 
     !Box2's Energy Calculation
-!    call box2% EFunc % Method % DiffECalc(box2, self%newPart(1:nAtoms), self%tempList, &
-!                                              self%tempNNei, E_Diff2, accept)
     call box2%ComputeEnergyDelta(self%newpart(1:nAtoms),&
                                      self%templist,&
                                      self%tempNNei, &
@@ -225,16 +245,33 @@ use VarPrecision
     endif
 
 
-    !Compute the Generation Probability
+    !Compute the Reverse Generation Probability For Swapping the Same Particle Back into
+    !It's Original Position in Box 1
+    nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
+    do iPoint = 1, nInsPoints
+      call self%AllocateProb(nInsPoints)
+      do i = 1, 3
+        reduced(i) = grnd()
+      enddo
+      call box1%GetRealCoords(reduced, self%insPoint(1:3, iPoint))
+      self%insProb(iPoint) = 1E0_dp
+    enddo
+    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), &
+                                                         box1, &
+                                                         ProbSubOut, &
+                                                         accept, &
+                                                         self%insPoint(1:3, 1:nInsPoints), &
+                                                         self%insProb(1:nInsPoints)) 
 
-    !Forward Probability = 1/N_box1 * 1/vol_Box2 
-    !Reverse Probability = 1/(N_box2+1) * 1/vol_Box1
-    !Rev/For = N_box1 * vol_box2 / ( (N_box2+1) * vol_Box1 )
-    vol = box2 % GetThermo(5)
-    Prob = real(box1%nMolTotal, dp) * vol
 
-    vol = box1 % GetThermo(5)
-    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol)
+    !Forward Probability = 1/N_box1 * 1/vol_Box2 * ForwardGenProbility
+    !Reverse Probability = 1/(N_box2+1) * 1/vol_Box1 * ReverseGenProbility
+    !Rev/For = N_box1 * vol_box2 / ( (N_box2+1) * vol_Box1 ) * GenProb
+    vol = box2 % GetThermo_String(volume)
+    Prob = real(box1%nMolTotal, dp) * vol * ProbSubIn
+
+    vol = box1 % GetThermo_String(volume)
+    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol * ProbSubOut)
 
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), box1)
     half = sampling % GetExtraTerms(self%newpart(1:nAtoms), box2)
@@ -248,10 +285,10 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call Box1 % UpdateEnergy(E_Diff1, E_Inter1, E_Intra1)
-      call box1 % DeleteMol(self%oldPart(1)%molIndx)
+      call Box1 % DeleteMol(self%oldPart(1)%molIndx)
 
       call Box2 % UpdateEnergy(E_Diff2, E_Inter2, E_Intra2)
-      call box2 % UpdatePosition(self%newpart(1:nAtoms), self%tempList, self%tempNNei)
+      call Box2 % UpdatePosition(self%newpart(1:nAtoms), self%tempList, self%tempNNei)
     endif
 
   end subroutine

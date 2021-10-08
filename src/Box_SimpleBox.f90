@@ -89,7 +89,7 @@ module SimpleSimBox
 !    These arrays are used to quickly look up location and informatics
 !    in arrays such as the atoms(:,:), forces(:,:), dr(:,:), etc.
 !    in order to get the spacial information required to perform
-!    all manners of
+!    all manners of calculations.
 ! 
 !     - Count and Bounds arrays for the number of
 !     - (Indexing is based on number of molecule types)
@@ -140,7 +140,7 @@ module SimpleSimBox
 !    ----------------------------
 !    
     integer :: volnum
-    integer :: nTotal
+!    integer :: nTotal
 
     ! Constraint Class Array, used to reject configurations that
     ! deviate from the user specified criterias. 
@@ -307,6 +307,7 @@ module SimpleSimBox
     self%AtomSubIndx = 0
     self%MolStartIndx = 0
     self%MolEndIndx = 0
+    self%nMolTotal = 0
 
     self%TypeFirst = 0
     self%TypeLast = 0
@@ -695,7 +696,8 @@ module SimpleSimBox
 ! This subroutine computes the intra contribution of a single molecule
   subroutine SimpleBox_ComputeMolIntra(self, molType, molIndx, E_Intra, accept, newpos)
     use Common_MolInfo, only: nMolTypes, MolData, BondData, AngleData, &
-                              TorsionData, MiscData, mostAtoms
+                              TorsionData, mostAtoms
+    use ErrorChecking, only: IsNan, IsInf
     implicit none
     class(SimpleBox), intent(inout), target :: self
     integer, intent(in) :: molType, molIndx
@@ -703,14 +705,18 @@ module SimpleSimBox
     logical, intent(out) :: accept
     real(dp), intent(in), optional, target :: newpos(:,:)
     real(dp), pointer :: molpos(:,:)
-    integer :: iAtom, iBond, iAngle, iTors
+    integer :: iAtom, iBond, iAngle, iTors, iMisc
     integer :: molStart, molEnd
     integer :: intraType, nAtoms
     integer :: mem1, mem2, mem3, mem4
-    real(dp) :: E_Bond, E_Angle, E_Torsion
+    real(dp) :: E_Bond, E_Angle, E_Torsion, E_Misc
 
 
     E_Intra = 0E0_dp
+    E_Bond = 0E0_dp
+    E_Angle = 0E0_dp
+    E_Torsion = 0E0_dp
+    E_Misc = 0E0_dp
     if(MolData(molType)%ridgid) then
       return
     endif
@@ -739,6 +745,10 @@ module SimpleSimBox
        if(.not. accept) then
          return
        endif
+       if(IsNan(E_Bond) ) then
+         write(0,*) "NaN Error in Bond Calculation!"
+         error stop
+       endif
        E_Intra = E_Intra + E_Bond
      enddo
 
@@ -754,8 +764,13 @@ module SimpleSimBox
 
        call AngleData(intraType) % angleFF % DetailedECalc(self, self%temppos(1:3,1:3), &
                                                          E_Angle, accept)
+
        if(.not. accept) then
          return
+       endif
+       if(IsNan(E_Angle) ) then
+         write(0,*) "NaN Error in Angle Calculation!"
+         error stop
        endif
        E_Intra = E_Intra + E_Angle
      enddo
@@ -777,8 +792,29 @@ module SimpleSimBox
        if(.not. accept) then
          return
        endif
+       if(IsNan(E_Torsion) ) then
+         write(0,*) "NaN Error in Torsion Calculation!"
+         error stop
+       endif
        E_Intra = E_Intra + E_Torsion
-    enddo
+     enddo
+
+
+     self%temppos(1:3, 1:nAtoms) = molpos(1:3, 1:nAtoms)
+     do iMisc = 1, MolData(molType)%nMisc
+       call MolData(molType) % miscdata(iMisc) % miscFF % DetailedECalc(self, &
+                                                         self%temppos(1:3,1:nAtoms), &
+                                                         E_Misc, &
+                                                         accept)
+       if(.not. accept) then
+         return
+       endif
+       if(IsNan(E_Misc) ) then
+         write(0,*) "NaN Error in Misc Calculation!"
+         error stop
+       endif
+       E_Intra = E_Intra + E_Misc
+      enddo
 
   end subroutine
 
@@ -787,7 +823,7 @@ module SimpleSimBox
 ! energy from scratch. 
   subroutine SimpleBox_ComputeIntraEnergy(self, E_Intra, accept)
     use Common_MolInfo, only: nMolTypes, MolData, BondData, AngleData, &
-                              TorsionData, MiscData
+                              TorsionData
     use ParallelVar, only: nout
     implicit none
     class(SimpleBox), intent(inout) :: self
@@ -1021,10 +1057,10 @@ module SimpleSimBox
     if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % DiffCheck( self, disp(1:nDisp), accept )
+        if(.not. accept) then
+          return
+        endif
       enddo
-      if(.not. accept) then
-        return
-      endif
     endif
 
   end function
@@ -1048,14 +1084,13 @@ module SimpleSimBox
     if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
         call self%Constrain(iConstrain) % method % PostEnergy( self, disp(1:nDisp), E_Diff, accept )
+        if(.not. accept) then
+          return
+        endif
       enddo
-      if(.not. accept) then
-        return
-      endif
     endif
 
   end function
-
 !==========================================================================================
   subroutine SimpleBox_ProcessIO(self, line, lineStat)
     use CoordinateTypes
@@ -1191,12 +1226,26 @@ module SimpleSimBox
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_GetMolData(self, globalIndx, nAtoms, molStart, molEnd, molType, &
-                                  atomSubIndx)
+                                  slice)
+    !Routine takes a
+    !
+    !Inputs
+    !    globalIndx => Global Molecule Index irrespective of molecule type.
+    !                  This may not be populated depending on the state of the system
+    !Outputs
+    !    nAtoms => Number of Atoms in this molecule
+    !    molStart => Array Index of the first Atom of this molecule in the atoms(:,:)
+    !    molEnd => Array Index of the last Atom of this molecule in the atoms(:,:)
+    !    slice => Returns an array with (molStart, molEnd) as data indexes. Used
+    !             for getting array slices of individual molecules and such.
+    !    molType => Molecule Type ID
     implicit none
-    class(SimpleBox), intent(inout) :: self
+    class(SimpleBox), intent(in) :: self
     integer, intent(in)  :: globalIndx
-    integer, intent(inout), optional :: molStart, molEnd, molType, atomSubIndx
+    integer, intent(inout), optional :: molStart, molEnd, molType
     integer, intent(inout), optional :: nAtoms
+    integer, intent(inout), optional :: slice(1:2)
+    integer :: tempInt
 
 
 
@@ -1211,21 +1260,27 @@ module SimpleSimBox
       molStart = self % MolStartIndx(globalIndx)
     endif
 
-    if( present(nAtoms) ) then
-      nAtoms = self % MolEndIndx(globalIndx) - self % MolStartIndx(globalIndx) + 1
-    endif
-
     if( present(molEnd) ) then
       molEnd = self % MolEndIndx(globalIndx)
     endif
 
-    if( present(molType) ) then
-      molType = self % MolType(globalIndx)
+    if(present(slice)) then
+      slice(1) = self % MolStartIndx(globalIndx) 
+      slice(2) = self % MolEndIndx(globalIndx) 
     endif
 
-    if( present(atomSubIndx) ) then
-      atomSubIndx = self%AtomSubIndx(globalIndx)
+    if( present(nAtoms) ) then
+      nAtoms = self % MolEndIndx(globalIndx) - self % MolStartIndx(globalIndx) + 1
     endif
+
+    if( present(molType) ) then
+      tempInt = self % MolStartIndx(globalIndx)
+      molType = self % MolType(tempInt)
+    endif
+
+!    if( present(atomSubIndx) ) then
+!      atomSubIndx = self%AtomSubIndx(globalIndx)
+!    endif
 
   end subroutine
 !====================================================================================
@@ -1512,7 +1567,7 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
   function SimpleBox_IsActive(self, atmIndx) result(active)
     use Common_MolInfo, only: nMolTypes, MolData
     implicit none
-    class(SimpleBox), intent(inout) :: self
+    class(SimpleBox), intent(in) :: self
     logical :: active
     integer, intent(in) :: atmIndx
 
@@ -1621,6 +1676,15 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     nStart = self % MolStartIndx(molIndx)
     nType = self % MolType(nStart)
 
+    if(self%NMol(nType) == self%NMolMin(nType)) then
+      write(0,*) "ERROR! Box attempted to delete a molecule, but this"
+      write(0,*) "       would take it below the minimum bounds for this box" 
+      write(0,*) "Box Number:", self%boxID
+      write(0,*) "MolType:", nType
+      error stop 
+    endif
+
+
     lastMol = 0
     do iType = 1, nType-1
       lastMol = lastMol + self%NMolMax(iType) 
@@ -1664,6 +1728,7 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     class(SimpleBox), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
+    integer :: molType
     integer :: iDisp, dispLen, dispIndx
     integer :: iAtom, iMol, molStart, molEnd
     real(dp) :: dx, dy, dz
@@ -1689,6 +1754,14 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
        !-------------------------------------------------
       class is(Addition)
         dispLen = size(disp)
+        molType = disp(1)%molType
+        if(self%NMol(molType) == self%NMolMax(molType)) then
+          write(0,*) "ERROR! Box attempted to add a molecule, but this"
+          write(0,*) "       would take it above the maximum bounds for this box" 
+          write(0,*) "Box Number:", self%boxID
+          write(0,*) "MolType:", molType
+          error stop 
+        endif
         do iDisp = 1, dispLen
           dispIndx = disp(iDisp) % atmIndx
           call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
@@ -1748,10 +1821,10 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     real(dp) :: tempE, drsq
     real(dp) :: maxdr, maxdr2
 
-!    do iList = 1, size(self%NeighList)
-!      call self % NeighList(iList) % BuildList(iList)
-!    enddo
-!    return
+    do iList = 1, size(self%NeighList)
+      call self % NeighList(iList) % BuildList(iList)
+    enddo
+    return
 
     !Check to see if the particles have shifted enough from their original position to justify a
     !neighorlist rebuild.
@@ -1783,7 +1856,7 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 !    write(*,*) maxdr, maxdr2, neighSkin
     if( (maxdr + maxdr2) > neighSkin ) then
       self%rebuilds = self%rebuilds + 1
-      if(maxdr > neighskin*0.8E0_dp) then
+      if(maxdr > neighskin*0.5E0_dp) then
         self%dangerbuilds = self%dangerbuilds + 1
 !        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
       endif
@@ -1986,6 +2059,7 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer :: iConstrain, iList
+
 
     if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)

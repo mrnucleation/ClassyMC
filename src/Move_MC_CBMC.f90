@@ -90,7 +90,6 @@ use VarPrecision
 
         class default
           self%validtype(iType) = .false.
-          error stop
       end select
     enddo
 
@@ -123,7 +122,7 @@ use VarPrecision
     real(dp) :: E_Diff, E_Inter, E_Intra, biasE
     real(dp) :: Prob, ProbFor, ProbRev
     
-    integer :: slice(1:2)
+!    integer :: slice(1:2)
     real(dp), pointer :: atoms(:,:) => null()
 
     boxID = trialBox % boxID

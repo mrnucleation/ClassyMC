@@ -101,6 +101,12 @@ module UmbrellaWHAMRule
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: i,j, indx, stat, AllocateStatus
 
+    if(self%nBiasVar < 1) then
+      write(0,*) "No Bias Variables have been specified!"
+      write(0,*) "Number of variables is set to 0!"
+      stop
+    endif
+
     do i = 1, self%nBiasVar
       indx = self%AnalysisIndex(i)
       if((indx > size(AnalysisArray)) .or. (indx < 1) ) then
@@ -158,7 +164,7 @@ module UmbrellaWHAMRule
 
     call self%GetUIndexArray(self%refVals, i, stat)
     if(stat /= 0) then
-      error stop
+      error stop "Index Error Encountered in Umbrella Sampling"
     endif
     self%refBin = i
 
@@ -210,7 +216,7 @@ module UmbrellaWHAMRule
     logical :: accept
     integer :: iBias, indx
     real(dp) :: biasE, biasOld, biasNew
-    real(dp) :: extraTerms, ranNum, probTerm
+    real(dp) :: extraTerms, probTerm
 
     if(present(inProb)) then
       if(inProb <= 0E0_dp) then
@@ -274,7 +280,7 @@ module UmbrellaWHAMRule
     integer :: biasIndx
 
     integer :: analyIndx
-    integer :: iBias, bin, intVal
+    integer :: iBias, intVal
     real(dp) :: biasVal
     
    ! Get the variables that are used for the biasing and figure out which histogram bin they
@@ -320,14 +326,14 @@ module UmbrellaWHAMRule
   end function
 !==========================================================================
   subroutine UmbrellaWHAM_GetNewBiasIndex(self, biasIndx, accept)
-    use AnalysisData, only: AnalysisArray, analyCommon
+    use AnalysisData, only: analyCommon
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     logical, intent(out) :: accept
     integer, intent(out) :: biasIndx
 
     integer :: analyIndx
-    integer :: iBias, bin
+    integer :: iBias
     real(dp) :: biasVal
     
    ! Get the variables that are used for the biasing and figure out which histogram bin they
@@ -391,7 +397,7 @@ module UmbrellaWHAMRule
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: AllocateStatus
-    integer :: j, iInput, iBias, inStat, biasIndx, iUmbrella
+    integer :: j, inStat, biasIndx, iUmbrella
     real(dp), allocatable :: varValue(:)
     real(dp) :: curBias, refVal
 
@@ -475,7 +481,7 @@ module UmbrellaWHAMRule
    subroutine UmbrellaWHAM_OutputUmbrellaHist(self)
      implicit none
      class(UmbrellaWHAM), intent(inout) :: self
-     integer :: iUmbrella, iBias, iBin
+     integer :: iUmbrella, iBias
      character(len = 100) :: outputString
 
      write(outputString, *) "(", ("F12.8, 2x", iBias =1,self%nBiasVar), "2x, F18.1)"
@@ -602,7 +608,7 @@ module UmbrellaWHAMRule
 !====================================================================
   subroutine UmbrellaWHAM_Maintenance(self)
     use AnalysisData, only: AnalysisArray
-    use ParallelVar, only: nout, myid
+    use ParallelVar, only: nout
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
 
@@ -693,8 +699,8 @@ module UmbrellaWHAMRule
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: arraySize, i, j, cnt, maxbin, maxbin2
-    real(dp) :: norm, maxBias, denomSum
-    real(qp) :: F_Estimate(1:self%nWhamItter), F_Old(1:self%nWhamItter), fSum     
+    real(dp) :: norm, maxBias
+    real(qp) :: F_Estimate(1:self%nWhamItter), F_Old(1:self%nWhamItter), fSum, denomSum
     real(dp) :: tol, refBias
 
 #ifdef PARALLEL

@@ -80,7 +80,8 @@ module StructureTypes
     type(TorsMem), allocatable :: torsion(:)
 
     integer :: nMisc = 0
-    integer, allocatable :: misc(:)
+!    integer, allocatable :: misc(:)
+    type(MiscDef), allocatable :: miscdata(:)
   end type
 
 
@@ -95,7 +96,7 @@ module Common_MolInfo
   integer :: nBondTypes = -1
   integer :: nAngleTypes = -1
   integer :: nTorsionTypes = -1
-  integer :: nMiscTypes = -1
+!  integer :: nMiscTypes = -1
   integer :: mostAtoms = -1
 
   type(MolDef), allocatable :: MolData(:)
@@ -103,7 +104,7 @@ module Common_MolInfo
   type(BondDef), allocatable :: BondData(:)
   type(AngleDef), allocatable :: AngleData(:)
   type(TorsionDef), allocatable :: TorsionData(:)
-  type(MiscDef), allocatable :: MiscData(:)
+!  type(MiscDef), allocatable :: MiscData(:)
 
 end module
 !================================================================

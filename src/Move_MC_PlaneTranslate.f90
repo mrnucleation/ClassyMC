@@ -99,7 +99,6 @@ use VarPrecision
     use CommonSampling, only: sampling
     use Common_NeighData, only: neighSkin
     use Common_MolInfo, only: MolData, nMolTypes
-    use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     implicit none
     class(PlaneTranslate), intent(inout) :: self

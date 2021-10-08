@@ -153,6 +153,8 @@ module CubicBoxDef
   select type(disp)
     class is(OrthoVolChange)
       scaleFactor = disp(1)%xScale
+    class default
+      error stop
   end select
   
   if(present(rx)) then
@@ -272,7 +274,6 @@ module CubicBoxDef
     logical :: accept
     integer :: iAtom, iDims, iConstrain, iType, iList
     integer :: iMol, molStart
-
 
     !Check to see if all particles are properly contained within the simulation box.
     do iAtom = 1, self%nMaxAtoms

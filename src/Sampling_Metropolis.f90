@@ -30,7 +30,8 @@ module MetropolisRule
     real(dp), intent(in) :: E_Diff
     logical :: accept
     integer :: iDisp
-    real(dp) :: biasE, chemPot, extraTerms, probTerm
+    real(dp) :: biasE = 1E0_dp
+    real(dp) :: chemPot, extraTerms, probTerm
 
 
     if(IsNan(E_Diff)) then

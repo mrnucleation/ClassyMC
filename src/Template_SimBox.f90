@@ -3,6 +3,8 @@
 ! family of objects. This type is only intended to provide the basic
 ! structure for child classes and should not be used directly. 
 ! Unlike other template classes, the root class used by most box types is the SimpleBox.
+! This defines the skelton for the box template, but most of the key routines are defined
+! in Box_SimpleBox.f90
 !==========================================================================================
 module Template_SimBox
   use MasterTemplate, only: classyClass
@@ -62,6 +64,7 @@ module Template_SimBox
       procedure, public, pass :: ProcessIO
       procedure, public, pass :: DumpData
       procedure, public, pass :: GetThermo
+      procedure, public, pass :: GetThermo_String
       procedure, public, pass :: ThermoLookUp
       procedure, public, pass :: IsActive
 !      procedure, public, pass :: UpdateEnergy
@@ -188,12 +191,12 @@ module Template_SimBox
     lineStat = 0
   end subroutine
 !==========================================================================================
-  subroutine GetMolData(self, globalIndx, nAtoms, molStart, molEnd, molType, atomSubIndx)
+  subroutine GetMolData(self, globalIndx, nAtoms, molStart, molEnd, molType, slice)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimBox), intent(in) :: self
     integer, intent(in)  :: globalIndx
-    integer, intent(inout), optional :: nAtoms, molStart, molEnd, molType, atomSubIndx
-
+    integer, intent(inout), optional :: nAtoms, molStart, molEnd, molType
+    integer, intent(inout), optional :: slice(1:2)
 
   end subroutine
 !==========================================================================================
@@ -209,7 +212,7 @@ module Template_SimBox
 !  Checks to see if the atom is present in the box.  This is required 
   function IsActive(self, atmIndx) result(active)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimBox), intent(in) :: self
     logical :: active
     integer, intent(in) :: atmIndx
 
@@ -224,6 +227,37 @@ module Template_SimBox
     character(len=*), intent(in) :: filename
 
   end subroutine
+!==========================================================================================
+  function GetThermo_String(self, thermoStr) result(thermVal)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(SimBox), intent(in) :: self
+    character(len=30), intent(in) :: thermoStr
+    real(dp) :: thermVal
+
+    select case(trim(adjustl(thermoStr)))
+      case("energy") !Energy
+        thermVal = self%ETotal
+      case("ethalpy") !Ethalpy
+        thermVal = self%ETotal + self%Pressure*self%Volume
+      case("engergy_mol") !Energy per Molecule
+        thermVal = self%ETotal / self%nMolTotal
+      case("ethalpy_mol") !Enthalpy per Molecule
+        thermVal = (self%ETotal + self%Pressure*self%Volume)/self%nMolTotal
+      case("volume") !Volume
+        thermVal = self%volume
+      case("temperature") !Temperature
+        thermVal = self%temperature
+      case("pressure") !Pressure
+        thermVal = self%pressure
+      case("density") !Density
+        thermVal = self%nMolTotal / self%volume
+      case default
+        thermVal = -1
+        error stop "No Such Thermodynamic value defined."
+    end select
+
+  end function
 !==========================================================================================
   function GetThermo(self, thermInt) result(thermVal)
     use Input_Format, only: maxLineLen
@@ -249,11 +283,12 @@ module Template_SimBox
         thermVal = self%pressure
       case(8) !Density
         thermVal = self%nMolTotal / self%volume
-
+      case default
+        thermVal = -1
+        error stop
     end select
 
   end function
-
 !==========================================================================================
   function ThermoLookup(self, thermoStr) result(thermInt)
     use Input_Format, only: maxLineLen
@@ -286,6 +321,9 @@ module Template_SimBox
 
       case("density") !Density
         thermInt = 8
+      case default
+        thermInt = -1
+        error stop
 
     end select
 

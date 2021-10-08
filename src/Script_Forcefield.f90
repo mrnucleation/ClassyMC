@@ -7,6 +7,7 @@ module Input_Forcefield
   use Input_BondType
   use Input_TorsionType
   use Input_Format
+  use Input_MiscType
 
   real(dp) :: engUnit = 1E0_dp 
   real(dp) :: lenUnit = 1E0_dp
@@ -293,7 +294,7 @@ module Input_Forcefield
                MolData(molType)%angle(i)%mem3 = intValue(4)
              enddo   
            else
-             write(0,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             write(0,*) "ERROR! The create angle command has already been used and can not be called twice"
              error stop
            endif
 !        -----------------------------------------------------------------------------
@@ -313,10 +314,24 @@ module Input_Forcefield
                MolData(molType)%torsion(i)%mem4 = intValue(5)
              enddo   
            else
-             write(0,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             write(0,*) "ERROR! The create torsion command has already been used and can not be called twice"
              error stop
            endif
-
+!        -----------------------------------------------------------------------------
+        case("misc")
+           if( .not. allocated(MolData(molType)%Miscdata) ) then
+             call FindCommandBlock(iLine, cmdBlock, "end_misc", lineBuffer)
+             nItems = lineBuffer - 1
+             MolData(molType)%nMisc = nItems
+             allocate(MolData(molType)%miscdata(1:nItems), stat = AllocateStat)
+             do i = 1, nItems
+               curLine = iLine + i
+               call Script_MiscType(cmdBlock(curLine), molType, i, lineStat)
+             enddo   
+           else
+             write(0,*) "ERROR! The create misc command has already been used and can not be called twice"
+             error stop
+           endif
 !        -----------------------------------------------------------------------------
         case default
           write(0,"(A,2x,I10)") "ERROR! Unknown Command on Line"

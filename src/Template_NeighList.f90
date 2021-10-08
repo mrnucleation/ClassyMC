@@ -51,10 +51,12 @@ module Template_NeighList
 
   end subroutine
 !===================================================================================
-  subroutine SortList(self)
+  subroutine SortList(self, forcesort)
     use SearchSort, only: QSort
     implicit none
     class(NeighListDef), intent(inout) :: self
+    logical, intent(in), optional :: forcesort
+
 
   end subroutine
 !===================================================================================

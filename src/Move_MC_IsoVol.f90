@@ -47,9 +47,6 @@ module MCMove_Isovol
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(IsoVol), intent(inout) :: self
-    integer :: nBoxes
-
-
 
     allocate( self%tempNNei(1) )
     allocate( self%tempList(1, 1) )

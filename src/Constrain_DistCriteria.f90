@@ -63,7 +63,7 @@ module Constrain_DistanceCriteria
   subroutine DistCrit_CheckInitialConstraint(self, trialBox, accept)
     implicit none
     class(DistCriteria), intent(inout) :: self
-    class(SimBox), intent(in) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
 
     integer :: totalMol, nNew, nClust, neiIndx
@@ -169,7 +169,7 @@ module Constrain_DistanceCriteria
   subroutine DistCrit_DiffCheck(self, trialBox, disp, accept)
     implicit none
     class(DistCriteria), intent(inout) :: self
-    class(SimBox), intent(in) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
     logical :: leave

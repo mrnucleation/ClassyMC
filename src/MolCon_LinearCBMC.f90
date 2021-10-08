@@ -77,18 +77,18 @@ module MolCon_LinearCBMC
   contains
 !==========================================================================================
   subroutine LinearCBMC_Prologue(self)
-    use Common_MolInfo, only: MolData, BondData, nMolTypes
+    use Common_MolInfo, only: MolData
     use MolSearch, only: FindBond
-    use ParallelVar, only: nout
+!    use ParallelVar, only: nout
     implicit none
     class(LinearCBMC), intent(inout) :: self
 !    integer, intent(in) :: molType
-    integer :: iType, iBond, iAtom, curMax
+    integer :: iBond, iAtom
     integer :: atm1, atm2
     integer :: iError = 0
     integer :: iSchedule
     integer :: nextAtm, prevAtm, curAtm, iPath
-    integer :: leftdist, rightdist, nleft, nright, nfirst
+    integer :: leftdist, rightdist, nfirst
 
     !Count the number of bonds each atom has.  This will be used to classify the atom
     !as either a Terminal, Linker, or Branch atom. 
@@ -151,6 +151,7 @@ module MolCon_LinearCBMC
     self%pathposition = 0
     !Pick an terminal atom to start building the patharray
     prevAtm = 0
+    curatm = 0
     do iAtom = 1,self%nAtoms
       if(self%freq(iAtom) == 1) then
         curatm = iAtom
@@ -235,7 +236,7 @@ module MolCon_LinearCBMC
   end subroutine
 !==========================================================================================
   subroutine LinearCBMC_GenerateConfig(self, trialBox, disp, probconstruct, accept, insPoint, insProb)
-    use Common_MolInfo, only: MolData, BondData, AngleData, TorsionData, nMolTypes
+    use Common_MolInfo, only: BondData, AngleData, TorsionData
     use MolSearch, only: FindBond, FindAngle, FindTorsion
     use RandomGen, only: Generate_UnitSphere, Generate_UnitCone, Generate_UnitTorsion, ListRNG
     use ForcefieldData, only: ECalcArray
@@ -250,7 +251,7 @@ module MolCon_LinearCBMC
     logical, intent(out) :: accept
 
     integer :: dispsubindx(1:self%nAtoms), atmdispindx(1:self%nAtoms)
-    integer :: bondType, angleType, torsType, molType
+    integer :: bondType, angleType, torsType
     integer :: molindx, molStart, molEnd, nSel
     integer :: atm1, atm2,atm3,atm4, atmindx, iDisp, iRosen
     integer :: lastGrown
@@ -448,7 +449,7 @@ module MolCon_LinearCBMC
   end subroutine
 !======================================================================================
   subroutine LinearCBMC_ReverseConfig(self, disp, trialBox, probconstruct, accept, insPoint, insProb)
-    use Common_MolInfo, only: MolData, BondData, AngleData, TorsionData, nMolTypes
+    use Common_MolInfo, only: MolData, BondData, AngleData, TorsionData
     use MolSearch, only: FindBond, FindAngle, FindTorsion
     use RandomGen, only: Generate_UnitSphere, Generate_UnitCone, Generate_UnitTorsion, ListRNG
     implicit none
@@ -463,8 +464,8 @@ module MolCon_LinearCBMC
 
 
     integer :: dispsubindx(1:self%nAtoms), atmdispindx(1:self%nAtoms)
-    integer :: bondType, angleType, torsType, molType
-    integer :: molindx, molStart, molEnd, nSel
+    integer :: bondType, angleType, torsType
+    integer :: molindx, molStart, molEnd
     integer :: atm1, atm2,atm3,atm4, iDisp, iRosen
     integer :: lastGrown
     real(dp), dimension(1:3) :: v1, v2, v3
@@ -708,7 +709,7 @@ module MolCon_LinearCBMC
   subroutine LinearCBMC_CreateSchedule(self)
     implicit none
     class(LinearCBMC), intent(inout) :: self
-    integer :: iPath, iAtom, iSchedule, lastatom
+    integer :: iPath, iAtom, lastatom
     logical :: lastgrown
     logical :: reverse
     integer :: breakpoint
@@ -718,6 +719,7 @@ module MolCon_LinearCBMC
     lastatom = self%patharray(1)
     !First we have to figure out what's still left to regrow. We find the point
     !where the first ungrown atom is in the path.
+    reverse = .true.
     do iPath = 2, self%nAtoms
       iAtom = self%patharray(iPath)
       if(self%grown(iAtom) .neqv. lastgrown) then
@@ -735,7 +737,6 @@ module MolCon_LinearCBMC
 
 
     if(.not. reverse) then
-
       do iPath = 1, self%nAtoms
         self%schedule(iPath) = self%patharray(iPath)
       enddo 
@@ -755,7 +756,7 @@ module MolCon_LinearCBMC
     integer, intent(in) :: Atm4
     integer, intent(out) ::  Atm1, Atm2, Atm3
 
-    integer :: i, atm4Pos
+    integer :: atm4Pos
     integer :: atm4plus1, atm4minus1
 
     atm4Pos = self%pathposition(atm4)
@@ -801,7 +802,6 @@ module MolCon_LinearCBMC
     implicit none
     class(LinearCBMC), intent(inout) :: self
     real(dp), intent(out) :: probGas
-    integer :: iAtom
 
     probGas = 1E0_dp
     if(.not. self%include15) then

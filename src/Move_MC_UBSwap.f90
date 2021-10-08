@@ -218,7 +218,6 @@ use VarPrecision
       accept = .false.
       return
     endif
-
     nMove = trialBox%NMol(nType) + 1
     nMove = trialbox%MolGlobalIndx(nType, nMove)
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart, &
@@ -255,7 +254,7 @@ use VarPrecision
     nAtoms = MolData(molType)%nAtoms
     do iAtom = 1, nAtoms
       atomIndx = molStart + iAtom - 1
-      self%newPart(iAtom)%molType = molType
+      self%newPart(iAtom)%molType = nType
       self%newPart(iAtom)%molIndx = nMove
       self%newPart(iAtom)%atmIndx = atomIndx
     enddo
@@ -265,8 +264,8 @@ use VarPrecision
                                                           self%newPart(1:nAtoms),&
                                                           ProbSub, &
                                                           accept, &
-                                                          self%insPoint, &
-                                                          self%insProb)
+                                                          self%insPoint(:, 1:nInsPoints), &
+                                                          self%insProb(1:nInsPoints))
     if(.not. accept) then
       return
     endif

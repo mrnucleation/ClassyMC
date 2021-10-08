@@ -143,6 +143,8 @@ module FF_EasyEP_LJ_Cut
 
         case default
           lineStat = -1
+          write(0,*) line
+          stop "Unknown Command Found"
       end select
     endif
 

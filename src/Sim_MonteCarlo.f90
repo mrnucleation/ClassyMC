@@ -71,18 +71,21 @@ contains
 
       !-----Start Move Loop
       do iMove = 1, nMoves
+        accept = .true.
         moveNum = ListRNG(MoveProb) !Randomly select a move to perform
-        select type( curMove => Moves(moveNum) % Move )
+        select type( curmove => Moves(moveNum) % Move )
           class is (MCMultiBoxMove) ! Mutli Box Move
-            call curMove % MultiBox (accept)
+!            call Moves(moveNum) % Move % MultiBox (accept)
+            call curmove % MultiBox (accept)
           class is (MCMove) ! Single Box Move
             if(nBoxes > 1) then
-              call curMove % GetBoxProb(boxProb)
+              call Moves(moveNum) % Move % GetBoxProb(boxProb)
               boxNum = ListRNG(boxProb)
             else
               boxNum = 1
             endif
-            call curMove % FullMove(BoxArray(boxNum)%box, accept)
+            write(*,*) "BLAHAHAHAHAHAHA"
+            call Moves(moveNum) % Move % FullMove(BoxArray(boxNum)%box, accept)
         end select
         call Sampling%UpdateStatistics(accept)
         if(accept) then
@@ -324,7 +327,7 @@ contains
     endif
 
     do i = 1, size(EnergyCalculator)
-      call EnergyCalculator(i)%method%Update
+      call EnergyCalculator(i) % method % Update
     enddo
 
     do i = 1, size(BoxArray)
@@ -424,11 +427,16 @@ contains
     use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
     implicit none
-    integer :: i
+    integer :: i, iMisc
 
     do i = 1, size(MolData)
       if(allocated(MolData(i) % molConstruct) ) then
         call MolData(i) % molConstruct % Prologue
+      endif
+      if(allocated(MolData(i) % miscdata) ) then
+        do iMisc = 1, MolData(i) % nMisc
+          call MolData(i) % MiscData(iMisc) % miscFF % Prologue
+        enddo
       endif
     enddo
 
@@ -475,7 +483,7 @@ contains
     use CommonSampling, only: Sampling
     use ParallelVar, only: nout
     implicit none
-    integer :: i
+    integer :: i, iMisc
 
     do i = 1, size(BoxArray)
       call BoxArray(i) % box % Epilogue
@@ -485,10 +493,15 @@ contains
     call Sampling % Epilogue
     
     do i = 1, size(MolData)
-      call MolData(i) % molConstruct % Epilogue
+      if(allocated(MolData(i) % molConstruct)) then
+        call MolData(i) % molConstruct % Epilogue
+      endif
+      if(allocated(MolData(i) % miscdata) ) then
+        do iMisc = 1, MolData(i) % nMisc
+          call MolData(i) % MiscData(iMisc) % miscFF % Epilogue
+        enddo
+      endif
     enddo
-
-
 
     if( allocated(AnalysisArray) ) then
       do i = 1, size(AnalysisArray)

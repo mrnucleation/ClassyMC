@@ -91,7 +91,6 @@ module FF_Pair_Pedone_Cut
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
-    real(dp) :: E_Half
 
     accept = .true.
     curbox % dETable = 0E0_dp

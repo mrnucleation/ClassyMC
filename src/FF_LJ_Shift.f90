@@ -72,7 +72,7 @@ module FF_Pair_LJ_Shift
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
-    integer :: iType, jType, iAtom, jAtom
+    integer :: iType, iAtom, jAtom
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq

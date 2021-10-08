@@ -30,7 +30,9 @@ use Template_NeighList, only: NeighListDef
 
       integer :: nX, nY, nZ
       integer :: coeffX, coeffY, coeffZ
-      real(dp) :: dX, dY, dZ
+      real(dp) :: dX = -1E0_dp
+      real(dp) :: dY = -1E0_dp
+      real(dp) :: dZ = -1E0_dp
       class(SimpleBox), pointer :: parent => null()
     contains
       procedure, pass :: Constructor => CellRSqList_Constructor 
@@ -108,7 +110,7 @@ use Template_NeighList, only: NeighListDef
 
     if(.not. self%initialized) then
         allocate( self%cellID(1:self%parent%nMaxAtoms), stat=AllocateStatus )
-        allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
+        allocate( self%list(1:self%maxNei+1, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
         allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
         allocate( self%atomList(1:self%parent%nMaxAtoms), stat=AllocateStatus )
 
@@ -312,7 +314,7 @@ use Template_NeighList, only: NeighListDef
     self%nNeigh = 0
     self%list = 0
     do iAtom = 1, self%maxAtoms
-      if( self%parent%MolSubIndx(iAtom) > self%parent%NMol(self%parent%MolType(iAtom)) ) then
+      if(.not. self%parent%IsActive(iAtom) ) then
         cycle
       endif
       call self%GetCellAtoms(nCellAtoms, self%atomlist, atmIndx=iAtom)
@@ -336,7 +338,7 @@ use Template_NeighList, only: NeighListDef
     enddo
 
     do iAtom = 1, self%parent%nMaxAtoms
-      if( self%parent%IsActive(iAtom) ) then
+      if( .not. self%parent%IsActive(iAtom) ) then
         cycle
       endif
       nNeigh = self%nNeigh(iAtom)
@@ -347,16 +349,24 @@ use Template_NeighList, only: NeighListDef
 
   end subroutine
 !===================================================================================
-  subroutine CellRSqList_SortList(self)
+  subroutine CellRSqList_SortList(self, forcesort)
     use SearchSort, only: QSort
     implicit none
     class(CellRSqList), intent(inout) :: self
+    logical, intent(in), optional :: forcesort
     integer :: iAtom, nNeigh
     integer :: iCell, nCellAtoms
+    logical :: forced
 
-    if(.not. self%sorted) then
+    if(present(forcesort)) then
+      forced = forcesort
+    else
+      forced = .false.
+    endif
+
+    if( (.not. self%sorted) .or. (forced) ) then
       do iAtom = 1, self%parent%nMaxAtoms
-        if( self%parent%IsActive(iAtom) ) then
+        if( .not. self%parent%IsActive(iAtom) ) then
           cycle
         endif
         nNeigh = self%nNeigh(iAtom)
@@ -414,7 +424,13 @@ use Template_NeighList, only: NeighListDef
         xn = disp%x_new
         yn = disp%y_new
         zn = disp%z_new
+      class default
+        error stop
     end select
+
+    if(self%dX < 0E0_dp) then
+      call self%buildlist(1)
+    endif
 
     !Get relevant box information from the parent.
     call self%parent%GetCoordinates(coords)
@@ -514,7 +530,9 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
   subroutine CellRSqList_SwapAtomLists(self, atmindx1, atmindx2)
     !--------------------------------
-    ! This function switches
+    ! This function switches two rows in a given neighbor list
+    ! and updates the indicies in all other non-swap rows to match
+    ! the new positions.
     !--------------------------------
 
     use SearchSort, only: BinarySearch, SimpleSearch, QSort
@@ -566,9 +584,8 @@ use Template_NeighList, only: NeighListDef
     call self%SortList
     do iSearch = 1, nSearch
       jAtom = searchlist(iSearch)
-!      write(2,*) jAtom,"|",self%list(1:self%nNeigh(jAtom), jAtom)
+!      write(2,"(I4,1x,A,1000(I3,1x))") jAtom,"|",self%list(1:self%nNeigh(jAtom), jAtom)
 !      call QSort(self%list(1:self%nNeigh(jAtom), jAtom))
-!      write(2,*) jAtom,"|",self%list(1:self%nNeigh(jAtom), jAtom)
       neiIndx1 = BinarySearch(atmIndx1, self%list(1:self%nNeigh(jAtom), jAtom))
       neiIndx2 = BinarySearch(atmIndx2, self%list(1:self%nNeigh(jAtom), jAtom))
 !      write(2,*) neiIndx1, neiIndx2
@@ -579,9 +596,11 @@ use Template_NeighList, only: NeighListDef
         self%list(neiIndx2, jAtom) = atmIndx1
       endif     
       call QSort(self%list(1:self%nNeigh(jAtom), jAtom))
-!      write(2,*) jAtom,"|",self%list(1:self%nNeigh(jAtom), jAtom)
+!      write(2,"(I4,1x,A,1000(I3,1x))") jAtom,"|",self%list(1:self%nNeigh(jAtom), jAtom)
 !      write(2,*)
     enddo
+    self%sorted = .false.
+    call self%SortList
 
 
     !Now that the other lists are reorganized, we need to swap the two lists
@@ -624,10 +643,11 @@ use Template_NeighList, only: NeighListDef
       nCellAtoms = self%nCellAtoms(cellID2)
       neiIndx2 = BinarySearch(atmIndx2, self%cellList(1:nCellAtoms, cellID2))
     endif
+!    write(2,*) "----------------------"
 !    write(2,*) atmIndx1, atmIndx2
 !    write(2,*) cellId1, cellId2
 !    write(2,*) neiIndx1, neiIndx2
-!    nCellAtoms = self%nCellAtoms(cellID1)
+    nCellAtoms = self%nCellAtoms(cellID1)
 !    write(2,*) cellId1, "|", self%cellList(1:nCellAtoms, cellId1)
 !    write(2,*) 
 
@@ -654,7 +674,7 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
   subroutine CellRSqList_PurgeAtom(self, atmindx1)
     !--------------------------------
-    ! This function removes an atom's entry from
+    ! This function removes an atom's entry from a single row of the neighborlist
     !--------------------------------
 
     use SearchSort, only: BinarySearch, SimpleSearch, QSort
@@ -674,7 +694,8 @@ use Template_NeighList, only: NeighListDef
       return
     endif
 
-    call self%SortList
+    self%sorted = .false.
+    call self%SortList(forcesort=.true.)
 !    write(2,*) "=================================================="
 !    write(2,*) "Purge: ", atmIndx1
     do jNei = 1, self%nNeigh(atmIndx1)
@@ -682,12 +703,15 @@ use Template_NeighList, only: NeighListDef
       nNeigh = self%nNeigh(jAtom) 
 !      write(2, *) "JAtom:", jAtom
 !      write(2,"(999(1x, I3))") self%list(1:nNeigh, jAtom)
-      neiIndx = BinarySearch(atmIndx1, self%list(1:nNeigh, jAtom))
+!      neiIndx = BinarySearch(atmIndx1, self%list(1:nNeigh, jAtom))
+      neiIndx = SimpleSearch(atmIndx1, self%list(1:nNeigh, jAtom))
       if(neiIndx == 0) then
+!        call self%PrintList(2)
+        write(0,*) "Atom's List Being Searched:", jAtom
+        write(0,*) "Atom Being Searched For:", atmIndx1
         error stop "Neighborlist Error! Index of neighbor atom not found!"
       endif
       if(nNeigh > 1) then
-!        self%list(1:nN-1, jAtom) = self%list(1:neiIndx-1, jAtom), &
 !        write(*,*) self%list(1:nNeigh, jAtom)
         if(neiIndx /= nNeigh) then
           self%list(neiIndx:nNeigh-1, jAtom) = self%list(neiIndx+1:nNeigh, jAtom)
@@ -778,7 +802,7 @@ use Template_NeighList, only: NeighListDef
       class is(Addition)
         call self%parent%GetDimensions(boxdim)
         do iDisp = 1, size(disp)
-!          write(2,"(A,A,1000(I3,1x))") "NewList","|", (tempList(j, iDisp) ,j=1,tempNNei(iDisp))
+!          write(2,"(I4,1x,A,A,1000(I3,1x))") disp(iDisp)%atmIndx, "NewList","|", (tempList(j, iDisp) ,j=1,tempNNei(iDisp))
            iAtom = disp(iDisp)%atmIndx
            binx = floor((disp(iDisp)%x_new - boxdim(1,1))/self%dx)
            biny = floor((disp(iDisp)%y_new - boxdim(1,2))/self%dy)
@@ -790,19 +814,18 @@ use Template_NeighList, only: NeighListDef
 
            self%nNeigh(iAtom) = tempNNei(iDisp)
            self%list(1:tempNNei(iDisp), iAtom ) = templist(1:tempNNei(iDisp), iDisp)
-!           write(*,*) self%list(1:tempNNei(iDisp), iAtom )
            do iNei = 1, tempNNei(iDisp)
                neiIndx = tempList(iNei, iDisp)
                self%nNeigh(neiIndx)= self%nNeigh(neiIndx) + 1
                self % list( self%nNeigh(neiIndx), neiIndx ) = iAtom
-!               write(*,*) neiIndx,"|",self % list( 1:self%nNeigh(neiIndx), neiIndx )
+!               write(2,"(I4,1x,A,1000(I3,1x))") neiIndx,"|",self % list( 1:self%nNeigh(neiIndx), neiIndx )
            enddo
        enddo
 
    end select
 
-   call self%sortlist
-!   call self%PrintList
+   call self%sortlist(forcesort=.true.)
+!   call self%PrintList(2)
 !   call self%IntegrityCheck(1)
 
 
@@ -816,24 +839,33 @@ use Template_NeighList, only: NeighListDef
     integer, intent(in) :: molIndx, topIndx
     integer :: nStart, nEnd
     integer :: iAtom, iNei, jNei, nType, j
+    integer :: nAtoms, topNAtoms
     integer :: topStart
     integer :: topEnd
     integer :: cellIndx
     integer :: atmIndx, topAtom
     integer :: curNei, curIndx, nNei
 
-    nStart = self % parent % MolStartIndx(molIndx)
-    topStart = self % parent % MolStartIndx(topIndx)
 
-    nEnd = self % parent % MolEndIndx(molIndx)
-    topEnd = self % parent % MolEndIndx(topIndx)
-    nType = self % parent % MolType(nStart)
+    call self%parent%GetMolData(molIndx, nAtoms=nAtoms, molType=nType, molStart=nStart, molEnd=nEnd)
+    call self%parent%GetMolData(topIndx, nAtoms=topNAtoms, molStart=topStart, molEnd=topEnd)
+!    nStart = self % parent % MolStartIndx(molIndx)
+!    topStart = self % parent % MolStartIndx(topIndx)
+!    nEnd = self % parent % MolEndIndx(molIndx)
+!    topEnd = self % parent % MolEndIndx(topIndx)
+!    nType = self % parent % MolType(nStart)
+    if(nAtoms /= topNAtoms) then
+      error stop "Top Molecule Indicies is not of the same type as the deleted molecule!"
+    endif
 
+
+!    write(2,*) "================================================"
+!    write(2,*) "Deleting:", molIndx
+!    write(2,*) "Top Index:", topIndx
     call self%sortlist
     do iAtom = 1, MolData(nType)%nAtoms
       atmIndx = nEnd - iAtom + 1
       topAtom = topEnd - iAtom + 1
-!      write(*,*) atmIndx, topAtom
       if(topAtom /= atmIndx) then
         call self%SwapAtomLists(atmIndx, topAtom)
       endif
@@ -1182,6 +1214,7 @@ use Template_NeighList, only: NeighListDef
           write(0,*) "ERROR: NeighList Integrity Failure!"
           write(0,*) "An atom's neighbor list contains itself!"
           write(0,*) "This is usually a sign of a problem during a swap move"
+!          call self%PrintList
           error stop
           return
         endif

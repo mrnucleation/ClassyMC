@@ -54,7 +54,6 @@ module FF_HardSphere
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
     real(dp) :: LJ
     real(dp) :: E_LJ
     real(dp) :: rmin_ij      

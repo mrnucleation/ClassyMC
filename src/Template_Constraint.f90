@@ -30,7 +30,7 @@ module ConstraintTemplate
   subroutine CheckInitialConstraint(self, trialBox, accept)
     implicit none
     class(constraint), intent(inout) :: self
-    class(SimBox), intent(in) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
 
     accept = .true.
@@ -40,7 +40,7 @@ module ConstraintTemplate
   subroutine DiffCheck(self, trialBox, disp, accept)
     implicit none
     class(constraint), intent(inout) :: self
-    class(SimBox), intent(in) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
     accept = .true.

@@ -34,7 +34,7 @@
       use ClassyConstants
       use VarPrecision
       implicit none
-      real(dp) :: y1, w, x1, x2
+      real(dp) :: y1, x1, x2
 
       x1 = grnd()
       x2 = grnd()
@@ -169,7 +169,7 @@
       real(dp), dimension(1:3), intent(out) :: v3
       real(dp), intent(in) :: bond_ang, tors_angle,r3
       real(dp) :: x1_u, y1_u, z1_u
-      real(dp) :: x1_s, y1_s, z1_s
+      real(dp) :: y1_s, z1_s
       real(dp) :: r2, rot_angle
       real(dp) :: s_term,c_term
       real(dp) :: coeff1,coeff2,coeff3  

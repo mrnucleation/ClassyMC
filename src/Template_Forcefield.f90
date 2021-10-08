@@ -60,7 +60,7 @@ module Template_ForceField
 
   end subroutine
 !=============================================================================+
-  function SinglePair(self, atmtype1, atmtype2, rsq) result(E_Pair)
+  function SinglePair(self, rsq, atmtype1, atmtype2) result(E_Pair)
     implicit none
     class(forcefield), intent(inout) :: self
     integer, intent(in) :: atmtype1, atmtype2
@@ -69,7 +69,7 @@ module Template_ForceField
 
   end function
 !=============================================================================+
-  function SinglePair_Approx(self, atmtype1, atmtype2, rsq) result(E_Pair)
+  function SinglePair_Approx(self, rsq, atmtype1, atmtype2) result(E_Pair)
     implicit none
     class(forcefield), intent(in) :: self
     integer, intent(in) :: atmtype1, atmtype2

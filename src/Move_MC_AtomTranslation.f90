@@ -59,20 +59,18 @@ use VarPrecision
   end subroutine
 !===============================================
   subroutine AtomTrans_FullMove(self, trialBox, accept) 
-    use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
-    use Common_NeighData, only: neighSkin
     use Box_Utility, only: FindAtom
     implicit none
     class(AtomTranslate), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
-    integer :: boxID, iAtom, nAtoms, molIndx, atomIndx
-    integer :: nMove, rawIndx, iConstrain
-    integer :: CalcIndex, molStart, molEnd, molType
+    integer :: boxID, molIndx
+    integer :: nMove, rawIndx
+    integer :: molStart, molEnd, molType
     real(dp) :: dx, dy, dz
-    real(dp) :: E_Diff, E_Inter, E_Intra, biasE
+    real(dp) :: E_Diff, E_Inter, E_Intra
     real(dp), parameter :: Prob = 1E0_dp
 
     boxID = trialBox % boxID

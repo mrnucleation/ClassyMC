@@ -24,7 +24,9 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g 
 #OPTIMIZE_FLAGS_GFORT += -DDETAILED
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
-OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
+#OPTIMIZE_FLAGS_GFORT += -Wmaybe-uninitialized
+#OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
+OPTIMIZE_FLAGS_GFORT += -finit-real=zero -finit-integer=0
 #OPTIMIZE_FLAGS_GFORT += -pg
 #OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
@@ -84,11 +86,12 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_MCMoves.f90\
         		$(SRC)/Common_NeighList.f90\
         		$(SRC)/Debug.f90\
+         		$(SRC)/Constrain_MultiAtomDistCrit.f90\
+         		$(SRC)/Constrain_MolTotal.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
          		$(SRC)/Constrain_EnergyCeiling.f90\
          		$(SRC)/Constrain_EnergyFloor.f90\
          		$(SRC)/Constrain_FreezeType.f90\
-         		$(SRC)/Constrain_HardWall.f90\
 	        	$(SRC)/SearchSort.f90\
         		$(SRC)/Sampling_AcceptAll.f90\
         		$(SRC)/Sampling_AcceptNone.f90\
@@ -117,10 +120,12 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Analysis_AngleDistribution.f90\
         		$(SRC)/Analysis_BondDistribution.f90\
         		$(SRC)/Analysis_TorsionDistribution.f90\
+        		$(SRC)/Analysis_TotalSize.f90\
         		$(SRC)/Analysis_BlockAverage.f90\
         		$(SRC)/Analysis_DensityOfStates.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
         		$(SRC)/Analysis_DistPair.f90\
+        		$(SRC)/Analysis_MolFraction.f90\
         		$(SRC)/Analysis_RDF.f90\
         		$(SRC)/Analysis_ThermoAverage.f90\
         		$(SRC)/Analysis_ThermoIntegration.f90\
@@ -148,12 +153,14 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Intra_TorsionTrappe.f90\
         		$(SRC)/Intra_TorsionHarmonic.f90\
         		$(SRC)/Intra_TorsionRidgid.f90\
+        		$(SRC)/Intra_Misc1_5_Pair.f90\
         		$(SRC)/MolCon_LinearCBMC.f90\
         		$(SRC)/MolCon_RidgidRegrowth.f90\
         		$(SRC)/MolCon_SimpleRegrowth.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
  	        	$(SRC)/Script_AngleType.f90\
  	        	$(SRC)/Script_BondType.f90\
+ 	        	$(SRC)/Script_MiscType.f90\
  	        	$(SRC)/Script_TorsionType.f90\
  	        	$(SRC)/Script_Constraint.f90\
  	        	$(SRC)/Script_Forcefield.f90\
@@ -172,7 +179,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Traj_LAMMPSDump.f90\
 	        	$(SRC)/Traj_XYZFormat.f90\
 	        	$(SRC)/Traj_XSF.f90\
-				$(SRC)/Input_Format.f90\
+	        	$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_CellRSqList.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
@@ -184,23 +191,23 @@ SRC_MAIN := $(SRC)/Common.f90\
 
 SRC_TEMPLATE := $(SRC)/Template_Master.f90\
         		$(SRC)/RandomNew.f90\
-				$(SRC)/Template_AcceptRule.f90\
-				$(SRC)/Template_Analysis.f90\
-				$(SRC)/Template_BondFF.f90\
-				$(SRC)/Template_AngleFF.f90\
-				$(SRC)/Template_TorsionFF.f90\
-				$(SRC)/Template_MiscIntra.f90\
-				$(SRC)/Template_Constraint.f90\
-				$(SRC)/Template_Forcefield.f90\
-				$(SRC)/Template_SimBox.f90\
+        		$(SRC)/Template_AcceptRule.f90\
+						$(SRC)/Template_Analysis.f90\
+						$(SRC)/Template_BondFF.f90\
+						$(SRC)/Template_AngleFF.f90\
+						$(SRC)/Template_TorsionFF.f90\
+						$(SRC)/Template_MiscIntra.f90\
+						$(SRC)/Template_Constraint.f90\
+						$(SRC)/Template_Forcefield.f90\
+						$(SRC)/Template_SimBox.f90\
         		$(SRC)/Box_SimpleBox.f90\
-				$(SRC)/Box_Ultility.f90\
-				$(SRC)/Template_IntraFF.f90\
-				$(SRC)/Template_NeighList.f90\
-				$(SRC)/Template_Trajectory.f90\
-				$(SRC)/Template_MultiBoxMove.f90\
-				$(SRC)/Template_MoveClass.f90\
-				$(SRC)/Template_MolConstructor.f90
+						$(SRC)/Box_Ultility.f90\
+						$(SRC)/Template_IntraFF.f90\
+						$(SRC)/Template_NeighList.f90\
+						$(SRC)/Template_Trajectory.f90\
+						$(SRC)/Template_MultiBoxMove.f90\
+						$(SRC)/Template_MoveClass.f90\
+						$(SRC)/Template_MolConstructor.f90
 
 OBJ_LIBRARY = $(shell find $(LIB) -name '*.a')
 -include *.Makefile 
@@ -388,7 +395,7 @@ $(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 
 $(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
-$(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o
+$(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o  $(OBJ)/ErrorChecking.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o

@@ -118,7 +118,6 @@ module FF_Pair_LJ_Q_Cut
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
     integer :: iType, jType, iAtom, jAtom
-    integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq, r
     real(dp) :: ep, sig_sq, q

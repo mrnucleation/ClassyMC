@@ -278,13 +278,8 @@ use VarPrecision
       return
     endif
 
-
     !Compute the probability of reversing the move
     call self%SelectNeighReverse(trialBox, nTarget, ProbSel)
-
-
-
-
 
     !Compute the generation probability
     Prob = real(trialBox%nMolTotal, dp) * self%avbmcVol
@@ -293,7 +288,6 @@ use VarPrecision
 
     call MolData(molType) % molConstruct % GasConfig(GasProb)
     Prob = GasProb*Prob/GenProb
-!    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%avbmcVol, nCount, trialBox%nMolTotal+1, ProbSel
 
     !Get the chemical potential term for GCMC
     extraTerms = sampling % GetExtraTerms(self%newpart(1:nAtoms), trialBox)

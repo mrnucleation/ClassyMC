@@ -12,11 +12,13 @@ contains
     use Analysis_AngleDistribution, only: AngleDistribution
     use Analysis_BondDistribution, only: BondDistribution
     use Analysis_TorsionDistribution, only: TorsionDistribution
+    use Anaylsis_TotalSize, only: TotalSize
     use Anaylsis_BlockAverage, only: BlockAverage
     use Anaylsis_ClusterSize, only: ClusterSize
     use Anaylsis_DensityOfStates, only: DensityOfStates
     use Anaylsis_DistPair, only: DistPair
     use Analysis_RDF, only: rdf
+    use Anaylsis_MolFractionHist, only: MolFractionHist
     use Anaylsis_ThermoAverage, only: ThermoAverage
     use Anaylsis_ThermoIntegration, only: ThermoIntegration
 #ifdef EMBPYTHON
@@ -55,6 +57,9 @@ contains
       case("distpair")
         allocate(DistPair::AnalysisArray(AnaNum) % func)
 
+      case("molfractionhist")
+        allocate(MolFractionHist::AnalysisArray(AnaNum) % func)
+
       case("thermoaverage")
         allocate(thermoAverage::AnalysisArray(AnaNum) % func)
 
@@ -63,6 +68,9 @@ contains
 
       case("torsiondistribution")
         allocate(TorsionDistribution::AnalysisArray(AnaNum) % func)
+
+      case("totalsize")
+        allocate(TotalSize::AnalysisArray(AnaNum) % func)
 
       case("rdf")
         allocate(rdf::AnalysisArray(AnaNum) % func)

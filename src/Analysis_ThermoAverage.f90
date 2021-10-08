@@ -106,7 +106,6 @@ use VarPrecision
   subroutine Thermo_Epilogue(self)
     use ParallelVar, only: myid
     implicit none
-    integer :: ierror
     class(ThermoAverage), intent(inout) :: self
 
     call self % WriteInfo

@@ -21,7 +21,7 @@ use VarPrecision
  contains
 !========================================================
   subroutine AtomExchange_Constructor(self)
-    use Common_MolInfo, only: MolData, nMolTypes
+!    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(MC_AtomExchange), intent(inout) :: self
 
@@ -42,7 +42,7 @@ use VarPrecision
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
-    use Common_NeighData, only: neighSkin
+!    use Common_NeighData, only: neighSkin
 
     implicit none
     class(MC_AtomExchange), intent(inout) :: self
@@ -51,7 +51,7 @@ use VarPrecision
     integer :: i
     integer :: nAtom, nAtomNew, reduIndx, newtype, oldtype
     integer :: nTarget
-    real(dp) :: OldProb, NewProb, Prob
+    real(dp) :: Prob
     real(dp) :: E_Diff, E_Inter, E_Intra
     real(dp) :: extraTerms
 

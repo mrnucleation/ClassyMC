@@ -92,6 +92,8 @@ use VarPrecision
     integer :: slice(1:2)
     real(dp) :: theta
 
+    if(accept) continue
+
     nMolecules = self%simbox%NMol(self%molType)
     do iMol = 1, nMolecules
       molIndx = self%simbox%MolGlobalIndx(self%molType, iMol)

@@ -37,7 +37,6 @@ module MCMove_Anisovol
  contains
 !========================================================
   subroutine AnisoVol_Constructor(self)
-    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(AnisoVol), intent(inout) :: self
     integer :: nBoxes
