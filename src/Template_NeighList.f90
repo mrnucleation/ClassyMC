@@ -25,6 +25,7 @@ module Template_NeighList
       procedure, pass :: GetNewList
       procedure, pass :: GetMaxNei
       procedure, pass :: GetNeighCount
+      procedure, pass :: GetRCut
       procedure, pass :: AddMol
       procedure, pass :: SwapAtomType
       procedure, pass :: DumpList
@@ -77,6 +78,14 @@ module Template_NeighList
     integer :: outval
 
     outval = self%maxnei
+  end function
+!===================================================================================
+  function GetRCut(self) result(outval)
+    implicit none
+    class(NeighListDef), intent(inout), target :: self
+    integer :: outval
+
+    outval = self%rcut
   end function
 !===================================================================================
   subroutine GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)

@@ -29,7 +29,7 @@ contains
     implicit none
  
     logical :: accept
-    integer :: i, j, nBoxes
+    integer :: i, j, nBoxes, iBox
     integer :: iAtom, moveNum, boxNum
     integer(kind=8) :: iCycle, iMove
     character(len=50) :: fileName
@@ -84,7 +84,6 @@ contains
             else
               boxNum = 1
             endif
-            write(*,*) "BLAHAHAHAHAHAHA"
             call Moves(moveNum) % Move % FullMove(BoxArray(boxNum)%box, accept)
         end select
         call Sampling%UpdateStatistics(accept)
@@ -93,6 +92,11 @@ contains
         endif
 
         call Analyze(iCycle, iMove, accept, .true.) !Per Move Analysis
+        if(accept) then
+          do iBox = 1, size(BoxArray)
+            call BoxArray(iBox)%box%CheckLists
+          enddo
+        endif
       enddo 
       !------End Move Loop
       if(mod(iCycle, int(screenfreq,8)) == 0) then

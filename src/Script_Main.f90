@@ -151,7 +151,7 @@
       use ParallelVar
       use RandomGen, only: initSeed
       use SimControl, only: nMoves, nCycles, screenFreq, energyCheck, &
-                            Etol, Forcetol, lrate
+                            Etol, Forcetol, lrate, configfreq
       use Units, only: outEngUnit, outLenUnit, outAngUnit,outPressUnit,  &
                        inEngUnit, inLenUnit, inAngUnit,inPressUnit, &
                        FindEngUnit, FindLengthUnit, FindAngularUnit,  &
@@ -242,6 +242,11 @@
           call GetXCommand(line, command2, 3, lineStat)
           read(command2, *) realValue
           neighSkin = realValue
+
+        case("configfrequency")
+          call GetXCommand(line, command2, 3, lineStat)
+          read(command2, *) realValue
+          configFreq = nint(realValue)
 
         case("screenfrequency")
           call GetXCommand(line, command2, 3, lineStat)

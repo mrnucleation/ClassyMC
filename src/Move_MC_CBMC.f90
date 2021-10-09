@@ -188,12 +188,14 @@ use VarPrecision
 
 
     !If the particle moved a large distance get a temporary neighborlist
-!    if(any([dx,dy,dz] > neighSkin)) then
-!      call trialBox % NeighList(1) % GetNewList(1, self%tempList, self%tempNNei, self%disp(1))
-!      self%disp(1)%newlist = .true.
-!    else
 
-!    endif
+    if(any([dx,dy,dz] > neighSkin)) then
+      do iAtom = 1, nAtoms
+        call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
+                                                  self%disp(iAtom))
+        self%disp(iAtom)%listIndex = iAtom
+      enddo 
+    endif
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%disp(1:nRegrow) )

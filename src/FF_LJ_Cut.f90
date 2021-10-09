@@ -6,6 +6,7 @@ module FF_Pair_LJ_Cut
   use CoordinateTypes
 
   type, extends(forcefield) :: Pair_LJ_Cut
+    logical :: includetail=.false.
     real(dp), allocatable :: eps(:)
     real(dp), allocatable :: sig(:)
     real(dp), allocatable :: rMin(:)

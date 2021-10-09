@@ -119,7 +119,7 @@ module FF_EasyPair_Cut
       enddo
     enddo
   
-!    write(nout,*) "Lennard-Jones Energy:", E_Total
+    write(nout,*) "Total Pair Energy:", E_Total
       
     E_T = E_Total    
   end subroutine
@@ -137,10 +137,15 @@ module FF_EasyPair_Cut
     accept = .true.
     curbox % dETable = 0E0_dp
     E_Diff = 0E0_dp
+!       write(*,*) self%RCut, self%RCutSq
 
     select type(disp)
       class is(Displacement)
-         call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+        if(disp(1)%newlist) then
+          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept, tempList, tempNNei)
+        else
+          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+        endif
 
       class is(Addition)
          call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
@@ -164,11 +169,12 @@ module FF_EasyPair_Cut
   end subroutine
 
   !=====================================================================
-  subroutine Shift_EasyPair_Cut_Single(self, curbox, disp, E_Diff, accept)
+  subroutine Shift_EasyPair_Cut_Single(self, curbox, disp, E_Diff, accept, tempList, tempNNei)
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
     type(Displacement), intent(in) :: disp(:)
+    integer, intent(in), optional, target :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 
@@ -183,8 +189,13 @@ module FF_EasyPair_Cut
     integer, pointer :: neighlist(:,:) => null()
     real(dp), pointer :: atoms(:,:) => null()
 
-    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
-    call curbox%GetCoordinates(atoms)
+    if( present(tempList) .and. present(tempNNei) ) then
+      neighlist => tempList
+      nNeigh => tempNNei
+    else
+      call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+      call curbox%GetCoordinates(atoms)
+    endif
 
     dispLen = size(disp)
     E_Diff = 0E0_dp
@@ -219,9 +230,9 @@ module FF_EasyPair_Cut
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-!          if(iAtom == jAtom) then
-!            write(*,*) "NeighborList Error!", iAtom, jAtom
-!          endif
+          if(iAtom == jAtom) then
+            write(*,*) "NeighborList Error!", iAtom, jAtom
+          endif
           E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
           E_Diff = E_Diff - E_Pair
           curbox % dETable(iAtom) = curbox % dETable(iAtom) - E_Pair

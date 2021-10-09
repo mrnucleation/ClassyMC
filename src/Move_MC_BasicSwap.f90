@@ -146,7 +146,6 @@ use VarPrecision
     integer :: i, iAtom, iPoint, iDisp, nInsPoints
     integer :: molType, molStart, molEnd, atomIndx, nAtoms
     real(dp) :: reduced(1:3)
-    real(dp) :: insPoint(1:3, 1)
     real(dp) :: dx, dy, dz, vol
     real(dp) :: E_Diff, biasE, radius
     real(dp) :: E_Inter, E_Intra
@@ -175,7 +174,7 @@ use VarPrecision
       do i=1,3
         reduced(i) = grnd()
       enddo
-      call trialBox%GetRealCoords(reduced, insPoint(1:3, iPoint))
+      call trialBox%GetRealCoords(reduced, self%insPoint(1:3, iPoint))
       self%insprob(iPoint) = 1E0_dp 
     enddo
 
@@ -205,7 +204,6 @@ use VarPrecision
                                                 self%newPart(iAtom))
       self%newPart(iAtom)%listIndex = iAtom
     enddo 
-    write(*,*) self%tempNnei
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%newPart(1:nAtoms) )
@@ -229,6 +227,12 @@ use VarPrecision
     if(.not. accept) then
       return
     endif
+
+    !Check Post Energy Constraint
+    accept = trialBox % CheckPostEnergy( self%newPart(1:nAtoms), E_Diff )
+    if(.not. accept) then
+      return
+    endif
     call MolData(molType) % molConstruct % GasConfig(GasProb)
 
     !Compute the generation probability
@@ -239,16 +243,13 @@ use VarPrecision
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff,  self%newPart(1:nAtoms), inProb=Prob)
-    write(*,*) E_Diff, Prob, accept
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList(:,:), self%tempNNei(:))
-      write(*,*) "ACCEPTED!"
     endif
 
-    write(*,*) "AGGGHHHH!!!"
 
   end subroutine
 !===============================================
@@ -289,7 +290,6 @@ use VarPrecision
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart)
 
     if(trialBox%NMol(molType) - 1 < trialBox%NMolMin(molType)) then
-!      write(*,*) "Bounds Rejection"
       accept = .false.
       return
     endif
@@ -301,8 +301,6 @@ use VarPrecision
     !Check Constraint
     accept = trialBox % CheckConstraint( self%oldPart(1:1) )
     if(.not. accept) then
-!      write(*,*) "Constraint Rejection"
-!      write(*,*) "============================================"
       return
     endif
 
@@ -317,7 +315,6 @@ use VarPrecision
                                      accept, &
                                      computeintra=.true.)
     if(.not. accept) then
-!      write(*,*) "Energy Rejection"
       return
     endif
 
@@ -353,7 +350,6 @@ use VarPrecision
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 
-    write(*,*) "AHHHHGGG!!!!"
 
   end subroutine
 !=========================================================================
@@ -384,7 +380,6 @@ use VarPrecision
     enddo
 
 
-!    write(*,*) self%ubVol
 
     allocate( self%tempNNei(maxAtoms), stat=errstat )
     if(errstat /= 0) then

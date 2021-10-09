@@ -151,7 +151,6 @@ module SimpleSimBox
     class(ECalcArray), pointer :: EFunc
 !    class(NeighList), allocatable :: NeighList(:)
 
-
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
       procedure, pass :: AllocateMolBound => SimpleBox_AllocateMolBound
@@ -159,6 +158,8 @@ module SimpleSimBox
       procedure, pass :: LoadDimension => Simplebox_LoadDimension
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
       procedure, pass :: Boundary => SimpleBox_Boundary
+      procedure, pass :: CheckLists => SimpleBox_CheckLists
+
       procedure, pass :: ComputeCM => SimpleBox_ComputeCM
       procedure, pass :: ComputeEnergy => SimpleBox_ComputeEnergy
       procedure, pass :: ComputeMolIntra => SimpleBox_ComputeMolIntra
@@ -167,7 +168,6 @@ module SimpleSimBox
       procedure, pass :: ComputeEnergyDelta => SimpleBox_ComputeEnergyDelta
       procedure, pass :: ComputeForces => SimpleBox_ComputeForces
       procedure, pass :: EnergySafetyCheck => SimpleBox_EnergySafetyCheck
-
 
       !IO Functions
       procedure, pass :: ProcessIO => SimpleBox_ProcessIO
@@ -186,6 +186,7 @@ module SimpleSimBox
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetForceArray => SimpleBox_GetForceArray
       procedure, pass :: GetIndexData => Simplebox_GetIndexData
+      procedure, pass :: GetNeighSkin => SimpleBox_GetNeighSkin
       procedure, pass :: GetAtomData => SimpleBox_GetAtomData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMolEnergy => SimpleBox_GetMolEnergy
@@ -883,6 +884,7 @@ module SimpleSimBox
       allocate(self%newpos(1:3, 1:mostAtoms))
       allocate(self%temppos(1:3, 1:mostAtoms))
     endif
+    E_Total = 0E0_dp
     E_Intra = 0E0_dp
     E_Inter = 0E0_dp
 
@@ -974,7 +976,8 @@ module SimpleSimBox
     E_Current = self%ETotal
     E_InterCur = self%E_Inter
     E_IntraCur = self%E_Intra
-    call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
+    call self % ComputeEnergy(tablecheck=.false.)
+!    call self % EFunc % Method % DetailedECalc( self, self%ETotal, accept )
 
     if(self%ETotal > 1E0_dp) then
 
@@ -1156,7 +1159,6 @@ module SimpleSimBox
         self % temperature = realVal
         self % beta = 1E0_dp/realVal
 
-
 !      case("recenter")
 !        call GetXCommand(line, command, 5, lineStat)
 !        read(command, *) logicVal
@@ -1283,6 +1285,16 @@ module SimpleSimBox
 !    endif
 
   end subroutine
+!====================================================================================
+  function SimpleBox_GetNeighSkin(self, listindex) result(outval)
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(in)  :: listindex
+    real(dp) :: outval
+
+  
+
+  end function
 !====================================================================================
 ! Returns various indexing information 
   subroutine SimpleBox_GetAtomData(self, atomglobalIndx, molIndx, atomSubIndx, atomtype)
@@ -1740,9 +1752,13 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
         dispLen = size(disp)
         do iDisp = 1, dispLen
           dispIndx = disp(iDisp) % atmIndx
-          self % dr(1, dispIndx) = self % dr(1, dispIndx) + disp(iDisp)%x_new - self%atoms(1, dispIndx)
-          self % dr(2, dispIndx) = self % dr(2, dispIndx) + disp(iDisp)%y_new - self%atoms(2, dispIndx)
-          self % dr(3, dispIndx) = self % dr(3, dispIndx) + disp(iDisp)%z_new - self%atoms(3, dispIndx)
+          dx = disp(iDisp)%x_new - self%atoms(1, dispIndx)
+          dy = disp(iDisp)%y_new - self%atoms(2, dispIndx)
+          dz = disp(iDisp)%z_new - self%atoms(3, dispIndx)
+          call self%Boundary( dx, dy, dz )
+          self % dr(1, dispIndx) = self % dr(1, dispIndx) + dx
+          self % dr(2, dispIndx) = self % dr(2, dispIndx) + dy 
+          self % dr(3, dispIndx) = self % dr(3, dispIndx) + dz
           call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
           self % atoms(1, dispIndx) = disp(iDisp)%x_new
           self % atoms(2, dispIndx) = disp(iDisp)%y_new
@@ -1811,63 +1827,18 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 !==========================================================================================
   subroutine SimpleBox_Maintenance(self)
     use CoordinateTypes
-    use Common_NeighData, only: neighSkin
     use ParallelVar, only: nout
     implicit none
     class(SimpleBox), intent(inout) :: self
     logical :: accept
     integer :: iList
     integer :: iAtom
-    real(dp) :: tempE, drsq
-    real(dp) :: maxdr, maxdr2
 
-    do iList = 1, size(self%NeighList)
-      call self % NeighList(iList) % BuildList(iList)
-    enddo
-    return
+!    return
+!    do iList = 1, size(self%NeighList)
+!      call self % NeighList(iList) % BuildList(iList)
+!    enddo
 
-    !Check to see if the particles have shifted enough from their original position to justify a
-    !neighorlist rebuild.
-    maxdr = 0E0_dp
-    maxdr2 = 0E0_dp
-    do iAtom = 1, self%nMaxAtoms
-      if(.not. self%IsActive(iAtom)) cycle
-
-      drsq = self%dr(1, iAtom)*self%dr(1, iAtom) + self%dr(2, iAtom)*self%dr(2, iAtom) + &
-             self%dr(3, iAtom)*self%dr(3, iAtom)
-!      write(*,*) iAtom, maxdr, maxdr2
-      if(drsq > maxdr) then
-        maxdr2 = maxdr
-        maxdr = drsq
-      else
-        if(drsq > maxdr2) then
-          maxdr2 = drsq
-        endif
-      endif
-    enddo
-
-    maxdr = sqrt(maxdr)
-    maxdr2 = sqrt(maxdr2)
-
-    !Keep track of the largest displacement between rebuilds seen through the course of the simulation
-
-
-
-!    write(*,*) maxdr, maxdr2, neighSkin
-    if( (maxdr + maxdr2) > neighSkin ) then
-      self%rebuilds = self%rebuilds + 1
-      if(maxdr > neighskin*0.5E0_dp) then
-        self%dangerbuilds = self%dangerbuilds + 1
-!        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
-      endif
-      if(maxdr > self%largestdr) then
-        self%largestdr = maxdr
-      endif
-      do iList = 1, size(self%NeighList)
-        call self % NeighList(iList) % BuildList(iList)
-      enddo
-      self%dr = 0E0_dp
-    endif
 
     if(self%forceERecompute) then
       call self % ComputeEnergy(tablecheck=.false.)
@@ -1879,6 +1850,71 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 !   write(2,*) self%ETotal, tempE, self%ETotal-tempE
 !    endif
 
+  end subroutine
+!==========================================================================================
+!  Checks the Neighbor List criteria periodically to see if the lists need to be rebuilt.
+  subroutine SimpleBox_CheckLists(self)
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+
+    integer :: iList
+    integer :: iAtom, iMol
+    integer :: molStart, molEnd
+    real(dp) :: tempE, drsq
+    real(dp) :: maxdr, maxdr2, molMax
+    real(dp) :: neighSkin, E_RCut, Nei_RCut
+
+
+    !Check to see if the particles have shifted enough from their original position to justify a
+    !neighorlist rebuild.
+    maxdr = 0E0_dp
+    maxdr2 = 0E0_dp
+    do iMol = 1, self%maxMol
+      molmax = 0E0_dp
+      call self%GetMolData(iMol, molStart=molStart, molEnd=molEnd)
+      do iAtom = molStart, molEnd
+        if(.not. self%IsActive(iAtom)) cycle
+        drsq = self%dr(1, iAtom)*self%dr(1, iAtom) + self%dr(2, iAtom)*self%dr(2, iAtom) + &
+               self%dr(3, iAtom)*self%dr(3, iAtom)
+!        write(*,*) iAtom, drsq
+        molmax = max(drsq, molmax)
+      enddo
+      if(molmax > maxdr) then
+        maxdr2 = maxdr
+        maxdr = molmax
+      else
+        if(molmax > maxdr2) then
+          maxdr2 = molmax
+        endif
+      endif
+    enddo
+
+    maxdr = sqrt(maxdr)
+    maxdr2 = sqrt(maxdr2)
+
+!    write(*,*) maxdr, maxdr2
+    !Keep track of the largest displacement between rebuilds seen through the course of the simulation
+    E_rcut = self%EFunc%Method%GetCutOff()
+    do iList = 1, size(self%NeighList)
+      Nei_RCut = self%NeighList(iList)%GetRCut()
+      if( (iList == 1) .and. (E_rcut > Nei_RCut)) then
+        error stop "ERROR! User set the first neighbor list's RCut shorter than required by the Forcefield!!"
+      endif
+      neighSkin = Nei_RCut - E_rcut
+      if( (maxdr + maxdr2) > neighSkin ) then
+!        write(*,*) maxdr, maxdr2, neighSkin
+        self%rebuilds = self%rebuilds + 1
+        if(maxdr > neighskin*0.7E0_dp) then
+          self%dangerbuilds = self%dangerbuilds + 1
+  !        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
+        endif
+        if(maxdr > self%largestdr) then
+          self%largestdr = maxdr
+        endif
+        call self % NeighList(iList) % BuildList(iList)
+        self%dr = 0E0_dp
+      endif
+    enddo
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_GetReducedCoords(self,realCoords,reducedCoords )
