@@ -48,8 +48,7 @@ module MCMove_Isovol
     implicit none
     class(IsoVol), intent(inout) :: self
 
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(1, 1) )
+
   end subroutine
 !=========================================================================
   subroutine IsoVol_FullMove(self, trialBox, accept)
@@ -105,6 +104,9 @@ module MCMove_Isovol
         stop "This type of box is not compatible with volume change moves."
     end select
 
+    if(.not. allocated(self%tempNNei)) allocate( self%tempNNei(1) )
+    if(.not. allocated(self%templist)) allocate( self%templist(1,1) )
+    
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%disp(1:1) )
