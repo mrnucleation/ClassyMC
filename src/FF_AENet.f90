@@ -769,7 +769,8 @@ module FF_AENet
 !    write(*,*) E_T, curbox%ETotal
     E_T = E_T / boltz
 !    write(*,*) E_T, curbox%ETotal
-    E_Diff = E_T - curbox%ETotal
+!    E_Diff = E_T - curbox%ETotal
+    E_Diff = E_T - curbox%E_Inter
 !    E_Diff = E_Diff - curbox%ETotal
     curbox % dETable = curbox%dETable - curbox % ETable
   end subroutine
@@ -965,7 +966,7 @@ module FF_AENet
      self%tempcoords(1:3,1:nCurAtoms) = matmul(self%boxrecp(1:3,1:3), self%tempcoords(1:3,1:nCurAtoms))/ (2E0_dp * pi)
 !     call get_energy_lib(self%box(1:3,1:3), nCurAtoms, self%tempcoords(1:3, 1:nCurAtoms), self%atomTypes(1:nCurAtoms), pbc, Ecoh, E_T)
      E_T = E_T / boltz
-     E_Diff = E_T - curbox%ETotal
+     E_Diff = E_T - curbox%E_Inter
 
   end subroutine
 !=============================================================================+

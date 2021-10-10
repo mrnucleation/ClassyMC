@@ -1337,7 +1337,7 @@ module FF_Pair_Tersoff
       enddo
     enddo
 
-    E_Diff = E_Diff - curbox%ETotal
+    E_Diff = E_Diff - curbox%E_Inter
     curbox%dETable = curbox%dETable - curbox%ETable
 
   end subroutine

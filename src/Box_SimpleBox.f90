@@ -1800,6 +1800,13 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
             dx = (disp(1)%xScale-1E0_dp) * self%centerMass(1, iMol)
             dy = (disp(1)%yScale-1E0_dp) * self%centerMass(2, iMol)
             dz = (disp(1)%zScale-1E0_dp) * self%centerMass(3, iMol)
+
+            do iAtom = molStart, molEnd
+              self%atoms(1:3, iAtom) = self%atoms(1:3, iAtom) - self%centerMass(1:3, iMol)
+              call self%Boundary(self%atoms(1,iAtom),self%atoms(2,iAtom),self%atoms(3,iAtom))
+              self%atoms(1:3, iAtom) = self%atoms(1:3, iAtom) + self%centerMass(1:3, iMol)
+            enddo
+
             do iAtom = molStart, molEnd
               self%atoms(1, iAtom) = self%atoms(1, iAtom) + dx
               self%atoms(2, iAtom) = self%atoms(2, iAtom) + dy
@@ -1807,9 +1814,7 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
               self % dr(1, iAtom) = self % dr(1, iAtom) + dx
               self % dr(2, iAtom) = self % dr(2, iAtom) + dy
               self % dr(3, iAtom) = self % dr(3, iAtom) + dz
-!                write(2,*) iAtom, self%atoms(1, iAtom), self%atoms(2, iAtom),self%atoms(3, iAtom)
             enddo
-!            write(2,*)
             self%centerMass(1, iMol) = self%centerMass(1, iMol) * disp(1)%xScale
             self%centerMass(2, iMol) = self%centerMass(2, iMol) * disp(1)%yScale
             self%centerMass(3, iMol) = self%centerMass(3, iMol) * disp(1)%zScale

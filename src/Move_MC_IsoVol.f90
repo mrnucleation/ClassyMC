@@ -139,7 +139,6 @@ module MCMove_Isovol
 
 
 
-    write(*,*) E_Inter, E_Intra, E_Diff 
     select case(self%style)
       case(1) !Log Scale
         prob = (trialBox%nMolTotal+1) * log(self%disp(1)%volNew / self%disp(1)%volOld) 

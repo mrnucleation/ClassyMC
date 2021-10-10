@@ -18,6 +18,7 @@ module FF_EasyPair_Cut
     contains
       procedure, pass :: Constructor => Constructor_EasyPair_Cut
       procedure, pass :: PairFunction => PairFunction_EasyPair_Cut
+!      procedure, pass :: TailFunction => TailFunction_EasyPair_Cut
       procedure, pass :: DetailedECalc => Detailed_EasyPair_Cut
       procedure, pass :: DiffECalc => DiffECalc_EasyPair_Cut
       procedure, pass :: ShiftECalc_Single => Shift_EasyPair_Cut_Single
@@ -360,6 +361,7 @@ module FF_EasyPair_Cut
     integer :: iAtom, jAtom, maxNei, listIndx, jNei
     integer :: atmType1, atmType2
     integer :: molIndx1, molIndx2
+    real(dp) :: iTemp(1:3), jTemp(1:3)
     real(dp) :: dxi, dyi, dzi
     real(dp) :: dxj, dyj, dzj
     real(dp) :: rx, ry, rz, rsq
@@ -383,6 +385,9 @@ module FF_EasyPair_Cut
       dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
       dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
       dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
+      iTemp(1:3) = atoms(1:3,iAtom) - curbox % centerMass(1:3, molIndx1)
+      call curbox%Boundary(iTemp(1), iTemp(2), iTemp(3))
+      iTemp(1:3) = iTemp(1:3) + curbox % centerMass(1:3, molIndx1)
       do jNei = 1, nNeigh(iAtom)
         jAtom = neighlist(jNei, iAtom)
         if(jAtom <= iAtom) then
@@ -392,16 +397,18 @@ module FF_EasyPair_Cut
         dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
         dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
         dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
-
-        rx =  atoms(1, iAtom) + dxi - atoms(1, jAtom) - dxj
-        ry =  atoms(2, iAtom) + dyi - atoms(2, jAtom) - dyj
-        rz =  atoms(3, iAtom) + dzi - atoms(3, jAtom) - dzj
+        jTemp(1:3) = atoms(1:3,jAtom) - curbox % centerMass(1:3, molindx2)
+        call curbox%Boundary(jTemp(1), jTemp(2), jTemp(3))
+        jTemp(1:3) = jTemp(1:3) + curbox % centerMass(1:3, molindx2)
+        rx =  iTemp(1) + dxi - jTemp(1) - dxj
+        ry =  iTemp(2) + dyi - jTemp(2) - dyj
+        rz =  iTemp(3) + dzi - jTemp(3) - dzj
 
         call curbox%BoundaryNew(rx, ry, rz, disp)
         rsq = rx*rx + ry*ry + rz*rz
         atmType2 = curbox % AtomType(jAtom)
         if(rsq < self%rCutSq) then
-          rmin_ij = self%rMinTable(atmType2, atmType1)          
+          rmin_ij = self%rMinTable(atmType2, atmType1)
           if(rsq < rmin_ij) then
             accept = .false.
             return
@@ -414,7 +421,7 @@ module FF_EasyPair_Cut
       enddo
     enddo
 
-    E_Diff = E_Diff - curbox%ETotal
+    E_Diff = E_Diff - curbox%E_Inter
     curbox % dETable = curbox%dETable - curbox % ETable
 
   end subroutine
