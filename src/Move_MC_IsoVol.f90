@@ -137,7 +137,7 @@ module MCMove_Isovol
 
 
 
-!    write(*,*) E_Diff
+    write(*,*) E_Inter, E_Intra, E_Diff 
     select case(self%style)
       case(1) !Log Scale
         prob = (trialBox%nMolTotal+1) * log(self%disp(1)%volNew / self%disp(1)%volOld) 
@@ -151,7 +151,7 @@ module MCMove_Isovol
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:1), logProb=prob, extraIn=extraTerms)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff, E_Inter)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
     else
       self%detailedrej = self%detailedrej + 1

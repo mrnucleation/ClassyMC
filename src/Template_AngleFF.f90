@@ -84,17 +84,25 @@ module Template_IntraAngle
     real(dp), intent(in) :: atompos(:, :)
     real(dp) :: theta
     
+    integer :: iAtom
+    real(dp) :: temppos(1:3, 1:3)
     real(dp) :: r1, rx1, ry1, rz1
     real(dp) :: r2, rx2, ry2, rz2
-    rx1 = atompos(1, 1) - atompos(1, 2)
-    ry1 = atompos(2, 1) - atompos(2, 2)
-    rz1 = atompos(3, 1) - atompos(3, 2)
+
+    do iAtom = 1,3
+      temppos(1:3, iAtom) = atompos(1:3, iAtom) - atompos(1:3, 1)
+      call curbox%Boundary(temppos(1,iAtom), temppos(2,iAtom), temppos(3,iAtom))
+    enddo
+
+    rx1 = temppos(1, 1) - temppos(1, 2)
+    ry1 = temppos(2, 1) - temppos(2, 2)
+    rz1 = temppos(3, 1) - temppos(3, 2)
     call curbox % Boundary(rx1, ry1, rz1)
     r1 = sqrt(rx1*rx1 + ry1*ry1 + rz1*rz1)
 
-    rx2 = atompos(1, 3) - atompos(1, 2)
-    ry2 = atompos(2, 3) - atompos(2, 2)
-    rz2 = atompos(3, 3) - atompos(3, 2)
+    rx2 = temppos(1, 3) - temppos(1, 2)
+    ry2 = temppos(2, 3) - temppos(2, 2)
+    rz2 = temppos(3, 3) - temppos(3, 2)
     call curbox % Boundary(rx2, ry2, rz2)
     r2 = sqrt(rx2*rx2 + ry2*ry2 + rz2*rz2)
      

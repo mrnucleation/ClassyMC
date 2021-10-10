@@ -1743,7 +1743,9 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     integer :: molType
     integer :: iDisp, dispLen, dispIndx
     integer :: iAtom, iMol, molStart, molEnd
-    real(dp) :: dx, dy, dz
+    real(dp) :: dx, dy, dz, r, r2
+    real(dp) :: dx2, dy2, dz2
+    real(dp) :: temp(1:3), temp2(1:3)
     
     self%forceoutofdate = .true.
     select type(disp)
@@ -1794,26 +1796,32 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
       class is(OrthoVolChange)
         do iMol = 1, self%maxMol
           call self%GetMolData(iMol, molStart=molStart, molEnd=molEnd)
-          if( self%MolSubIndx(molStart) <= self%NMol(self%MolType(molStart)) ) then
+          if( self%IsActive(molStart) ) then
             dx = (disp(1)%xScale-1E0_dp) * self%centerMass(1, iMol)
             dy = (disp(1)%yScale-1E0_dp) * self%centerMass(2, iMol)
             dz = (disp(1)%zScale-1E0_dp) * self%centerMass(3, iMol)
             do iAtom = molStart, molEnd
-!              write(*,*) self%atoms(1:3, iAtom)
               self%atoms(1, iAtom) = self%atoms(1, iAtom) + dx
               self%atoms(2, iAtom) = self%atoms(2, iAtom) + dy
               self%atoms(3, iAtom) = self%atoms(3, iAtom) + dz
               self % dr(1, iAtom) = self % dr(1, iAtom) + dx
               self % dr(2, iAtom) = self % dr(2, iAtom) + dy
               self % dr(3, iAtom) = self % dr(3, iAtom) + dz
-!              write(*,*) self%atoms(1:3, iAtom)
+!                write(2,*) iAtom, self%atoms(1, iAtom), self%atoms(2, iAtom),self%atoms(3, iAtom)
             enddo
+!            write(2,*)
             self%centerMass(1, iMol) = self%centerMass(1, iMol) * disp(1)%xScale
             self%centerMass(2, iMol) = self%centerMass(2, iMol) * disp(1)%yScale
             self%centerMass(3, iMol) = self%centerMass(3, iMol) * disp(1)%zScale
           endif
         enddo
         call self%UpdateVolume(disp)
+        do iAtom = 1, self%nMaxAtoms
+          if( self%IsActive(iAtom) ) then
+            call self%Boundary(self%atoms(1,iAtom),self%atoms(2,iAtom),self%atoms(3,iAtom))
+          endif
+        enddo
+
       class is(AtomExchange)
         call self%SwapAtomType(disp)
 

@@ -37,6 +37,7 @@ module Template_IntraTorsion
 
     integer :: iAtom
     real(dp) :: p1(1:3)
+    real(dp) :: temppos(1:3, 1:4)
     real(dp) :: x12, y12, z12
     real(dp) :: x23, y23, z23
     real(dp) :: x34, y34, z34
@@ -53,22 +54,22 @@ module Template_IntraTorsion
     !Once we have that we can simply take the dot product between this new
     !vector system and the remaining 3-4 vector to get the torsional angle. 
 
+    do iAtom = 1,4
+      temppos(1:3, iAtom) = atompos(1:3, iAtom) - atompos(1:3, 1)
+      call curbox%Boundary(temppos(1,iAtom), temppos(2,iAtom), temppos(3,iAtom))
+    enddo
 
-
-    x12 = atompos(1, 2) - atompos(1, 1)
-    y12 = atompos(2, 2) - atompos(2, 1)
-    z12 = atompos(3, 2) - atompos(3, 1)
-    call curbox % Boundary(x12, y12, z12)
+    x12 = temppos(1, 2) - temppos(1, 1)
+    y12 = temppos(2, 2) - temppos(2, 1)
+    z12 = temppos(3, 2) - temppos(3, 1)
  
-    x23 = atompos(1, 3) - atompos(1, 2) 
-    y23 = atompos(2, 3) - atompos(2, 2) 
-    z23 = atompos(3, 3) - atompos(3, 2) 
-    call curbox % Boundary(x23, y23, z23)
+    x23 = temppos(1, 3) - temppos(1, 2) 
+    y23 = temppos(2, 3) - temppos(2, 2) 
+    z23 = temppos(3, 3) - temppos(3, 2) 
 
-    x34 = atompos(1, 4) - atompos(1, 3)
-    y34 = atompos(2, 4) - atompos(2, 3)
-    z34 = atompos(3, 4) - atompos(3, 3)
-    call curbox % Boundary(x34, y34, z34)
+    x34 = temppos(1, 4) - temppos(1, 3)
+    y34 = temppos(2, 4) - temppos(2, 3)
+    z34 = temppos(3, 4) - temppos(3, 3)
 
 !   Calculate the vector, v1 = <r12 x r23>
     vx1 =   y12*z23 - z12*y23
