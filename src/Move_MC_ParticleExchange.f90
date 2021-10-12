@@ -39,6 +39,14 @@ use VarPrecision
     integer :: iBox
 
     !Ensure a boundary condition is set.
+    if(.not. allocated(BoxArray)) then
+      error stop "No boxes to opperate on!"
+    endif
+
+    if( size(BoxArray) < 2 ) then
+      stop "The user has only specified one box! ParticleExchange is designed to work with 2 or more boxes!"
+    endif
+
     do iBox = 1, size(BoxArray)
       select type(box => BoxArray(iBox)%box)
         type is(SimpleBox)
@@ -50,18 +58,14 @@ use VarPrecision
 
 
 
+
   end subroutine
 !========================================================
   subroutine ParticleExchange_Constructor(self)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(ParticleExchange), intent(inout) :: self
-!    integer :: iType, maxAtoms
 
-
-
-!    allocate( self%tempNNei(1) )
-!    allocate( self%tempList(200, 1) )
   end subroutine
 !========================================================
 !  subroutine ParticleExchange_GeneratePosition(self, disp)
@@ -217,7 +221,6 @@ use VarPrecision
     endif
 
     !Box1's Energy Calculation
-!    call box1 % EFunc % Method % DiffECalc(box1, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff1, accept)
     call box1%ComputeEnergyDelta(self%oldpart(1:1),&
                                      self%templist,&
                                      self%tempNNei, &
@@ -227,7 +230,6 @@ use VarPrecision
                                      accept, &
                                      computeintra=.true.)
     if(.not. accept) then
-!      write(*,*) "Energy Rejection"
       return
     endif
 

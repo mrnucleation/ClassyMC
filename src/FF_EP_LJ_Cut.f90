@@ -179,10 +179,11 @@ module FF_EasyEP_LJ_Cut
 
             NMol(molType) = NMol(molType) + 1
             call self%CountType(NMol)
-            E_Corr = E_Corr - self%SumTail()/vol
+            E_Corr = self%SumTail()/vol - E_Corr
 
          class is(Deletion)
             vol = curbox%GetThermo_String(volume)
+            molType = disp(1)%molType
 
             NMol(1:nMolTypes) = curbox%NMol(1:nMolTypes)
             call self%CountType(NMol)
@@ -190,7 +191,7 @@ module FF_EasyEP_LJ_Cut
 
             NMol(molType) = NMol(molType) - 1
             call self%CountType(NMol)
-            E_Corr = E_Corr - self%SumTail()/vol
+            E_Corr = self%SumTail()/vol - E_Corr
 
          class is(OrthoVolChange)
             vol = curbox%GetThermo_String(volume)
