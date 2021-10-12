@@ -2,8 +2,8 @@
 #define __StdErr__ 0
 !========================================================            
     module ScriptInput
-      use Input_Format
-      contains
+      use Input_Format, only: LoadFile,GetXCommand, LowerCaseLine, FindCommandBlock, maxLineLen
+    contains
 !========================================================            
       subroutine Script_ReadParameters(infile)
       use ClassyConstants
@@ -46,13 +46,13 @@
             call LoadFile(lineStore, nLines, lineNumber, fileName)
             if(nLines == 0) then
               write(__StdErr__,*) "ERROR! Input file is empty or could not be read!"
-              error stop
+              stop
             else
               write(nout, *) "File successfully loaded!"
             endif
           elseif(nArgs == 0) then
             write(__StdErr__,*) "ERROR! No Input File has been given!"
-            error stop
+            stop
           endif
       endif
 
@@ -313,8 +313,8 @@
              enddo   
 
            else
-             write(*,*) "ERROR! The create analysis command has already been used and can not be called twice"
-             error stop
+             write(0,*) "ERROR! The create analysis command has already been used and can not be called twice"
+             stop
            endif
 
          !-------------------------------------------------------------------------------------
@@ -340,8 +340,8 @@
                BoxArray(i)%box%screenIO = .true.
              enddo             
            else
-             write(*,*) "ERROR! The create box command has already been used and can not be called twice"
-             error stop
+             write(0,*) "ERROR! The create box command has already been used and can not be called twice"
+             stop
            endif
 
          !-------------------------------------------------------------------------------------

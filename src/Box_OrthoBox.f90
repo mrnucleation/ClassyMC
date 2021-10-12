@@ -38,6 +38,7 @@ module OrthoBoxDef
     integer :: iType, iMol, iAtom, jType, subIndx, arrayIndx
     integer :: iConstrain, iList, molStart, molEnd
 
+    self%volume = self%boxLx * self%boxLy * self%boxLz
     call self % ComputeEnergy
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
@@ -84,7 +85,6 @@ module OrthoBoxDef
 
 
 
-    self%volume = self%boxLx * self%boxLy * self%boxLz
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Pressure: ", self%pressure
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Dimensions: ", self%volume
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Volume: ", self%volume

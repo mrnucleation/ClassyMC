@@ -220,6 +220,7 @@ module SimpleSimBox
       procedure, pass :: GetRealCoords => SimpleBox_GetRealCoords
 
 !      procedure, public, pass :: GetThermo
+!      procedure, public, pass :: GetThermo_String
 !      procedure, public, pass :: ThermoLookUp
 
       procedure, pass :: Maintenance => SimpleBox_Maintenance

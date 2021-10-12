@@ -32,7 +32,7 @@ contains
         write(*,*) "Please double check to ensure the file exists and the name in the input is accurate."
         write(*,*) "Attempted to open file:", trim(adjustl(modfileName))
       endif
-      error stop
+      stop
     endif
 
 !      This block counts the number of lines in the input file to determine how large the lineStorage array needs to be.

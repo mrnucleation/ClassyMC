@@ -12,13 +12,14 @@ module FF_EasyPair_Cut
   use CoordinateTypes
 
   type, extends(forcefield) :: EasyPair_Cut
+    logical :: usetailcorrection = .false.
     real(dp), allocatable :: rMin(:)
     real(dp), allocatable :: rMinTable(:,:)
 !    real(dp) :: rCut, rCutSq
     contains
       procedure, pass :: Constructor => Constructor_EasyPair_Cut
       procedure, pass :: PairFunction => PairFunction_EasyPair_Cut
-!      procedure, pass :: TailFunction => TailFunction_EasyPair_Cut
+      procedure, pass :: TailCorrection => TailCorrection_EasyPair_Cut
       procedure, pass :: DetailedECalc => Detailed_EasyPair_Cut
       procedure, pass :: DiffECalc => DiffECalc_EasyPair_Cut
       procedure, pass :: ShiftECalc_Single => Shift_EasyPair_Cut_Single
@@ -48,7 +49,7 @@ module FF_EasyPair_Cut
     IF (AllocateStat /= 0) error STOP "Allocation in the EasyPair_Cut Pair Style"
 
   end subroutine
-  !=============================================================================+
+  !======================================================================+
   function PairFunction_EasyPair_Cut(self, rsq, atmtype1, atmtype2) result(E_Pair)
     use Common_MolInfo, only: nAtomTypes
     implicit none
@@ -60,7 +61,19 @@ module FF_EasyPair_Cut
     E_Pair = 0E0_dp
 
   end function
-  !===================================================================================
+  !======================================================================+
+  subroutine TailCorrection_EasyPair_Cut(self, curbox, E_Corr, disp) 
+    use Common_MolInfo, only: nAtomTypes
+    implicit none
+    class(EasyPair_Cut), intent(inout) :: self
+    class(Perturbation), intent(in), optional :: disp(:)
+    class(SimBox), intent(inout) :: curbox
+    real(dp), intent(out) :: E_Corr
+
+    E_Corr = 0E0_dp
+
+  end subroutine
+  !=======================================================================
   subroutine Detailed_EasyPair_Cut(self, curbox, E_T, accept)
     use ParallelVar, only: nout
     use Common_MolInfo, only: nMolTypes
@@ -74,7 +87,7 @@ module FF_EasyPair_Cut
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: E_Pair
-    real(dp) :: E_Total
+    real(dp) :: E_Total, E_Corr
     real(dp) :: rmin_ij      
 
     real(dp), pointer :: atoms(:,:) => null()
@@ -122,6 +135,12 @@ module FF_EasyPair_Cut
   
     write(nout,*) "Total Pair Energy:", E_Total
       
+
+    if( self%usetailcorrection ) then
+      call self%TailCorrection( curbox, E_Corr )
+      E_Total = E_Total + E_Corr
+      write(nout,*) "Total Tail Corrections:", E_Corr
+    endif
     E_T = E_Total    
   end subroutine
 !============================================================================
@@ -133,7 +152,7 @@ module FF_EasyPair_Cut
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
-    real(dp) :: E_Half
+    real(dp) :: E_Half, E_Corr
 
     accept = .true.
     curbox % dETable = 0E0_dp
@@ -166,9 +185,13 @@ module FF_EasyPair_Cut
 
     end select
 
+    if( self%usetailcorrection ) then
+      E_Corr = 0E0_dp
+      call self%TailCorrection( curbox, E_Corr, disp )
+      E_Diff = E_Diff + E_Corr
+    endif
 
   end subroutine
-
   !=====================================================================
   subroutine Shift_EasyPair_Cut_Single(self, curbox, disp, E_Diff, accept, tempList, tempNNei)
     implicit none

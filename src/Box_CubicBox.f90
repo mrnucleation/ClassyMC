@@ -310,12 +310,12 @@ module CubicBoxDef
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
     write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
 
+    self%volume = self%boxL**3
     do iList = 1 ,size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
     call self % ComputeEnergy
 
-    self%volume = self%boxL**3
     write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure/outPressUnit, pressStr
     write(nout,*) "Box ", self%boxID, " Volume: ", self%volume
     write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%boxL**3

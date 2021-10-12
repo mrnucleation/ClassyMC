@@ -138,6 +138,7 @@ module MCMove_Isovol
     endif
 
 
+!    write(*,*) E_Inter
 
     select case(self%style)
       case(1) !Log Scale
