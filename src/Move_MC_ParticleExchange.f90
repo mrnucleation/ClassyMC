@@ -123,9 +123,12 @@ use VarPrecision
 
 
 
+    !For this we are taking a particle from box1 and moving it over to box2
+    !Thus box1 is always the "out box" and box2 is always the "in box"
     !Randomly choose which boxes will exchange particles
     boxNum = ListRNG(self%boxProb)
     box1 => BoxArray(boxNum)%box
+
 
     !To avoid picking the same box twice, rescale the probability such that
     !box1's probability is equal to 0.
@@ -270,10 +273,10 @@ use VarPrecision
     !Reverse Probability = 1/(N_box2+1) * 1/vol_Box1 * ReverseGenProbility
     !Rev/For = N_box1 * vol_box2 / ( (N_box2+1) * vol_Box1 ) * GenProb
     vol = box2 % GetThermo_String(volume)
-    Prob = real(box1%nMolTotal, dp) * vol * ProbSubIn
+    Prob = real(box1%nMolTotal, dp) * vol * ProbSubOut
 
     vol = box1 % GetThermo_String(volume)
-    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol * ProbSubOut)
+    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol * ProbSubIn)
 
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), box1)
     half = sampling % GetExtraTerms(self%newpart(1:nAtoms), box2)

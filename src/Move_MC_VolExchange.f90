@@ -1,6 +1,7 @@
 !=========================================================================
-! Monte Carlo move for the Isobaric ensemble. This move scales the dimensions
-! of the simulation box uniformly in all directions. 
+! Monte Carlo move for the Gibbs Ensemble. This move scales the dimensions
+! of the simulation box uniformly in all directions of more than one box
+! at the same time. Intended to keep two boxes in volumetric equlibrium.
 !=========================================================================
 module MCMove_VolExchange
   use CoordinateTypes, only: OrthoVolChange, TriVolChange
@@ -199,7 +200,7 @@ module MCMove_VolExchange
     endif
 
     !Energy Calculation for Box 2
-    call Box2 % ComputeEnergyDelta(self%disp1(1:1),&
+    call Box2 % ComputeEnergyDelta(self%disp2(1:1),&
                                      self%templist, &
                                      self%tempNNei, &
                                      E_Inter2, &
