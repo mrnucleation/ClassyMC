@@ -67,20 +67,31 @@ module StructureTypes
     logical :: ridgid = .true.
     integer :: nAtoms = 1
 
+     !MolConstructor is used to 
     class(MolConstructor), allocatable :: molConstruct
     integer, allocatable :: atomType(:)
 
+     !Bond Class information
     integer :: nBonds = 0
     type(BondMem), allocatable :: bond(:)
+     !Look up Tables to find which bonds a given atom is a member of
+    integer, allocatable :: nAtmBonds(:)
+    integer, allocatable :: atmBonds(:,:)
 
     integer :: nAngles = 0
     type(AngleMem), allocatable :: angle(:)
+     !Look up Tables to find which bond angles a given atom is a member of
+    integer, allocatable :: nAtmAngles(:)
+    integer, allocatable :: atmAngles(:,:)
 
     integer :: nTors = 0
     type(TorsMem), allocatable :: torsion(:)
+     !Look up Tables to find which torsion angles a given atom is a member of
+    integer, allocatable :: nAtmTorsions(:)
+    integer, allocatable :: atmTorsions(:,:)
 
+     !Misc is 
     integer :: nMisc = 0
-!    integer, allocatable :: misc(:)
     type(MiscDef), allocatable :: miscdata(:)
   end type
 

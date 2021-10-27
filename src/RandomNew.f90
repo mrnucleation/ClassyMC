@@ -1,5 +1,5 @@
 !=======================================================
-  module RandomGen
+ module RandomGen
       use VarPrecision
       integer :: initseed = -1
 !=======================================================
@@ -110,13 +110,13 @@
 !     w1=(x1,y1,z1)   w2=(-y1,x1,0)  w3=(-x1*z1, -y1*z1, x1^2 + y1^2)
 !     Using these vectors, the new vectors(v2 and v3) is calculated using a rotational matrix
 
-      subroutine Generate_UnitPyramid(v1, r2, r3, bond_ang1, bond_ang2, dihed, v2, v3)
+    subroutine Generate_UnitPyramid(v1, r2, r3, bond_ang1, bond_ang2, dihed, v2, v3)
       use ClassyConstants      
       use CoordinateTypes
       implicit none
       real(dp), dimension(1:3), intent(in) :: v1
-      real(dp), dimension(1:3), intent(out) :: v2, v3
       real(dp), intent(in) :: bond_ang1, bond_ang2, dihed, r2, r3
+      real(dp), dimension(1:3), intent(out) :: v2, v3
       real(dp) :: tors_angle
       real(dp) :: r1
       real(dp) :: s_term,c_term
@@ -138,7 +138,7 @@
 
       v2(1) = coeff1*v1(1) - coeff2*c_Term*v1(2) - coeff3*s_Term*v1(1)*v1(3)
       v2(2) = coeff1*v1(2) + coeff2*c_term*v1(1) - coeff3*s_term*v1(2)*v1(3)
-      v2(3) = coeff1*v1(3)                      + coeff3*s_term*(r_proj*r_proj)
+      v2(3) = coeff1*v1(3)                       + coeff3*s_term*(r_proj*r_proj)
   
       tors_angle = tors_angle + dihed
       s_term = sin(tors_angle)
@@ -150,10 +150,9 @@
   
       v3(1) = coeff1*v1(1) - coeff2*c_Term*v1(2) - coeff3*s_Term*v1(1)*v1(3)
       v3(2) = coeff1*v1(2) + coeff2*c_term*v1(1) - coeff3*s_term*v1(2)*v1(3)
-      v3(3) = coeff1*v1(3)                      + coeff3*s_term*(r_proj*r_proj)
+      v3(3) = coeff1*v1(3)                       + coeff3*s_term*(r_proj*r_proj)
          
-      end subroutine
-  
+    end subroutine
 !==========================================================================     
 !     The purpose of this function is similar to the UnitCone function however
 !     in this case the torsional angle is fixed in addition to the distance and
@@ -161,7 +160,7 @@
 !     corresponds to these constraints.
 !     The coordinate is created using a relative orthonormal framework given by these vectors
 !     w1=(x2,y2,z2)   w2=(-y2,x2,0)  w3=(-x2*z2, -y2*z2, x2^2 + y2^2)
-      subroutine Generate_UnitTorsion(v1,v2,r3,bond_ang,tors_angle,v3)
+    subroutine Generate_UnitTorsion(v1,v2,r3,bond_ang,tors_angle,v3)
       use ClassyConstants      
       use CoordinateTypes
       implicit none
@@ -222,7 +221,7 @@
       v3(3) = coeff1*v2(3)                       + coeff3*s_Term*(r_proj*r_proj)
 
          
-      end subroutine
+    end subroutine
 !========================================================================== 
 !     The purpose of this function is to generate three random position for three atoms
 !     given three fixed bond angles (bond_ang1 and bond_ang2 and bond_ang3), 
@@ -233,7 +232,7 @@
 !     w1=(x1,y1,z1)   w2=(-y1,x1,0)  w3=(-x1*z1, -y1*z1, x1^2 + y1^2)
 !     Using these vectors, the new vectors(v2 and v3) is calculated using a rotational matrix
 
-      subroutine Generate_UnitTetrahedral(v1, r2, r3, r4, bond_ang1, bond_ang2, bond_ang3, dihed1, dihed2, v2, v3, v4)
+    subroutine Generate_UnitTetrahedral(v1, r2, r3, r4, bond_ang1, bond_ang2, bond_ang3, dihed1, dihed2, v2, v3, v4)
       use ClassyConstants      
       use CoordinateTypes
       implicit none
@@ -261,7 +260,7 @@
 
       v2(1) = coeff1*v1(1) - coeff2*c_Term*v1(2) - coeff3*s_Term*v1(1)*v1(3)
       v2(2) = coeff1*v1(2) + coeff2*c_term*v1(1) - coeff3*s_term*v1(2)*v1(3)
-      v2(3) = coeff1*v1(3)                      + coeff3*s_term*(r_proj*r_proj)
+      v2(3) = coeff1*v1(3)                       + coeff3*s_term*(r_proj*r_proj)
   
       tors_angle = tors_angle + dihed1
       s_term = sin(tors_angle)
@@ -273,7 +272,7 @@
   
       v3(1) = coeff1*v1(1) - coeff2*c_Term*v1(2) - coeff3*s_Term*v1(1)*v1(3)
       v3(2) = coeff1*v1(2) + coeff2*c_term*v1(1) - coeff3*s_term*v1(2)*v1(3)
-      v3(3) = coeff1*v1(3)                      + coeff3*s_term*(r_proj*r_proj)
+      v3(3) = coeff1*v1(3)                       + coeff3*s_term*(r_proj*r_proj)
   
       tors_angle = tors_angle + dihed2
       s_term = sin(tors_angle)
@@ -285,10 +284,9 @@
   
       v4(1) = coeff1*v1(1) - coeff2*c_Term*v1(2) - coeff3*s_Term*v1(1)*v1(3)
       v4(2) = coeff1*v1(2) + coeff2*c_term*v1(1) - coeff3*s_term*v1(2)*v1(3)
-      v4(3) = coeff1*v1(3)                      + coeff3*s_term*(r_proj*r_proj)
+      v4(3) = coeff1*v1(3)                       + coeff3*s_term*(r_proj*r_proj)
   
-      end subroutine
-
+  end subroutine
 !=======================================================
   function ListRNG(list, norm) result(bin)
     use ClassyConstants

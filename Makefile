@@ -100,6 +100,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Sampling_Nested.f90\
         		$(SRC)/Sampling_Umbrella.f90\
         		$(SRC)/Sampling_UmbrellaWHAM.f90\
+        		$(SRC)/Math_CoordinateFunctions.f90\
         		$(SRC)/Move_MC_AVBMC.f90\
         		$(SRC)/Move_MC_AnisoVol.f90\
         		$(SRC)/Move_MC_AtomExchange.f90\

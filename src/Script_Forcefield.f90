@@ -219,6 +219,8 @@ module Input_Forcefield
     integer :: i, j, intValue(1:5), iLine, lineBuffer, nLines, curLine
     integer :: AllocateStat, nItems
     character(len=30) :: command
+    integer :: atm1, atm2, atm3, atm4
+    integer :: nIntra
 
     lineStat  = 0
     lineBuffer = 0
@@ -266,12 +268,26 @@ module Input_Forcefield
              nItems = lineBuffer - 1
              MolData(molType)%nBonds = nItems
              allocate(MolData(molType)%bond(1:nItems), stat = AllocateStat)
+             allocate(MolData(molType)%nAtmBonds(1:MolData(molType)%nAtoms), stat = AllocateStat)
+             allocate(MolData(molType)%atmBonds(1:nItems, 1:MolData(molType)%nAtoms), stat = AllocateStat)
+             MolData(molType)%nAtmBonds = 0
+             MolData(molType)%atmBonds = 0
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,3)
                MolData(molType)%bond(i)%bondType = intValue(1)
-               MolData(molType)%bond(i)%mem1 = intValue(2)
-               MolData(molType)%bond(i)%mem2 = intValue(3)
+               atm1 = intValue(2)
+               atm2 = intValue(3)
+               MolData(molType)%bond(i)%mem1 = atm1
+               MolData(molType)%bond(i)%mem2 = atm2
+
+               nIntra = MolData(molType)%nAtmBonds(atm1) + 1
+               MolData(molType)%nAtmBonds(atm1) = nIntra
+               MolData(molType)%atmBonds(nIntra, atm1) = i
+
+               nIntra = MolData(molType)%nAtmBonds(atm2) + 1
+               MolData(molType)%nAtmBonds(atm2) = nIntra
+               MolData(molType)%atmBonds(nIntra, atm2) = i
              enddo   
            else
              write(0,*) "ERROR! The bonds for this molecule has already been defined."
@@ -285,13 +301,30 @@ module Input_Forcefield
              nItems = lineBuffer - 1
              MolData(molType)%nAngles = nItems
              allocate(MolData(molType)%angle(1:nItems), stat = AllocateStat)
+             allocate(MolData(molType)%nAtmAngles(1:MolData(molType)%nAtoms), stat = AllocateStat)
+             allocate(MolData(molType)%atmAngles(1:nItems, 1:MolData(molType)%nAtoms), stat = AllocateStat)
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,4)
+               atm1 = intValue(2)
+               atm2 = intValue(3)
+               atm3 = intValue(4)
                MolData(molType)%angle(i)%angleType = intValue(1)
-               MolData(molType)%angle(i)%mem1 = intValue(2)
-               MolData(molType)%angle(i)%mem2 = intValue(3)
-               MolData(molType)%angle(i)%mem3 = intValue(4)
+               MolData(molType)%angle(i)%mem1 = atm1
+               MolData(molType)%angle(i)%mem2 = atm2
+               MolData(molType)%angle(i)%mem3 = atm3
+
+               nIntra = MolData(molType)%nAtmAngles(atm1) + 1
+               MolData(molType)%nAtmAngles(atm1) = nIntra
+               MolData(molType)%atmAngles(nIntra, atm1) = i
+
+               nIntra = MolData(molType)%nAtmAngles(atm2) + 1
+               MolData(molType)%nAtmAngles(atm2) = nIntra
+               MolData(molType)%atmAngles(nIntra, atm2) = i
+
+               nIntra = MolData(molType)%nAtmAngles(atm3) + 1
+               MolData(molType)%nAtmAngles(atm3) = nIntra
+               MolData(molType)%atmAngles(nIntra, atm3) = i
              enddo   
            else
              write(0,*) "ERROR! The create angle command has already been used and can not be called twice"
@@ -304,14 +337,35 @@ module Input_Forcefield
              nItems = lineBuffer - 1
              MolData(molType)%nTors = nItems
              allocate(MolData(molType)%torsion(1:nItems), stat = AllocateStat)
+             allocate(MolData(molType)%nAtmTorsions(1:MolData(molType)%nAtoms), stat = AllocateStat)
+             allocate(MolData(molType)%atmTorsions(1:nItems, 1:MolData(molType)%nAtoms), stat = AllocateStat)
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,5)
                MolData(molType)%torsion(i)%torsType = intValue(1)
-               MolData(molType)%torsion(i)%mem1 = intValue(2)
-               MolData(molType)%torsion(i)%mem2 = intValue(3)
-               MolData(molType)%torsion(i)%mem3 = intValue(4)
-               MolData(molType)%torsion(i)%mem4 = intValue(5)
+               atm1 = intValue(2)
+               atm2 = intValue(3)
+               atm3 = intValue(4)
+               atm4 = intValue(5)
+               MolData(molType)%torsion(i)%mem1 = atm1
+               MolData(molType)%torsion(i)%mem2 = atm2
+               MolData(molType)%torsion(i)%mem3 = atm3 
+               MolData(molType)%torsion(i)%mem4 = atm4
+               nIntra = MolData(molType)%nAtmTorsions(atm1) + 1
+               MolData(molType)%nAtmTorsions(atm1) = nIntra
+               MolData(molType)%atmTorsions(nIntra, atm1) = i
+
+               nIntra = MolData(molType)%nAtmTorsions(atm2) + 1
+               MolData(molType)%nAtmTorsions(atm2) = nIntra
+               MolData(molType)%atmTorsions(nIntra, atm2) = i
+
+               nIntra = MolData(molType)%nAtmTorsions(atm3) + 1
+               MolData(molType)%nAtmTorsions(atm3) = nIntra
+               MolData(molType)%atmTorsions(nIntra, atm3) = i
+
+               nIntra = MolData(molType)%nAtmTorsions(atm4) + 1
+               MolData(molType)%nAtmTorsions(atm4) = nIntra
+               MolData(molType)%atmTorsions(nIntra, atm4) = i
              enddo   
            else
              write(0,*) "ERROR! The create torsion command has already been used and can not be called twice"
