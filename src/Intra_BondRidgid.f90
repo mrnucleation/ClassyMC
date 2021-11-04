@@ -36,6 +36,28 @@ module IntraBond_Ridgid
     accept = .true.
   end subroutine
 !==========================================================================
+  subroutine RidgidBond_GenerateTrial(self, beta, val, bounds )
+    use RandomGen, only: grnd, Gaussian
+    implicit none
+    class(RidgidBond), intent(inout) :: self
+    real(dp), intent(in) :: beta
+    real(dp), intent(out) :: val
+    real(dp), intent(in), optional :: bounds(1:2)
+    real(dp) :: E_Gen, rMax
+    real(dp) :: lb, ub
+
+    if(.not. present(bounds)) then
+      lb = 0E0_dp
+      ub = self%r0
+    else
+      lb = bounds(1)
+      ub = bounds(2)
+    endif
+
+    val = self%r0
+
+  end subroutine
+!==========================================================================
   subroutine RidgidBond_GenerateDist(self, beta, val, probgen, E_T)
     implicit none
     class(RidgidBond), intent(inout) :: self

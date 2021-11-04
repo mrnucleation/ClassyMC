@@ -48,9 +48,14 @@ module MolCon_BranchCBMC
     integer, private, allocatable :: tempList(:,:), tempNNei(:)
     integer, private, allocatable :: atomtypes(:)
     real(dp), private, allocatable :: posN(:,:)
+
+    integer, private :: nNewBonds, nNewAngles, nNewTorsions
     integer, private, allocatable :: newBonds(:)
+    integer, private, allocatable :: newBondType(:)
     integer, private, allocatable :: newAngles(:)
+    integer, private, allocatable :: newAngType(:)
     integer, private, allocatable :: newTorsions(:)
+    integer, private, allocatable :: newTorsType(:)
 
     !freq => The number of bonds each atom has.  This will be used to classify the atom
     !as either a Terminal, Linker, or Branch atom. 
@@ -128,18 +133,21 @@ module MolCon_BranchCBMC
       largestVal = max(largestVal, MolData(self%molType)%nAtmBonds(iAtom))
     enddo
     if(.not. allocated(self%newBonds)) allocate(self%newBonds(1:largestVal))
+    if(.not. allocated(self%newBondTypes)) allocate(self%newBondTypes(1:largestVal))
 
     largestVal = 0
     do iAtom = 1, self%nAtoms
       largestVal = max(largestVal, MolData(self%molType)%nAtmAngles(iAtom))
     enddo
     if(.not. allocated(self%newAngles)) allocate(self%newAngles(1:largestVal))
+    if(.not. allocated(self%newAngleTypes)) allocate(self%newAngleTypes(1:largestVal))
 
     largestVal = 0
     do iAtom = 1, self%nAtoms
       largestVal = max(largestVal, MolData(self%molType)%nAtmTorsions(iAtom))
     enddo
     if(.not. allocated(self%newTorsions)) allocate(self%newTorsions(1:largestVal))
+    if(.not. allocated(self%newTorsionTypes)) allocate(self%newTorsionTypes(1:largestVal))
 
     !Count the number of bonds each atom has.  This will be used to classify the atom
     !as either a Terminal, Linker, or Branch atom. 
@@ -323,28 +331,28 @@ module MolCon_BranchCBMC
         self%grown = .true.
         self%nGrown = self%nAtoms
         molindx = disp(1)%molindx
-
+  
         call trialbox%GetMolData(molindx, molStart=molStart, molEnd=molEnd)
         slice(1) = molStart
         slice(2) = molEnd
         call trialbox%GetCoordinates(atoms, slice=slice)
         do iDisp = 1, size(disp)
-          atm1 = disp(iDisp)%atmindx - molStart + 1
+          atm1 = disp (iDisp)%atmindx - molStart + 1
           dispsubindx(iDisp) = atm1
           atmdispindx(atm1) = iDisp
-          self%grown(atm1) = .false.
+          self%grown (atm1) = .false.
           self%nGrown = self%nGrown - 1
         enddo
-        self%newconfig(1:3, 1:self%nAtoms) = atoms(1:3, 1:self%nAtoms)
+        self%newc   onfig(1:3, 1:self%nAtoms) = atoms(1:3, 1:self%nAtoms)
         call self%CreateSchedule
 
       class is(Deletion)
         self%grown = .false.
         self%nGrown = 0
-        molindx = disp(1)%molindx
+        mol     indx = disp(1)%molindx
         call trialbox%GetMolData(molindx, molStart=molStart, molEnd=molEnd)
         slice(1) = molStart
-        slice(2) = molEnd
+        s  lice(2) = molEnd
         self%schedule = self%scratchschedule
         call trialbox%GetCoordinates(atoms, slice=slice)
         do iDisp = 1, self%nAtoms
@@ -556,19 +564,19 @@ module MolCon_BranchCBMC
 
   end subroutine
 !=======================================================================
-  subroutine BranchCBMC_CreateTrials(self, curAtm, nTrials, schedule)
+  subroutine BranchCBMC_CreateTrials(self, curAtm, nTrials, schedule, trialbox)
     use Common_MolInfo, only: MolData, BondData, AngleData, TorsionData
     implicit none
     class(BranchCBMC), intent(inout) :: self
     integer, intent(in) :: curAtm
     integer, intent(in) :: nTrials
     real(dp), intent(in) :: schedule(:)
+    class(SimBox), intent(inout) :: trialBox
 
     integer :: iTrial
     integer :: atm1, atm2, atm3, atm4
     integer :: iBond, iAngle, iTorsion
     integer :: nBonds, nAngles, nTorsions
-    integer :: nNewBonds, nNewAngles, nNewTorsions
     integer :: curbond, curangle, curtorsion
     integer :: originBond = -1
     real(dp) :: v1(1:3)
@@ -576,17 +584,15 @@ module MolCon_BranchCBMC
     nBonds = MolData(self%molType)%nAtmBonds(curAtm)
     nAngles = MolData(self%molType)%nAtmAngles(curAtm)
     nTorsions = MolData(self%molType)%nAtmTorsions(curAtm)
-    nNewBonds = 0
-    nNewAngles = 0
-    nNewTorsions = 0
 
     self%newBonds = 0
+    nNewBonds = 0
     do iBond = 1, nBonds
       curbond = MolData(self%molType)%atmBonds(iBond, curAtm)
       atm1 = MolData(self%molType)%bond(curbond)%mem1
       atm2 = MolData(self%molType)%bond(curbond)%mem2
       if( self%grown(atm1) .and.  self%grown(atm2) ) then
-        if(originBond > 0) stop "ERROR! Branch has been used for a molecule that's potentially cyclic"
+        if(originBond > 0) stop "ERROR! BranchCBMC has been used for a molecule that's potentially cyclic"
         originBond = curbond
       else
         nNewBonds = nNewBonds + 1
@@ -595,25 +601,27 @@ module MolCon_BranchCBMC
     enddo
 
     self%newAngles = 0
+    nNewAngles = 0
     do iAngle = 1, nAngles
       curangle = MolData(self%molType)%atmAngles(iAngle, curAtm)
       atm1 = MolData(self%molType)%angle(curangle)%mem1
       atm2 = MolData(self%molType)%angle(curangle)%mem2
       atm3 = MolData(self%molType)%angle(curangle)%mem3
-      if( .not. (self%grown(atm1) .and.  self%grown(atm2) .and. self%grown(atm3) ) then
+      if( .not. (self%grown(atm1) .and.  self%grown(atm2) .and. self%grown(atm3) ) ) then
         nNewAngles = nNewAngles + 1
         self%newAngles(nNewAngles) = curangle
       endif
     enddo
 
     self%newTorsions = 0
+    nNewTorsions = 0
     do iTorsion = 1, nTorsions
       curtorsion = MolData(self%molType)%atmTorsions(iTorsion, curAtm)
       atm1 = MolData(self%molType)%torsion(curtorsion)%mem1
       atm2 = MolData(self%molType)%torsion(curtorsion)%mem2
       atm3 = MolData(self%molType)%torsion(curtorsion)%mem3
       atm4 = MolData(self%molType)%torsion(curtorsion)%mem4
-      if( .not. (self%grown(atm1) .and.  self%grown(atm2) .and. self%grown(atm3).and. self%grown(atm4) ) then
+      if( .not. (self%grown(atm1) .and.  self%grown(atm2) .and. self%grown(atm3).and. self%grown(atm4) ) ) then
         nNewTorsions = nNewTorsions + 1
         self%newTorsions(nNewTorsions) = curtorsion
       endif
@@ -629,23 +637,78 @@ module MolCon_BranchCBMC
       else
         v1(1:3) = self%newConfig(1:3, atm1) - self%newConfig(1:3, atm2)
       endif
+      call trialBox%Boundary(v1(1), v1(2), v1(3))
+    else
+      v1 = 0E0_dp
     endif
 
     do iTrial = 1, nTrials
        !If there's no origin we generate a random orientation to start from.
-      if(originBond < 1) then
-        call Generate_UnitSphere(v1(1),v1(2),v1(3))
-      endif
+
       select case(nNewBonds)
         case(1) !Linear Single Branch
+          call self%OneBranch(v1, originbond, trialBox, probGen)
         case(2) !Two Branch
+          call self%TwoBranch
         case(3) !Three Branch
+          call self%ThreeBranch
         case(4) !Four Branch
         case default
           write(0,*) nNewBonds
           stop "ERROR! Branch CBMC has not been set up for this number of branches yet!"
       end select
     enddo
+
+  end subroutine 
+!=======================================================================
+  subroutine BranchCBMC_OneBranch(self, v1, originBond, trialBox, probGen)
+     !To create a new single branch we need to generate three variables
+     !The bond distance (r), the bond angle(theta), and torsion angle(phi)
+     !If there's no new bond angles or torsion angles, theta and phi will simply
+     !be assigned uniformly.
+    use Common_MolInfo, only: MolData, BondData, AngleData, TorsionData
+    use Math_Coordinates, only: GetPerpendicularVector
+    implicit none
+    class(BranchCBMC), intent(inout) :: self
+    real(dp), intent(in) :: v1(1:3)
+    integer, intent(in) :: originBond
+    class(SimBox), intent(inout) :: trialBox
+    real(dp), intent(out) :: probGen
+    integer :: bondIndx, bondType
+    integer :: angleIndx, angleType
+    integer :: torsionIndx, torsionType
+    integer :: iTors
+    real(dp) :: r, theta, phi
+    real(dp) :: prob_r, prob_theta, prob_phi
+    real(dp) :: prevphi(1:self%nNewTorsions)
+    real(dp) :: v2(1:3)
+    real(dp) :: vpervec(1:3)
+    real(dp) :: E_Tors
+
+    bondIndx = self%newBonds(1)
+    bondType = MolData(self%molType)%bond(bondIndx)%bondType
+    call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r, prob_r)
+
+
+    prob_theta = 1E0_dp
+    prob_phi = 1E0_dp
+    if( (self%nNewAngles < 1) .and. (self%nNewTorsions < 1) ) then
+      call Generate_UnitSphere(v2(1), v2(2), v2(3))
+    else if(self%nNewTorsions < 1) then
+      angleIndx = self%newAngle(1)
+      angleType = MolData(self%molType)%angle(angleIndx)%angleType
+      call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, theta, prob_theta)
+      E_Tors = 0E0_dp
+
+      do iTors = 1, self%nNewTorsion
+        torsionIndx = self%newTorsion(iTors)
+        torsionType = self%newTorsionType(iTors)
+        atompos
+        call TorsionData(torsionType) % torsionFF % ComputeTors(trialbox, atompos)
+      enddo
+      call Generate_UnitTorsion(v1,v2,r3,bond_ang,tors_angle,v3)
+    endif
+
 
   end subroutine 
 !=======================================================================

@@ -13,6 +13,7 @@ module Template_IntraAngle
       procedure, pass :: EFunc
       procedure, pass :: ComputeProb
       procedure, pass :: ComputeAngle
+!      procedure, pass :: GenerateTrial
       procedure, pass :: GenerateReverseDist
       procedure, pass :: DetailedECalc 
 !      procedure, pass :: DiffECalc
@@ -66,6 +67,7 @@ module Template_IntraAngle
     call self%DetailedECalc(curbox, reducepos(1:3,1:3), E_Angle, accept)
     probgen = exp(-beta*E_Angle)
   end subroutine
+
 !=============================================================================+
   function EFunc(self, angle) result(E_Angle)
     implicit none

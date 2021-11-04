@@ -15,8 +15,8 @@ module IntraTorsion_TRAPPE
     real(dp), allocatable :: k(:)
     contains
       procedure, pass :: Constructor => TRAPPETorsion_Constructor
+!      procedure, pass :: ComputeTors
       procedure, pass :: EFunc => TRAPPETorsion_EFunc
-!      procedure, pass :: DetailedECalc => TRAPPETorsion_DetailedECalc
       procedure, pass :: GenerateDist => TRAPPETorsion_GenerateDist
       procedure, pass :: ProcessIO => TRAPPETorsion_ProcessIO
   end type

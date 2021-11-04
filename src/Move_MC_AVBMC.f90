@@ -216,16 +216,6 @@ use VarPrecision
     enddo
 
 
-!    call Generate_UnitSphere(dx, dy, dz)
-!    radius = self % avbmcRad * grnd()**(1.0E0_dp/3.0E0_dp)
-!    dx = radius * dx
-!    dy = radius * dy
-!    dz = radius * dz
-!    insPoint(1) = trialBox%atoms(1, targStart) + dx
-!    insPoint(2) = trialBox%atoms(2, targStart) + dy
-!    insPoint(3) = trialBox%atoms(3, targStart) + dz
-
-
     nAtoms = MolData(molType)%nAtoms
     do iAtom = 1, nAtoms
       atomIndx = molStart + iAtom - 1
@@ -407,7 +397,7 @@ use VarPrecision
 
     call MolData(molType) % molConstruct % GasConfig(GasProb)
 
-    !Compute Acceptance Probability  P_Gen = (N_mol 
+    !Compute Acceptance Probability  
     Prob = real(trialBox%nMolTotal, dp)/ProbSel
     Prob = Prob/(real(trialBox%nMolTotal-1, dp) * self%avbmcVol)
     Prob = Prob*GenProb/GasProb

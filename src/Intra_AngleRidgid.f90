@@ -35,6 +35,27 @@ module IntraAngle_Ridgid
 
   end subroutine
 !==========================================================================
+  subroutine RidgidAngle_GenerateTrial(self, beta, val, bounds )
+    use RandomGen, only: grnd, Gaussian
+    use ClassyConstants, only: two_pi
+    implicit none
+    class(RidgidAngle), intent(inout) :: self
+    real(dp), intent(in) :: beta
+    real(dp), intent(out) :: val
+    real(dp), intent(in), optional :: bounds(1:2)
+    real(dp) :: EGen
+    real(dp) :: lb, ub
+
+    if(.not. present(bounds)) then
+      lb = 0E0_dp
+      ub = two_pi
+    else
+      lb = bounds(1)
+      ub = bounds(2)
+    endif
+    val = self%theta0
+  end subroutine
+!==========================================================================
   subroutine RidgidAngle_GenerateDist(self, beta, val, probgen, E_T)
     implicit none
     class(RidgidAngle), intent(inout) :: self
@@ -43,7 +64,8 @@ module IntraAngle_Ridgid
     real(dp), intent(out) :: probgen
     real(dp), intent(out), optional :: E_T
 
-    val = self%theta0
+!    val = self%theta0
+    call self%GenerateTrial(beta, val)
     probgen = 1E0_dp
     if(present(E_T)) then     
       E_T = 0E0_dp
