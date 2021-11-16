@@ -1,3 +1,4 @@
 objects/*.o
 mods/*
 profiling/*
+**/Config_*.clssy
