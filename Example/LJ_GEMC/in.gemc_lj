@@ -24,7 +24,7 @@
   ForceField "LJForcefield.clFF"
 
   Create Boxes
-    fromfile "LJ_Config.clssy"
+    fromfile "LJ_Liq_Config.clssy"
     fromfile "LJ_Gas_Config.clssy"
   End_Create
 
