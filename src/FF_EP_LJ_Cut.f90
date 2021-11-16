@@ -1,10 +1,6 @@
-!================================================================================
-! Easy Pair Template for general pair forcefields. The purpose of this class is
-! to act as an inheritable object that can allow the user to quickly set up
-! any standard pair distance based forcefields by simply creating a child object
-! from this class. By overwriting the PairFunction class and parameter settings
-! the procedures for all cut-off based forcefields are automatically defined.
-!================================================================================
+!===================================================================
+! Easy Pair Template for LJ pair forcefields. 
+!===================================================================
 module FF_EasyEP_LJ_Cut
   use FF_EasyPair_Cut, only: EasyPair_Cut
   use VarPrecision
@@ -21,8 +17,9 @@ module FF_EasyEP_LJ_Cut
     real(dp), allocatable :: epsTable(:,:)
     real(dp), allocatable :: sigTable(:,:)
 
-                            !Array for book keeping the number of each atom type
-                            !is contained within a molecule
+    !Array for book keeping the number of each atom type
+    !is contained within a molecule.  This is used for
+    !the tail corrections 
     integer, allocatable :: PerMolTypeCount(:, :)
     integer, allocatable :: TypeCount(:)
 

@@ -695,8 +695,19 @@ module SimpleSimBox
 
   end subroutine
 !==========================================================================================
-! This subroutine computes the intra contribution of a single molecule
-  subroutine SimpleBox_ComputeMolIntra(self, molType, molIndx, E_Intra, accept, newpos)
+! This subroutine computes the intramolecular energy contribution of a single molecule
+!  molType -> The molecule type index number that tells the box what the molecular species is.
+!  molIndx -> The molecule Index number which gives it's relative position in the simulation box's
+!             atom array.  Used to look up and find th atom positions.
+!  E_Intra -> The computed energy from all the intra-molecular interactions.
+!  accept  -> Flag which signals the simulation to prematurely terminate a calculation in the event
+!             some rejection criteria is met. For example if two atoms overlap there's usually little
+!             point in continuing the calculation since the move will almost certainly be rejected.
+!  newpos  -> If passed this routine will use these coordinates for the molecule calculation instead
+!             of the coordinates stored in the atoms(:,:) array.  Used for computing move energies
+!  fragment-> Array of atom indexes that is used to specify a subset of interactions to compute
+!             instead of computing the entire molecule.
+  subroutine SimpleBox_ComputeMolIntra(self, molType, molIndx, E_Intra, accept, newpos, fragment)
     use Common_MolInfo, only: nMolTypes, MolData, BondData, AngleData, &
                               TorsionData, mostAtoms
     use ErrorChecking, only: IsNan, IsInf
@@ -706,13 +717,26 @@ module SimpleSimBox
     real(dp), intent(out) :: E_Intra
     logical, intent(out) :: accept
     real(dp), intent(in), optional, target :: newpos(:,:)
+    integer, intent(in), optional :: fragment(:)
     real(dp), pointer :: molpos(:,:)
-    integer :: iAtom, iBond, iAngle, iTors, iMisc
+    logical :: allatoms = .true.
+    logical :: included(1:mostAtoms)
+    integer :: i, iAtom, iBond, iAngle, iTors, iMisc
     integer :: molStart, molEnd
     integer :: intraType, nAtoms
     integer :: mem1, mem2, mem3, mem4
     real(dp) :: E_Bond, E_Angle, E_Torsion, E_Misc
 
+    if(present(fragment)) then
+      allatoms = .false.
+      included = .false.
+      do i = 1, size(fragment)
+        iAtom = fragment(i)
+        included(iAtom) = .true.
+      enddo
+    else
+      included = .true.
+    endif
 
     E_Intra = 0E0_dp
     E_Bond = 0E0_dp
@@ -739,6 +763,11 @@ module SimpleSimBox
 
        mem1 = MolData(molType)%bond(iBond)%mem1
        mem2 = MolData(molType)%bond(iBond)%mem2
+       if( .not. allatoms  ) then
+         if((.not. included(mem1)) .or. (.not. included(mem2)) ) then
+           cycle
+         endif
+       endif 
        self % temppos(1:3, 1) = molpos(1:3, mem1)
        self % temppos(1:3, 2) = molpos(1:3, mem2)
 
@@ -760,6 +789,14 @@ module SimpleSimBox
        mem1 = MolData(molType)%angle(iAngle)%mem1
        mem2 = MolData(molType)%angle(iAngle)%mem2
        mem3 = MolData(molType)%angle(iAngle)%mem3
+       if( .not. allatoms  ) then
+         if((.not. included(mem1))  .or. &
+            (.not. included(mem2))  .or. &
+            (.not. included(mem3))) then
+            cycle
+         endif
+       endif 
+
        self%temppos(1:3, 1) = molpos(1:3, mem1)
        self%temppos(1:3, 2) = molpos(1:3, mem2)
        self%temppos(1:3, 3) = molpos(1:3, mem3)
@@ -783,6 +820,15 @@ module SimpleSimBox
        mem2 = MolData(molType)%torsion(iTors)%mem2
        mem3 = MolData(molType)%torsion(iTors)%mem3
        mem4 = MolData(molType)%torsion(iTors)%mem4
+       if( .not. allatoms  ) then
+         if((.not. included(mem1))  .or. &
+            (.not. included(mem2))  .or. &
+            (.not. included(mem3))  .or. &
+            (.not. included(mem4))) then
+            cycle
+         endif
+       endif 
+
        self%temppos(1:3, 1) = molpos(1:3, mem1)
        self%temppos(1:3, 2) = molpos(1:3, mem2)
        self%temppos(1:3, 3) = molpos(1:3, mem3)
@@ -816,10 +862,9 @@ module SimpleSimBox
          error stop
        endif
        E_Intra = E_Intra + E_Misc
-      enddo
+     enddo
 
   end subroutine
-
 !==========================================================================================
 ! This subroutine recomputes the intra contribution of entire system 
 ! energy from scratch. 

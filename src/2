@@ -30,17 +30,13 @@ module MolCon_BranchCBMC
     integer, private :: rosenNeighList = 1
     integer,private :: nRosenTrials = 1
 
+    !GenProb => Weight array for chosing which trial position to use
     !RosenProb => Weight array for chosing which trial position to use
+    !tempcoords => Temporary storage bucket for trial atom positions
     real(dp), private, allocatable :: GenProb(:) 
     real(dp), private, allocatable :: RosenProb(:) 
     real(dp), private, allocatable :: tempcoords(:, :) 
     real(dp), private, allocatable :: newconfig(:, :) 
-
-
-    !trialcoords => Temporary storage bucket for trial atom positions
-    integer, private :: nTrialAtoms
-    real(dp), private, allocatable :: trialcoords(:, :, :) 
-    real(dp), private, allocatable :: trialGenProb(:)
 
     !nGrown => Counter which tracks how many atoms are already regrown. 
     !grown => Array which specifies if an atom has been added to the system or not
@@ -123,8 +119,6 @@ module MolCon_BranchCBMC
     !Create the path array which is used to determine regrowth order.
     if(.not. allocated(self%patharray) ) then
       allocate( self%newconfig(1:3, 1:self%nAtoms) )
-      allocate( self%trialcoords(1:3, 1:self%nAtoms, 1:self%nRosenTrials) )
-      allocate( self%trialGenProb(1:self%nRosenTrials) )
       allocate( self%grown(1:self%nAtoms) )  
       allocate( self%patharray(1:self%nAtoms) )  
       allocate( self%pathposition(1:self%nAtoms) )  
@@ -196,7 +190,6 @@ module MolCon_BranchCBMC
     use MolSearch, only: FindBond, FindAngle, FindTorsion
     use RandomGen, only: Generate_UnitSphere, Generate_UnitCone, Generate_UnitTorsion, ListRNG
     use ForcefieldData, only: ECalcArray
-    use SearchSort, only: QSort
 
     implicit none
     class(BranchCBMC), intent(inout) :: self
@@ -278,9 +271,7 @@ module MolCon_BranchCBMC
         endif
       enddo
 
-      call QSort( schedule(1:nSchedule) )
-      call self%CreateTrials( schedule(1:nSchedule) ) 
-      call self%SelectTrial()
+      call self%CreateTrials( schedule(1:nSchedule) )
 
       nNext = nNext - 1
     enddo
@@ -317,13 +308,249 @@ module MolCon_BranchCBMC
     real(dp), intent(in), optional :: insProb(:)
     logical, intent(out) :: accept
 
+
+    integer :: dispsubindx(1:self%nAtoms), atmdispindx(1:self%nAtoms)
+    integer :: bondType, angleType, torsType
+    integer :: molindx, molStart, molEnd
+    integer :: atm1, atm2,atm3,atm4, iDisp, iRosen
+    integer :: lastGrown
+    real(dp), dimension(1:3) :: v1, v2, v3
+    real(dp) :: dx, dy, dz, r
+    real(dp) :: norm
+    real(dp) :: bend_angle,tors_angle
+    real(dp) :: prob_r, prob_ang, prob_tors, probgen
+    integer :: slice(1:2)
+    real(dp), pointer :: atoms(:,:) => null()
+    real(dp) :: oldpos(1:3, 1:4)
+
+    probconstruct = 1E0_dp
+    accept = .true.
+
+    select type(disp)
+      class is(Displacement)
+        self%grown = .true.
+        self%nGrown = self%nAtoms
+        molindx = disp(1)%molindx
+  
+        call trialbox%GetMolData(molindx, molStart=molStart, molEnd=molEnd)
+        slice(1) = molStart
+        slice(2) = molEnd
+        call trialbox%GetCoordinates(atoms, slice=slice)
+        do iDisp = 1, size(disp)
+          atm1 = disp (iDisp)%atmindx - molStart + 1
+          dispsubindx(iDisp) = atm1
+          atmdispindx(atm1) = iDisp
+          self%grown (atm1) = .false.
+          self%nGrown = self%nGrown - 1
+        enddo
+        self%newc   onfig(1:3, 1:self%nAtoms) = atoms(1:3, 1:self%nAtoms)
+        call self%CreateSchedule
+
+      class is(Deletion)
+        self%grown = .false.
+        self%nGrown = 0
+        mol     indx = disp(1)%molindx
+        call trialbox%GetMolData(molindx, molStart=molStart, molEnd=molEnd)
+        slice(1) = molStart
+        s  lice(2) = molEnd
+        self%schedule = self%scratchschedule
+        call trialbox%GetCoordinates(atoms, slice=slice)
+        do iDisp = 1, self%nAtoms
+          dispsubindx(iDisp) = iDisp
+          atmdispindx(iDisp) = 1
+        enddo
+        self%newconfig(1:3, 1:self%nAtoms) = atoms(1:3, 1:self%nAtoms)
+
+      class default
+        error stop "Critical Errror! An invalid perturbation type has been passed into the regrowth function"
+    end select
+
+    if(present(insPoint) .neqv. present(insProb)) then
+      write(0,*) "insPoint and insProb must both be present or abscent!"
+      error stop
+    endif
+
+    if(present(insPoint)) then
+      if(size(insPoint,2) /= self%nRosenTrials) then
+        write(0,*) "ERROR! Linear CBMC Regrowth received a different number of insertion points"
+        write(0,*) "than it was expecting!"
+        error stop
+      endif
+    endif
+
+
+    do while(self%nGrown < self%nAtoms)
+      if(self%nGrown == 0) then
+          Atm1 = self%schedule(1)
+          if(present(inspoint) .and. present(insProb)) then
+            do iRosen = 1, self%nRosenTrials-1
+              self%tempcoords(1:3, iRosen) = insPoint(1:3,iRosen)
+              self%GenProb(iRosen) = insProb(iRosen)
+            enddo
+            self%tempcoords(1:3, self%nRosenTrials) = self%newconfig(1:3, Atm1)
+            self%GenProb(self%nRosenTrials) = insProb(self%nRosenTrials)
+          else
+            error stop "Full Regrowth has been requsted without passing in insertion points"
+          endif 
+          lastGrown = Atm1
+
+      elseif(self%nGrown == 1) then
+        Atm1 = self%schedule(1)
+        Atm2 = self%schedule(2)
+        if(.not. self%grown(Atm1) ) then
+          write(0,*)  Atm1, Atm2
+          write(0,*) self%grown(1:self%nAtoms)
+          error stop "Unexpected gap in Linear CBMC!"
+        endif
+        call FindBond(self%molType, Atm1, Atm2, bondType)
+        do iRosen = 1, self%nRosenTrials-1
+          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r, prob_r)
+          probgen = prob_r
+          call Generate_UnitSphere(dx, dy, dz)
+          self%tempcoords(1, iRosen) = r*dx + self%newconfig(1, Atm1)
+          self%tempcoords(2, iRosen) = r*dy + self%newconfig(2, Atm1)
+          self%tempcoords(3, iRosen) = r*dz + self%newconfig(3, Atm1)
+          call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                 self%tempcoords(2, iRosen),&
+                                 self%tempcoords(3, iRosen))
+          self%GenProb(iRosen) = prob_r
+        enddo
+        !Compute the generation probability of the old position
+
+        oldpos(1:3, 1) = atoms(1:3, Atm1)
+        oldpos(1:3, 2) = atoms(1:3, Atm2)   
+
+        call BondData(bondType) % bondFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,1:2), &
+                                                     prob_r)
+!        write(*,*) "2", prob_r
+        self%GenProb(self%nRosenTrials) = prob_r
+        self%tempcoords(1:3, self%nRosenTrials) = self%newconfig(1:3, Atm2)
+        lastGrown = Atm2
+
+      elseif(self%nGrown == 2) then
+        Atm3 = self%schedule(3) 
+        Atm2 = self%schedule(2) 
+        if(self%freq(Atm2) == 2) then
+            Atm1 = self%schedule(1) 
+            Atm2 = self%schedule(2) 
+        else
+            Atm1 = self%schedule(2) 
+            Atm2 = self%schedule(1) 
+        endif
+
+        v1(1:3) = self%newconfig(1:3, Atm1) - self%newconfig(1:3, Atm2)
+        call trialBox%Boundary(v1(1), v1(2), v1(3))
+
+        call FindBond(self%molType, Atm2, Atm3, bondType)
+        call FindAngle(self%molType, Atm1, Atm2, Atm3, angleType)
+        do iRosen = 1, self%nRosenTrials-1
+          call BondData(bondType) % bondFF % GenerateDist(trialBox%beta,r, prob_r)
+          call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bend_angle, prob_ang)
+          probgen = prob_r * prob_ang
+          call Generate_UnitCone(v1, r, bend_angle, v2)
+          self%tempcoords(1:3, iRosen) = v2(1:3) + self%newconfig(1:3, Atm2)
+          call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                 self%tempcoords(2, iRosen),&
+                                 self%tempcoords(3, iRosen))
+
+          self%GenProb(iRosen) = probgen
+        enddo
+        oldpos(1:3, 1) = atoms(1:3, Atm1)
+        oldpos(1:3, 2) = atoms(1:3, Atm2)
+        oldpos(1:3, 3) = atoms(1:3, Atm3)
+        call BondData(bondType) % bondFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,2:3), &
+                                                     prob_r)
+
+
+        call AngleData(angleType) % angleFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,1:3), &
+                                                     prob_ang)
+
+!        write(*,*) "3", prob_r, prob_ang
+        probgen = prob_r * prob_ang
+        self%GenProb(self%nRosenTrials) = probgen
+        self%tempcoords(1:3, self%nRosenTrials) = self%newconfig(1:3, Atm3)
+        lastGrown = Atm3
+
+      elseif(self%nGrown < self%nAtoms) then
+            Atm4 = self%schedule(self%nGrown+1) 
+            call self%FindAtomsFromPath(Atm4, Atm1, Atm2, Atm3)
+
+            call FindBond(self%molType, Atm3, Atm4, bondType)
+            call FindAngle(self%molType, Atm2, Atm3, Atm4, angleType)
+            call FindTorsion(self%molType, Atm1, Atm2, Atm3, Atm4, torsType)
+
+            v1(1:3) = self%newconfig(1:3, Atm1) - self%newconfig(1:3, Atm3)
+            call trialBox%Boundary(v1(1), v1(2), v1(3))
+            v2(1:3) = self%newconfig(1:3, Atm2) - self%newconfig(1:3, Atm3)
+            call trialBox%Boundary(v2(1), v2(2), v2(3))
+
+            do iRosen = 1, self%nRosenTrials-1
+              call BondData(bondType) % bondFF % GenerateDist(trialBox%beta, r, prob_r)
+              call AngleData(angleType) % angleFF % GenerateDist(trialBox%beta, bend_angle, prob_ang)
+              call TorsionData(torsType) % torsionFF % GenerateDist(trialBox%beta, tors_angle, prob_tors)
+              probgen = prob_r*prob_ang*prob_tors
+              call Generate_UnitTorsion(v1, v2, r, bend_angle, tors_angle, v3)
+              self%tempcoords(1:3, iRosen)  = v3(1:3) + self%newconfig(1:3, Atm3)
+              call trialBox%Boundary(self%tempcoords(1, iRosen),&
+                                     self%tempcoords(2, iRosen),&
+                                     self%tempcoords(3, iRosen))
+
+              self%GenProb(iRosen) = probgen
+            enddo
+            oldpos(1:3, 1) = atoms(1:3, Atm1)
+            oldpos(1:3, 2) = atoms(1:3, Atm2)
+            oldpos(1:3, 3) = atoms(1:3, Atm3)
+            oldpos(1:3, 4) = atoms(1:3, Atm4)
+
+            call BondData(bondType) % bondFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,3:4), &
+                                                     prob_r)
+
+
+            call AngleData(angleType) % angleFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,2:4), &
+                                                     prob_ang)
+
+            call TorsionData(torsType) % torsionFF % GenerateReverseDist(trialbox, &
+                                                     oldpos(1:3,1:4), &
+                                                     prob_tors)
+            probgen = prob_r * prob_ang * prob_tors
+            self%GenProb(self%nRosenTrials) = probgen
+            self%tempcoords(1:3, self%nRosenTrials) = self%newconfig(1:3, Atm4)
+            lastGrown = Atm4
+        else
+            error stop "nGrown is some invalid number."
+        endif
+
+
+        iDisp = atmdispindx(lastGrown)
+        call self%RosenBluth(trialBox, lastGrown, iDisp, disp)
+        norm = 0E0_dp
+        !For this method we leave off the prob term since we can generate the angles and such
+        !directly. 
+        do iRosen = 1, self%nRosenTrials
+          norm = norm + self%RosenProb(iRosen)
+        enddo
+        if(norm < 1E-10_dp) then
+          accept = .false.
+          return
+        endif
+        probconstruct = probconstruct * self%GenProb(self%nRosenTrials) * self%RosenProb(self%nRosenTrials)/norm
+
+!        write(*,*) self%nRosenTrials, self%GenProb(self%nRosenTrials), self%RosenProb(1:self%nRosenTrials)/norm
+        self%grown(lastGrown) = .true.
+        self%nGrown = self%nGrown + 1
+     enddo
+
   end subroutine
 !======================================================================
-!==========================================================================================
-  subroutine BranchCBMC_GasConfig(self, probGas)
-
 !  Routine for simulating the probability of an isolated molecule in the gas phase
 !  Used primarily for swap moves with an implict gas box.
+!==========================================================================================
+  subroutine BranchCBMC_GasConfig(self, probGas)
     implicit none
     class(BranchCBMC), intent(inout) :: self
     real(dp), intent(out) :: probGas
@@ -339,7 +566,6 @@ module MolCon_BranchCBMC
 !=======================================================================
   subroutine BranchCBMC_CreateTrials(self, curAtm, nTrials, schedule, trialbox)
     use Common_MolInfo, only: MolData, BondData, AngleData, TorsionData
-    use SearchSort, only: BinarySearch
     implicit none
     class(BranchCBMC), intent(inout) :: self
     integer, intent(in) :: curAtm
@@ -353,7 +579,6 @@ module MolCon_BranchCBMC
     integer :: nBonds, nAngles, nTorsions
     integer :: curbond, curangle, curtorsion
     integer :: originBond = -1
-    real(dp) :: originAtom(1:3)
     real(dp) :: v1(1:3)
 
     nBonds = MolData(self%molType)%nAtmBonds(curAtm)
@@ -366,7 +591,6 @@ module MolCon_BranchCBMC
       curbond = MolData(self%molType)%atmBonds(iBond, curAtm)
       atm1 = MolData(self%molType)%bond(curbond)%mem1
       atm2 = MolData(self%molType)%bond(curbond)%mem2
-      if( 
       if( self%grown(atm1) .and.  self%grown(atm2) ) then
         if(originBond > 0) stop "ERROR! BranchCBMC has been used for a molecule that's potentially cyclic"
         originBond = curbond
@@ -410,10 +634,8 @@ module MolCon_BranchCBMC
       atm2 = MolData(self%molType)%bond(originBond)%mem2
       if(atm1 == curAtm) then
         v1(1:3) = self%newConfig(1:3, atm2) - self%newConfig(1:3, atm1)
-        originAtom(1:3) = self%newConfig(1:3, atm1)
       else
         v1(1:3) = self%newConfig(1:3, atm1) - self%newConfig(1:3, atm2)
-        originAtom(1:3) = self%newConfig(1:3, atm2)
       endif
       call trialBox%Boundary(v1(1), v1(2), v1(3))
     else
@@ -425,12 +647,12 @@ module MolCon_BranchCBMC
 
       select case(nNewBonds)
         case(1) !Linear Single Branch
-          call self%OneBranch(v1, curatm, iTrial, originAtom, originBond, trialBox, probGen)
+          call self%OneBranch(v1, curatm, originbond, trialBox, probGen)
         case(2) !Two Branch
           call self%TwoBranch
         case(3) !Three Branch
           call self%ThreeBranch
-!        case(4) !Four Branch
+        case(4) !Four Branch
         case default
           write(0,*) nNewBonds
           stop "ERROR! Branch CBMC has not been set up for this number of branches yet!"
@@ -439,7 +661,7 @@ module MolCon_BranchCBMC
 
   end subroutine 
 !=======================================================================
-  subroutine BranchCBMC_OneBranch(self, v1, curatm, iTrial, originAtom, originBond, trialBox, probGen)
+  subroutine BranchCBMC_OneBranch(self, v1, curatm, originBond, trialBox, probGen)
      !To create a new single branch we need to generate three variables
      !The bond distance (r), the bond angle(theta), and torsion angle(phi)
      !If there's no new bond angles or torsion angles, theta and phi will simply
@@ -449,11 +671,9 @@ module MolCon_BranchCBMC
     implicit none
     class(BranchCBMC), intent(inout) :: self
     real(dp), intent(in) :: v1(1:3)
-    integer, intent(in) :: curatm, originBond, iTrial
+    integer, intent(in) :: curatm, originBond
     class(SimBox), intent(inout) :: trialBox
-    real(dp), intent(in) :: originAtom(1:3)
     real(dp), intent(out) :: probGen
-    logical :: propertors(1:self%nNewTorsions)
     integer :: bondIndx, bondType
     integer :: angleIndx, angleType
     integer :: torsionIndx, torsionType
@@ -489,10 +709,8 @@ module MolCon_BranchCBMC
        ! For the torsional component however, we can easily have multiple torsion angles
        ! thus we need to generate according to that. We may have several
        ! rejections before a good angle is found so for speed, we need to get a common reference point
-       ! so we don't have to recompute the torsion energies from the raw coordinates every single time.
-       ! We only include proper torsion in this stage.
+       ! so we don't have to recompute the torsion angles every single time.
       prevphi = 0E0_dp
-      propertors = .true.
       call GetPerpendicularVector(v1, vpervec, phi=0E0_dp)
       do iTors = 1, self%nNewTorsion
         torsionIndx = self%newTorsion(iTors)
@@ -510,9 +728,7 @@ module MolCon_BranchCBMC
           atm3 = MolData(self%molType)%torsion(torsionIndx)%mem3
           atm4 = MolData(self%molType)%torsion(torsionIndx)%mem4
         else
-          !If the newly grown atom is
-          properTors(iTors) = .false.
-          cycle
+          error stop "ERROR! CurAtom is found in the middle of the growth chain?"
         endif
         atompos(1:3, 1) = self%newconfig(1:3, atm1)
         atompos(1:3, 2) = self%newconfig(1:3, atm2)
@@ -522,32 +738,21 @@ module MolCon_BranchCBMC
       enddo
 
       !Now that we have the reference points, we can simply compute all torsion angles
-      !by adding the offset from the reference angle. We generate an angle
-      !that
+      !by
       do
         E_Tors = 0E0_dp
         phi = two_pi*grnd()
         do iTors = 1, self%nNewTorsion
-          if( .not. properTors(iTors) ) cycle
           torsionIndx = self%newTorsion(iTors)
           torsionType = self%newTorsionType(iTors)
           phi_tors = prevphi(iTors) + phi
-          E_Tors = E_Tors + TorsionData(torsionType) % torsionFF % EFunc(phi_tors)
+          E_Tors = E_Tors + TorsionData(torsionType) % torsionFF % ComputeTors(trialBox, atompos)
         enddo
-        prob_phi = exp(-trialBox%beta*E_Tors)
-        if( prob_phi > grnd() ) exit
       enddo
-      call Generate_RelativeVector(v1, r2, theta, phi, v2)
 
+      call Generate_UnitTorsion(v1,v2,r3,bond_ang,tors_angle,v3)
     endif
-     !Now that we have the vectors relative to the previous Atom, we get the
-     !absolute position of the new atom and store the position in the trial
-     !array
-    v2(1:3) = originAtom(1:3) + v2(1:3)
-    call trialBox%Boundary( v2(1), v2(2), v2(3) )
-    self%trialcoords(1:3, curatm, iTrial) = v2(1:3)
-    probGen = prob_r * prob_theta * prob_phi
-    self%trialProbGen(iTrial) = probGen
+
 
   end subroutine 
 !=======================================================================
@@ -718,17 +923,6 @@ module MolCon_BranchCBMC
     self%nRosenTrials = nRosen
 
   end subroutine
-!==========================================================================================
-  function BranchCBMC_InSchedule(self, schedule, atmcur, atm1) result(
-    implicit none
-    class(BranchCBMC), intent(in) :: self
-    integer, intent(in) :: schedule(:)
-    logical :: 
-
-    
-
-
-  end function
 !=======================================================================
 end module
 !==========================================================================================

@@ -1,0 +1,84 @@
+#======================================
+  set rng_seed -6 #RNG Seed. Negative numbers turn this into a time based seed. 
+  set NeighSkin 4.0 #Default neighbor skin for the neighborlists
+  set moves 2194 #Number of MC moves per cycle
+  set cycles 10000 #Number of Cycles in total to perform
+  set screenfrequency 100 #Prints to the screen every 100 cycles
+  set configfrequency 100 #How often to print the current Configuration Files.
+
+   # Sets the simulation to Metropolis style sampling. This is the default for NVT, NPT, uVT, etc.
+  SamplingType Metropolis
+
+  #This block is for the UmbrellaWHAM biased 
+  #sampling technique. If you're just running
+  #standard NVT, NPT, etc. type ensembles
+  #you don't need to worry about this. 
+
+#  SamplingType UmbrellaWHAM
+#  modify Sampling biasvariables 1
+#  modify Sampling analysis 1
+#  modify Sampling bounds 1  4 1.0 5.0
+#  modify Sampling reference 1.0
+#  modify Sampling whamfreq 100000
+
+  ForceField "LJForcefield.clFF"
+
+  Create Boxes
+    fromfile "LJ_Config.clssy"
+    fromfile "LJ_Gas_Config.clssy"
+  End_Create
+
+
+  #Box 1's thermodynamical variables. 
+  modify box 1 energycalc 1
+  modify box 1 temperature 0.7 
+  modify box 1 chempotential 1 0.0
+  #Box 1's Neighborlist parameters  
+  modify box 1 buildfreq 10
+  NeighList  1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 22.5
+
+
+  #Box 2's thermodynamical variables. 
+  modify box 2 energycalc 1
+  modify box 2 temperature 0.7
+  modify box 2 buildfreq 10
+  #Box 2's Neighborlist parameters  
+  modify box 2 chempotential 1 0.0
+  NeighList  2 cellrsqlist 1
+  modify box 2 neighlist 1 rcut 50.5
+
+   #Define the types of Monte Carlo moves to use for this simulation
+   #Since we're doing an LJ system we only need moves to shift the atoms around the box
+   #and then the Volume Swap and Atom Swap moves for the Gibbs Ensemble
+  Create Moves
+    VolExchange 1.0   
+    ParticleExchange 100.0
+    MolTranslation 569.0
+  End_Create
+  modify move 1 tunemax .true.
+  modify move 1 style log
+  modify move 1 maxdv 0.0001
+#
+  modify move 2 maxdisplace 0.05
+  modify move 2 dynamiclimit 1.0
+  modify move 2 tunemax .true.
+
+  modify move 3 tunemax .true.
+
+
+   #Co-existance densities is one of the primary uses of GEMC so
+   #to measure this we block average the densities of both boxes
+  Create Analysis
+     blockaverage 1 density 1 500 "liq_density.dat"
+     blockaverage 2 density 1 500 "gas_density.dat"
+  End_Create
+
+   #This block prints a lammps style trajectory file every 500 steps for both boxes
+  Create trajectory
+    dump 1  500 "Traj&.dump"
+    dump 2  500 "GasTraj&.dump"
+  End_Create
+
+  Run
+#=====================================
