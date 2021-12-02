@@ -211,6 +211,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % inatmps = self % inatmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%newPart)
 
 
     nType = floor(nMolTypes * grnd() + 1E0_dp)
@@ -383,6 +384,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % outatmps = self % outatmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%oldPart)
 
     !Propose move
     if(.not. present(forceid) ) then

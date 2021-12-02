@@ -156,6 +156,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % inatmps = self % inatmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialBox, self%newPart)
 
     nType = floor(nMolTypes * grnd() + 1E0_dp)
     if(trialBox%NMol(nType) + 1 > trialBox%NMolMax(nType)) then
@@ -280,6 +281,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % outatmps = self % outatmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialBox, self%oldPart)
 
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)

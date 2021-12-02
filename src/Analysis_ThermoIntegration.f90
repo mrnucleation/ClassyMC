@@ -82,13 +82,16 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
-  subroutine ThermoInt_CalcNewState(self, disp, newVal)
+  subroutine ThermoInt_CalcNewState(self, disp, accept, newVal)
     use AnalysisData, only: analyCommon
     use CoordinateTypes, only: Perturbation
     implicit none
     class(ThermoIntegration), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
+    logical, intent(out) :: accept
+
+    accept = .true.
 
     if( self%pushedValue ) then
       select type( anaVar => analyCommon(self%analyID)%val )

@@ -57,7 +57,7 @@ use VarPrecision
 
 
     accept = .true.
-
+    call self%LoadBoxInfo(trialBox, self%disp)
     ! Choose an atom to remove
     reduIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
     call FindMolecule(trialbox, reduIndx, nTarget)

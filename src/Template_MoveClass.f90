@@ -20,6 +20,7 @@ module MoveClassDef
       procedure, pass :: GetAcceptRate
       procedure, pass :: GetBoxProb
       procedure, pass :: ProcessIO
+      procedure, pass :: LoadBoxInfo
       procedure, pass :: UniformMoleculeSelect
       procedure, pass :: UniformAtomSelect
 !      procedure, pass :: Maintenance 
@@ -47,6 +48,20 @@ module MoveClassDef
     write(0,*) "FullMove for this move type has not been defined!"
     error stop
     accept = .true.
+  end subroutine
+!=========================================================================
+  subroutine LoadBoxInfo(self, trialBox, disp)
+    ! Places the information such as boxID into
+    use CoordinateTypes, only: Perturbation
+    class(MCMove), intent(inout) :: self
+    class(SimpleBox), intent(inout) :: trialBox
+    class(Perturbation), intent(inout) :: disp(:)
+    integer :: iDisp
+
+    do iDisp = 1, size(disp)
+      disp(iDisp)%boxID = trialBox%GetBoxID()
+    enddo
+
   end subroutine
 !=========================================================================
   function GetAcceptRate(self) result(rate)

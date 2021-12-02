@@ -112,8 +112,8 @@ use VarPrecision
     integer :: molType, molStart, molEnd
     integer :: nInsPoints
     class(SimpleBox), pointer :: box1, box2
-    real(dp) :: Prob, ProbSubIn, ProbSubOut, Norm, extraTerms, half
-    real(dp) :: vol
+    real(dp) :: Prob, ProbForGen, ProbRevGen, Norm, extraTerms, half
+    real(dp) :: vol1, vol2
     real(dp) :: reduced(1:3)
     real(dp) :: E_Diff1, E_Diff2
     real(dp) :: E_Inter1, E_Intra1
@@ -128,6 +128,8 @@ use VarPrecision
     !Randomly choose which boxes will exchange particles
     boxNum = ListRNG(self%boxProb)
     box1 => BoxArray(boxNum)%box
+    call self%LoadBoxInfo(box1, self%oldPart)
+
 
 
     !To avoid picking the same box twice, rescale the probability such that
@@ -148,6 +150,7 @@ use VarPrecision
     enddo
     boxNum = ListRNG(rescale)
     box2 => BoxArray(boxNum)%box
+    call self%LoadBoxInfo(box2, self%newPart)
 
 
     !Increment attempt counter.
@@ -206,7 +209,7 @@ use VarPrecision
     enddo
 
 
-    call MolData(molType) % molConstruct % GenerateConfig(box2, self%newPart(1:nAtoms), ProbSubIn, accept ,self%insPoint, self%insProb)
+    call MolData(molType) % molConstruct % GenerateConfig(box2, self%newPart(1:nAtoms), ProbForGen, accept ,self%insPoint, self%insProb)
     if(.not. accept) then
       return
     endif
@@ -263,7 +266,7 @@ use VarPrecision
     enddo
     call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), &
                                                          box1, &
-                                                         ProbSubOut, &
+                                                         ProbRevGen, &
                                                          accept, &
                                                          self%insPoint(1:3, 1:nInsPoints), &
                                                          self%insProb(1:nInsPoints)) 
@@ -271,22 +274,27 @@ use VarPrecision
 
     !Forward Probability = 1/N_box1 * 1/vol_Box2 * ForwardGenProbility
     !Reverse Probability = 1/(N_box2+1) * 1/vol_Box1 * ReverseGenProbility
-    !Rev/For = N_box1 * vol_box2 / ( (N_box2+1) * vol_Box1 ) * GenProb
-    vol = box2 % GetThermo_String(volume)
-    Prob = real(box1%nMolTotal, dp) * vol * ProbSubOut
+    !Rev/For = N_box1 * vol_box2 / ( (N_box2+1) * vol_Box1 ) * RevGenProb/ForGenProb 
+    vol2 = box2 % GetThermo_String(volume)
+    Prob = real(box1%nMolTotal, dp) * vol2 * ProbRevGen
+!    write(*,*) "For", box1%nMolTotal, vol2, ProbRevGen
 
-    vol = box1 % GetThermo_String(volume)
-    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol * ProbSubIn)
+    vol1 = box1 % GetThermo_String(volume)
+    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol1 * ProbForGen)
+!    write(*,*) "Rev", box2%nMolTotal+1, vol1, ProbForGen
 
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), box1)
     half = sampling % GetExtraTerms(self%newpart(1:nAtoms), box2)
     extraTerms = extraTerms + half
+!    write(*,*) "extraTerms", extraTerms
 
 
     !Accept/Reject
     accept = sampling % MakeDecision2Box(box1,  box2, E_Diff1, E_Diff2, &
                             self%oldPart(1:1), self%newPart(1:nAtoms), inprob=prob, &
                             extraIn=extraTerms )
+!    write(*,*) E_Diff1, E_Diff2, accept
+!    write(*,*)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call Box1 % UpdateEnergy(E_Diff1, E_Inter1, E_Intra1)

@@ -225,7 +225,7 @@ module NestedSampling
     use AnalysisData, only: AnalysisArray
     use ParallelVar, only: nout, myid
     use Units, only: outEngUnit
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     implicit none
@@ -234,7 +234,7 @@ module NestedSampling
     integer :: nMedian, iError, arraySize
     real(dp) :: norm
     real(dp) :: sumint
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     real(dp) :: temphist(0:1000)
 #endif
     if(self%firstpass) then
@@ -245,7 +245,7 @@ module NestedSampling
 
     write(nout,*) "Updating Nested Sampling..."
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     if(self%parallel) then
       call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
       arraySize = size(self%EHist)     
@@ -296,7 +296,7 @@ module NestedSampling
 
       enddo
   !    write(nout,*) nMedian, norm, sumint
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     endif
 #endif
 
@@ -306,7 +306,7 @@ module NestedSampling
         self%EMax = self%EMedian
         self%dE = 1000.0E0_dp/(self%EMax - self%EMin)
       endif
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
       call MPI_BCast(self%EMedian, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD,  ierror)
 #endif
     else

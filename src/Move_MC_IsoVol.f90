@@ -68,6 +68,7 @@ module MCMove_Isovol
     real(dp) :: E_Diff, E_Inter, E_Intra, scaleFactor
 
     self % atmps = self % atmps + 1E0_dp
+    call self%LoadBoxInfo(trialBox, self%disp)
     select case(self%style)
       case(1) !Log Scale
         dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)

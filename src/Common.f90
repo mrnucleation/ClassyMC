@@ -4,6 +4,7 @@ module CoordinateTypes
  
   !Base Perturbation Class
   type :: Perturbation
+    integer :: boxID=1 
   end type
 
 

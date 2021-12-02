@@ -73,6 +73,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%disp)
 
     !Propose move
     rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp )

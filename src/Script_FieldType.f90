@@ -14,6 +14,7 @@ contains
     use FF_Hybrid, only: Pair_Hybrid
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use FF_EasyEP_LJ_Cut, only: EP_LJ_Cut
+    use FF_EasyEP_LJ_CutShift, only: EP_LJ_CutShift
     use FF_EasyEP_LJ_Ele_Cut, only: EP_LJ_Ele_Cut
     use FF_Pair_LJ_Wall, only: Pair_LJ_Wall
     use FF_Pair_LJ_Shift, only: Pair_LJ_Shift
@@ -76,7 +77,8 @@ contains
 
 
       case("lj_shift")
-        allocate(Pair_LJ_Shift::EnergyCalculator(FFNum) % Method)
+!        allocate(Pair_LJ_Shift::EnergyCalculator(FFNum) % Method)
+        allocate(EP_LJ_CutShift::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut/Shift style"
 
       case("lj_q_cut")

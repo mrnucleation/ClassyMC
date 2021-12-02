@@ -9,7 +9,7 @@ module Anaylsis_DensityOfStates
 !    integer :: IOUnit = -1
 !    integer :: UpdateFreq = -1
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     logical :: parallel = .true.
 #else
     logical  :: parallel = .false.
@@ -106,7 +106,7 @@ module Anaylsis_DensityOfStates
 
     allocate(self%temphist(1:self%nBins) )
     self%temphist = 0E0_dp
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     if(myid == 0) then
       allocate(self%hist(1:self%nBins) )
       self%hist = 0E0_dp
@@ -123,7 +123,7 @@ module Anaylsis_DensityOfStates
       if(self%filename(iCharacter:iCharacter) == "&") then
         write(idString, *) myid
         self%filename = ReplaceText(self%filename, "&", trim(adjustl(idString)))
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
         self%parallel = .false.
 #endif
         exit
@@ -142,7 +142,7 @@ module Anaylsis_DensityOfStates
   end subroutine
 !=========================================================================
   subroutine DensOfStates_Maintenance(self)
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     use ParallelVar, only: myid, nout
@@ -155,7 +155,7 @@ module Anaylsis_DensityOfStates
 
 
     rewind(self%fileunit)
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     
     if(self%parallel) then
         write(nout, *) "Stopping for density of states averaging"

@@ -56,6 +56,7 @@ module Template_SimBox
       procedure, public, pass :: GetCoordinates
       procedure, public, pass :: GetAtomTypes
       procedure, public, pass :: GetAtomData
+      procedure, public, pass :: GetTypeAtoms
       procedure, public, pass :: GetMolData
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
@@ -63,6 +64,7 @@ module Template_SimBox
       procedure, public, pass :: ComputeEnergy
       procedure, public, pass :: ProcessIO
       procedure, public, pass :: DumpData
+      procedure, public, pass :: GetBoxID
       procedure, public, pass :: GetThermo
       procedure, public, pass :: GetThermo_String
       procedure, public, pass :: ThermoLookUp
@@ -106,6 +108,30 @@ module Template_SimBox
     else
         atoms => self%atoms
     endif
+
+  end subroutine
+!==========================================================================================
+function GetBoxID(self) result(boxID)
+    !Returns the start and end incidies of the atoms of this molecule type
+    !that are currently active in the box.
+    implicit none
+    class(SimBox), intent(inout) :: self
+    integer :: boxID
+
+    boxID = self%boxID
+end function
+!==========================================================================================
+subroutine GetTypeAtoms(self, iType, typeStart, typeEnd)
+    !Returns the start and end incidies of the atoms of this molecule type
+    !that are currently active in the box.
+    implicit none
+    class(SimBox), intent(inout) :: self
+    integer, intent(in) :: iType
+    integer, intent(out) :: typeStart, typeEnd
+
+    typeStart = -1
+    typeEnd = -1
+
 
   end subroutine
 !==========================================================================================

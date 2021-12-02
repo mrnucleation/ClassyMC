@@ -185,6 +185,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % inatmps = self % inatmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%newPart)
 
 !    integer(kind=atomIntType) :: molType, atmIndx, molIndx
 !    real(dp) :: x_new, y_new, z_new
@@ -322,6 +323,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % outatmps = self % outatmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%oldPart)
 
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)

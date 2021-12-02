@@ -94,6 +94,7 @@ use ClassyConstants, only: pi
 
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%disp)
 
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)

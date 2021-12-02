@@ -129,6 +129,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialBox, self%disp)
 
     !Propose move
     nMove = self%UniformMoleculeSelect(trialBox, restrict=self%validtype(1:nMolTypes))

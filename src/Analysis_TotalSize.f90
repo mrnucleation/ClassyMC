@@ -57,16 +57,22 @@ use VarPrecision
     var = self%nMol
   end function
 !=========================================================================
-  subroutine TotalSize_CalcNewState(self, disp, newVal)
+  subroutine TotalSize_CalcNewState(self, disp, accept, newVal)
     use AnalysisData, only: analyCommon
     use CoordinateTypes, only: Perturbation, Deletion, Addition, AtomExchange
     implicit none
     class(TotalSize), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
+    logical, intent(out) :: accept
     integer :: Diff
     integer :: molNew, molOld
     integer :: typeNew, typeOld
+
+    if(disp(1)%boxID /= self%boxNum) then
+      accept = .false.
+      return
+    endif
 
     Diff = 0
     select type(disp)

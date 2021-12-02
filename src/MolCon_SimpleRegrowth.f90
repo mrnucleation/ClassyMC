@@ -195,8 +195,6 @@ module MolCon_SimpleRegrowth
     end select
 
     select type(disp)
-!      class is(DisplacementNew)
-!        molType = disp(1)%molType
       class is(Addition)
         do iDisp = 1, MolData(molType)%nAtoms
           if( present(insPoint) ) then

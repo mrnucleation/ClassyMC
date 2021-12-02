@@ -10,7 +10,7 @@ module Anaylsis_BlockAverage
 !    integer :: IOUnit = -1
 !    integer :: UpdateFreq = -1
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     logical :: parallel = .true.
 #else
     logical :: parallel = .false.
@@ -92,7 +92,7 @@ module Anaylsis_BlockAverage
       if(self%filename(iCharacter:iCharacter) == "&") then
         write(idString, *) myid
         self%filename = ReplaceText(self%filename, "&", trim(adjustl(idString)))
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
         self%parallel = .false.
 #endif
         exit
@@ -111,7 +111,7 @@ module Anaylsis_BlockAverage
   end subroutine
 !=========================================================================
   subroutine BlockAvg_Maintenance(self)
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     use ParallelVar, only: myid, nout
@@ -122,7 +122,7 @@ module Anaylsis_BlockAverage
 
 
     self%writeNum = self%writeNum + 1
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     
     if(self%parallel) then
         write(nout, *) "Stopping for block averaging"

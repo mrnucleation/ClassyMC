@@ -79,6 +79,8 @@ module MCMove_Anisovol
         error stop "Invalid Scale style given"
 
     end select
+
+    call self%LoadBoxInfo(trialbox, self%disp)
     if(self%disp(1)%volNew < 0E0_dp) then
       return
     endif

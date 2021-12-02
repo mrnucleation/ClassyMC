@@ -8,7 +8,7 @@ module SimMonteCarlo
 contains
 !===========================================================================
   subroutine RunMonteCarlo
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
 
@@ -24,6 +24,7 @@ contains
     use Output_DumpCoords, only: Output_DumpData
     use RandomGen, only: sgrnd, grnd, ListRNG
     use SimControl, only: nMoves, nCycles, screenfreq, configfreq, energyCheck
+    use SimControl, only: TimeStart
     use Units, only: outEngUnit
 
     implicit none
@@ -66,7 +67,9 @@ contains
     flush(nout)
 
 
+    call CPU_TIME(TimeStart)
     call ScreenOut(iCycle, iMove)
+
     do iCycle = 1, nCycles
 
       !-----Start Move Loop
@@ -77,6 +80,7 @@ contains
           class is (MCMultiBoxMove) ! Mutli Box Move
 !            call Moves(moveNum) % Move % MultiBox (accept)
             call curmove % MultiBox (accept)
+            boxNum = -1 !Set to -1 since multiple boxes are changes
           class is (MCMove) ! Single Box Move
             if(nBoxes > 1) then
               call Moves(moveNum) % Move % GetBoxProb(boxProb)
@@ -94,7 +98,9 @@ contains
         call Analyze(iCycle, iMove, accept, .true.) !Per Move Analysis
         if(accept) then
           do iBox = 1, size(BoxArray)
-            call BoxArray(iBox)%box%CheckLists
+            if( (boxNum < 0) .or. (boxNum == iBox) ) then
+              call BoxArray(iBox)%box%CheckLists
+            endif
           enddo
         endif
       enddo 
@@ -134,7 +140,7 @@ contains
 
     call Epilogue
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
 #endif
 

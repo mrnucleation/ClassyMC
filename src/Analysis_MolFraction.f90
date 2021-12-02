@@ -27,7 +27,6 @@ use VarPrecision
 !      procedure, pass :: Initialize
       procedure, pass :: Prologue => MolFractionHist_Prologue
       procedure, pass :: Compute => MolFractionHist_Compute
-!      procedure, pass :: CalcNewState => MolFractionHist_CalcNewState
       procedure, pass :: CastCommonType => MolFractionHist_CastCommonType
       procedure, pass :: Maintenance =>  MolFractionHist_Maintenance
       procedure, pass :: ProcessIO => MolFractionHist_ProcessIO
@@ -118,7 +117,7 @@ use VarPrecision
       if(self%filename(iCharacter:iCharacter) == "&") then
         write(idString, *) myid
         self%filename = ReplaceText(self%filename, "&", trim(adjustl(idString)))
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
         self%parallel = .false.
 #endif
         exit
@@ -137,7 +136,7 @@ use VarPrecision
 !=========================================================================
   subroutine MolFractionHist_Maintenance(self)
     use ClassyConstants, only: pi
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     use ParallelVar, only: myid, nout, p_size
@@ -148,7 +147,7 @@ use VarPrecision
     integer :: nSamples
     real(dp) :: frac, norm, volume
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     
     if(self%parallel) then
         write(nout, *) "Stopping for block averaging"

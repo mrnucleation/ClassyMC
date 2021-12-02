@@ -46,6 +46,7 @@ module UmbrellaWHAMRule
     contains
        procedure, pass :: Constructor => UmbrellaWHAM_Constructor
        procedure, pass :: MakeDecision => UmbrellaWHAM_MakeDecision
+       procedure, pass :: MakeDecision2Box => UmbrellaWHAM_MakeDecision2Box
        procedure, pass :: UpdateStatistics => UmbrellaWHAM_UpdateStatistics
 
        procedure, pass :: GetBiasIndex => UmbrellaWHAM_GetBiasIndex
@@ -195,6 +196,7 @@ module UmbrellaWHAMRule
     self%NewBias = 0E0_dp
     self%TempHist = 0E0_dp
 
+
     write(nout,*) self%refVals, i 
     write(nout,*) "Bin Size:", self%UBinSize
 !    self%oldIndx = self % GetBiasIndex()
@@ -213,7 +215,8 @@ module UmbrellaWHAMRule
     real(dp), intent(in), optional:: extraIn
     real(dp), intent(in) :: E_Diff
 
-    logical :: accept
+    logical :: accept, indxchanged
+    logical :: usebias
     integer :: iBias, indx
     real(dp) :: biasE, biasOld, biasNew
     real(dp) :: extraTerms, probTerm
@@ -231,40 +234,40 @@ module UmbrellaWHAMRule
       error stop
     endif
 
+    indxchanged = .false.
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
-      call AnalysisArray(indx) % func % CalcNewState(disp)
+      call AnalysisArray(indx) % func % CalcNewState(disp, accept=usebias)
+      if(usebias) indxchanged = .true.
     enddo
 
     self%oldIndx = self % GetBiasIndex()
-    call self%GetNewBiasIndex(self%newIndx, accept)
-
-    if(.not. accept) then
-!      self%UHist(self%oldIndx) = self%UHist(oldIndx) + 1E0_dp
-!      write(*,*) "Early Reject"
-      return
+    if(indxchanged) then
+      call self%GetNewBiasIndex(self%newIndx, accept)
+    else
+      self%newIndx = self%oldIndx
     endif
 
-!    write(*,*) self%oldIndx, self%newIndx
+    if(.not. accept) then
+      return
+    endif
 
     biasOld = self%UBias(self%oldIndx)
     biasNew = self%UBias(self%newIndx)
 
-     if(present(extraIn)) then
+    if(present(extraIn)) then
       extraTerms = extraIn
     else
       extraTerms = 0E0_dp
     endif
 
 
-
-
-!    write(*,*) "Bias", self%oldindx, biasOld, self%newIndx, biasNew
-
     accept = .false.
+!    write(*,*) "Bias1B", E_diff, -trialBox%beta * E_Diff
+!    write(*,*) "    ", biasOld, biasNew,  probTerm, extraTerms
     biasE = -trialBox%beta * E_Diff + probTerm + (biasNew-biasOld) + extraTerms
-!    write(*,*) "Energy:", E_diff
-!    write(*,*) "Prob:", biasE, log(inProb), extraTerms, trialBox%beta, biasNew-biasOld
+!    write(*,*) "    ",  biasE
+!    write(*,*)
     if(biasE >= 0.0E0_dp) then
       accept = .true.
     elseif(biasE > log(grnd()) ) then
@@ -272,6 +275,88 @@ module UmbrellaWHAMRule
     endif
 
   end function
+!====================================================================
+  function UmbrellaWHAM_MakeDecision2Box(self, trialBox1,  trialBox2, E_Diff1, E_Diff2, &
+                                       disp1, disp2, inProb, &
+                                       logProb, extraIn ) result(accept)
+    use Template_SimBox, only: SimBox
+    use AnalysisData, only: AnalysisArray
+    use RandomGen, only: grnd
+    use ParallelVar, only: nout
+    implicit none
+    class(UmbrellaWHAM), intent(inout) :: self
+    class(SimBox), intent(in) :: trialBox1, trialBox2
+    class(Perturbation), intent(in) :: disp1(:), disp2(:)
+    real(dp), intent(in) :: E_Diff1, E_Diff2
+    real(dp), intent(in), optional :: inProb, logProb, extraIn
+    logical :: accept
+    logical :: usebias
+    integer :: iDisp, iBias
+    integer :: indx
+    integer :: biasNew, biasOld
+    real(dp) :: biasE, chemPot, extraTerms, probTerm, rannum
+
+
+
+    accept = .false.
+    if(present(inProb)) then
+      if(inProb <= 0E0_dp) then
+        return
+      endif
+    endif
+
+    if(present(extraIn)) then
+      extraTerms = extraIn
+    else
+      extraTerms = 0E0_dp
+    endif
+
+    if(present(inProb)) then
+      probTerm = log(inProb)
+    elseif(present(logProb)) then
+      probTerm = logProb
+    else
+      write(0,*) "Coding Error! Probability has not been passed into Sampling "
+      error stop
+    endif
+
+    do iBias = 1, self%nBiasVar
+      indx = self%AnalysisIndex(iBias)
+      call AnalysisArray(indx) % func % CalcNewState(disp1, usebias)
+      call AnalysisArray(indx) % func % CalcNewState(disp2, usebias)
+    enddo
+
+    self%oldIndx = self % GetBiasIndex()
+    call self%GetNewBiasIndex(self%newIndx, accept)
+!    write(*,*) self%oldIndx, self%newIndx
+
+    if(.not. accept) then
+      return
+    endif
+
+    biasOld = self%UBias(self%oldIndx)
+    biasNew = self%UBias(self%newIndx)
+
+
+!    write(*,*) "Bias2b", E_diff1, E_Diff2
+!    write(*,*) "Bias", -trialBox1%beta*E_diff1, -trialBox2%beta*E_Diff2
+!    write(*,*) "    ", biasOld, biasNew
+!    write(*,*) "    ", probTerm, extraTerms
+    biasE = -trialBox1%beta*E_Diff1 - trialBox2%beta*E_Diff2 + probTerm + extraTerms + (biasNew-biasOld)
+    rannum = grnd()
+!    write(*,*) "    ",  biasE, log(rannum)
+    accept = .false.
+    if(biasE >= 0.0E0_dp) then
+      accept = .true.
+!      write(*,*) "???"
+    elseif( biasE >= log(rannum) ) then
+      accept = .true.
+    endif
+!    write(*,*) "Accept: ", accept
+!    write(*,*)
+
+  end function
+
 !==========================================================================
   function UmbrellaWHAM_GetBiasIndex(self)  result(biasIndx)
     use AnalysisData, only: AnalysisArray, analyCommon
@@ -693,7 +778,7 @@ module UmbrellaWHAMRule
 !     by collecting histogram data from across each thread. 
   subroutine UmbrellaWHAM_AdjustHist(self)
     use ParallelVar, only: myid, nout, ierror
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     implicit none
@@ -703,14 +788,14 @@ module UmbrellaWHAMRule
     real(qp) :: F_Estimate(1:self%nWhamItter), F_Old(1:self%nWhamItter), fSum, denomSum
     real(dp) :: tol, refBias
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     write(nout,*) "Halting for WHAM"
     call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
 #endif
     
 !      This block condences the histogram data from all the different processors
 !      into one collective array on the root (myid = 0) processor.        
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     arraySize = size(self%UHist)     
     if(myid .eq. 0) then
       self%TempHist = 0E0_dp
@@ -831,7 +916,7 @@ module UmbrellaWHAMRule
     endif      !End of processor 0 only block
 
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
 !      Distribute the new free energy estimate to all threads so that they can continue the simulation
 !      with the new free energy. 

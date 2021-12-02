@@ -137,6 +137,7 @@ module FF_EasyPair_Cut
       
 
     if( self%usetailcorrection ) then
+      E_Corr = 0E0_dp
       call self%TailCorrection( curbox, E_Corr )
       E_Total = E_Total + E_Corr
       write(nout,*) "Total Tail Corrections:", E_Corr
@@ -194,6 +195,7 @@ module FF_EasyPair_Cut
   end subroutine
   !=====================================================================
   subroutine Shift_EasyPair_Cut_Single(self, curbox, disp, E_Diff, accept, tempList, tempNNei)
+    USE OMP_LIB
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
@@ -254,9 +256,9 @@ module FF_EasyPair_Cut
         call curbox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-          if(iAtom == jAtom) then
-            write(*,*) "NeighborList Error!", iAtom, jAtom
-          endif
+!          if(iAtom == jAtom) then
+!            write(*,*) "NeighborList Error!", iAtom, jAtom
+!          endif
           E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
           E_Diff = E_Diff - E_Pair
           curbox % dETable(iAtom) = curbox % dETable(iAtom) - E_Pair
@@ -374,6 +376,7 @@ module FF_EasyPair_Cut
   end subroutine
   !=====================================================================
   subroutine OrthoVol_EasyPair_Cut(self, curbox, disp, E_Diff, accept)
+    use Common_MolInfo, only: nMolTypes
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
@@ -382,6 +385,7 @@ module FF_EasyPair_Cut
     logical, intent(out) :: accept
 
     integer :: iAtom, jAtom, maxNei, listIndx, jNei
+    integer :: iType, typeStart, typeEnd
     integer :: atmType1, atmType2
     integer :: molIndx1, molIndx2
     real(dp) :: iTemp(1:3), jTemp(1:3)
@@ -399,48 +403,50 @@ module FF_EasyPair_Cut
     call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
     call curbox%GetCoordinates(atoms)
     E_Diff = 0E0_dp
-    do iAtom = 1, curbox%nMaxAtoms-1
-      if(.not. curbox%IsActive(iAtom) ) then
-        cycle
-      endif
-      atmType1 = curbox % AtomType(iAtom)
-      molIndx1 = curbox % MolIndx(iAtom)
-      dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
-      dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
-      dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
-      iTemp(1:3) = atoms(1:3,iAtom) - curbox % centerMass(1:3, molIndx1)
-      call curbox%Boundary(iTemp(1), iTemp(2), iTemp(3))
-      iTemp(1:3) = iTemp(1:3) + curbox % centerMass(1:3, molIndx1)
-      do jNei = 1, nNeigh(iAtom)
-        jAtom = neighlist(jNei, iAtom)
-        if(jAtom <= iAtom) then
-          cycle
-        endif
-        molIndx2 = curbox % MolIndx(jAtom)
-        dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
-        dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
-        dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
-        jTemp(1:3) = atoms(1:3,jAtom) - curbox % centerMass(1:3, molindx2)
-        call curbox%Boundary(jTemp(1), jTemp(2), jTemp(3))
-        jTemp(1:3) = jTemp(1:3) + curbox % centerMass(1:3, molindx2)
-        rx =  iTemp(1) + dxi - jTemp(1) - dxj
-        ry =  iTemp(2) + dyi - jTemp(2) - dyj
-        rz =  iTemp(3) + dzi - jTemp(3) - dzj
+   do iType = 1, nMolTypes
+      call curbox%GetTypeAtoms(iType, typeStart, typeEnd)
+      if(typeStart < 1) cycle
 
-        call curbox%BoundaryNew(rx, ry, rz, disp)
-        rsq = rx*rx + ry*ry + rz*rz
-        atmType2 = curbox % AtomType(jAtom)
-        if(rsq < self%rCutSq) then
-          rmin_ij = self%rMinTable(atmType2, atmType1)
-          if(rsq < rmin_ij) then
-            accept = .false.
-            return
+      do iAtom = typeStart, typeEnd
+        atmType1 = curbox % AtomType(iAtom)
+        molIndx1 = curbox % MolIndx(iAtom)
+        dxi = curbox % centerMass(1, molIndx1) * (disp(1)%xScale-1E0_dp)
+        dyi = curbox % centerMass(2, molIndx1) * (disp(1)%yScale-1E0_dp)
+        dzi = curbox % centerMass(3, molIndx1) * (disp(1)%zScale-1E0_dp)
+        iTemp(1:3) = atoms(1:3,iAtom) - curbox % centerMass(1:3, molIndx1)
+        call curbox%Boundary(iTemp(1), iTemp(2), iTemp(3))
+        iTemp(1:3) = iTemp(1:3) + curbox % centerMass(1:3, molIndx1)
+        do jNei = 1, nNeigh(iAtom)
+          jAtom = neighlist(jNei, iAtom)
+          if(jAtom <= iAtom) then
+            cycle
           endif
-          E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
-          E_Diff = E_Diff + E_Pair
-          curbox % dETable(iAtom) = curbox % dETable(iAtom) + E_Pair
-          curbox % dETable(jAtom) = curbox % dETable(jAtom) + E_Pair
-        endif
+          molIndx2 = curbox % MolIndx(jAtom)
+          dxj = curbox % centerMass(1,molIndx2) * (disp(1)%xScale-1E0_dp)
+          dyj = curbox % centerMass(2,molIndx2) * (disp(1)%yScale-1E0_dp)
+          dzj = curbox % centerMass(3,molIndx2) * (disp(1)%zScale-1E0_dp)
+          jTemp(1:3) = atoms(1:3,jAtom) - curbox % centerMass(1:3, molindx2)
+          call curbox%Boundary(jTemp(1), jTemp(2), jTemp(3))
+          jTemp(1:3) = jTemp(1:3) + curbox % centerMass(1:3, molindx2)
+          rx =  iTemp(1) + dxi - jTemp(1) - dxj
+          ry =  iTemp(2) + dyi - jTemp(2) - dyj
+          rz =  iTemp(3) + dzi - jTemp(3) - dzj
+
+          call curbox%BoundaryNew(rx, ry, rz, disp)
+          rsq = rx*rx + ry*ry + rz*rz
+          atmType2 = curbox % AtomType(jAtom)
+          if(rsq < self%rCutSq) then
+            rmin_ij = self%rMinTable(atmType2, atmType1)
+            if(rsq < rmin_ij) then
+              accept = .false.
+              return
+            endif
+            E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
+            E_Diff = E_Diff + E_Pair
+            curbox % dETable(iAtom) = curbox % dETable(iAtom) + E_Pair
+            curbox % dETable(jAtom) = curbox % dETable(jAtom) + E_Pair
+          endif
+        enddo
       enddo
     enddo
 

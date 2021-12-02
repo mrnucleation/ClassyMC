@@ -29,12 +29,16 @@ module AnaylsisClassDef
     class(Analysis), intent(inout) :: self
   end subroutine
 !=========================================================================
-  subroutine CalcNewState(self, disp, newVal)
+  subroutine CalcNewState(self, disp, accept, newVal)
     use CoordinateTypes, only: Perturbation
     implicit none
     class(Analysis), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
+    logical, intent(out) :: accept
+
+    accept = .false.
+
   end subroutine
 !=========================================================================
   subroutine Compute(self, accept)

@@ -47,6 +47,7 @@ use VarPrecision
 
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialBox, self%disp)
 
 !    self%disp(1)%newAtom = .false.
     self%disp(1)%MolType = 1

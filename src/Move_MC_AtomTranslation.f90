@@ -73,7 +73,7 @@ use VarPrecision
     real(dp) :: E_Diff, E_Inter, E_Intra
     real(dp), parameter :: Prob = 1E0_dp
 
-    boxID = trialBox % boxID
+    call self%LoadBoxInfo(trialBox, self%disp)
     self % atmps = self % atmps + 1E0_dp
     self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.

@@ -219,11 +219,13 @@ use Template_NeighList, only: NeighListDef
   end subroutine
 !===================================================================================
   subroutine CellRSqList_BuildList(self, listindx)
-    use SearchSort, only: QSort
+    use SearchSort, only: QSort, IsSorted
+    use Common_MolInfo, only: nMolTypes
     implicit none
     class(CellRSqList), intent(inout) :: self
     integer, intent(in) :: listindx
 
+    integer :: iType, typeStart, typeEnd
     integer :: iAtom, jNei, jAtom
 !    integer :: maxAtoms
     integer :: nCells
@@ -297,52 +299,62 @@ use Template_NeighList, only: NeighListDef
     self%cellID = 0
     self%nCellAtoms = 0
     self%cellList = 0
-    do iAtom = 1, self%maxAtoms
-      if( .not. self%parent%IsActive(iAtom) ) then
-        cycle
-      endif
-
-      binx = floor((coords(1, iAtom) - boxdim(1,1))/dx)
-      biny = floor((coords(2, iAtom) - boxdim(1,2))/dy)
-      binz = floor((coords(3, iAtom) - boxdim(1,3))/dz)
-      cellIndx = self % GetCellIndex(binx, biny, binz)
-      self % cellID(iAtom) = cellIndx
-      self % nCellAtoms(cellIndx) = self % nCellAtoms(cellIndx) + 1
-      self % cellList(self%nCellAtoms(cellIndx), cellIndx) = iAtom
+    do iType = 1, nMolTypes
+      call self%parent%GetTypeAtoms(iType, typeStart, typeEnd)
+      if(typeStart < 1) cycle
+      do iAtom = typeStart, typeEnd
+!        if( .not. self%parent%IsActive(iAtom) ) then
+!          cycle
+!        endif
+        binx = floor((coords(1, iAtom) - boxdim(1,1))/dx)
+        biny = floor((coords(2, iAtom) - boxdim(1,2))/dy)
+        binz = floor((coords(3, iAtom) - boxdim(1,3))/dz)
+        cellIndx = self % GetCellIndex(binx, biny, binz)
+        self % cellID(iAtom) = cellIndx
+        self % nCellAtoms(cellIndx) = self % nCellAtoms(cellIndx) + 1
+        self % cellList(self%nCellAtoms(cellIndx), cellIndx) = iAtom
+      enddo
     enddo
 
     self%nNeigh = 0
     self%list = 0
-    do iAtom = 1, self%maxAtoms
-      if(.not. self%parent%IsActive(iAtom) ) then
-        cycle
-      endif
-      call self%GetCellAtoms(nCellAtoms, self%atomlist, atmIndx=iAtom)
-      do jNei = 1, nCellAtoms
-        jAtom = self%atomlist(jNei)
-        if(jAtom <= iAtom) cycle
-        if( self%parent%MolIndx(iAtom) == self%parent%MolIndx(jAtom)) cycle
-        rx = coords(1, iAtom) - coords(1, jAtom)
-        ry = coords(2, iAtom) - coords(2, jAtom)
-        rz = coords(3, iAtom) - coords(3, jAtom)
-        call self%parent%Boundary(rx,ry,rz)
-        rsq = rx*rx + ry*ry + rz*rz
-        if(rsq < self%rCutSq) then
-          self%nNeigh(iAtom) = self%nNeigh(iAtom) + 1
-          self%list( self%nNeigh(iAtom), iAtom ) = jAtom
+    do iType = 1, nMolTypes
+      call self%parent%GetTypeAtoms(iType, typeStart, typeEnd)
+      if(typeStart < 1) cycle
+      do iAtom = typeStart, typeEnd
+!        if(.not. self%parent%IsActive(iAtom) ) then
+!          cycle
+!        endif
+        call self%GetCellAtoms(nCellAtoms, self%atomlist, atmIndx=iAtom)
+        do jNei = 1, nCellAtoms
+          jAtom = self%atomlist(jNei)
+          if(jAtom <= iAtom) cycle
+          if( self%parent%MolIndx(iAtom) == self%parent%MolIndx(jAtom)) cycle
+          rx = coords(1, iAtom) - coords(1, jAtom)
+          ry = coords(2, iAtom) - coords(2, jAtom)
+          rz = coords(3, iAtom) - coords(3, jAtom)
+          call self%parent%Boundary(rx,ry,rz)
+          rsq = rx*rx + ry*ry + rz*rz
+          if(rsq < self%rCutSq) then
+            self%nNeigh(iAtom) = self%nNeigh(iAtom) + 1
+            self%list( self%nNeigh(iAtom), iAtom ) = jAtom
 
-          self%nNeigh(jAtom) = self%nNeigh(jAtom) + 1
-          self%list( self%nNeigh(jAtom), jAtom ) = iAtom
-        endif
+            self%nNeigh(jAtom) = self%nNeigh(jAtom) + 1
+            self%list( self%nNeigh(jAtom), jAtom ) = iAtom
+          endif
+        enddo
       enddo
     enddo
 
-    do iAtom = 1, self%parent%nMaxAtoms
-      if( .not. self%parent%IsActive(iAtom) ) then
-        cycle
-      endif
-      nNeigh = self%nNeigh(iAtom)
-      call QSort(self%list(1:nNeigh, iAtom))
+   do iType = 1, nMolTypes
+      call self%parent%GetTypeAtoms(iType, typeStart, typeEnd)
+      if(typeStart < 1) cycle
+      do iAtom = typeStart, typeEnd
+        nNeigh = self%nNeigh(iAtom)
+        if(.not. IsSorted(self%list(1:nNeigh, iAtom))) then
+          call QSort(self%list(1:nNeigh, iAtom))
+        endif
+      enddo
     enddo
 
     self%sorted = .true.
@@ -350,7 +362,7 @@ use Template_NeighList, only: NeighListDef
   end subroutine
 !===================================================================================
   subroutine CellRSqList_SortList(self, forcesort)
-    use SearchSort, only: QSort
+    use SearchSort, only: QSort, IsSorted
     implicit none
     class(CellRSqList), intent(inout) :: self
     logical, intent(in), optional :: forcesort
@@ -370,12 +382,17 @@ use Template_NeighList, only: NeighListDef
           cycle
         endif
         nNeigh = self%nNeigh(iAtom)
-        call QSort(self%list(1:nNeigh, iAtom))
+
+        if(.not. IsSorted(self%list(1:nNeigh, iAtom))) then
+          call QSort(self%list(1:nNeigh, iAtom))
+        endif
       enddo
 
       do iCell = 1, self%nCells
         nCellAtoms = self%nCellAtoms(iCell)
-        call QSort(self%cellList(1:nCellAtoms, iCell))
+        if(.not. IsSorted(self%cellList(1:nCellAtoms, iCell))) then
+          call QSort(self%cellList(1:nCellAtoms, iCell))
+        endif
       enddo
 
       self%sorted = .true.
@@ -388,7 +405,7 @@ use Template_NeighList, only: NeighListDef
 ! To give a temporary neighborlist to addition type Monte Carlo Moves.
   subroutine CellRSqList_GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)
     use Common_MolInfo, only: nMolTypes
-    use SearchSort, only: QSort
+    use SearchSort, only: QSort, IsSorted
     implicit none
     class(CellRSqList), intent(inout) :: self
     integer, intent(in) :: iDisp
@@ -466,14 +483,16 @@ use Template_NeighList, only: NeighListDef
         endif
       enddo
 
-      call QSort(templist(1:tempNNei(iDisp), iDisp))
+      if(.not. IsSorted(templist(1:tempNNei(iDisp), iDisp))) then
+        call QSort(templist(1:tempNNei(iDisp), iDisp))
+      endif
 !      molStart = molStart + self%parent%NMolMax(jType)
 !    enddo
 !    write(2,"(A, 1000(I3))") "New",   templist(1:tempNNei(iDisp), iDisp)
   end subroutine
 !===================================================================================
   subroutine CellRSqList_GetCellAtoms(self, nAtoms, atomlist, atmindx, cellIndx) 
-    use SearchSort, only: QSort
+    use SearchSort, only: QSort, IsSorted
     implicit none
     class(CellRSqList), intent(inout) :: self
     integer, intent(in), optional :: atmindx
@@ -787,7 +806,7 @@ use Template_NeighList, only: NeighListDef
 !===================================================================================
   subroutine CellRSqList_AddMol(self, disp, tempList, tempNNei)
     use Common_MolInfo, only: nMolTypes, MolData
-    use SearchSort, only: QSort
+    use SearchSort, only: QSort, IsSorted
     implicit none
     class(CellRSqList), intent(inout) :: self
     class(Perturbation), intent(in) :: disp(:)

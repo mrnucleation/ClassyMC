@@ -15,6 +15,7 @@ OPTIMIZE_FLAGS_IFORT += -xHost
 OPTIMIZE_FLAGS_IFORT += -no-prec-div
 OPTIMIZE_FLAGS_IFORT += -no-wrap-margin
 OPTIMIZE_FLAGS_IFORT += -fpp
+OPTIMIZE_FLAGS_IFORT += -qopenmp
 #OPTIMIZE_FLAGS_IFORT += -fpe0
 #OPTIMIZE_FLAGS_IFORT += -pg
 OPTIMIZE_FLAGS_IFORT += -traceback 
@@ -27,7 +28,7 @@ OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
 #OPTIMIZE_FLAGS_GFORT += -Wmaybe-uninitialized
 #OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 OPTIMIZE_FLAGS_GFORT += -finit-real=zero -finit-integer=0
-#OPTIMIZE_FLAGS_GFORT += -pg
+OPTIMIZE_FLAGS_GFORT += -pg
 #OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic
@@ -45,7 +46,7 @@ DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug 
 
 
 
-PACKAGE_FLAGS := -DPARALLEL
+PACKAGE_FLAGS := -DMPIPARALLEL
 
 
 #PACKAGEMAKEFILES = $(shell find . -name "*.Makefile")
@@ -140,6 +141,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Hybrid.f90\
         		$(SRC)/FF_EP_LJ_Ele_Cut.f90\
         		$(SRC)/FF_EP_LJ_Cut.f90\
+						$(SRC)/FF_EP_LJ_CutShift.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_LJWall.f90\
         		$(SRC)/FF_LJ_Shift.f90\
@@ -435,6 +437,7 @@ $(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 
 $(OBJ)/FF_EP_LJ_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_EP_LJ_CutShift.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o

@@ -78,6 +78,7 @@ module SimpleSimBox
     integer, private :: rebuilds = 0
     integer, private :: dangerbuilds = 0
     real(dp), allocatable, private :: dr(:,:)
+    real(dp), allocatable, private :: drsq(:)
     real(dp), private :: largestdr = 0E0_dp
 
     ! Temporary Molecule Position Storage Arrays. 
@@ -154,6 +155,7 @@ module SimpleSimBox
     contains
       procedure, pass :: Constructor => SimpleBox_Constructor
       procedure, pass :: AllocateMolBound => SimpleBox_AllocateMolBound
+!      procedure, pass :: GetBoxID
       procedure, pass :: LoadAtomCoord => Simplebox_LoadAtomCoord
       procedure, pass :: LoadDimension => Simplebox_LoadDimension
       procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
@@ -190,6 +192,7 @@ module SimpleSimBox
       procedure, pass :: GetAtomData => SimpleBox_GetAtomData
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMolEnergy => SimpleBox_GetMolEnergy
+      procedure, pass :: GetTypeAtoms => SimpleBox_GetTypeAtoms
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
       procedure, pass :: CountAtoms => SimpleBox_CountAtoms
 !      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
@@ -257,6 +260,7 @@ module SimpleSimBox
     self%boxStr = "NoBox"
     !First begin by computing the maximium number of atoms that the box can potentially contain
     self%nMaxAtoms = 0
+    self%nMolTotal = 0
     maxMol = 0
     do iType = 1, nMolTypes
       self%nMaxAtoms = self%nMaxAtoms + self%NMolMax(iType)*MolData(iType)%nAtoms
@@ -271,6 +275,7 @@ module SimpleSimBox
     !Allocate the position and energy related arrays. 
     allocate(self%atoms(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%dr(1:3, 1:self%nMaxAtoms), stat=AllocateStatus)
+    allocate(self%drsq(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%ETable(1:self%nMaxAtoms), stat=AllocateStatus)
     allocate(self%dETable(1:self%nMaxAtoms), stat=AllocateStatus)
 
@@ -1459,6 +1464,29 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 
   end function
 !==========================================================================================
+subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
+    !Returns the start and end incidies of the atoms of this molecule type
+    !that are currently active in the box.
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(in) :: iType
+    integer, intent(out) :: typeStart, typeEnd
+
+    integer :: lastMol
+
+    if(self%NMol(iType) < 1) then
+      typeStart = -1
+      typeEnd = -1
+      return
+    endif
+
+    typeStart = self%TypeFirst(iType)
+    lastmol = self%NMol(iType)
+    call self%GetMolData(lastmol, molEnd=typeEnd)
+
+  end subroutine
+!==========================================================================================
 ! Returns the total number of atoms in the system.  Alternatively can be used to
 ! get the atoms of a single type by passing a value to atmtype
   function SimpleBox_CountAtoms(self, atmtype) result(nCount)
@@ -1466,26 +1494,34 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer, optional, intent(in) :: atmtype
+    integer :: iType, typeStart, typeEnd
     integer :: iAtom, atmType1
     integer :: nCount
 
     nCount = 0
 
     if(present(atmtype)) then
-       do iAtom = 1, self%nMaxAtoms
-         if(.not. self%IsActive(iAtom)) then
-           cycle
-         endif
+!       do iAtom = 1, self%nMaxAtoms
+!         if(.not. self%IsActive(iAtom)) then
+!           cycle
+!         endif
+     do iType = 1, nMolTypes
+       call self%GetTypeAtoms(iType, typeStart, typeEnd)
+       if(typeStart < 1) cycle
+       do iAtom = typeStart, typeEnd
          atmType1 = self%AtomType(iAtom)
          if(atmType1 == atmType) then
            nCount = nCount + 1
          endif
-      enddo
+       enddo
+     enddo
     else
-       do iAtom = 1, self%nMaxAtoms
-         if(self%IsActive(iAtom)) then
+      do iType = 1, nMolTypes
+        call self%GetTypeAtoms(iType, typeStart, typeEnd)
+        if(typeStart < 1) cycle
+        do iAtom = typeStart, typeEnd
            nCount = nCount + 1
-         endif
+        enddo 
       enddo
     endif
 
@@ -1689,12 +1725,14 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
       self % atoms(iDimn, nStartNew ) = self % atoms(iDimn, nStartOld)
       self % dr(iDimn, nStartNew ) = self % dr(iDimn, nStartOld )
     enddo
+    self % drsq(nStartNew) = self % drsq(nStartOld)
     self % ETable(nStartNew) = self % ETable(nStartOld)
 
     do iDimn = 1, self%nDimension
       self % atoms(iDimn, nStartOld) = self % atoms(iDimn, jStart)
       self % dr(iDimn, nStartOld) = self % dr(iDimn, jStart)
     enddo
+    self % drsq(nStartOld) = self % drsq(jStart)
     self % ETable(nStartOld) = self % ETable(jStart)
     self % ETable(jStart) = 0E0_dp
 
@@ -1766,6 +1804,7 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
         self % atoms(iDimn, nStart+iAtom-1 ) = self % atoms(iDimn, jStart+iAtom-1 )
         self % dr(iDimn, nStart+iAtom-1 ) = self % dr(iDimn, jStart+iAtom-1 )
       enddo
+      self % drsq(nStart+iAtom-1 ) = self % drsq(jStart+iAtom-1 )
       self % ETable(nStart+iAtom-1 ) = self % ETable(jStart+iAtom-1 )
       self % ETable(jStart+iAtom-1 ) = 0E0_dp
     enddo
@@ -1781,14 +1820,14 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 !==========================================================================================
   subroutine SimpleBox_UpdatePosition(self, disp, tempList, tempNNei)
     use CoordinateTypes
-    use Common_MolInfo, only: MolData
+    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(SimpleBox), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
-    integer :: molType
+    integer :: molType, typeStart, typeEnd
     integer :: iDisp, dispLen, dispIndx
-    integer :: iAtom, iMol, molStart, molEnd
+    integer :: iType, iAtom, iMol, molStart, molEnd, molIndx
     real(dp) :: dx, dy, dz, r, r2
     real(dp) :: dx2, dy2, dz2
     real(dp) :: temp(1:3), temp2(1:3)
@@ -1807,6 +1846,9 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
           self % dr(1, dispIndx) = self % dr(1, dispIndx) + dx
           self % dr(2, dispIndx) = self % dr(2, dispIndx) + dy 
           self % dr(3, dispIndx) = self % dr(3, dispIndx) + dz
+          self % drsq(dispIndx) = self%dr(1, dispIndx)*self%dr(1, dispIndx) + &
+                                  self%dr(2, dispIndx)*self%dr(2, dispIndx) + &
+                                  self%dr(3, dispIndx)*self%dr(3, dispIndx) 
           call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
           self % atoms(1, dispIndx) = disp(iDisp)%x_new
           self % atoms(2, dispIndx) = disp(iDisp)%y_new
@@ -1833,6 +1875,7 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
           self % atoms(2, dispIndx) = disp(iDisp)%y_new
           self % atoms(3, dispIndx) = disp(iDisp)%z_new
           self % dr(1:3, dispIndx) = 0E0_dp
+          self % drsq(dispIndx) = 0E0_dp
         enddo
         call self % NeighList(1) % AddMol(disp, tempList, tempNNei)
         call self % AddMol(disp(1)%molType)
@@ -1840,17 +1883,18 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 
        !-------------------------------------------------
       class is(OrthoVolChange)
-        do iMol = 1, self%maxMol
-          call self%GetMolData(iMol, molStart=molStart, molEnd=molEnd)
-          if( self%IsActive(molStart) ) then
-            dx = (disp(1)%xScale-1E0_dp) * self%centerMass(1, iMol)
-            dy = (disp(1)%yScale-1E0_dp) * self%centerMass(2, iMol)
-            dz = (disp(1)%zScale-1E0_dp) * self%centerMass(3, iMol)
+        do iType = 1, nMolTypes
+          do iMol = 1, self%NMol(iType)
+            molIndx = self%MolGlobalIndx(iType, iMol)
+            call self%GetMolData(molIndx, molStart=molStart, molEnd=molEnd)
+            dx = (disp(1)%xScale-1E0_dp) * self%centerMass(1, molIndx)
+            dy = (disp(1)%yScale-1E0_dp) * self%centerMass(2, molIndx)
+            dz = (disp(1)%zScale-1E0_dp) * self%centerMass(3, molIndx)
 
             do iAtom = molStart, molEnd
-              self%atoms(1:3, iAtom) = self%atoms(1:3, iAtom) - self%centerMass(1:3, iMol)
+              self%atoms(1:3, iAtom) = self%atoms(1:3, iAtom) - self%centerMass(1:3, molIndx)
               call self%Boundary(self%atoms(1,iAtom),self%atoms(2,iAtom),self%atoms(3,iAtom))
-              self%atoms(1:3, iAtom) = self%atoms(1:3, iAtom) + self%centerMass(1:3, iMol)
+              self%atoms(1:3, iAtom) = self%atoms(1:3, iAtom) + self%centerMass(1:3, molIndx)
             enddo
 
             do iAtom = molStart, molEnd
@@ -1860,17 +1904,24 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
               self % dr(1, iAtom) = self % dr(1, iAtom) + dx
               self % dr(2, iAtom) = self % dr(2, iAtom) + dy
               self % dr(3, iAtom) = self % dr(3, iAtom) + dz
+              self % drsq(iAtom) = self%dr(1, iAtom)*self%dr(1, iAtom) + &
+                                   self%dr(2, iAtom)*self%dr(2, iAtom) + &
+                                   self%dr(3, iAtom)*self%dr(3, iAtom) 
             enddo
-            self%centerMass(1, iMol) = self%centerMass(1, iMol) * disp(1)%xScale
-            self%centerMass(2, iMol) = self%centerMass(2, iMol) * disp(1)%yScale
-            self%centerMass(3, iMol) = self%centerMass(3, iMol) * disp(1)%zScale
-          endif
+            self%centerMass(1, molIndx) = self%centerMass(1, molIndx) * disp(1)%xScale
+            self%centerMass(2, molIndx) = self%centerMass(2, molIndx) * disp(1)%yScale
+            self%centerMass(3, molIndx) = self%centerMass(3, molIndx) * disp(1)%zScale
+          enddo
         enddo
         call self%UpdateVolume(disp)
-        do iAtom = 1, self%nMaxAtoms
-          if( self%IsActive(iAtom) ) then
+!        do iAtom = 1, self%nMaxAtoms
+!          if( self%IsActive(iAtom) ) then
+        do iType = 1, nMolTypes
+          call self%GetTypeAtoms(iType, typeStart, typeEnd)
+          if(typeStart < 1) cycle
+          do iAtom = typeStart, typeEnd
             call self%Boundary(self%atoms(1,iAtom),self%atoms(2,iAtom),self%atoms(3,iAtom))
-          endif
+          enddo
         enddo
 
       class is(AtomExchange)
@@ -1913,12 +1964,13 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 !==========================================================================================
 !  Checks the Neighbor List criteria periodically to see if the lists need to be rebuilt.
   subroutine SimpleBox_CheckLists(self)
+    use Common_MolInfo, only: nMolTypes
     implicit none
     class(SimpleBox), intent(inout) :: self
 
     integer :: iList
-    integer :: iAtom, iMol
-    integer :: molStart, molEnd
+    integer :: iAtom, iMol, iType
+    integer :: molIndx, molStart, molEnd
     real(dp) :: tempE, drsq
     real(dp) :: maxdr, maxdr2, molMax
     real(dp) :: neighSkin, E_RCut, Nei_RCut
@@ -1928,24 +1980,26 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
     !neighorlist rebuild.
     maxdr = 0E0_dp
     maxdr2 = 0E0_dp
-    do iMol = 1, self%maxMol
-      molmax = 0E0_dp
-      call self%GetMolData(iMol, molStart=molStart, molEnd=molEnd)
-      do iAtom = molStart, molEnd
-        if(.not. self%IsActive(iAtom)) cycle
-        drsq = self%dr(1, iAtom)*self%dr(1, iAtom) + self%dr(2, iAtom)*self%dr(2, iAtom) + &
-               self%dr(3, iAtom)*self%dr(3, iAtom)
-!        write(*,*) iAtom, drsq
-        molmax = max(drsq, molmax)
-      enddo
-      if(molmax > maxdr) then
-        maxdr2 = maxdr
-        maxdr = molmax
-      else
-        if(molmax > maxdr2) then
-          maxdr2 = molmax
+    do iType = 1, nMolTypes
+      do iMol = 1, self%NMol(iType)
+        molmax = 0E0_dp
+        molIndx = self%MolGlobalIndx(iType, iMol)
+        call self%GetMolData(molIndx, molStart=molStart, molEnd=molEnd)
+        do iAtom = molStart, molEnd
+!          drsq = self%dr(1, iAtom)*self%dr(1, iAtom) + self%dr(2, iAtom)*self%dr(2, iAtom) + &
+!                 self%dr(3, iAtom)*self%dr(3, iAtom)
+!          molmax = max(drsq, molmax)
+          molmax = max(self%drsq(iAtom), molmax)
+        enddo
+        if(molmax > maxdr) then
+          maxdr2 = maxdr
+          maxdr = molmax
+        else
+          if(molmax > maxdr2) then
+            maxdr2 = molmax
+          endif
         endif
-      endif
+      enddo
     enddo
 
     maxdr = sqrt(maxdr)

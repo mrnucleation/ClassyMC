@@ -15,6 +15,28 @@ contains
 
   end subroutine
 !======================================
+  function IsSorted(list) result(sorted)
+    !Checks if a list is already sorted from lowest to highest.
+    implicit none
+    integer, intent(in) :: list(:)
+    logical :: sorted
+    integer :: i
+    integer :: upper, lower
+
+    lower = LBound(list, dim=1)
+    upper = UBound(list, dim=1)
+    sorted = .true.
+    if(lower == upper) then
+      return
+    endif
+    do i = lower+1, upper
+      if(list(i-1) > list(i)) then
+        sorted = .false.
+        return
+      endif
+    enddo
+  end function
+!======================================
   function SimpleSearch(val, list) result(outIndx)
     implicit none
     integer, intent(in) :: val
@@ -166,8 +188,11 @@ recursive subroutine QSort(list)
   real(dp) :: x, t
   integer :: lower, upper
   integer :: i, j
+
+
   lower = LBound(list, dim=1)
   upper = UBound(list, dim=1)
+
   if(size(list) < 1) then
     return
   endif
@@ -245,6 +270,26 @@ end subroutine QSort
     enddo
 
   end function
+!======================================
+  subroutine bubbleSort(list)
+    implicit none
+    integer, intent(inout) ::  list(:)
+    integer :: lower, upper
+    integer :: i, j, n
+    lower = LBound(list, dim=1)
+    upper = UBound(list, dim=1)
+
+    n = size(list) 
+     
+    do i =lower, upper-1 
+      do j= lower, n-i-1 
+        if(list(j) > list(j+1)) then
+          call Swap(list(j), list(j+1))
+        endif
+      enddo
+    enddo
+
+  end subroutine
 !======================================
 end module
 !======================================
