@@ -207,7 +207,8 @@ recursive subroutine QSort(list)
       j=j-1
     end do
     if (i >= j) exit
-    t = list(i);  list(i) = list(j);  list(j) = t
+!    t = list(i);  list(i) = list(j);  list(j) = t
+    call Swap(list(i), list(j))
     i=i+1
     j=j-1
   end do

@@ -67,6 +67,8 @@ module Template_ForceField
     real(dp), intent(in) :: rsq
     real(dp) :: E_Pair
 
+    E_Pair = 30E0_dp
+
   end function
 !=============================================================================+
   function SinglePair_Approx(self, rsq, atmtype1, atmtype2) result(E_Pair)
@@ -106,6 +108,8 @@ module Template_ForceField
     implicit none
     class(forcefield), intent(inout) :: self
     real(dp), pointer :: rMinOut(:)
+
+    rMinOut => null()
 
   end function
 !=============================================================================+
