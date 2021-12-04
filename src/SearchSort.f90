@@ -41,36 +41,28 @@ contains
     implicit none
     integer, intent(in) :: val
     integer, intent(in) :: list(:)
-    integer :: outIndx
-    integer :: upper, lower, curIndx, listSize
+    integer :: i, outIndx
+    integer :: upper, lower, listSize
 
     lower = LBound(list, dim=1)
     upper = UBound(list, dim=1)
 
-    curIndx = lower
 
     listSize = size(list)
     if(listSize < 1) then
       outIndx = 0
       return
-!      write(0,*) "Critical Error! A list size of 0 has been passed to the sort function!"
-!      error stop 
     endif
 
 !    write(*,*) curIndx, list(curIndx)
-    do 
-      if( list(curIndx) == val ) then
-        exit
-      endif
-
-      curIndx = curIndx + 1   
-      if(curIndx > upper) then
-        curIndx = 0
+    outindx = -1
+    do i = lower, upper
+      if( list(i) == val ) then
+        outIndx = i
         exit
       endif
     enddo
  
-    outIndx = curIndx
 
   end function
 !======================================

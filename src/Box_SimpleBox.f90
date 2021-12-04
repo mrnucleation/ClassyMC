@@ -159,7 +159,7 @@ module SimpleSimBox
 !      procedure, pass :: GetBoxID
       procedure, pass :: LoadAtomCoord => Simplebox_LoadAtomCoord
       procedure, pass :: LoadDimension => Simplebox_LoadDimension
-      procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
+!      procedure, pass :: BuildNeighList => SimpleBox_BuildNeighList
       procedure, pass :: Boundary => SimpleBox_Boundary
       procedure, pass :: CheckLists => SimpleBox_CheckLists
 
@@ -551,15 +551,6 @@ module SimpleSimBox
     self%atoms(1, arrayIndx) = x
     self%atoms(2, arrayIndx) = y
     self%atoms(3, arrayIndx) = z
-
-  end subroutine
-!==========================================================================================
-  subroutine SimpleBox_BuildNeighList(self)
-    implicit none
-    class(SimpleBox), intent(inout) :: self
-    integer :: iList
-    integer :: iAtom, jAtom
-    real(dp) :: rx, ry, rz, rsq
 
   end subroutine
 !==========================================================================================
@@ -2041,7 +2032,7 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
       if( (self%maxdr + self%maxdr2) > neighSkin ) then
 !        write(*,*) maxdr, maxdr2, neighSkin
         self%rebuilds = self%rebuilds + 1
-        if(self%maxdr > neighskin*0.7E0_dp) then
+        if(self%maxdr > neighskin*0.5E0_dp) then
           self%dangerbuilds = self%dangerbuilds + 1
   !        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
         endif
@@ -2139,6 +2130,8 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
+    self%dr = 0E0_dp
+    self%drsq = 0E0_dp
     if( allocated(self%Constrain) ) then
       if( size(self%Constrain) > 0 ) then
         do iConstrain = 1, size(self%Constrain)
@@ -2189,6 +2182,8 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
+    self%dr = 0E0_dp
+    self%drsq = 0E0_dp
 
     write(nout, *) "Final Energy:", self % ETotal/outEngUnit, engStr
     if(self%ETotal /= 0) then
