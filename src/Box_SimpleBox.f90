@@ -79,6 +79,7 @@ module SimpleSimBox
     integer, private :: dangerbuilds = 0
     real(dp), allocatable, private :: dr(:,:)
     real(dp), allocatable, private :: drsq(:)
+    real(dp), private :: maxdr, maxdr2
     real(dp), private :: largestdr = 0E0_dp
 
     ! Temporary Molecule Position Storage Arrays. 
@@ -306,6 +307,7 @@ module SimpleSimBox
     self%HTotal = 0E0_dp
     self%atoms = 0.0E0_dp
     self%dr = 0E0_dp
+    self%drsq = 0E0_dp
     self%maxMol = maxMol
     self%AtomType = 0
     self%MolType = 0
@@ -359,6 +361,7 @@ module SimpleSimBox
 
     deallocate(self%atoms)
     deallocate(self%dr)
+    deallocate(self%drsq)
     deallocate(self%ETable)
     deallocate(self%dETable)
 
@@ -1831,12 +1834,14 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     real(dp) :: dx, dy, dz, r, r2
     real(dp) :: dx2, dy2, dz2
     real(dp) :: temp(1:3), temp2(1:3)
+    real(dp) :: molmax
     
     self%forceoutofdate = .true.
     select type(disp)
        !-------------------------------------------------
       class is(Displacement)
         dispLen = size(disp)
+        molmax = 0E0_dp
         do iDisp = 1, dispLen
           dispIndx = disp(iDisp) % atmIndx
           dx = disp(iDisp)%x_new - self%atoms(1, dispIndx)
@@ -1849,11 +1854,22 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
           self % drsq(dispIndx) = self%dr(1, dispIndx)*self%dr(1, dispIndx) + &
                                   self%dr(2, dispIndx)*self%dr(2, dispIndx) + &
                                   self%dr(3, dispIndx)*self%dr(3, dispIndx) 
+          molmax = max(molmax, self%drsq(dispIndx))
           call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )
           self % atoms(1, dispIndx) = disp(iDisp)%x_new
           self % atoms(2, dispIndx) = disp(iDisp)%y_new
           self % atoms(3, dispIndx) = disp(iDisp)%z_new
         enddo
+        !Update the maximum displacements since last neighbor rebuild
+        if(molmax > self%maxdr) then
+          self%maxdr2 = self%maxdr
+          self%maxdr = molmax
+        else
+          if(molmax > self%maxdr2) then
+            self%maxdr2 = molmax
+          endif
+        endif
+
         call self%ComputeCM(disp(1)%molIndx)
 
 
@@ -1897,17 +1913,28 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
               self%atoms(1:3, iAtom) = self%atoms(1:3, iAtom) + self%centerMass(1:3, molIndx)
             enddo
 
+            molmax = 0E0_dp
             do iAtom = molStart, molEnd
               self%atoms(1, iAtom) = self%atoms(1, iAtom) + dx
               self%atoms(2, iAtom) = self%atoms(2, iAtom) + dy
               self%atoms(3, iAtom) = self%atoms(3, iAtom) + dz
-              self % dr(1, iAtom) = self % dr(1, iAtom) + dx
-              self % dr(2, iAtom) = self % dr(2, iAtom) + dy
-              self % dr(3, iAtom) = self % dr(3, iAtom) + dz
-              self % drsq(iAtom) = self%dr(1, iAtom)*self%dr(1, iAtom) + &
-                                   self%dr(2, iAtom)*self%dr(2, iAtom) + &
-                                   self%dr(3, iAtom)*self%dr(3, iAtom) 
+              self%dr(1, iAtom) = self % dr(1, iAtom) + dx
+              self%dr(2, iAtom) = self % dr(2, iAtom) + dy
+              self%dr(3, iAtom) = self % dr(3, iAtom) + dz
+              self%drsq(iAtom) = self%dr(1, iAtom)*self%dr(1, iAtom) + &
+                                 self%dr(2, iAtom)*self%dr(2, iAtom) + &
+                                 self%dr(3, iAtom)*self%dr(3, iAtom) 
+              molmax = max(molmax, self%drsq(iAtom))
             enddo
+            if(molmax > self%maxdr) then
+              self%maxdr2 = self%maxdr
+              self%maxdr = molmax
+            else
+              if(molmax > self%maxdr2) then
+                self%maxdr2 = molmax
+              endif
+            endif
+
             self%centerMass(1, molIndx) = self%centerMass(1, molIndx) * disp(1)%xScale
             self%centerMass(2, molIndx) = self%centerMass(2, molIndx) * disp(1)%yScale
             self%centerMass(3, molIndx) = self%centerMass(3, molIndx) * disp(1)%zScale
@@ -1972,38 +1999,35 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     integer :: iAtom, iMol, iType
     integer :: molIndx, molStart, molEnd
     real(dp) :: tempE, drsq
-    real(dp) :: maxdr, maxdr2, molMax
+    real(dp) :: molMax
     real(dp) :: neighSkin, E_RCut, Nei_RCut
 
 
     !Check to see if the particles have shifted enough from their original position to justify a
     !neighorlist rebuild.
-    maxdr = 0E0_dp
-    maxdr2 = 0E0_dp
-    do iType = 1, nMolTypes
-      do iMol = 1, self%NMol(iType)
-        molmax = 0E0_dp
-        molIndx = self%MolGlobalIndx(iType, iMol)
-        call self%GetMolData(molIndx, molStart=molStart, molEnd=molEnd)
-        do iAtom = molStart, molEnd
-!          drsq = self%dr(1, iAtom)*self%dr(1, iAtom) + self%dr(2, iAtom)*self%dr(2, iAtom) + &
-!                 self%dr(3, iAtom)*self%dr(3, iAtom)
-!          molmax = max(drsq, molmax)
-          molmax = max(self%drsq(iAtom), molmax)
-        enddo
-        if(molmax > maxdr) then
-          maxdr2 = maxdr
-          maxdr = molmax
-        else
-          if(molmax > maxdr2) then
-            maxdr2 = molmax
-          endif
-        endif
-      enddo
-    enddo
+!    self%maxdr = 0E0_dp
+!    self%maxdr2 = 0E0_dp
+!    do iType = 1, nMolTypes
+!      do iMol = 1, self%NMol(iType)
+!        molmax = 0E0_dp
+!        molIndx = self%MolGlobalIndx(iType, iMol)
+!        call self%GetMolData(molIndx, molStart=molStart, molEnd=molEnd)
+!        do iAtom = molStart, molEnd
+!          molmax = max(self%drsq(iAtom), molmax)
+!        enddo
+!        if(molmax > self%maxdr) then
+!          self%maxdr2 = self%maxdr
+!          self%maxdr = molmax
+!        else
+!          if(molmax > self%maxdr2) then
+!            self%maxdr2 = molmax
+!          endif
+!        endif
+!      enddo
+!    enddo
 
-    maxdr = sqrt(maxdr)
-    maxdr2 = sqrt(maxdr2)
+    self%maxdr = sqrt(self%maxdr)
+    self%maxdr2 = sqrt(self%maxdr2)
 
 !    write(*,*) maxdr, maxdr2
     !Keep track of the largest displacement between rebuilds seen through the course of the simulation
@@ -2014,18 +2038,21 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
         error stop "ERROR! User set the first neighbor list's RCut shorter than required by the Forcefield!!"
       endif
       neighSkin = Nei_RCut - E_rcut
-      if( (maxdr + maxdr2) > neighSkin ) then
+      if( (self%maxdr + self%maxdr2) > neighSkin ) then
 !        write(*,*) maxdr, maxdr2, neighSkin
         self%rebuilds = self%rebuilds + 1
-        if(maxdr > neighskin*0.7E0_dp) then
+        if(self%maxdr > neighskin*0.7E0_dp) then
           self%dangerbuilds = self%dangerbuilds + 1
   !        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
         endif
-        if(maxdr > self%largestdr) then
-          self%largestdr = maxdr
+        if(self%maxdr > self%largestdr) then
+          self%largestdr = self%maxdr
         endif
         call self % NeighList(iList) % BuildList(iList)
         self%dr = 0E0_dp
+        self%drsq = 0E0_dp
+        self%maxdr = 0E0_dp
+        self%maxdr2 = 0E0_dp
       endif
     enddo
   end subroutine
