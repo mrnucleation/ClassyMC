@@ -105,8 +105,6 @@ module MCMove_Isovol
         stop "This type of box is not compatible with volume change moves."
     end select
 
-    if(.not. allocated(self%tempNNei)) allocate( self%tempNNei(1) )
-    if(.not. allocated(self%templist)) allocate( self%templist(1,1) )
     
 
     !Check Constraint

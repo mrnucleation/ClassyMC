@@ -46,8 +46,6 @@ module MCMove_VolExchange
 
 
 
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(1, 1) )
   end subroutine
 !=========================================================================
   subroutine VolExchange_MultiBox(self, accept)
@@ -100,6 +98,8 @@ module MCMove_VolExchange
     !Increment attempt counter.
     self % atmps = self % atmps + 1E0_dp
 
+
+    call box1 % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     !Randomly chose the amount of volume that will be exchanged.
     select case(self%style)
       case(1) !Log Scale

@@ -78,8 +78,6 @@ use VarPrecision
     enddo
 
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
   end subroutine
 !========================================================
@@ -171,6 +169,7 @@ use VarPrecision
 
     !Energy Calculation
 !    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:nAtoms), self%tempList, self%tempNNei, E_Diff, accept)
+    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     call trialBox%ComputeEnergyDelta(self%disp(1:nAtoms),&
                                      self%templist,&
                                      self%tempNNei, &

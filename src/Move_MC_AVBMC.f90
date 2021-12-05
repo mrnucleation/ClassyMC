@@ -93,8 +93,6 @@ use VarPrecision
     enddo
 
 
-    allocate( self%tempNNei(nMaxPerMol) )
-    allocate( self%tempList(nMaxPerBox, nMaxPerMol) )
   end subroutine
 !===============================================
   subroutine AVBMC_FullMove(self, trialBox, accept) 
@@ -236,7 +234,7 @@ use VarPrecision
     endif
     GenProb = ProbSub
 
-
+    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))
@@ -623,8 +621,6 @@ use VarPrecision
     write(nout,*) "AVBMC Radius:", self%avbmcRad
     write(nout,*) "AVBMC Volume:", self%avbmcVol
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(2000,maxAtoms ) )
     allocate( self%newPart(1:maxAtoms) )
   end subroutine
 !=========================================================================

@@ -58,8 +58,6 @@ use VarPrecision
 
 
 
-!    allocate( self%tempNNei(1) )
-!    allocate( self%tempList(200, 1) )
   end subroutine
 !========================================================
   subroutine UB_Swap_AllocateProb(self, nInsPoints)
@@ -272,6 +270,7 @@ use VarPrecision
     endif
     GenProb = ProbSub
 
+    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))
@@ -556,8 +555,6 @@ use VarPrecision
     self%ubVol = (4E0_dp/3E0_dp)*pi*self%ubRad**3
     self%ubRadSq = self%ubRad * self%ubRad
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(2000,maxAtoms ) )
     allocate( self%newPart(1:maxAtoms) )
   end subroutine
 !=========================================================================

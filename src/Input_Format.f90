@@ -360,6 +360,7 @@ contains
        finalString = line  
        sizeOld = LEN_TRIM(oldstr) 
        sizeReplace = LEN_TRIM(newstr)
+       i = 0
        do
          i = index(finalString, oldstr(:sizeOld))  
          if (i == 0) then

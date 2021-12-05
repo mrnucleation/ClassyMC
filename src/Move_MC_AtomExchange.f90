@@ -26,8 +26,6 @@ use VarPrecision
     class(MC_AtomExchange), intent(inout) :: self
 
 
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(1, 1) )
   end subroutine
 !=========================================================================
   subroutine AtomExchange_GeneratePosition(self, disp)

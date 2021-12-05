@@ -40,14 +40,23 @@ use Template_NeighList, only: NeighListDef
   subroutine RSqList_Constructor(self, parentID, rCut)
     use BoxData, only: BoxArray
     use Common_NeighData, only: neighSkin
-    use Common_MolInfo, only: nAtomTypes
+    use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ParallelVar, only: nout
     implicit none
     class(RSqList), intent(inout) :: self
     integer, intent(in) :: parentID
     real(dp), intent(in), optional :: rCut
     real(dp), parameter :: atomRadius = 0.85E0_dp  !Used to estimate an approximate volume of 
+    integer :: iType
     integer :: AllocateStatus
+    integer :: maxAtoms
+
+    maxAtoms = 0
+    do iType = 1, nMolTypes
+      if(MolData(iType)%nAtoms > maxAtoms) then
+        maxAtoms = MolData(iType)%nAtoms 
+      endif
+    enddo
 
     self%parent => BoxArray(parentID)%box
     if(.not. allocated(self%parent%atoms) ) then
@@ -81,6 +90,9 @@ use Template_NeighList, only: NeighListDef
 
     allocate( self%list(1:self%maxNei, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
     allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
+
+    allocate( self%templist(1:self%maxNei+1, 1:maxAtoms), stat=AllocateStatus )
+    allocate( self%tempNNeigh(1:maxAtoms), stat=AllocateStatus )
 
     if(.not. allocated(self%allowed) ) then
       allocate(self%allowed(1:nAtomTypes), stat=AllocateStatus )

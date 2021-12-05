@@ -214,6 +214,7 @@ use VarPrecision
       return
     endif
 
+    call box2 % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     do iAtom = 1, nAtoms
       call box2 % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))
@@ -341,8 +342,6 @@ use VarPrecision
     endif
 !    write(*,*) self%ubVol
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(2000,maxAtoms ) )
     allocate( self%newPart(1:maxAtoms) )
   end subroutine
 !=========================================================================

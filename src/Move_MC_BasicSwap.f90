@@ -64,8 +64,6 @@ use VarPrecision
 
 
 
-!    allocate( self%tempNNei(1) )
-!    allocate( self%tempList(200, 1) )
   end subroutine
 !========================================================
 !  subroutine Basic_Swap_GeneratePosition(self, disp)
@@ -200,6 +198,7 @@ use VarPrecision
     endif
 
 
+    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))
@@ -369,9 +368,11 @@ use VarPrecision
     implicit none
     class(Basic_Swap), intent(inout) :: self
     integer :: iType, maxAtoms, maxPoints, errstat
+    integer :: iBox, maxnei
 
     maxAtoms = 0
     maxPoints = 0
+    maxnei = 0
     do iType = 1, nMolTypes
       if(MolData(iType)%nAtoms > maxAtoms) then
         maxAtoms = MolData(iType)%nAtoms 
@@ -383,14 +384,8 @@ use VarPrecision
 
 
 
-    allocate( self%tempNNei(maxAtoms), stat=errstat )
-    if(errstat /= 0) then
-      error stop "Allocation Error trying to allocate tempNNei!"
-    endif
-    allocate( self%tempList(1000,maxAtoms ) )
-    if(errstat /= 0) then
-      error stop "Allocation Error trying to allocate tempList!"
-    endif
+
+
     allocate( self%newPart(1:maxAtoms) )
     if(errstat /= 0) then
       error stop "Allocation Error trying to allocate newPart!"

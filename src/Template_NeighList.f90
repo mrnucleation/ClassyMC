@@ -10,6 +10,8 @@ module Template_NeighList
       logical :: Strict = .false.
       integer, allocatable :: list(:,:)
       integer, allocatable :: nNeigh(:)
+      integer, allocatable :: templist(:,:)
+      integer, allocatable :: tempNNeigh(:)
       integer :: maxNei
       real(dp) :: rCut = -1E0_dp
       real(dp) :: rCutSq
@@ -22,6 +24,7 @@ module Template_NeighList
       procedure, pass :: BuildList
       procedure, pass :: SortList
       procedure, pass :: GetListArray
+      procedure, pass :: GetTempListArray
       procedure, pass :: GetNewList
       procedure, pass :: GetMaxNei
       procedure, pass :: GetNeighCount
@@ -71,6 +74,18 @@ module Template_NeighList
     list => self%list
  
   end subroutine
+!===================================================================================
+  subroutine GetTempListArray(self, templist,  tempNNeigh )
+    implicit none
+    class(NeighListDef), intent(inout), target :: self
+    integer, pointer, intent(inout) :: tempNNeigh(:)
+    integer, pointer, intent(inout) :: templist(:,:)
+
+    tempNNeigh => self%tempNNeigh
+    templist => self%templist
+ 
+  end subroutine
+
 !===================================================================================
   function GetMaxNei(self) result(outval)
     implicit none

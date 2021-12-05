@@ -77,8 +77,6 @@ use VarPrecision
     enddo
 
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
   end subroutine
 !========================================================
@@ -126,6 +124,7 @@ use VarPrecision
     dy = self % boxmax_dist(boxID) * (2E0_dp * grnd() - 1E0_dp)
     dz = self % boxmax_dist(boxID) * (2E0_dp * grnd() - 1E0_dp)
  
+    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     nAtoms = MolData(molType)%nAtoms
     do iAtom = 1, nAtoms
       atomIndx = molStart + iAtom - 1

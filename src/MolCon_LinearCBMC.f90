@@ -48,7 +48,7 @@ module MolCon_LinearCBMC
     integer, private, allocatable :: pathposition(:) 
     integer, private, allocatable :: schedule(:) 
     integer, private, allocatable :: scratchschedule(:) 
-    integer, private, allocatable :: tempList(:,:), tempNNei(:)
+    integer, private, pointer :: tempList(:,:), tempNNei(:)
     integer, private, allocatable :: atomtypes(:)
     real(dp), private, allocatable :: posN(:,:)
 
@@ -860,10 +860,8 @@ module MolCon_LinearCBMC
         call trialBox%GetNeighborList(self%rosenNeighList, neighlist, nNeigh)
     end select
 
-    if(.not. allocated(self%tempList)) then
+    if(.not. allocated(self%atomtypes)) then
       neiSize = size(neighlist, 1)
-      allocate( self%tempList(1:neiSize, 1:1) )
-      allocate( self%tempNNei(1:neiSize)      )
       allocate( self%atomtypes(1:neiSize)     )
       allocate( self%posN(1:3, 1:neiSize)     )
     endif
@@ -895,10 +893,8 @@ module MolCon_LinearCBMC
         class is(Addition)
           select type(trialbox)
             class is(SimpleBox)
-            call trialbox%GetNewNeighborList(self%rosenNeighList, 1, self%tempList, self%tempNNei, tempdisp(1))
+            call trialbox%GetNewNeighborList(self%rosenNeighList, 1, neighlist, nNeigh, tempdisp(1))
           end select
-          neighlist => self%tempList
-          nNeigh => self%tempNNei 
           atmNeiIndx = 1
       end select
       pos1(1:3) = self%tempcoords(1:3, iRosen)

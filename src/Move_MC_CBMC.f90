@@ -75,8 +75,6 @@ use VarPrecision
     enddo
 
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
     allocate( self%patharrays(1:maxAtoms, 1:nMolTypes) )
     self%patharrays = 0
@@ -190,13 +188,14 @@ use VarPrecision
 
     !If the particle moved a large distance get a temporary neighborlist
 
-    if(any([dx,dy,dz] > neighSkin)) then
-      do iAtom = 1, nAtoms
-        call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
-                                                  self%disp(iAtom))
-        self%disp(iAtom)%listIndex = iAtom
-      enddo 
-    endif
+!    if(any([dx,dy,dz] > neighSkin)) then
+!      call trialBox % NeighList(1) % GetTempListArray(tempList, tempNNei)
+!      do iAtom = 1, nAtoms
+!        call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
+!                                                  self%disp(iAtom))
+!        self%disp(iAtom)%listIndex = iAtom
+!      enddo 
+!    endif
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%disp(1:nRegrow) )

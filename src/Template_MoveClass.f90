@@ -10,8 +10,8 @@ module MoveClassDef
     real(dp), allocatable :: boxProb(:)
 
     !Temporary Neighborlist Variables
-    integer, allocatable :: tempNnei(:)
-    integer, allocatable :: tempList(:, :)
+    integer, pointer :: tempNnei(:) => null()
+    integer, pointer :: tempList(:, :) => null()
 
     contains
       procedure, pass :: Constructor

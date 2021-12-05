@@ -18,7 +18,6 @@ use Template_NeighList, only: NeighListDef
 !      logical :: restrictType = .false.
 !      integer, allocatable :: allowed(:)
 !      integer :: safetyCheck = .false.
-      integer, allocatable :: tempList(:)
       logical :: initialized = .false.
       integer :: maxAtoms
       integer :: nCells = 0
@@ -69,7 +68,7 @@ use Template_NeighList, only: NeighListDef
     use BoxData, only: BoxArray
     use SimpleSimBox, only: SimpleBox
     use Common_NeighData, only: neighSkin
-    use Common_MolInfo, only: nAtomTypes
+    use Common_MolInfo, only: nAtomTypes, nMolTypes, MolData
     use ParallelVar, only: nout
     implicit none
     class(CellRSqList), intent(inout) :: self
@@ -78,8 +77,14 @@ use Template_NeighList, only: NeighListDef
     real(dp), parameter :: atomRadius = 0.5E0_dp  !Used to estimate an approximate volume of 
     integer :: AllocateStatus
     real(dp), pointer :: coords(:,:)
+    integer :: iType, maxAtoms
 
-
+    maxAtoms = 0
+    do iType = 1, nMolTypes
+      if(MolData(iType)%nAtoms > maxAtoms) then
+        maxAtoms = MolData(iType)%nAtoms 
+      endif
+    enddo
 
     select type(parbox => BoxArray(parentID)%box)
       type is(SimpleBox)
@@ -116,8 +121,9 @@ use Template_NeighList, only: NeighListDef
     if(.not. self%initialized) then
         allocate( self%cellID(1:self%parent%nMaxAtoms), stat=AllocateStatus )
         allocate( self%list(1:self%maxNei+1, 1:self%parent%nMaxAtoms), stat=AllocateStatus )
-        allocate( self%templist(1:self%maxNei+1), stat=AllocateStatus )
         allocate( self%nNeigh(1:self%parent%nMaxAtoms), stat=AllocateStatus )
+        allocate( self%templist(1:self%maxNei+1, 1:maxAtoms), stat=AllocateStatus )
+        allocate( self%tempNNeigh(1:maxAtoms), stat=AllocateStatus )
         allocate( self%atomList(1:self%parent%nMaxAtoms), stat=AllocateStatus )
 
       if(.not. allocated(self%allowed) ) then
@@ -384,7 +390,9 @@ use Template_NeighList, only: NeighListDef
       do iAtom = typeStart, typeEnd
         nNeigh = self%nNeigh(iAtom)
         if(.not. IsSorted(self%list(1:nNeigh, iAtom))) then
+          call self%PrintList(2)
           call QSort(self%list(1:nNeigh, iAtom))
+          call self%PrintList(2)
         endif
       enddo
     enddo
@@ -507,8 +515,9 @@ use Template_NeighList, only: NeighListDef
         call self%parent%Boundary(rx,ry,rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-          tempNNei(iDisp) = tempNNei(iDisp) + 1
-          templist(tempNNei(iDisp), iDisp) = jAtom
+!          tempNNei(iDisp) = tempNNei(iDisp) + 1
+!          templist(tempNNei(iDisp), iDisp) = jAtom
+          call self%InsertAtom(templist(:,iDisp), tempNNei(iDisp), jAtom)
         endif
         if(present(rCount)) then
           if(rsq < rCount*rCount) then
@@ -638,8 +647,9 @@ use Template_NeighList, only: NeighListDef
     searchlist(1) = templist(1)
     do jNei = 2, nNeigh1+nNeigh2
       if(templist(jNei-1) /= templist(jNei)) then
-        nSearch = nSearch + 1
-        searchlist(nSearch) = templist(jNei)
+        call self%InsertAtom(searchlist(:), nSearch, templist(jNei))
+!        nSearch = nSearch + 1
+!        searchlist(nSearch) = templist(jNei)
       endif
     enddo
 
@@ -651,7 +661,7 @@ use Template_NeighList, only: NeighListDef
 !    write(2,*) "Atom 1:", atmindx1
 !    write(2,*) "Atom 2:", atmindx2
 !    write(2,*) 
-    call self%SortList
+!    call self%SortList
     do iSearch = 1, nSearch
       jAtom = searchlist(iSearch)
 !      write(2,"(I4,1x,A,1000(I3,1x))") jAtom,"|",self%list(1:self%nNeigh(jAtom), jAtom)
@@ -672,7 +682,7 @@ use Template_NeighList, only: NeighListDef
 !      write(2,*)
     enddo
     self%sorted = .false.
-    call self%SortList
+!    call self%SortList
 
 
     !Now that the other lists are reorganized, we need to swap the two lists
@@ -887,8 +897,10 @@ use Template_NeighList, only: NeighListDef
            binz = floor((disp(iDisp)%z_new - boxdim(1,3))/self%dz)
            cellIndx = self % GetCellIndex(binx, biny, binz)
            self % cellID(iAtom) = cellIndx
-           self % nCellAtoms(cellIndx) = self % nCellAtoms(cellIndx) + 1
-           self % cellList(self%nCellAtoms(cellIndx), cellIndx) = iAtom
+
+           call self%InsertAtom(self%cellList(:,cellIndx), self%nCellAtoms(cellIndx), iAtom)
+!           self % nCellAtoms(cellIndx) = self % nCellAtoms(cellIndx) + 1
+!           self % cellList(self%nCellAtoms(cellIndx), cellIndx) = iAtom
 
            self%nNeigh(iAtom) = tempNNei(iDisp)
            self%list(1:tempNNei(iDisp), iAtom ) = templist(1:tempNNei(iDisp), iDisp)
@@ -904,7 +916,7 @@ use Template_NeighList, only: NeighListDef
 
 !   call self%sortlist(forcesort=.true.)
 !   call self%PrintList(2)
-   call self%IntegrityCheck(1)
+!   call self%IntegrityCheck(1)
 
 
   end subroutine
@@ -936,7 +948,7 @@ use Template_NeighList, only: NeighListDef
     do iAtom = 1, MolData(nType)%nAtoms
       atmIndx = nEnd - iAtom + 1
       topAtom = topEnd - iAtom + 1
-      write(*,*) atmIndx, topAtom
+!      write(*,*) atmIndx, topAtom
       if(topAtom /= atmIndx) then
         call self%SwapAtomLists(atmIndx, topAtom)
       endif
@@ -944,7 +956,7 @@ use Template_NeighList, only: NeighListDef
     enddo
 !    call self%sortlist
 
-   call self%IntegrityCheck(1)
+!   call self%IntegrityCheck(1)
 
 
   end subroutine

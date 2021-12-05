@@ -53,8 +53,6 @@ use ClassyConstants, only: pi
 
 
 !    allocate( self%tempcoords(3, maxAtoms) )
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
   end subroutine
 !========================================================
@@ -224,6 +222,7 @@ use ClassyConstants, only: pi
       return
     endif
 
+    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     !Energy Calculation
 !    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
 !    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:nAtoms), self%tempList, self%tempNNei, E_Diff, accept)

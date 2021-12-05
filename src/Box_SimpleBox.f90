@@ -79,8 +79,10 @@ module SimpleSimBox
     integer, private :: dangerbuilds = 0
     real(dp), allocatable, private :: dr(:,:)
     real(dp), allocatable, private :: drsq(:)
-    real(dp), private :: maxdr, maxdr2
+    real(dp), private :: maxdr = 0E0_dp
+    real(dp), private :: maxdr2 = 0E0_dp
     real(dp), private :: largestdr = 0E0_dp
+    real(dp), private :: rebuildsensitivity = 0.5E0_dp
 
     ! Temporary Molecule Position Storage Arrays. 
     real(dp), allocatable, private :: newpos(:,:)
@@ -179,6 +181,7 @@ module SimpleSimBox
 
       procedure, pass :: CheckConstraint => SimpleBox_CheckConstraint
       procedure, pass :: CheckPostEnergy => SimpleBox_CheckPostEnergy
+      procedure, pass :: CheckListValidity => SimpleBox_CheckListValidity
       procedure, pass :: DumpData => SimpleBox_DumpData
 
       !Coordinate Processing Functions
@@ -880,6 +883,7 @@ module SimpleSimBox
     real(dp) :: E_Mol
 
     E_Intra = 0E0_dp
+    accept = .true.
     do iType = 1, nMolTypes
       if(MolData(iType)%ridgid) then
         cycle
@@ -1140,6 +1144,63 @@ module SimpleSimBox
 
   end function
 !==========================================================================================
+  subroutine SimpleBox_CheckListValidity(self, disp, templist, tempNnei)
+     !Checks to see if a given move is shifting a particle so far that it needs to use a new
+     !list
+    use CoordinateTypes
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    class(Perturbation), intent(inout) :: disp(:)
+    integer, intent(inout), pointer :: templist(:,:), tempNNei(:)
+    logical :: accept
+    logical :: newlist
+    integer :: iDisp, dispIndx, dispLen
+    integer :: nDisp, iList
+    real(dp) :: tempdr(1:3), tempdrsq
+    real(dp) :: dx, dy, dz
+    real(dp) :: E_rcut, Nei_RCut
+    real(dp) :: NeighSkin
+
+    newlist = .false.
+    E_rcut = self%EFunc%Method%GetCutOff()
+    Nei_RCut = self%NeighList(1)%GetRCut()
+    if( (iList == 1) .and. (E_rcut > Nei_RCut)) then
+      write(0,*) "ERROR! User set the first neighbor list's RCut shorter than required by the Forcefield!!"
+      write(0,*) "Boost NeighborList rCut to address this error"
+      stop
+    endif
+    neighSkin = Nei_RCut - E_rcut
+    nDisp = size(disp)
+    select type(disp)
+      class is(Displacement)
+      do iDisp = 1, dispLen
+        dispIndx = disp(iDisp) % atmIndx
+        dx = disp(iDisp)%x_new - self%atoms(1, dispIndx)
+        dy = disp(iDisp)%y_new - self%atoms(2, dispIndx)
+        dz = disp(iDisp)%z_new - self%atoms(3, dispIndx)
+        call self%Boundary( dx, dy, dz )
+        tempdr(1) = self%dr(1, dispIndx) + dx
+        tempdr(2) = self%dr(2, dispIndx) + dy 
+        tempdr(3) = self%dr(3, dispIndx) + dz
+        tempdrsq = tempdr(1)*tempdr(1) + &
+                   tempdr(2)*tempdr(2) + &
+                   tempdr(3)*tempdr(3)
+        if(sqrt(tempdrsq) > neighSkin) then
+          newlist = .true.
+          exit
+        endif
+      enddo
+
+      if(newlist) then
+        call self%NeighList(1)%GetTempListArray(tempList, tempNNei)
+        do iDisp = 1, dispLen
+          call self%NeighList(1)%GetNewList(iDisp, tempList, tempNNei, disp(iDisp))
+        enddo
+      endif
+    end select
+
+  end subroutine
+!==========================================================================================
   subroutine SimpleBox_ProcessIO(self, line, lineStat)
     use CoordinateTypes
     use Input_Format, only: maxLineLen, GetXCommand, LowerCaseLine
@@ -1170,6 +1231,11 @@ module SimpleSimBox
         call GetXCommand(line, command, 6, lineStat)
         read(command, *) realVal
         self % chempot(intVal) = realVal
+
+      case("rebuildsensitivity")
+        call GetXCommand(line, command, 5, lineStat)
+        read(command, *) realVal
+        self % rebuildsensitivity = realVal
 
       case("energycalc")
         call GetXCommand(line, command, 5, lineStat)
@@ -1548,8 +1614,8 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     class(SimpleBox), intent(inout), target :: self
     integer, intent(in) :: listIndx
     integer, intent(in) :: iAtom
-    integer, intent(inout) :: tempNnei(:)
-    integer, intent(inout) :: tempList(:, :)
+    integer, intent(inout), pointer :: tempNnei(:)
+    integer, intent(inout), pointer :: tempList(:, :)
     class(Perturbation), intent(inout) :: disp
 
     call self%NeighList(listindx)%GetNewList(iAtom, tempList, tempNNei, disp)
@@ -2029,10 +2095,10 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
         error stop "ERROR! User set the first neighbor list's RCut shorter than required by the Forcefield!!"
       endif
       neighSkin = Nei_RCut - E_rcut
-      if( (self%maxdr + self%maxdr2) > neighSkin ) then
+      if( (self%maxdr + self%maxdr2) > self%rebuildsensitivity * neighSkin ) then
 !        write(*,*) maxdr, maxdr2, neighSkin
         self%rebuilds = self%rebuilds + 1
-        if(self%maxdr > neighskin*0.5E0_dp) then
+        if(self%maxdr > neighskin*0.7E0_dp) then
           self%dangerbuilds = self%dangerbuilds + 1
   !        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
         endif
