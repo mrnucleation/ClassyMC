@@ -27,7 +27,7 @@ OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
 #OPTIMIZE_FLAGS_GFORT += -Wmaybe-uninitialized
 #OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 OPTIMIZE_FLAGS_GFORT += -finit-real=zero -finit-integer=0
-OPTIMIZE_FLAGS_GFORT += -pg
+#OPTIMIZE_FLAGS_GFORT += -pg
 #OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic

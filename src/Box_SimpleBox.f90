@@ -559,8 +559,6 @@ module SimpleSimBox
     subIndx = subIndx + molIndx
     arrayIndx = self%MolStartIndx(subIndx)
     arrayIndx = arrayIndx + atmIndx - 1
-!    write(*,*) arrayIndx, trim(adjustl(line))
-!    write(*,*) molType, subindx, self%MolStartIndx(subIndx)
 
     self%atoms(1, arrayIndx) = x
     self%atoms(2, arrayIndx) = y

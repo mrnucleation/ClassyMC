@@ -383,7 +383,7 @@ use Template_NeighList, only: NeighListDef
         enddo
       enddo
     enddo
-   call self%PrintList(2, "rebuild")
+!   call self%PrintList(2, "rebuild")
    do iType = 1, nMolTypes
       call self%parent%GetTypeAtoms(iType, typeStart, typeEnd)
       if(typeStart < 1) cycle
@@ -897,7 +897,7 @@ use Template_NeighList, only: NeighListDef
     real(dp) :: rx, ry, rz, rsq
     real(dp) :: boxdim(1:2, 1:3)
 
-    call self%PrintList(2, "addmol")
+!    call self%PrintList(2, "addmol")
 
     select type(disp)
       class is(Addition)
@@ -924,8 +924,8 @@ use Template_NeighList, only: NeighListDef
    end select
 
 !   call self%sortlist(forcesort=.true.)
-   call self%PrintList(2, "addmol_end")
-   call self%IntegrityCheck(1)
+!   call self%PrintList(2, "addmol_end")
+!   call self%IntegrityCheck(1)
 
 
   end subroutine
@@ -947,7 +947,7 @@ use Template_NeighList, only: NeighListDef
     integer :: curNei, curIndx, nNei
 
 
-    call self%PrintList(2, "delete")
+!    call self%PrintList(2, "delete")
     call self%parent%GetMolData(molIndx, nAtoms=nAtoms, molType=nType, molStart=nStart, molEnd=nEnd)
     call self%parent%GetMolData(topIndx, nAtoms=topNAtoms, molStart=topStart, molEnd=topEnd)
     if(nAtoms /= topNAtoms) then
@@ -968,8 +968,8 @@ use Template_NeighList, only: NeighListDef
       call self%PurgeAtom(topAtom)
     enddo
 
-    call self%PrintList(2, "end_delete")
-    call self%IntegrityCheck(1)
+!    call self%PrintList(2, "end_delete")
+!    call self%IntegrityCheck(1)
 
 
   end subroutine
@@ -1174,7 +1174,7 @@ use Template_NeighList, only: NeighListDef
           write(0,*) "Fill Value:", inatmindx
           write(0,*) "Index:", low, half, high
           write(0,*) "Value:", curlist(low), curlist(half), curlist(high)
-          call self%PrintList(2, "InsertAtom")
+!          call self%PrintList(2, "InsertAtom")
           error stop
         endif
 

@@ -13,11 +13,12 @@ module FF_EasyEP_Pedone_Cut
 !    real(dp) :: rCut, rCutSq
 
 
-    logical :: implicitSolvent = .false.
-    real(dp), allocatable :: repul_tab(:,:), rEqTable(:,:)
-    real(dp), allocatable :: qTable(:,:), alpha_Tab(:,:), D_Tab(:,:)
-    real(dp), allocatable :: bornRad(:)
-    real(dp), allocatable :: q(:)
+    logical, private :: hardcut = .true.
+    logical, private :: implicitSolvent = .false.
+    real(dp), allocatable, private :: repul_tab(:,:), rEqTable(:,:)
+    real(dp), allocatable, private :: qTable(:,:), alpha_Tab(:,:), D_Tab(:,:)
+    real(dp), allocatable, private :: bornRad(:)
+    real(dp), allocatable, private :: q(:)
     contains
       procedure, pass :: Constructor => Constructor_EP_Pedone_Cut
       procedure, pass :: SolventFunction => EP_Pedone_SolventFunction
@@ -91,7 +92,11 @@ module FF_EasyEP_Pedone_Cut
     E_LJ = repul_C * E_LJ
  
     r = sqrt(rsq)
-    E_Ele = q_ij/r
+    if( self%hardcut ) then
+      E_Ele = q_ij/r
+    else
+      E_Ele = erfc(r)*q_ij/r
+    endif
     E_Solvent = 0E0_dp
     if(self%implicitSolvent) then
       born1 = self%bornRad(atmType1)
@@ -132,6 +137,10 @@ module FF_EasyEP_Pedone_Cut
         read(command, *) rCut
         self % rCut = rCut
         self % rCutSq = rCut * rCut
+
+      case("hardcut")
+        call GetXCommand(line, command, 2, lineStat)
+        read(command, *) self%hardcut
 
       case("implicitsolvent")
         call GetXCommand(line, command, 2, lineStat)

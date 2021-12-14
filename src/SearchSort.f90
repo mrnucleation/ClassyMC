@@ -55,7 +55,7 @@ contains
     endif
 
 !    write(*,*) curIndx, list(curIndx)
-    outindx = -1
+    outindx = 0
     do i = lower, upper
       if( list(i) == val ) then
         outIndx = i

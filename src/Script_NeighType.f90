@@ -30,10 +30,10 @@ contains
     lineStat  = 0
     !Safety check to ensure that the index number is within proper bounds
     select case(trim(adjustl(command)))
-      case("rsqlist")
-        call GetXCommand(line, command, 4, lineStat)
-        read(command,*) intVal
-        allocate( RSqList::BoxArray(boxNum)%box%NeighList(1:intVal) )
+!      case("rsqlist")
+!        call GetXCommand(line, command, 4, lineStat)
+!        read(command,*) intVal
+!        allocate( RSqList::BoxArray(boxNum)%box%NeighList(1:intVal) )
 
       case("cellrsqlist")
         call GetXCommand(line, command, 4, lineStat)

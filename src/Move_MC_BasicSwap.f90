@@ -186,7 +186,6 @@ use VarPrecision
       self%newPart(iAtom)%molType = molType
       self%newPart(iAtom)%molIndx = nMove
       self%newPart(iAtom)%atmIndx = atomIndx
-      write(*,*) iAtom, molType, nMove, atomIndx
     enddo
 
     !Generate the full atomic positions for 

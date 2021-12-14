@@ -32,8 +32,8 @@ module MinMetroRule
     elseif(present(logProb)) then
       probTerm = logProb
     else
-      write(*,*) "Coding Error! Probability has not been passed into Sampling "
-      stop
+      write(0,*) "Coding Error! Probability has not been passed into Sampling "
+      error stop
     endif
 
     if(present(extraIn)) then
@@ -47,7 +47,6 @@ module MinMetroRule
     biasE = -trialBox%beta * E_Diff + probTerm + extraTerms
     if(biasE <= 0.0E0_dp) then
       accept = .true.
-      write(*,*) biasE
     else
       accept = .false.
     endif
