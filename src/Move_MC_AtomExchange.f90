@@ -21,11 +21,12 @@ use VarPrecision
  contains
 !========================================================
   subroutine AtomExchange_Constructor(self)
-!    use Common_MolInfo, only: MolData, nMolTypes
+    use Common_MolInfo, only: mostAtoms
     implicit none
     class(MC_AtomExchange), intent(inout) :: self
 
 
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !=========================================================================
   subroutine AtomExchange_GeneratePosition(self, disp)

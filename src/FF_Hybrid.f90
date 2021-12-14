@@ -62,8 +62,8 @@ module FF_Hybrid
     implicit none
     class(Pair_Hybrid), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
-    integer, intent(in) :: tempList(:,:), tempNNei(:)
+    class(Perturbation), intent(inout) :: disp(:)
+    integer, intent(in), pointer :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
     integer :: iField

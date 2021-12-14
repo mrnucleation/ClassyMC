@@ -135,11 +135,14 @@ module SimpleSimBox
 !     -Molecule Type look up
 !     -(Indexing is based on molecule type ID)
 !    TypeFirst => The atom global index of the first atom of the first molecule of this type
-!    TypeLast => The atom global index of the kast atom of the last molecule of this type
+!    TypeLast => The atom global index of the last atom of the last molecule of this type
+!    TypeMolFirst => The molecule global index of the first molecule of this type
+!    TypeMolLast => The molecule global index of the last molecule of this type
 !
 !     nLists => Number of neighborlists, depreciated.
 !
 !     integer, allocatable :: TypeFirst(:), TypeLast(:)
+!     integer, allocatable :: TypeMolFirst(:), TypeMolLast(:)
 !     integer :: nLists
 !    ----------------------------
 !    
@@ -188,6 +191,7 @@ module SimpleSimBox
 !      procedure, pass :: GetAtomTypes => Simplebox_GetAtomTypes
       procedure, pass :: GetNeighborList => Simplebox_GetNeighborList
       procedure, pass :: GetNewNeighborList => Simplebox_GetNewNeighborList
+      procedure, pass :: GetTempListBounds => Simplebox_GetTempListBounds
       procedure, pass :: GetLargestNNei => SimpleBox_GetLargestNNei
       procedure, pass :: GetDimensions => Simplebox_GetDimensions
       procedure, pass :: GetForceArray => SimpleBox_GetForceArray
@@ -197,6 +201,7 @@ module SimpleSimBox
       procedure, pass :: GetMolData => SimpleBox_GetMolData
       procedure, pass :: GetMolEnergy => SimpleBox_GetMolEnergy
       procedure, pass :: GetTypeAtoms => SimpleBox_GetTypeAtoms
+      procedure, pass :: GetTypeMols => SimpleBox_GetTypeMols
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
       procedure, pass :: CountAtoms => SimpleBox_CountAtoms
 !      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
@@ -297,6 +302,8 @@ module SimpleSimBox
 
     allocate(self%TypeFirst(1:nMolTypes), stat=AllocateStatus)
     allocate(self%TypeLast(1:nMolTypes), stat=AllocateStatus)
+    allocate(self%TypeMolFirst(1:nMolTypes), stat=AllocateStatus)
+    allocate(self%TypeMolLast(1:nMolTypes), stat=AllocateStatus)
 
     maxSingleMol = maxval(self%NMolMax(:))
     allocate(self%MolGlobalIndx(1:nMolTypes, 1:maxSingleMol), stat=AllocateStatus)
@@ -323,6 +330,8 @@ module SimpleSimBox
 
     self%TypeFirst = 0
     self%TypeLast = 0
+    self%TypeMolFirst = 0
+    self%TypeMolLast = 0
 
     self%MolGlobalIndx = 0
 
@@ -337,6 +346,7 @@ module SimpleSimBox
     molIndx = 0
     do iType = 1, nMolTypes
       self%TypeFirst(iType) = atmIndx + 1
+      self%TypeMolFirst(iType) = molIndx + 1
       do iMol = 1, self%NMolMax(iType)
         molIndx = molIndx + 1
         self%MolGlobalIndx(iType, iMol) = molIndx
@@ -353,6 +363,7 @@ module SimpleSimBox
         enddo
       enddo 
       self%TypeLast(iType) = atmIndx 
+      self%TypeMolLast(iType) = molIndx 
     enddo
 
 
@@ -921,7 +932,7 @@ module SimpleSimBox
     use Common_MolInfo, only: mostAtoms
     implicit none
     class(SimpleBox), intent(inout) :: self
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     logical, intent(in), optional :: computeintra
     real(dp), intent(inout) :: E_Inter, E_Intra, E_Total
@@ -947,7 +958,7 @@ module SimpleSimBox
     endif
 
     call self % EFunc % Method % DiffECalc(self, &
-                                           disp, &
+                                           disp(:), &
                                            tempList, &
                                            tempNNei, &
                                            E_Inter, &
@@ -970,8 +981,8 @@ module SimpleSimBox
     integer :: iAtom, atmType
     type(Displacement) :: disp(1:1)
     real(dp) :: E_Diff
-    integer :: tempNnei(1)
-    integer :: tempList(1, 1)
+    integer, pointer :: tempNnei(:)
+    integer, pointer :: tempList(:, :)
 
 
     if(.not. allocated(self%forces)) then
@@ -1192,13 +1203,11 @@ module SimpleSimBox
       enddo
 
       if(newlist) then
-        call self%NeighList(1)%GetTempListArray(tempList, tempNNei)
         do iDisp = 1, dispLen
           call self%NeighList(1)%GetNewList(iDisp, tempList, tempNNei, disp(iDisp))
         enddo
       endif
     end select
-
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_ProcessIO(self, line, lineStat)
@@ -1531,19 +1540,59 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     implicit none
     class(SimpleBox), intent(inout) :: self
     integer, intent(in) :: iType
-    integer, intent(out) :: typeStart, typeEnd
+    integer, intent(out), optional :: typeStart, typeEnd
 
-    integer :: lastMol
+    integer :: lastMol, startMol
 
     if(self%NMol(iType) < 1) then
-      typeStart = -1
-      typeEnd = -1
+      if( present(typeStart) ) then
+        typeStart = -1
+      endif
+      if( present(typeStart) ) then
+        typeEnd = -1
+      endif
       return
     endif
 
-    typeStart = self%TypeFirst(iType)
-    lastmol = self%NMol(iType)
-    call self%GetMolData(lastmol, molEnd=typeEnd)
+    if( present(typeStart) ) then
+      typeStart = self%TypeFirst(iType)
+    endif
+    if( present(typeEnd) ) then
+      call self%GetTypeMols(iType, typeMolEnd=lastmol)
+      call self%GetMolData(lastmol, molEnd=typeEnd)
+    endif
+
+  end subroutine
+!==========================================================================================
+subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
+    !Returns the start and end global incidies of the molecules of this type
+    !that are currently active in the box.
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer, intent(in) :: iType
+    integer, intent(out), optional :: typeMolStart, typeMolEnd
+    integer :: startMol
+
+    !If there's no molecules of this type active, return -1. 
+    if(self%NMol(iType) < 1) then
+      if( present(typeMolStart) ) then
+        typeMolStart = -1
+      endif
+      if( present(typeMolEnd) ) then
+        typeMolEnd = -1
+      endif
+      return
+    endif
+
+    
+    startMol = self%TypeMolFirst(iType)
+    if( present(typeMolStart) ) then
+      typeMolStart = startMol
+    endif
+    if( present(typeMolEnd) ) then
+      typeMolEnd = self%NMol(iType) + startMol - 1
+    endif
 
   end subroutine
 !==========================================================================================
@@ -1614,11 +1663,25 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     class(SimpleBox), intent(inout), target :: self
     integer, intent(in) :: listIndx
     integer, intent(in) :: iAtom
-    integer, intent(inout), pointer :: tempNnei(:)
-    integer, intent(inout), pointer :: tempList(:, :)
+    integer, intent(inout) :: tempNnei(:)
+    integer, intent(inout) :: tempList(:, :)
     class(Perturbation), intent(inout) :: disp
 
     call self%NeighList(listindx)%GetNewList(iAtom, tempList, tempNNei, disp)
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_GetTempListBounds(self, b1, b2, listIndx)
+    implicit none
+    class(SimpleBox), intent(inout), target :: self
+    integer, intent(inout) :: b1, b2
+    integer, intent(in), optional :: listIndx
+
+    if(present(listIndx)) then
+      call self%NeighList(listindx)%GetTempListBounds(b1, b2)
+    else
+      call self%NeighList(1)%GetTempListBounds(b1, b2)
+    endif
+
   end subroutine
 !==========================================================================================
   function SimpleBox_GetLargestNNei(self) result(maxnei)
@@ -1841,24 +1904,18 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     endif
 
 
-    lastMol = 0
-    do iType = 1, nType-1
-      lastMol = lastMol + self%NMolMax(iType) 
-    enddo
-    lastMol = lastMol + self%NMol(nType)
+!    lastMol = 1
+!    do iType = 1, nType-1
+!      lastMol = lastMol + self%NMolMax(iType) 
+!    enddo
+!    lastMol = lastMol + self%NMol(nType)
+    call self%GetTypeMols(nType, typeMolEnd=lastmol)
     self%centermass(1:3,molIndx) = self%centermass(1:3, lastMol)
-!    if(molIndx == lastMol) then
-!      self % NMol(nType) = self % NMol(nType) - 1 
-!      self % nAtoms = self % nAtoms - MolData(nType)%nAtoms
-!      return
-!    endif
-!    write(*,*) lastMol, nStart, nType, molIndx
+
     jStart = self%MolStartIndx(lastMol)
 
 !     Take the top molecule from the atom array and move it's position in the deleted
 !     molecule's slot.
-!    write(*,*) molindx
-!    write(*,*) "e", self%ETable
     do iAtom = 1, MolData(nType) % nAtoms
       do iDimn = 1, self%nDimension
         self % atoms(iDimn, nStart+iAtom-1 ) = self % atoms(iDimn, jStart+iAtom-1 )
@@ -1941,6 +1998,7 @@ subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
           write(0,*) "MolType:", molType
           error stop 
         endif
+!        call self % NeighList(1) % Update
         do iDisp = 1, dispLen
           dispIndx = disp(iDisp) % atmIndx
           call self%Boundary( disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new )

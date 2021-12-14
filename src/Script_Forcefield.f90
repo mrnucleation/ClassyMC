@@ -166,6 +166,7 @@ module Input_Forcefield
             error stop
           endif
           call Script_ReadMolDef( lineStore(iLine+1:iLine+lineBuffer-1), intValue, lineStat )
+          call Script_BuildGraph(intValue)
 
 !        -----------------------------------------------------------------------------
         case("moleculetypes")
@@ -224,6 +225,13 @@ module Input_Forcefield
 
     lineStat  = 0
     lineBuffer = 0
+    nIntra = 0
+    atm1 = 0
+    atm2 = 0
+    atm3 = 0
+    atm4 = 0
+    nItems = 0
+    AllocateStat = 0
     nLines = size(cmdBlock)
     do iLine = 1, nLines
       if(lineBuffer .gt. 0) then
@@ -303,12 +311,15 @@ module Input_Forcefield
              allocate(MolData(molType)%angle(1:nItems), stat = AllocateStat)
              allocate(MolData(molType)%nAtmAngles(1:MolData(molType)%nAtoms), stat = AllocateStat)
              allocate(MolData(molType)%atmAngles(1:nItems, 1:MolData(molType)%nAtoms), stat = AllocateStat)
+             MolData(molType)%nAtmAngles = 0
+             MolData(molType)%atmAngles = 0
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,4)
                atm1 = intValue(2)
                atm2 = intValue(3)
                atm3 = intValue(4)
+
                MolData(molType)%angle(i)%angleType = intValue(1)
                MolData(molType)%angle(i)%mem1 = atm1
                MolData(molType)%angle(i)%mem2 = atm2
@@ -339,6 +350,8 @@ module Input_Forcefield
              allocate(MolData(molType)%torsion(1:nItems), stat = AllocateStat)
              allocate(MolData(molType)%nAtmTorsions(1:MolData(molType)%nAtoms), stat = AllocateStat)
              allocate(MolData(molType)%atmTorsions(1:nItems, 1:MolData(molType)%nAtoms), stat = AllocateStat)
+             MolData(molType)%nAtmTorsions = 0
+             MolData(molType)%atmTorsions = 0 
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,5)
@@ -397,6 +410,84 @@ module Input_Forcefield
 
   end subroutine
 !================================================================================
+  subroutine Script_BuildGraph(molnum)
+    use Common_MolInfo, only: MolData
+    implicit none
+    integer, intent(in) :: molnum
+    integer :: iGraph, iEdge
+    integer :: iBond, iAngle, iTorsion
+    integer :: nAtoms, intraType
+    integer :: mem1, mem2, mem3, mem4
+
+    nAtoms = MolData(molnum)%nAtoms
+
+    call MolData(molnum)%molgraph%Constructor(nAtoms)
+
+    do iBond = 1, MolData(molnum)%nBonds
+      intraType = MolData(molnum)%bond(iBond)%bondType
+      mem1 = MolData(molnum)%bond(iBond)%mem1
+      mem2 = MolData(molnum)%bond(iBond)%mem2
+      call MolData(molnum)%molgraph%AddEdge(mem1, mem2, intraType)
+    enddo
+
+    do iAngle = 1, MolData(molnum)%nAngles
+      intraType = MolData(molnum)%angle(iAngle)%angleType
+      mem1 = MolData(molnum)%angle(iAngle)%mem1
+      mem2 = MolData(molnum)%angle(iAngle)%mem2
+      mem3 = MolData(molnum)%angle(iAngle)%mem3
+      call MolData(molnum)%molgraph%AddAngle(mem1, mem2, mem3, intraType)
+    enddo
+
+    do iTorsion = 1, MolData(molnum)%nTors
+      intraType = MolData(molnum)%torsion(iTorsion)%torsType
+      mem1 = MolData(molnum)%torsion(iTorsion)%mem1
+      mem2 = MolData(molnum)%torsion(iTorsion)%mem2
+      mem3 = MolData(molnum)%torsion(iTorsion)%mem3
+      mem4 = MolData(molnum)%torsion(iTorsion)%mem4
+      call MolData(molnum)%molgraph%AddTorsion(mem1, mem2, mem3, mem4, intraType)
+    enddo
+
+
+
+!    write(*,*) "Edges"
+!    do iGraph = 1, size(MolData(molnum)%molgraph%nodes)
+!      if(.not. allocated(MolData(molnum)%molgraph%nodes(iGraph)%edge) ) cycle
+!      do iEdge = 1, size(MolData(molnum)%molgraph%nodes(iGraph)%edge)
+!        write(*,*) iGraph, iEdge, MolData(molnum)%molgraph%nodes(iGraph)%edge(iEdge)
+!      enddo
+!    enddo
+!    write(*,*)
+
+!    write(*,*) "EndAngle"
+!    do iGraph = 1, size(MolData(molnum)%molgraph%nodes)
+!      if(.not. allocated(MolData(molnum)%molgraph%nodes(iGraph)%endangle) ) cycle
+!      do iEdge = 1, size(MolData(molnum)%molgraph%nodes(iGraph)%endangle, 2)
+!        write(*,*) iGraph, iEdge, MolData(molnum)%molgraph%nodes(iGraph)%endangle(1:2,iEdge) 
+!      enddo
+!    enddo
+
+!    write(*,*) "MidAngle"
+!    do iGraph = 1, size(MolData(molnum)%molgraph%nodes)
+!      if(.not. allocated(MolData(molnum)%molgraph%nodes(iGraph)%midangle) ) cycle
+!      do iEdge = 1, size(MolData(molnum)%molgraph%nodes(iGraph)%midangle, 2)
+!        write(*,*) iGraph, iEdge, MolData(molnum)%molgraph%nodes(iGraph)%midangle(1:2,iEdge) 
+!      enddo
+!    enddo
+
+!    write(*,*) "EndTorsion"
+!    do iGraph = 1, size(MolData(molnum)%molgraph%nodes)
+!      if(.not. allocated(MolData(molnum)%molgraph%nodes(iGraph)%endtorsion) ) cycle
+!      do iEdge = 1, size(MolData(molnum)%molgraph%nodes(iGraph)%endtorsion, 2)
+!        write(*,*) iGraph, iEdge, MolData(molnum)%molgraph%nodes(iGraph)%endtorsion(1:3,iEdge) 
+!      enddo
+!    enddo
+
+!    write(*,*) MolData(molnum)%molgraph%IsConnected()
+
+
+
+  end subroutine
+!================================================================================
   subroutine Script_SetUnits(line, lineStat)
     use Units
     implicit none
@@ -428,8 +519,6 @@ module Input_Forcefield
 
 
   end subroutine
-
-
 !================================================================================
 end module
 !================================================================================

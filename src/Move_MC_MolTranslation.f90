@@ -78,6 +78,8 @@ use VarPrecision
 
 
     allocate( self%disp(1:maxAtoms) )
+
+    call self%CreateTempArray(maxAtoms)
   end subroutine
 !========================================================
 !  subroutine MolTrans_GeneratePosition(self, disp)
@@ -124,7 +126,6 @@ use VarPrecision
     dy = self % boxmax_dist(boxID) * (2E0_dp * grnd() - 1E0_dp)
     dz = self % boxmax_dist(boxID) * (2E0_dp * grnd() - 1E0_dp)
  
-    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     nAtoms = MolData(molType)%nAtoms
     do iAtom = 1, nAtoms
       atomIndx = molStart + iAtom - 1

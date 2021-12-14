@@ -17,8 +17,8 @@ use VarPrecision
 
     real(dp), allocatable :: insPoint(:,:)
     real(dp), allocatable :: insProb(:)
-!    integer, allocatable :: tempNnei(:)
-!    integer, allocatable :: tempList(:, :)
+!    integer, pointer :: tempNnei(:)
+!    integer, pointer :: tempList(:, :)
 
     contains
     procedure, pass :: SafetyCheck => Basic_Swap_SafetyCheck
@@ -38,6 +38,7 @@ use VarPrecision
   subroutine Basic_Swap_SafetyCheck(self)
     use BoxData, only: boxArray
     use SimpleSimBox, only: SimpleBox
+    use Common_MolInfo, only: mostAtoms
     implicit none
     class(Basic_Swap), intent(inout) :: self
     integer :: iBox
@@ -54,6 +55,7 @@ use VarPrecision
 
 
 
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !========================================================
   subroutine Basic_Swap_Constructor(self)
@@ -184,6 +186,7 @@ use VarPrecision
       self%newPart(iAtom)%molType = molType
       self%newPart(iAtom)%molIndx = nMove
       self%newPart(iAtom)%atmIndx = atomIndx
+      write(*,*) iAtom, molType, nMove, atomIndx
     enddo
 
     !Generate the full atomic positions for 
@@ -198,7 +201,6 @@ use VarPrecision
     endif
 
 
-    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))
@@ -247,8 +249,9 @@ use VarPrecision
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
-      call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList(:,:), self%tempNNei(:))
+      call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList, self%tempNNei)
     endif
+
 
 
   end subroutine
@@ -373,6 +376,7 @@ use VarPrecision
     maxAtoms = 0
     maxPoints = 0
     maxnei = 0
+    errstat = 0
     do iType = 1, nMolTypes
       if(MolData(iType)%nAtoms > maxAtoms) then
         maxAtoms = MolData(iType)%nAtoms 
@@ -386,8 +390,9 @@ use VarPrecision
 
 
 
-    allocate( self%newPart(1:maxAtoms) )
+    allocate( self%newPart(1:maxAtoms),  stat=errstat)
     if(errstat /= 0) then
+      write(0,*) "Error Code:", errstat
       error stop "Allocation Error trying to allocate newPart!"
     endif
   end subroutine

@@ -25,7 +25,6 @@ module Template_ForceField
   contains
 !=============================================================================+
   subroutine Constructor(self)
-    use Common_MolInfo, only: nMolTypes
     implicit none
     class(forcefield), intent(inout) :: self
 
@@ -47,7 +46,7 @@ module Template_ForceField
     class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
 !    class(displacement), intent(in) :: disp(:)
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept

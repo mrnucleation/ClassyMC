@@ -149,36 +149,47 @@ module FF_EasyPair_Cut
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
+    type(Displacement), pointer :: move(:) => null()
+    type(Addition), pointer :: add(:) => null()
+    type(Deletion), pointer :: del(:) => null()
+    type(OrthoVolChange), pointer :: ortho(:) => null()
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
+    integer :: dlow, dhigh
     real(dp) :: E_Half, E_Corr
 
     accept = .true.
     curbox % dETable = 0E0_dp
     E_Diff = 0E0_dp
+    dlow = lbound(disp,1)
+    dhigh = ubound(disp,1)
 !       write(*,*) self%RCut, self%RCutSq
 
     select type(disp)
       class is(Displacement)
+        move => disp(dlow:dhigh)
         if(disp(1)%newlist) then
-          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept, tempList, tempNNei)
+          call self % ShiftECalc_Single(curbox, move(dlow:dhigh), E_Diff, accept, tempList, tempNNei)
         else
-          call self % ShiftECalc_Single(curbox, disp, E_Diff, accept)
+          call self % ShiftECalc_Single(curbox, move(dlow:dhigh), E_Diff, accept)
         endif
 
       class is(Addition)
-         call self % NewECalc(curbox, disp, tempList, tempNNei, E_Diff, accept)
+         add => disp(dlow:dhigh)
+         call self % NewECalc(curbox, add(dlow:dhigh), tempList, tempNNei, E_Diff, accept)
 
       class is(Deletion)
-         call self % OldECalc(curbox, disp, E_Diff)
+         del => disp(dlow:dhigh)
+         call self % OldECalc(curbox, del(dlow:dhigh), E_Diff)
 
       class is(OrthoVolChange)
-         call self % OrthoVolECalc( curbox, disp, E_Diff, accept)
+         ortho => disp(dlow:dhigh)
+         call self % OrthoVolECalc( curbox, ortho(dlow:dhigh), E_Diff, accept)
 
       class is(AtomExchange)
-         call self % AtomExchange( curbox, disp, E_Diff, accept)
+         call self % AtomExchange( curbox, disp(dlow:dhigh), E_Diff, accept)
 
       class default
         write(0,*) "Unknown Perturbation Type Encountered by the EasyPair_Cut Pair Style."
@@ -195,12 +206,11 @@ module FF_EasyPair_Cut
   end subroutine
   !=====================================================================
   subroutine Shift_EasyPair_Cut_Single(self, curbox, disp, E_Diff, accept, tempList, tempNNei)
-    USE OMP_LIB
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(Displacement), intent(in) :: disp(:)
-    integer, intent(in), optional, target :: tempList(:,:), tempNNei(:)
+    type(Displacement), intent(inout) :: disp(:)
+    integer, intent(in), target, optional :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 
@@ -215,19 +225,23 @@ module FF_EasyPair_Cut
     integer, pointer :: neighlist(:,:) => null()
     real(dp), pointer :: atoms(:,:) => null()
 
+    call curbox%GetCoordinates(atoms)
     if( present(tempList) .and. present(tempNNei) ) then
       neighlist => tempList
       nNeigh => tempNNei
     else
       call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
-      call curbox%GetCoordinates(atoms)
     endif
 
     dispLen = size(disp)
     E_Diff = 0E0_dp
     accept = .true.
     do iDisp = 1, dispLen
-      iAtom = disp(iDisp)%atmIndx
+      if( present(tempList) ) then
+        iAtom = iDisp
+      else
+        iAtom = disp(iDisp)%atmIndx
+      endif
       atmType1 = curbox % AtomType(iAtom)
       do jNei = 1, nNeigh(iAtom)
         jAtom = neighlist(jNei, iAtom)
@@ -274,7 +288,7 @@ module FF_EasyPair_Cut
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(Addition), intent(in) :: disp(:)
+    type(Addition), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
@@ -285,17 +299,21 @@ module FF_EasyPair_Cut
     real(dp) :: E_Pair
     real(dp) :: rmin_ij      
 
-    integer, pointer :: nNeigh(:) => null()
-    integer, pointer :: neighlist(:,:) => null()
+!    integer, pointer :: nNeigh(:) => null()
+!    integer, pointer :: neighlist(:,:) => null()
     real(dp), pointer :: atoms(:,:) => null()
 
-    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
+!    call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
     call curbox%GetCoordinates(atoms)
 
 
     dispLen = size(disp)
     E_Diff = 0E0_dp
     accept = .true.
+
+    if( .not. associated(atoms) )then
+      error stop "Unassociated Neighborlist pointers have been passed into energy routines!"
+    endif
 
 !    write(*,*) "Length:", size(tempNNei)
 !    write(*,*) "Length:", size(tempList)
@@ -335,7 +353,7 @@ module FF_EasyPair_Cut
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(Deletion), intent(in) :: disp(:)
+    type(Deletion), intent(inout) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     integer :: iDisp, iAtom, jAtom, remLen, jNei
     integer :: atmType1, atmType2
@@ -350,6 +368,11 @@ module FF_EasyPair_Cut
     call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
     call curbox%GetCoordinates(atoms)
 
+!    if(.not. (associated(neighlist) .and. associated(nNeigh) .and. associated(atoms)))then
+!      error stop "Unassociated Neighborlist pointers have been passed into energy routines!"
+!    endif
+
+
 
     E_Diff = 0E0_dp
     call curBox % GetMolData(disp(1)%molIndx, molEnd=molEnd, molStart=molStart)
@@ -358,6 +381,10 @@ module FF_EasyPair_Cut
       atmType1 = curbox % AtomType(iAtom) 
       do jNei = 1, nNeigh(iAtom)
         jAtom = neighlist(jNei, iAtom)
+
+        if(iAtom == jAtom) then
+          error stop "Neighborlist error!"
+        endif
 
         atmType2 = curbox % AtomType(jAtom)
         rx = atoms(1, iAtom) - atoms(1, jAtom)
@@ -380,7 +407,7 @@ module FF_EasyPair_Cut
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
-    type(OrthoVolChange), intent(in) :: disp(:)
+    type(OrthoVolChange), intent(inout) :: disp(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
 

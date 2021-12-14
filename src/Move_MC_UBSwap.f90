@@ -44,18 +44,18 @@ use VarPrecision
 !========================================================
   subroutine UB_Swap_Constructor(self)
     use BoxData, only: BoxArray
-    use Common_MolInfo, only: MolData, nMolTypes
+    use Common_MolInfo, only: MolData, nMolTypes, mostAtoms
     implicit none
     class(UB_Swap), intent(inout) :: self
     integer :: nBoxes
+
+
 
     if(.not. allocated(self%boxProb)) then
       nBoxes = size(boxArray)
       allocate( self%boxProb(1:nBoxes) )
       self%boxProb = 1E0_dp/real(nBoxes,dp)
     endif
-
-
 
 
   end subroutine
@@ -270,7 +270,6 @@ use VarPrecision
     endif
     GenProb = ProbSub
 
-    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))
@@ -556,6 +555,7 @@ use VarPrecision
     self%ubRadSq = self%ubRad * self%ubRad
 
     allocate( self%newPart(1:maxAtoms) )
+    call self%CreateTempArray(maxAtoms)
   end subroutine
 !=========================================================================
   subroutine UB_Swap_Epilogue(self)

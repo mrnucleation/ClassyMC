@@ -48,7 +48,7 @@ module MolCon_LinearCBMC
     integer, private, allocatable :: pathposition(:) 
     integer, private, allocatable :: schedule(:) 
     integer, private, allocatable :: scratchschedule(:) 
-    integer, private, pointer :: tempList(:,:), tempNNei(:)
+    integer, private, allocatable :: tempList(:,:), tempNNei(:)
     integer, private, allocatable :: atomtypes(:)
     real(dp), private, allocatable :: posN(:,:)
 
@@ -78,13 +78,17 @@ module MolCon_LinearCBMC
 !==========================================================================================
   subroutine LinearCBMC_Prologue(self)
     use Common_MolInfo, only: MolData
+    use BoxData, only: BoxArray
     use MolSearch, only: FindBond
 !    use ParallelVar, only: nout
     implicit none
     class(LinearCBMC), intent(inout) :: self
 !    integer, intent(in) :: molType
+    integer :: iBox
     integer :: iBond, iAtom
     integer :: atm1, atm2
+    integer :: ub1, ub2
+    integer :: maxub1, maxub2
     integer :: iError = 0
     integer :: iSchedule
     integer :: nextAtm, prevAtm, curAtm, iPath
@@ -231,6 +235,16 @@ module MolCon_LinearCBMC
     endif
 
 
+    maxub1 = 0
+    maxub2 = 0
+    do iBox=1, size(BoxArray)
+      call BoxArray(iBox)%box%GetTempListBounds(ub1, ub2)
+      maxub1 = max(ub1, maxub1)
+      maxub2 = max(ub2, maxub2)
+    enddo
+
+    allocate(self%templist(1:maxub1, 1:self%nAtoms))
+    allocate(self%tempNNei(1:self%nAtoms))
 
 
   end subroutine
@@ -857,7 +871,13 @@ module MolCon_LinearCBMC
       class is(SimpleBox)
         call trialbox%GetCoordinates(atoms)
         call trialbox%GetEFunc(EFunc)
-        call trialBox%GetNeighborList(self%rosenNeighList, neighlist, nNeigh)
+        select type(disp)
+          class is(Displacement)
+            call trialBox%GetNeighborList(self%rosenNeighList, neighlist, nNeigh)
+          class is(Addition)
+            neighlist => self%templist
+            nNeigh => self%tempNNei
+        end select
     end select
 
     if(.not. allocated(self%atomtypes)) then
@@ -879,7 +899,12 @@ module MolCon_LinearCBMC
 
     atmIndx = atmSubIndx + molStart - 1
     tempdisp(1)%atmindx = atmIndx
-    atmNeiIndx = atmIndx
+    select type(disp)
+      class is(Displacement)
+        atmNeiIndx = atmIndx
+      class default
+        atmNeiIndx = 1
+    end select
     call trialBox%GetAtomData(atmIndx, atomtype=atmtype1)
 
 
@@ -893,9 +918,9 @@ module MolCon_LinearCBMC
         class is(Addition)
           select type(trialbox)
             class is(SimpleBox)
-            call trialbox%GetNewNeighborList(self%rosenNeighList, 1, neighlist, nNeigh, tempdisp(1))
+            call trialbox%GetNewNeighborList(self%rosenNeighList, 1, self%templist, self%tempNNei, tempdisp(1))
           end select
-          atmNeiIndx = 1
+        atmNeiIndx = 1
       end select
       pos1(1:3) = self%tempcoords(1:3, iRosen)
       accept = .true.

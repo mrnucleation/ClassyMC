@@ -402,6 +402,10 @@ use Template_NeighList, only: NeighListDef
     real(dp) :: xn, yn, zn
     real(dp) :: rx, ry, rz, rsq
 
+!    if(.not. (associated(tempList) .and. associated(tempNNei)))then
+!      error stop "Unassociated Temporary List passed into CellRSq_GetNewList"
+!    endif
+
     if(present(nCount)) then
       nCount = 0
     endif
@@ -594,9 +598,6 @@ use Template_NeighList, only: NeighListDef
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     integer :: iList, iDisp, iAtom, iNei, nNei, neiIndx, j
     real(dp) :: rx, ry, rz, rsq
-
-
-
 
     do iList = 1, size(trialBox%NeighList)
       if(iList == 1) then

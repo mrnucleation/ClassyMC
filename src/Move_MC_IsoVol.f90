@@ -49,6 +49,7 @@ module MCMove_Isovol
     class(IsoVol), intent(inout) :: self
 
 
+    call self%CreateTempArray(1)
   end subroutine
 !=========================================================================
   subroutine IsoVol_FullMove(self, trialBox, accept)

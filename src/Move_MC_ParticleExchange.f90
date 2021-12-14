@@ -34,6 +34,7 @@ use VarPrecision
   subroutine ParticleExchange_SafetyCheck(self)
     use BoxData, only: boxArray
     use SimpleSimBox, only: SimpleBox
+    use Common_MolInfo, only: mostAtoms
     implicit none
     class(ParticleExchange), intent(inout) :: self
     integer :: iBox
@@ -56,9 +57,7 @@ use VarPrecision
       end select
     enddo
 
-
-
-
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !========================================================
   subroutine ParticleExchange_Constructor(self)
@@ -214,7 +213,6 @@ use VarPrecision
       return
     endif
 
-    call box2 % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     do iAtom = 1, nAtoms
       call box2 % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))

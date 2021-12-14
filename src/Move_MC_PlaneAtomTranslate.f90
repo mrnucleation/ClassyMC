@@ -155,6 +155,7 @@ use VarPrecision
 !=========================================================================
   subroutine PlaneAtomTranslate_Prologue(self)
     use ParallelVar, only: nout
+    use Common_MolInfo, only: mostAtoms
     implicit none
     class(PlaneAtomTranslate), intent(inout) :: self
 
@@ -162,6 +163,7 @@ use VarPrecision
       call self % Constructor
     endif
       
+    call self%CreateTempArray(mostAtoms)
 
     write(nout,"(1x,A,F15.8)") "(Plane Atom Translate) Maximum Displacement: ", self%max_dist
 

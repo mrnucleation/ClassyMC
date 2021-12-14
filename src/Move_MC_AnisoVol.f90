@@ -42,6 +42,7 @@ module MCMove_Anisovol
     integer :: nBoxes
 
 
+    call self%CreateTempArray(1)
 
   end subroutine
 !=========================================================================
@@ -113,7 +114,6 @@ module MCMove_Anisovol
 
     !Energy Calculation
 !    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:1), self%tempList, self%tempNNei, E_Diff, accept)
-    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     call trialBox%ComputeEnergyDelta(self%disp(1:1),&
                                      self%templist, &
                                      self%tempNNei, &

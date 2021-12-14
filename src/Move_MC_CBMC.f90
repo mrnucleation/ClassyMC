@@ -46,7 +46,7 @@ use VarPrecision
 !========================================================
   subroutine CBMC_Constructor(self)
     use BoxData, only: BoxArray
-    use Common_MolInfo, only: MolData, nMolTypes
+    use Common_MolInfo, only: MolData, nMolTypes, mostAtoms
     use MolCon_LinearCBMC, only: LinearCBMC
     use Template_MolConstructor, only: MolConstructor
     use ParallelVar, only: nout
@@ -97,6 +97,7 @@ use VarPrecision
     endif
 
 
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !===============================================
   subroutine CBMC_FullMove(self, trialBox, accept) 

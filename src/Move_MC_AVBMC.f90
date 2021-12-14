@@ -61,7 +61,7 @@ use VarPrecision
 !========================================================
   subroutine AVBMC_Constructor(self)
     use BoxData, only: BoxArray
-    use Common_MolInfo, only: MolData, nMolTypes
+    use Common_MolInfo, only: MolData, nMolTypes, mostAtoms
     implicit none
     class(AVBMC), intent(inout) :: self
     integer :: iBox, nBoxes
@@ -93,6 +93,7 @@ use VarPrecision
     enddo
 
 
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !===============================================
   subroutine AVBMC_FullMove(self, trialBox, accept) 
@@ -234,7 +235,6 @@ use VarPrecision
     endif
     GenProb = ProbSub
 
-    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
                                                 self%newPart(iAtom))

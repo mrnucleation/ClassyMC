@@ -24,7 +24,7 @@ module Template_NeighList
       procedure, pass :: BuildList
       procedure, pass :: SortList
       procedure, pass :: GetListArray
-      procedure, pass :: GetTempListArray
+      procedure, pass :: GetTempListBounds
       procedure, pass :: GetNewList
       procedure, pass :: GetMaxNei
       procedure, pass :: GetNeighCount
@@ -75,17 +75,15 @@ module Template_NeighList
  
   end subroutine
 !===================================================================================
-  subroutine GetTempListArray(self, templist,  tempNNeigh )
+  subroutine GetTempListBounds(self, b1, b2)
     implicit none
     class(NeighListDef), intent(inout), target :: self
-    integer, pointer, intent(inout) :: tempNNeigh(:)
-    integer, pointer, intent(inout) :: templist(:,:)
+    integer, intent(out) :: b1, b2
 
-    tempNNeigh => self%tempNNeigh
-    templist => self%templist
- 
+    b1 = ubound(self%list, 1)
+    b2 = ubound(self%list, 2)
+
   end subroutine
-
 !===================================================================================
   function GetMaxNei(self) result(outval)
     implicit none

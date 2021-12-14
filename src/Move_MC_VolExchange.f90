@@ -45,6 +45,7 @@ module MCMove_VolExchange
     integer :: nBoxes
 
 
+    call self%CreateTempArray(1)
 
   end subroutine
 !=========================================================================
@@ -99,7 +100,6 @@ module MCMove_VolExchange
     self % atmps = self % atmps + 1E0_dp
 
 
-    call box1 % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     !Randomly chose the amount of volume that will be exchanged.
     select case(self%style)
       case(1) !Log Scale

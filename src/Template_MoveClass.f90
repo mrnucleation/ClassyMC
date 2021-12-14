@@ -10,8 +10,8 @@ module MoveClassDef
     real(dp), allocatable :: boxProb(:)
 
     !Temporary Neighborlist Variables
-    integer, pointer :: tempNnei(:) => null()
-    integer, pointer :: tempList(:, :) => null()
+    integer, allocatable :: tempNnei(:) 
+    integer, allocatable :: tempList(:, :) 
 
     contains
       procedure, pass :: Constructor
@@ -19,6 +19,7 @@ module MoveClassDef
       procedure, pass :: FullMove
       procedure, pass :: GetAcceptRate
       procedure, pass :: GetBoxProb
+      procedure, pass :: CreateTempArray
       procedure, pass :: ProcessIO
       procedure, pass :: LoadBoxInfo
       procedure, pass :: UniformMoleculeSelect
@@ -87,6 +88,31 @@ module MoveClassDef
       boxProb(iBox) = self%boxProb(iBox)
     enddo
 
+
+
+  end subroutine
+!=========================================================================
+  subroutine CreateTempArray(self, maxdisp)
+    use BoxData, only: BoxArray
+    class(MCMove), intent(inout) :: self
+    integer, intent(in) :: maxdisp
+    integer :: iBox
+    integer :: b1, b2
+    integer :: maxb1, maxb2
+
+
+    maxb1 = 0
+    maxb2 = 0
+    do iBox = 1, size(BoxArray)
+      call BoxArray(iBox)%box%GetTempListBounds(b1, b2)
+      maxb1 = max(b1, maxb1)
+      maxb2 = max(b2, maxb2)
+    enddo
+
+    if(.not. (allocated(self%templist) .and. allocated(self%tempNNei))) then
+      allocate(self%templist(1:maxb1, 1:maxdisp))
+      allocate(self%tempNNei(1:maxdisp))
+    endif
 
 
   end subroutine

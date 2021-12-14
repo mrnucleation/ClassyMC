@@ -87,7 +87,7 @@ module FF_Pair_Pedone_Cut
     implicit none
     class(Pair_Pedone_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept

@@ -45,6 +45,7 @@ module Template_SimBox
 
     integer, allocatable :: MolGlobalIndx(:, :)
     integer, allocatable :: TypeFirst(:), TypeLast(:)
+    integer, allocatable :: TypeMolFirst(:), TypeMolLast(:)
 
     integer :: nLists
     class(NeighListDef), allocatable :: NeighList(:)
@@ -70,7 +71,7 @@ module Template_SimBox
       procedure, public, pass :: ThermoLookUp
       procedure, public, pass :: IsActive
 !      procedure, public, pass :: UpdateEnergy
-      procedure, public, pass :: UpdatePosition
+!      procedure, public, pass :: UpdatePosition
       procedure, public, pass :: UpdateVol
       procedure, public, pass :: UpdateNeighLists
 
@@ -127,10 +128,14 @@ subroutine GetTypeAtoms(self, iType, typeStart, typeEnd)
     implicit none
     class(SimBox), intent(inout) :: self
     integer, intent(in) :: iType
-    integer, intent(out) :: typeStart, typeEnd
+    integer, intent(out), optional :: typeStart, typeEnd
 
-    typeStart = -1
-    typeEnd = -1
+    if(present(typeStart)) then
+      typeStart = -1
+    endif
+    if(present(typeEnd)) then
+      typeEnd = -1
+    endif
 
 
   end subroutine
@@ -180,12 +185,12 @@ subroutine GetTypeAtoms(self, iType, typeStart, typeEnd)
 !    real(dp), intent(in) :: E_Diff
 !  end subroutine
 !==========================================================================================
-  subroutine UpdatePosition(self, disp, tempList, tempNNei)
-    implicit none
-    class(SimBox), intent(inout) :: self
-    class(Perturbation), intent(inout) :: disp(:)
-    integer, intent(in) :: tempList(:,:), tempNNei(:)
-  end subroutine
+!  subroutine UpdatePosition(self, disp, tempList, tempNNei)
+!    implicit none
+!    class(SimBox), intent(inout) :: self
+!    class(Perturbation), intent(inout) :: disp(:)
+!    integer, intent(in), pointer :: tempList(:,:), tempNNei(:)
+!  end subroutine
 !==========================================================================================
   subroutine UpdateNeighLists(self, disp)
     use CoordinateTypes
