@@ -6,24 +6,28 @@ atomdef
   "Cl"  1.0
 end_atomdef
 
-molecule 1
+molecule 1 
+  regrowthtype simple
   atoms
     1
   end_atoms
 end_molecule
 
 molecule 2
+  regrowthtype simple
   atoms
     2
   end_atoms
 end_molecule
 
 forcefieldtype
-    LJ_Q_Cut
+    LJ_Ele_Cut
 end_forcefieldtype
 
+units energy ev
 forcefield 1
-  rCut 12.5
-  1  0.0  1.0  -1.0
-  2  0.0  1.0   1.0
+  ljrCut 12.5
+  qrCut 12.5
+  1  0.024  2.0  -1.0  0.2
+  2  0.024  2.0   1.0  0.2
 end_forcefield

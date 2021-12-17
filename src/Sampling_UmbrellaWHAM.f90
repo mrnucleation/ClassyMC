@@ -11,6 +11,9 @@ module UmbrellaWHAMRule
     integer, allocatable :: AnalysisIndex(:)
 
     integer :: umbrellaLimit = 0
+    integer, private :: potfile = 0
+    integer, private :: histfile = 0
+    integer, private :: whamfile = 0
     integer, allocatable :: varType(:)
     integer, allocatable :: indexCoeff(:)
     integer, allocatable :: binMin(:), binMax(:)
@@ -73,6 +76,12 @@ module UmbrellaWHAMRule
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: AllocationStat
 
+    if(self%nBiasVar < 1) then
+      write(0,*) "No Bias Variables have been specified for the UmbrellaWHAM sampling method"
+      write(0,*) "Please defined at least one."
+      stop
+    endif
+
     allocate( self%refVals(1:self%nBiasVar), stat=AllocationStat ) 
     allocate( self%AnalysisIndex(1:self%nBiasVar), stat=AllocationStat ) 
     allocate( self%varType(1:self%nBiasVar), stat=AllocationStat ) 
@@ -88,6 +97,8 @@ module UmbrellaWHAMRule
     allocate( self%valMin(1:self%nBiasVar), STAT =AllocationStat )
     allocate( self%valMax(1:self%nBiasVar), STAT =AllocationStat )
     self%varType = 1
+    self%UBinSize = 0
+    self%UArray = 0
     self%refVals = 0E0_dp
     self%valMin = 0E0_dp
     self%valMax = 0E0_dp
@@ -152,12 +163,18 @@ module UmbrellaWHAMRule
     do i = 1, self%nBiasVar 
       self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * self%nBins(i)
     enddo
+    self%umbrellaLimit = max(self%umbrellaLimit, 1)
 
     write(nout,*) "Sampling Style: Histogram based Umbrella Sampling \w Auto WHAM method"
     write(nout,*) "Number of Umbrella Bins:", self%umbrellaLimit
        
     allocate(self%UBias(1:self%umbrellaLimit+1), STAT = AllocateStatus)
     allocate(self%UHist(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+    allocate(self%TempHist(1:self%umbrellaLimit+1), STAT = AllocateStatus)      
+    allocate(self%NewBias(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+    self%NewBias = 0E0_dp
+    self%TempHist = 0E0_dp
+
 
 !    write(nout,*) self%binMax
     self%UBias = 0E0_dp
@@ -180,21 +197,18 @@ module UmbrellaWHAMRule
       allocate(self%FreeEnergyEst(1:self%umbrellaLimit), STAT = AllocateStatus)
       allocate(self%ProbArray(1:self%umbrellaLimit), STAT = AllocateStatus)
 
+      self%FreeEnergyEst = 0E0_dp
       self%WHAM_Numerator = 0E0_dp
       self%WHAM_Denominator = 0E0_dp
       self%HistStorage = 0E0_dp
       self%BiasStorage = 0E0_dp
+      self%ProbArray = 0E0_dp
       self%nCurWhamItter = 1
 !        tolLimit = 1d-2
-      open(unit = 96, file="Umbrella_Histogram.dat")
-      open(unit = 97, file="Umbrella_Potential.dat")
-      open(unit = 98, file="Umbrella_WHAMDG.dat")
+      open(newunit = self%histfile, file="Umbrella_Histogram.dat")
+      open(newunit = self%potfile, file="Umbrella_Potential.dat")
+      open(newunit = self%whamfile, file="Umbrella_WHAMDG.dat")
     endif
-
-    allocate(self%TempHist(1:self%umbrellaLimit), STAT = AllocateStatus)      
-    allocate(self%NewBias(1:self%umbrellaLimit), STAT = AllocateStatus)
-    self%NewBias = 0E0_dp
-    self%TempHist = 0E0_dp
 
 
     write(nout,*) self%refVals, i 
@@ -221,6 +235,7 @@ module UmbrellaWHAMRule
     real(dp) :: biasE, biasOld, biasNew
     real(dp) :: extraTerms, probTerm
 
+    accept = .true.
     if(present(inProb)) then
       if(inProb <= 0E0_dp) then
         accept = .false.
@@ -249,6 +264,7 @@ module UmbrellaWHAMRule
     endif
 
     if(.not. accept) then
+!      write(*,*) "???"
       return
     endif
 
@@ -263,11 +279,13 @@ module UmbrellaWHAMRule
 
 
     accept = .false.
-!    write(*,*) "Bias1B", E_diff, -trialBox%beta * E_Diff
-!    write(*,*) "    ", biasOld, biasNew,  probTerm, extraTerms
     biasE = -trialBox%beta * E_Diff + probTerm + (biasNew-biasOld) + extraTerms
-!    write(*,*) "    ",  biasE
-!    write(*,*)
+!    if( present(extraIn) ) then
+!      write(*,*) "Bias1B", E_diff, -trialBox%beta * E_Diff
+!      write(*,*) "    ", biasOld, biasNew,  probTerm, extraTerms
+!      write(*,*) "    ",  biasE
+!      write(*,*)
+!    endif
     if(biasE >= 0.0E0_dp) then
       accept = .true.
     elseif(biasE > log(grnd()) ) then
@@ -440,12 +458,10 @@ module UmbrellaWHAMRule
 
 !      write(*,*) self%valMax(iBias), biasVal
       if(biasVal > self%valMax(iBias) ) then
-!        write(*,*) "Reject Max"
         accept = .false.
         return
       endif
       if(biasVal < self%valMin(iBias) ) then
-!        write(*,*) "Reject Min", biasVal, self%valMin(iBias)
         accept = .false.
         return
       endif
@@ -474,7 +490,6 @@ module UmbrellaWHAMRule
       accept = .false.
       return
     endif
-!    write(*,*) "New Index", biasIndx
 
   end subroutine
 !==========================================================================================
@@ -739,35 +754,35 @@ module UmbrellaWHAMRule
     write(outputString, *) "(", ("2x, F10.4,", j =1,self%nBiasVar), "2x, F22.1)"
 
 !        This block exports the histogram 
-    rewind(96)
+    rewind(self%histfile)
     do i = 1, self%umbrellaLimit
       if(self%HistStorage(i) /= 0E0_dp ) then
         call self%FindVarValues(i, self%UArray)
-        write(96, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j), j=1,self%nBiasVar), self%HistStorage(i)
+        write(self%histfile, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j), j=1,self%nBiasVar), self%HistStorage(i)
       endif
     enddo
-    flush(96)
+    flush(self%histfile)
 
     write(outputString, *) "(", ("2x, F10.4,", j =1,self%nBiasVar), "2x, F18.8)"
 
 !      This block exports the current umbrella bias
-    rewind(97)
+    rewind(self%potfile)
     do i = 1, self%umbrellaLimit
       call self%FindVarValues(i, self%UArray)
-      write(97, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j),j=1,self%nBiasVar), self%UBias(i)
+      write(self%potfile, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j),j=1,self%nBiasVar), self%UBias(i)
     enddo
-    flush(97)
+    flush(self%potfile)
 
 
 !        This block exports the calculated free energy to a file
-    rewind(98)
+    rewind(self%whamfile)
     do i = 1, self%umbrellaLimit
       if(self%ProbArray(i) /= 0E0_dp ) then
         call self%FindVarValues(i, self%UArray)
-        write(98, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j) ,j=1,self%nBiasVar), self%FreeEnergyEst(i)
+        write(self%whamfile, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j) ,j=1,self%nBiasVar), self%FreeEnergyEst(i)
       endif
     enddo
-    flush(98)
+    flush(self%whamfile)
 
 
 

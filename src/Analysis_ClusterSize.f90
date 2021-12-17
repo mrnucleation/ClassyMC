@@ -76,6 +76,7 @@ use VarPrecision
         anaVar = self%nMol 
     end select
 
+    accept = .true.
     if(disp(1)%boxID /= self%boxNum) then
       accept = .false.
       return
@@ -102,7 +103,10 @@ use VarPrecision
             Diff = Diff + 1
          endif
     end select
-!    write(*,*) "Newcalc", self%boxNum, Diff, self%nMol
+
+    if(Diff == 0) then
+      accept = .false.
+    endif
 
     select type(anaVar => analyCommon(self%analyID)%val)
       type is(integer)

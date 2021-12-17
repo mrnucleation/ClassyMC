@@ -203,6 +203,8 @@ module SimpleSimBox
       procedure, pass :: GetTypeAtoms => SimpleBox_GetTypeAtoms
       procedure, pass :: GetTypeMols => SimpleBox_GetTypeMols
       procedure, pass :: GetMaxAtoms => SimpleBox_GetMaxAtoms
+      procedure, pass :: GetMaxMol => SimpleBox_GetMaxMol
+      procedure, pass :: GetMinMol => SimpleBox_GetMinMol
       procedure, pass :: CountAtoms => SimpleBox_CountAtoms
 !      procedure, pass :: GetCoordinates => SimpleBox_GetCoordinates
       procedure, pass :: GetEFunc => SimpleBox_GetEFunc
@@ -1531,6 +1533,39 @@ function SimpleBox_FindMolByTypeIndex(self, MolType, nthofMolType, nthAtom) resu
 
   end function
 !==========================================================================================
+  function SimpleBox_GetMaxMol(self, iType) result(nMax)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(in) :: self
+    integer, intent(in) :: iType
+    integer :: nMax
+    
+
+    if( (iType < 1) .or. (iType > size(self%NMolMax)) ) then
+      write(0,*) "MolType given:", iType
+      error stop "Invalid Molecule Type given to GetMaxMol!"
+    endif
+
+    nMax = self%NMolMax(iType)
+
+  end function
+!====================================================================================
+  function SimpleBox_GetMinMol(self, iType) result(nMin)
+    use Common_MolInfo, only: nMolTypes, MolData
+    implicit none
+    class(SimpleBox), intent(in) :: self
+    integer, intent(in) :: iType
+    integer :: nMin
+
+    if( (iType < 1) .or. (iType > size(self%NMolMin)) ) then
+      write(0,*) "MolType given:", iType
+      error stop "Invalid Molecule Type given to GetMinMol!"
+    endif
+
+    nMin = self%NMolMin(iType)
+
+  end function
+!==================================================================================
 subroutine SimpleBox_GetTypeAtoms(self, iType, typeStart, typeEnd)
     !Returns the start and end incidies of the atoms of this molecule type
     !that are currently active in the box.

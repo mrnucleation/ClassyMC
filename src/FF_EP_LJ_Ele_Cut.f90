@@ -208,31 +208,24 @@ module FF_EasyEP_LJ_Ele_Cut
     write(nout,*) "Cutoffs Sq (LJ Q Global):", self%rLJCutSq, self%rQCutSq, self%rCutSq
     write(nout,*)
 
-    do i = 1, nAtomTypes
-      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
-    enddo
-
-    write(nout,*)
-    do i = 1, nAtomTypes
-      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
-    enddo
-
-    write(nout,*)
-    do i = 1, nAtomTypes
-      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
-    enddo
-
-    write(nout,*)
-    do i = 1, nAtomTypes
-      write(nout, *) (self%qTable(i,j)/coulombConst, j=1,nAtomTypes)
-    enddo
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
+!    enddo
 
 !    write(nout,*)
 !    do i = 1, nAtomTypes
-!      write(nout, *) (self%qTable(i,j), j=1,nAtomTypes)
+!      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
 !    enddo
 
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
+!    enddo
 
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%qTable(i,j)/coulombConst, j=1,nAtomTypes)
+!    enddo
 
   end subroutine
 

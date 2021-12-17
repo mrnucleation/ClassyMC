@@ -34,10 +34,11 @@ use VarPrecision
   subroutine ParticleExchange_SafetyCheck(self)
     use BoxData, only: boxArray
     use SimpleSimBox, only: SimpleBox
-    use Common_MolInfo, only: mostAtoms
+    use Common_MolInfo, only: mostAtoms, nMolTypes
+    use ParallelVar, only: nOut
     implicit none
     class(ParticleExchange), intent(inout) :: self
-    integer :: iBox
+    integer :: iBox, iType, nMolMin, nMolMax, diff, largestVal
 
     !Ensure a boundary condition is set.
     if(.not. allocated(BoxArray)) then
@@ -48,6 +49,8 @@ use VarPrecision
       stop "The user has only specified one box! ParticleExchange is designed to work with 2 or more boxes!"
     endif
 
+    nMolMax = 0
+    largestVal = 0
     do iBox = 1, size(BoxArray)
       select type(box => BoxArray(iBox)%box)
         type is(SimpleBox)
@@ -55,6 +58,20 @@ use VarPrecision
             write(*,*) "a bounding box!"
             write(*,*) "Box Number:", iBox
       end select
+      do iType = 1, nMolTypes
+        select type(box => BoxArray(iBox)%box)
+          class is(SimpleBox)
+            nMolMin = box%GetMinMol(iType)
+            nMolMax = box%GetMaxMol(iType)
+        end select
+        diff = nMolMax-nMolMin
+        largestVal = max(largestVal, diff)
+      enddo
+      if(largestVal <= 0) then
+        write(nout,*) "WARNING! Box's MolMax is equal to its MolMin for all types."
+        write(nout,*) "         This means no swap moves will take place for this box."
+        write(nout,*) "Box Number:", iBox
+      endif
     enddo
 
     call self%CreateTempArray(mostAtoms)

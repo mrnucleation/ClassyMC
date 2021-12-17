@@ -76,7 +76,7 @@ module Anaylsis_BlockAverage
     call GetXCommand(line, command, 3, lineStat)
     self%thermNum = BoxArray(self%boxNum) % box % ThermoLookUp(command)
     self%varName = command
-    write(nout,*) command
+!    write(nout,*) command
  
     call GetXCommand(line, command, 4, lineStat)
     read(command, *) intVal

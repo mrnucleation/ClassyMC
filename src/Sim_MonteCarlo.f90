@@ -49,6 +49,8 @@ contains
     allocate( boxProb(1:nBoxes) )
     boxNum = 1
 
+    accept = .true.
+
     call Analyze(iCycle, iMove, accept, .true.)
     call Analyze(iCycle, iMove, accept, .false.)
 

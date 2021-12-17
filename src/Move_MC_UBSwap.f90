@@ -114,6 +114,7 @@ use VarPrecision
 
 #ifdef DETAILED
     call self%CheckReversibility(trialBox, accept)
+    return
 #endif
 
     if(grnd() > 0.5E0_dp) then
@@ -219,36 +220,25 @@ use VarPrecision
     endif
     nMove = trialBox%NMol(nType) + 1
     nMove = trialbox%MolGlobalIndx(nType, nMove)
-    call trialBox % GetMolData(nMove, molType=molType, molStart=molStart, &
+    call trialBox % GetMolData(nMove, molStart=molStart, &
                                molEnd=molEnd)
 
     !Choose an atom to serve as the target for the new molecule.
 !    rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
 !    call FindMolecule(trialbox, rawIndx, nTarget)
     nTarget = self%UniformMoleculeSelect(trialBox)
-    call trialBox % GetMolData(nTarget, molStart=targStart, molEnd=targEnd)
+    call trialBox % GetMolData(nTarget, molType=molType, molStart=targStart, molEnd=targEnd)
 
     slice(1) = targStart
     slice(2) = targEnd
     call trialbox%GetCoordinates(targetatoms, slice=slice)
-
+    !Choose the position relative to the target atom 
     nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
     call self%AllocateProb(nInsPoints)
     do iIns = 1, nInsPoints
       call self%CreateForward(targetatoms, self%inspoint(1:3, iIns))
       self%insprob(iIns) = 1E0_dp 
     enddo
-
-    !Old Code
-!    call Generate_UnitSphere(dx, dy, dz)
-!    radius = self % ubRad * grnd()**(1.0E0_dp/3.0E0_dp)
-!    dx = radius * dx
-!    dy = radius * dy
-!    dz = radius * dz
-!    insPoint(1) = trialBox%atoms(1, targStart) + dx
-!    insPoint(2) = trialBox%atoms(2, targStart) + dy
-!    insPoint(3) = trialBox%atoms(3, targStart) + dz
-
 
     nAtoms = MolData(molType)%nAtoms
     do iAtom = 1, nAtoms
@@ -257,7 +247,6 @@ use VarPrecision
       self%newPart(iAtom)%molIndx = nMove
       self%newPart(iAtom)%atmIndx = atomIndx
     enddo
-
 
     call MolData(molType) % molConstruct % GenerateConfig(trialBox, &
                                                           self%newPart(1:nAtoms),&
@@ -330,9 +319,8 @@ use VarPrecision
     !Get the chemical potential term for GCMC
     extraTerms = sampling % GetExtraTerms(self%newpart(1:nAtoms), trialBox)
     !Accept/Reject
-    if( .not. present(moveid) ) then
-      accept = sampling % MakeDecision(trialBox, E_Diff,  self%newPart(1:nAtoms), inProb=Prob, extraIn=extraTerms)
-    else
+    accept = sampling % MakeDecision(trialBox, E_Diff,  self%newPart(1:nAtoms), inProb=Prob, extraIn=extraTerms)
+    if( present(moveid) ) then
       accept = .true.
     endif
 
@@ -474,9 +462,8 @@ use VarPrecision
     !Get chemical potential term
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), trialBox)
     !Accept/Reject
-    if(.not. present(forceid) ) then
-      accept = sampling % MakeDecision(trialBox, E_Diff,  self%oldPart(1:1), inProb=Prob, extraIn=extraTerms)
-    else
+    accept = sampling % MakeDecision(trialBox, E_Diff,  self%oldPart(1:1), inProb=Prob, extraIn=extraTerms)
+    if( present(forceid) ) then
       accept = .true.
     endif
 
