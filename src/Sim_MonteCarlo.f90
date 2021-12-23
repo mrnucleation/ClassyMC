@@ -1,4 +1,7 @@
 !===========================================================================
+! Main Monte Carlo simulation subroutine.  This makes all the calls
+! to the various sub components of this simulation.
+!===========================================================================
 #define __StdErr__ 0
 !===========================================================================
 module SimMonteCarlo
@@ -168,7 +171,6 @@ contains
       do iAn = 1, size(AnalysisArray)
         if( AnalysisArray(iAn)%func%perMove .eqv. moveloop) then
           if((mod(iCycle, int(AnalysisArray(iAn)%func%UpdateFreq,8)) == 0) .or.  AnalysisArray(iAn)%func%perMove) then
-!            write(*,*) iCycle, iMove, AnalysisArray(iAn)%func%perMove, moveloop
             call AnalysisArray(iAn) % func % Compute(accept)
           endif
         endif
