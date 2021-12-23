@@ -190,12 +190,12 @@ module UmbrellaWHAMRule
     self%nWhamItter = ceiling(dble(nCycles)/dble(self%maintFreq))
     ! Allocation of the WHAM variables
     if(myid .eq. 0) then
-      allocate(self%WHAM_Numerator(1:self%umbrellaLimit), STAT = AllocateStatus)
-      allocate(self%WHAM_Denominator(1:self%umbrellaLimit,1:self%nWhamItter+1), STAT = AllocateStatus)
-      allocate(self%HistStorage(1:self%umbrellaLimit), STAT = AllocateStatus)
-      allocate(self%BiasStorage(1:self%umbrellaLimit,1:self%nWhamItter+1), STAT = AllocateStatus)
-      allocate(self%FreeEnergyEst(1:self%umbrellaLimit), STAT = AllocateStatus)
-      allocate(self%ProbArray(1:self%umbrellaLimit), STAT = AllocateStatus)
+      allocate(self%WHAM_Numerator(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+      allocate(self%WHAM_Denominator(1:self%umbrellaLimit+1,1:self%nWhamItter+1), STAT = AllocateStatus)
+      allocate(self%HistStorage(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+      allocate(self%BiasStorage(1:self%umbrellaLimit+1,1:self%nWhamItter+1), STAT = AllocateStatus)
+      allocate(self%FreeEnergyEst(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+      allocate(self%ProbArray(1:self%umbrellaLimit+1), STAT = AllocateStatus)
 
       self%FreeEnergyEst = 0E0_dp
       self%WHAM_Numerator = 0E0_dp
@@ -894,28 +894,29 @@ module UmbrellaWHAMRule
        enddo
      enddo
 
-!        Using the new estimates for the unbiased probability, calculate the free energy of nucleation
-!        and modify the umbrella sampling bias to
+!        Using the new estimates for the unbiased probability, calculate the free energy of the histogram
+!        and modify the umbrella sampling bias such that it's equal to the new estimate.
       self%NewBias = 0E0_dp
       maxbin = maxloc(self%HistStorage,1)
       maxbin2 = maxloc(self%TempHist,1)
       write(nout,*) "Largest Bin", maxbin, maxbin2
       write(nout,*) "Largest Value", self%ProbArray(maxbin)
-      if(self%ProbArray(maxbin) > 1E-200_dp) then
-          do i = 1, self%umbrellaLimit
-            if(self%ProbArray(i) > 0E0_dp) then
-              self%FreeEnergyEst(i) = -log(self%ProbArray(i)/self%ProbArray(maxbin))
-            endif
-            if(self%TempHist(i) >= 1E0_dp) then
-              self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) - log(self%TempHist(i)/self%TempHist(maxbin2))
-            endif
-          enddo
+      if(self%ProbArray(maxbin) > 1E-300_dp) then
+        do i = 1, self%umbrellaLimit
+          if(self%ProbArray(i) > 0E0_dp) then
+            self%FreeEnergyEst(i) = -log(self%ProbArray(i)/self%ProbArray(maxbin))
+          endif
+        enddo
       else
-          self%FreeEnergyEst = 0E0_dp
+        self%FreeEnergyEst = 0E0_dp
       endif
+
+
       do i = 1, self%umbrellaLimit
         if(self%TempHist(i) < 1E0_dp) then
           self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) + log(self%TempHist(maxbin2))
+        else
+          self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) - log(self%TempHist(i)/self%TempHist(maxbin2))
         endif
       enddo
 !        Rescale the pontential such that the reference free energy is set to 0
