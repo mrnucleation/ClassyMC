@@ -14,11 +14,13 @@ contains
     use FF_Hybrid, only: Pair_Hybrid
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
     use FF_EasyEP_LJ_Cut, only: EP_LJ_Cut
+    use FF_EasyEP_LJ_CutShift, only: EP_LJ_CutShift
     use FF_EasyEP_LJ_Ele_Cut, only: EP_LJ_Ele_Cut
-    use FF_Pair_LJ_Wall, only: Pair_LJ_Wall
-    use FF_Pair_LJ_Shift, only: Pair_LJ_Shift
+    use FF_EasyEP_Pedone_Cut, only: EP_Pedone_Cut
+!    use FF_Pair_LJ_Wall, only: Pair_LJ_Wall
+!    use FF_Pair_LJ_Shift, only: Pair_LJ_Shift
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
-    use FF_Pair_LJ_Q_Cut, only: Pair_LJ_Q_Cut
+!    use FF_Pair_LJ_Q_Cut, only: Pair_LJ_Q_Cut
     use FF_Pair_Pedone_Cut, only: Pair_Pedone_Cut
     use FF_Pair_Tersoff, only: Pair_Tersoff
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
@@ -62,34 +64,42 @@ contains
         allocate(Pair_Hybrid::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a Hybrid Forcefield"
 
-      case("lj_cut")
-        allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
+        !Phasing out the lj_cut in favor of the EP style
+!      case("lj_cut")
+!        allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
+!        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
 
-      case("ep_lj_cut")
+      case("lj_cut")
         allocate(EP_LJ_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style (EasyPair)"
 
-      case("ep_lj_ele_cut")
+      case("lj_ele_cut")
         allocate(EP_LJ_Ele_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6-1 LJ/Q Cut style (EasyPair)"
 
 
       case("lj_shift")
-        allocate(Pair_LJ_Shift::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut/Shift style"
+!        allocate(Pair_LJ_Shift::EnergyCalculator(FFNum) % Method)
+        allocate(EP_LJ_CutShift::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut/Shift style (EasyPair)"
 
-      case("lj_q_cut")
-        allocate(Pair_LJ_Q_Cut::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
+!      case("lj_q_cut")
+!        allocate(Pair_LJ_Q_Cut::EnergyCalculator(FFNum) % Method)
+!        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as a 12-6 LJ w/ Eletrostatic Cut style"
 
-      case("lj_wall")
-        allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 9-3 LJ Wall style"
+!      case("lj_wall")
+!        allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
+!        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 9-3 LJ Wall style"
 
       case("pedone")
-        allocate(Pair_Pedone_Cut::EnergyCalculator(FFNum) % Method)
+        allocate(EP_Pedone_Cut::EnergyCalculator(FFNum) % Method)
+!        allocate(Pair_Pedone_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Pedone Cut style"
+
+        !Depreciating the old Pedone code in favor of the EP Style
+!      case("pedone")
+!        allocate(Pair_Pedone_Cut::EnergyCalculator(FFNum) % Method)
+!        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Pedone Cut style"
 
       case("tersoff")
         allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)

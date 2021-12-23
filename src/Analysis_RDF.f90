@@ -202,7 +202,7 @@ use VarPrecision
       if(self%filename(iCharacter:iCharacter) == "&") then
         write(idString, *) myid
         self%filename = ReplaceText(self%filename, "&", trim(adjustl(idString)))
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
         self%parallel = .false.
 #endif
         exit
@@ -224,7 +224,7 @@ use VarPrecision
 !=========================================================================
   subroutine RDF_Maintenance(self)
     use ClassyConstants, only: pi
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     use ParallelVar, only: myid, nout, p_size
@@ -235,7 +235,7 @@ use VarPrecision
     integer :: nSamples
     real(dp) :: r, binVol, norm, volume
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     
     if(self%parallel) then
         write(nout, *) "Stopping for block averaging"

@@ -19,7 +19,7 @@ module Input_Moves
   use MCMove_IsoVol, only: IsoVol
   use MCMove_UB_Swap, only: UB_Swap
   use MCMove_VolExchange, only: VolExchange
-  use Move_ThermoLambda, only: ThermoLambda
+!  use Move_ThermoLambda, only: ThermoLambda
 
   contains
 !================================================================================
@@ -66,8 +66,8 @@ module Input_Moves
       case("moltranslation")
         allocate(MolTranslate::Moves(moveNum)%move)
 
-      case("thermolambda")
-        allocate(ThermoLambda::Moves(moveNum)%move)
+!      case("thermolambda")
+!        allocate(ThermoLambda::Moves(moveNum)%move)
 
       case("isovol")
         allocate(IsoVol::Moves(moveNum)%move)

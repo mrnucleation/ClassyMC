@@ -78,7 +78,7 @@ module FF_Pair_LJ_Q_Cut
     implicit none
     class(Pair_LJ_Q_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
@@ -118,7 +118,6 @@ module FF_Pair_LJ_Q_Cut
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
     integer :: iType, jType, iAtom, jAtom
-    integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq, r
     real(dp) :: ep, sig_sq, q

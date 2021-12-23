@@ -11,6 +11,9 @@ module UmbrellaWHAMRule
     integer, allocatable :: AnalysisIndex(:)
 
     integer :: umbrellaLimit = 0
+    integer, private :: potfile = 0
+    integer, private :: histfile = 0
+    integer, private :: whamfile = 0
     integer, allocatable :: varType(:)
     integer, allocatable :: indexCoeff(:)
     integer, allocatable :: binMin(:), binMax(:)
@@ -46,6 +49,7 @@ module UmbrellaWHAMRule
     contains
        procedure, pass :: Constructor => UmbrellaWHAM_Constructor
        procedure, pass :: MakeDecision => UmbrellaWHAM_MakeDecision
+       procedure, pass :: MakeDecision2Box => UmbrellaWHAM_MakeDecision2Box
        procedure, pass :: UpdateStatistics => UmbrellaWHAM_UpdateStatistics
 
        procedure, pass :: GetBiasIndex => UmbrellaWHAM_GetBiasIndex
@@ -72,6 +76,12 @@ module UmbrellaWHAMRule
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: AllocationStat
 
+    if(self%nBiasVar < 1) then
+      write(0,*) "No Bias Variables have been specified for the UmbrellaWHAM sampling method"
+      write(0,*) "Please defined at least one."
+      stop
+    endif
+
     allocate( self%refVals(1:self%nBiasVar), stat=AllocationStat ) 
     allocate( self%AnalysisIndex(1:self%nBiasVar), stat=AllocationStat ) 
     allocate( self%varType(1:self%nBiasVar), stat=AllocationStat ) 
@@ -87,6 +97,8 @@ module UmbrellaWHAMRule
     allocate( self%valMin(1:self%nBiasVar), STAT =AllocationStat )
     allocate( self%valMax(1:self%nBiasVar), STAT =AllocationStat )
     self%varType = 1
+    self%UBinSize = 0
+    self%UArray = 0
     self%refVals = 0E0_dp
     self%valMin = 0E0_dp
     self%valMax = 0E0_dp
@@ -100,6 +112,12 @@ module UmbrellaWHAMRule
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: i,j, indx, stat, AllocateStatus
+
+    if(self%nBiasVar < 1) then
+      write(0,*) "No Bias Variables have been specified!"
+      write(0,*) "Number of variables is set to 0!"
+      stop
+    endif
 
     do i = 1, self%nBiasVar
       indx = self%AnalysisIndex(i)
@@ -145,12 +163,18 @@ module UmbrellaWHAMRule
     do i = 1, self%nBiasVar 
       self%umbrellaLimit = self%umbrellaLimit + self%indexCoeff(i) * self%nBins(i)
     enddo
+    self%umbrellaLimit = max(self%umbrellaLimit, 1)
 
     write(nout,*) "Sampling Style: Histogram based Umbrella Sampling \w Auto WHAM method"
     write(nout,*) "Number of Umbrella Bins:", self%umbrellaLimit
        
     allocate(self%UBias(1:self%umbrellaLimit+1), STAT = AllocateStatus)
     allocate(self%UHist(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+    allocate(self%TempHist(1:self%umbrellaLimit+1), STAT = AllocateStatus)      
+    allocate(self%NewBias(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+    self%NewBias = 0E0_dp
+    self%TempHist = 0E0_dp
+
 
 !    write(nout,*) self%binMax
     self%UBias = 0E0_dp
@@ -158,7 +182,7 @@ module UmbrellaWHAMRule
 
     call self%GetUIndexArray(self%refVals, i, stat)
     if(stat /= 0) then
-      error stop
+      error stop "Index Error Encountered in Umbrella Sampling"
     endif
     self%refBin = i
 
@@ -166,28 +190,26 @@ module UmbrellaWHAMRule
     self%nWhamItter = ceiling(dble(nCycles)/dble(self%maintFreq))
     ! Allocation of the WHAM variables
     if(myid .eq. 0) then
-      allocate(self%WHAM_Numerator(1:self%umbrellaLimit), STAT = AllocateStatus)
-      allocate(self%WHAM_Denominator(1:self%umbrellaLimit,1:self%nWhamItter+1), STAT = AllocateStatus)
-      allocate(self%HistStorage(1:self%umbrellaLimit), STAT = AllocateStatus)
-      allocate(self%BiasStorage(1:self%umbrellaLimit,1:self%nWhamItter+1), STAT = AllocateStatus)
-      allocate(self%FreeEnergyEst(1:self%umbrellaLimit), STAT = AllocateStatus)
-      allocate(self%ProbArray(1:self%umbrellaLimit), STAT = AllocateStatus)
+      allocate(self%WHAM_Numerator(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+      allocate(self%WHAM_Denominator(1:self%umbrellaLimit+1,1:self%nWhamItter+1), STAT = AllocateStatus)
+      allocate(self%HistStorage(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+      allocate(self%BiasStorage(1:self%umbrellaLimit+1,1:self%nWhamItter+1), STAT = AllocateStatus)
+      allocate(self%FreeEnergyEst(1:self%umbrellaLimit+1), STAT = AllocateStatus)
+      allocate(self%ProbArray(1:self%umbrellaLimit+1), STAT = AllocateStatus)
 
+      self%FreeEnergyEst = 0E0_dp
       self%WHAM_Numerator = 0E0_dp
       self%WHAM_Denominator = 0E0_dp
       self%HistStorage = 0E0_dp
       self%BiasStorage = 0E0_dp
+      self%ProbArray = 0E0_dp
       self%nCurWhamItter = 1
 !        tolLimit = 1d-2
-      open(unit = 96, file="Umbrella_Histogram.dat")
-      open(unit = 97, file="Umbrella_Potential.dat")
-      open(unit = 98, file="Umbrella_WHAMDG.dat")
+      open(newunit = self%histfile, file="Umbrella_Histogram.dat")
+      open(newunit = self%potfile, file="Umbrella_Potential.dat")
+      open(newunit = self%whamfile, file="Umbrella_WHAMDG.dat")
     endif
 
-    allocate(self%TempHist(1:self%umbrellaLimit), STAT = AllocateStatus)      
-    allocate(self%NewBias(1:self%umbrellaLimit), STAT = AllocateStatus)
-    self%NewBias = 0E0_dp
-    self%TempHist = 0E0_dp
 
     write(nout,*) self%refVals, i 
     write(nout,*) "Bin Size:", self%UBinSize
@@ -207,11 +229,13 @@ module UmbrellaWHAMRule
     real(dp), intent(in), optional:: extraIn
     real(dp), intent(in) :: E_Diff
 
-    logical :: accept
+    logical :: accept, indxchanged
+    logical :: usebias
     integer :: iBias, indx
     real(dp) :: biasE, biasOld, biasNew
-    real(dp) :: extraTerms, ranNum, probTerm
+    real(dp) :: extraTerms, probTerm
 
+    accept = .true.
     if(present(inProb)) then
       if(inProb <= 0E0_dp) then
         accept = .false.
@@ -225,40 +249,43 @@ module UmbrellaWHAMRule
       error stop
     endif
 
+    indxchanged = .false.
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
-      call AnalysisArray(indx) % func % CalcNewState(disp)
+      call AnalysisArray(indx) % func % CalcNewState(disp, accept=usebias)
+      if(usebias) indxchanged = .true.
     enddo
 
     self%oldIndx = self % GetBiasIndex()
-    call self%GetNewBiasIndex(self%newIndx, accept)
-
-    if(.not. accept) then
-!      self%UHist(self%oldIndx) = self%UHist(oldIndx) + 1E0_dp
-!      write(*,*) "Early Reject"
-      return
+    if(indxchanged) then
+      call self%GetNewBiasIndex(self%newIndx, accept)
+    else
+      self%newIndx = self%oldIndx
     endif
 
-!    write(*,*) self%oldIndx, self%newIndx
+    if(.not. accept) then
+!      write(*,*) "???"
+      return
+    endif
 
     biasOld = self%UBias(self%oldIndx)
     biasNew = self%UBias(self%newIndx)
 
-     if(present(extraIn)) then
+    if(present(extraIn)) then
       extraTerms = extraIn
     else
       extraTerms = 0E0_dp
     endif
 
 
-
-
-!    write(*,*) "Bias", self%oldindx, biasOld, self%newIndx, biasNew
-
     accept = .false.
     biasE = -trialBox%beta * E_Diff + probTerm + (biasNew-biasOld) + extraTerms
-!    write(*,*) "Energy:", E_diff
-!    write(*,*) "Prob:", biasE, log(inProb), extraTerms, trialBox%beta, biasNew-biasOld
+!    if( present(extraIn) ) then
+!      write(*,*) "Bias1B", E_diff, -trialBox%beta * E_Diff
+!      write(*,*) "    ", biasOld, biasNew,  probTerm, extraTerms
+!      write(*,*) "    ",  biasE
+!      write(*,*)
+!    endif
     if(biasE >= 0.0E0_dp) then
       accept = .true.
     elseif(biasE > log(grnd()) ) then
@@ -266,6 +293,88 @@ module UmbrellaWHAMRule
     endif
 
   end function
+!====================================================================
+  function UmbrellaWHAM_MakeDecision2Box(self, trialBox1,  trialBox2, E_Diff1, E_Diff2, &
+                                       disp1, disp2, inProb, &
+                                       logProb, extraIn ) result(accept)
+    use Template_SimBox, only: SimBox
+    use AnalysisData, only: AnalysisArray
+    use RandomGen, only: grnd
+    use ParallelVar, only: nout
+    implicit none
+    class(UmbrellaWHAM), intent(inout) :: self
+    class(SimBox), intent(in) :: trialBox1, trialBox2
+    class(Perturbation), intent(in) :: disp1(:), disp2(:)
+    real(dp), intent(in) :: E_Diff1, E_Diff2
+    real(dp), intent(in), optional :: inProb, logProb, extraIn
+    logical :: accept
+    logical :: usebias
+    integer :: iDisp, iBias
+    integer :: indx
+    integer :: biasNew, biasOld
+    real(dp) :: biasE, chemPot, extraTerms, probTerm, rannum
+
+
+
+    accept = .false.
+    if(present(inProb)) then
+      if(inProb <= 0E0_dp) then
+        return
+      endif
+    endif
+
+    if(present(extraIn)) then
+      extraTerms = extraIn
+    else
+      extraTerms = 0E0_dp
+    endif
+
+    if(present(inProb)) then
+      probTerm = log(inProb)
+    elseif(present(logProb)) then
+      probTerm = logProb
+    else
+      write(0,*) "Coding Error! Probability has not been passed into Sampling "
+      error stop
+    endif
+
+    do iBias = 1, self%nBiasVar
+      indx = self%AnalysisIndex(iBias)
+      call AnalysisArray(indx) % func % CalcNewState(disp1, usebias)
+      call AnalysisArray(indx) % func % CalcNewState(disp2, usebias)
+    enddo
+
+    self%oldIndx = self % GetBiasIndex()
+    call self%GetNewBiasIndex(self%newIndx, accept)
+!    write(*,*) self%oldIndx, self%newIndx
+
+    if(.not. accept) then
+      return
+    endif
+
+    biasOld = self%UBias(self%oldIndx)
+    biasNew = self%UBias(self%newIndx)
+
+
+!    write(*,*) "Bias2b", E_diff1, E_Diff2
+!    write(*,*) "Bias", -trialBox1%beta*E_diff1, -trialBox2%beta*E_Diff2
+!    write(*,*) "    ", biasOld, biasNew
+!    write(*,*) "    ", probTerm, extraTerms
+    biasE = -trialBox1%beta*E_Diff1 - trialBox2%beta*E_Diff2 + probTerm + extraTerms + (biasNew-biasOld)
+    rannum = grnd()
+!    write(*,*) "    ",  biasE, log(rannum)
+    accept = .false.
+    if(biasE >= 0.0E0_dp) then
+      accept = .true.
+!      write(*,*) "???"
+    elseif( biasE >= log(rannum) ) then
+      accept = .true.
+    endif
+!    write(*,*) "Accept: ", accept
+!    write(*,*)
+
+  end function
+
 !==========================================================================
   function UmbrellaWHAM_GetBiasIndex(self)  result(biasIndx)
     use AnalysisData, only: AnalysisArray, analyCommon
@@ -274,7 +383,7 @@ module UmbrellaWHAMRule
     integer :: biasIndx
 
     integer :: analyIndx
-    integer :: iBias, bin, intVal
+    integer :: iBias, intVal
     real(dp) :: biasVal
     
    ! Get the variables that are used for the biasing and figure out which histogram bin they
@@ -320,14 +429,14 @@ module UmbrellaWHAMRule
   end function
 !==========================================================================
   subroutine UmbrellaWHAM_GetNewBiasIndex(self, biasIndx, accept)
-    use AnalysisData, only: AnalysisArray, analyCommon
+    use AnalysisData, only: analyCommon
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     logical, intent(out) :: accept
     integer, intent(out) :: biasIndx
 
     integer :: analyIndx
-    integer :: iBias, bin
+    integer :: iBias
     real(dp) :: biasVal
     
    ! Get the variables that are used for the biasing and figure out which histogram bin they
@@ -349,12 +458,10 @@ module UmbrellaWHAMRule
 
 !      write(*,*) self%valMax(iBias), biasVal
       if(biasVal > self%valMax(iBias) ) then
-!        write(*,*) "Reject Max"
         accept = .false.
         return
       endif
       if(biasVal < self%valMin(iBias) ) then
-!        write(*,*) "Reject Min", biasVal, self%valMin(iBias)
         accept = .false.
         return
       endif
@@ -383,7 +490,6 @@ module UmbrellaWHAMRule
       accept = .false.
       return
     endif
-!    write(*,*) "New Index", biasIndx
 
   end subroutine
 !==========================================================================================
@@ -391,7 +497,7 @@ module UmbrellaWHAMRule
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: AllocateStatus
-    integer :: j, iInput, iBias, inStat, biasIndx, iUmbrella
+    integer :: j, inStat, biasIndx, iUmbrella
     real(dp), allocatable :: varValue(:)
     real(dp) :: curBias, refVal
 
@@ -475,7 +581,7 @@ module UmbrellaWHAMRule
    subroutine UmbrellaWHAM_OutputUmbrellaHist(self)
      implicit none
      class(UmbrellaWHAM), intent(inout) :: self
-     integer :: iUmbrella, iBias, iBin
+     integer :: iUmbrella, iBias
      character(len = 100) :: outputString
 
      write(outputString, *) "(", ("F12.8, 2x", iBias =1,self%nBiasVar), "2x, F18.1)"
@@ -602,7 +708,7 @@ module UmbrellaWHAMRule
 !====================================================================
   subroutine UmbrellaWHAM_Maintenance(self)
     use AnalysisData, only: AnalysisArray
-    use ParallelVar, only: nout, myid
+    use ParallelVar, only: nout
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
 
@@ -648,35 +754,35 @@ module UmbrellaWHAMRule
     write(outputString, *) "(", ("2x, F10.4,", j =1,self%nBiasVar), "2x, F22.1)"
 
 !        This block exports the histogram 
-    rewind(96)
+    rewind(self%histfile)
     do i = 1, self%umbrellaLimit
       if(self%HistStorage(i) /= 0E0_dp ) then
         call self%FindVarValues(i, self%UArray)
-        write(96, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j), j=1,self%nBiasVar), self%HistStorage(i)
+        write(self%histfile, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j), j=1,self%nBiasVar), self%HistStorage(i)
       endif
     enddo
-    flush(96)
+    flush(self%histfile)
 
     write(outputString, *) "(", ("2x, F10.4,", j =1,self%nBiasVar), "2x, F18.8)"
 
 !      This block exports the current umbrella bias
-    rewind(97)
+    rewind(self%potfile)
     do i = 1, self%umbrellaLimit
       call self%FindVarValues(i, self%UArray)
-      write(97, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j),j=1,self%nBiasVar), self%UBias(i)
+      write(self%potfile, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j),j=1,self%nBiasVar), self%UBias(i)
     enddo
-    flush(97)
+    flush(self%potfile)
 
 
 !        This block exports the calculated free energy to a file
-    rewind(98)
+    rewind(self%whamfile)
     do i = 1, self%umbrellaLimit
       if(self%ProbArray(i) /= 0E0_dp ) then
         call self%FindVarValues(i, self%UArray)
-        write(98, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j) ,j=1,self%nBiasVar), self%FreeEnergyEst(i)
+        write(self%whamfile, outputString) (self%UArray(j)*self%UBinSize(j)+self%valMin(j) ,j=1,self%nBiasVar), self%FreeEnergyEst(i)
       endif
     enddo
-    flush(98)
+    flush(self%whamfile)
 
 
 
@@ -687,24 +793,24 @@ module UmbrellaWHAMRule
 !     by collecting histogram data from across each thread. 
   subroutine UmbrellaWHAM_AdjustHist(self)
     use ParallelVar, only: myid, nout, ierror
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     implicit none
     class(UmbrellaWHAM), intent(inout) :: self
     integer :: arraySize, i, j, cnt, maxbin, maxbin2
-    real(dp) :: norm, maxBias, denomSum
-    real(qp) :: F_Estimate(1:self%nWhamItter), F_Old(1:self%nWhamItter), fSum     
+    real(dp) :: norm, maxBias
+    real(qp) :: F_Estimate(1:self%nWhamItter), F_Old(1:self%nWhamItter), fSum, denomSum
     real(dp) :: tol, refBias
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     write(nout,*) "Halting for WHAM"
     call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
 #endif
     
 !      This block condences the histogram data from all the different processors
 !      into one collective array on the root (myid = 0) processor.        
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     arraySize = size(self%UHist)     
     if(myid .eq. 0) then
       self%TempHist = 0E0_dp
@@ -788,28 +894,29 @@ module UmbrellaWHAMRule
        enddo
      enddo
 
-!        Using the new estimates for the unbiased probability, calculate the free energy of nucleation
-!        and modify the umbrella sampling bias to
+!        Using the new estimates for the unbiased probability, calculate the free energy of the histogram
+!        and modify the umbrella sampling bias such that it's equal to the new estimate.
       self%NewBias = 0E0_dp
       maxbin = maxloc(self%HistStorage,1)
       maxbin2 = maxloc(self%TempHist,1)
       write(nout,*) "Largest Bin", maxbin, maxbin2
       write(nout,*) "Largest Value", self%ProbArray(maxbin)
-      if(self%ProbArray(maxbin) > 1E-200_dp) then
-          do i = 1, self%umbrellaLimit
-            if(self%ProbArray(i) > 0E0_dp) then
-              self%FreeEnergyEst(i) = -log(self%ProbArray(i)/self%ProbArray(maxbin))
-            endif
-            if(self%TempHist(i) >= 1E0_dp) then
-              self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) - log(self%TempHist(i)/self%TempHist(maxbin2))
-            endif
-          enddo
+      if(self%ProbArray(maxbin) > 1E-300_dp) then
+        do i = 1, self%umbrellaLimit
+          if(self%ProbArray(i) > 0E0_dp) then
+            self%FreeEnergyEst(i) = -log(self%ProbArray(i)/self%ProbArray(maxbin))
+          endif
+        enddo
       else
-          self%FreeEnergyEst = 0E0_dp
+        self%FreeEnergyEst = 0E0_dp
       endif
+
+
       do i = 1, self%umbrellaLimit
         if(self%TempHist(i) < 1E0_dp) then
           self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) + log(self%TempHist(maxbin2))
+        else
+          self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) - log(self%TempHist(i)/self%TempHist(maxbin2))
         endif
       enddo
 !        Rescale the pontential such that the reference free energy is set to 0
@@ -825,7 +932,7 @@ module UmbrellaWHAMRule
     endif      !End of processor 0 only block
 
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
 !      Distribute the new free energy estimate to all threads so that they can continue the simulation
 !      with the new free energy. 

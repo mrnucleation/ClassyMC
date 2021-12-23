@@ -94,7 +94,7 @@ module FF_Pair_LJ_Wall
     implicit none
     class(Pair_LJ_Wall), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept

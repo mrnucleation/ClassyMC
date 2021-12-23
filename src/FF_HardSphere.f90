@@ -54,7 +54,6 @@ module FF_HardSphere
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: ep, sig_sq
     real(dp) :: LJ
     real(dp) :: E_LJ
     real(dp) :: rmin_ij      
@@ -101,7 +100,7 @@ module FF_HardSphere
     implicit none
     class(Pair_HardSphere), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept

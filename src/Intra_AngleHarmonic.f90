@@ -14,6 +14,7 @@ module IntraAngle_Harmonic
       procedure, pass :: Constructor => HarmonicAngle_Constructor
 !      procedure, pass :: DetailedECalc => HarmonicAngle_DetailedECalc
       procedure, pass :: GenerateDist => HarmonicAngle_GenerateDist
+      procedure, pass :: GenerateTrial => HarmonicAngle_GenerateTrial
 !      procedure, pass :: GenerateReverseDist => HarmonicAngle_GenerateReverseDist
       procedure, pass :: ProcessIO => HarmonicAngle_ProcessIO
   end type
@@ -37,9 +38,36 @@ module IntraAngle_Harmonic
 
   end subroutine
 !==========================================================================
-  subroutine HarmonicAngle_GenerateDist(self, beta, val, probgen, E_T)
+  subroutine HarmonicAngle_GenerateTrial(self, beta, val, bounds )
     use RandomGen, only: grnd, Gaussian
     use ClassyConstants, only: two_pi
+    implicit none
+    class(HarmonicAngle), intent(inout) :: self
+    real(dp), intent(in) :: beta
+    real(dp), intent(out) :: val
+    real(dp), intent(in), optional :: bounds(1:2)
+    real(dp) :: EGen
+    real(dp) :: lb, ub
+
+    if(.not. present(bounds)) then
+      lb = 0E0_dp
+      ub = two_pi
+    else
+      lb = bounds(1)
+      ub = bounds(2)
+    endif
+
+    do
+      val = Gaussian()
+      val = self%theta0 + val/sqrt(self%k0*beta)
+      if( (val > ub) .or. (val < lb) ) cycle
+      exit
+    enddo
+  end subroutine
+!==========================================================================
+  subroutine HarmonicAngle_GenerateDist(self, beta, val, probgen, E_T)
+    use ClassyConstants, only: two_pi
+    use RandomGen, only: grnd
     implicit none
     class(HarmonicAngle), intent(inout) :: self
     real(dp), intent(in) :: beta
@@ -49,11 +77,12 @@ module IntraAngle_Harmonic
     real(dp) :: EGen
 
     do
-      val = Gaussian()
-      val = self%theta0 + val/sqrt(self%k0*beta)
-      if( (val > two_pi) .or. (val < 0.0E0_dp) ) then
-        cycle
-      endif
+!      val = Gaussian()
+!      val = self%theta0 + val/sqrt(self%k0*beta)
+!      if( (val > two_pi) .or. (val < 0.0E0_dp) ) then
+!        cycle
+!      endif
+      call self%GenerateTrial(beta, val)
       probgen = sin(val)
       if(probgen > grnd()) then
         exit

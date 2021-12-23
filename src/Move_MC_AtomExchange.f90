@@ -21,13 +21,12 @@ use VarPrecision
  contains
 !========================================================
   subroutine AtomExchange_Constructor(self)
-    use Common_MolInfo, only: MolData, nMolTypes
+    use Common_MolInfo, only: mostAtoms
     implicit none
     class(MC_AtomExchange), intent(inout) :: self
 
 
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(1, 1) )
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !=========================================================================
   subroutine AtomExchange_GeneratePosition(self, disp)
@@ -42,7 +41,7 @@ use VarPrecision
     use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
-    use Common_NeighData, only: neighSkin
+!    use Common_NeighData, only: neighSkin
 
     implicit none
     class(MC_AtomExchange), intent(inout) :: self
@@ -51,13 +50,13 @@ use VarPrecision
     integer :: i
     integer :: nAtom, nAtomNew, reduIndx, newtype, oldtype
     integer :: nTarget
-    real(dp) :: OldProb, NewProb, Prob
+    real(dp) :: Prob
     real(dp) :: E_Diff, E_Inter, E_Intra
     real(dp) :: extraTerms
 
 
     accept = .true.
-
+    call self%LoadBoxInfo(trialBox, self%disp)
     ! Choose an atom to remove
     reduIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
     call FindMolecule(trialbox, reduIndx, nTarget)
@@ -130,7 +129,7 @@ use VarPrecision
     if(accept) then
 !      write(*,*) "Atom Exchange"
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList(:,:), self%tempNNei(:))
      endif
 

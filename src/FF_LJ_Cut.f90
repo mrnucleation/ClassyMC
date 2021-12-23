@@ -6,6 +6,7 @@ module FF_Pair_LJ_Cut
   use CoordinateTypes
 
   type, extends(forcefield) :: Pair_LJ_Cut
+    logical :: includetail=.false.
     real(dp), allocatable :: eps(:)
     real(dp), allocatable :: sig(:)
     real(dp), allocatable :: rMin(:)
@@ -60,7 +61,6 @@ module FF_Pair_LJ_Cut
   end subroutine
   !===================================================================================
   subroutine Detailed_LJ_Cut(self, curbox, E_T, accept)
-    use ParallelVar, only: nout
     use Common_MolInfo, only: nMolTypes
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
@@ -127,7 +127,7 @@ module FF_Pair_LJ_Cut
     implicit none
     class(Pair_LJ_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
@@ -414,7 +414,7 @@ module FF_Pair_LJ_Cut
       enddo
     enddo
 
-    E_Diff = E_Diff - curbox%ETotal
+    E_Diff = E_Diff - curbox%E_Inter
     curbox % dETable = curbox%dETable - curbox % ETable
 
   end subroutine

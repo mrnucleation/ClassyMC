@@ -6,9 +6,11 @@
 !
 !  For a valid Analysis script the compute function must be defined
 !  def compute(boxlist):
+!      return (float)
 !
 !  
 !  def compute_new(boxlist, disp):
+!      return (float)
 !
 !
 !=========================================================================
@@ -124,7 +126,8 @@ module Anaylsis_PythonFunc
     if(self%new) then
       self%lastvalue = self%newvalue
       self%new = .false.
-!      ierror = call_py_noret(self%pyanalysis, "update", args=self%args)
+      ierror = call_py_noret(self%pyanalysis, "update", args=self%args)
+      errcheck_macro
       return
     endif
 

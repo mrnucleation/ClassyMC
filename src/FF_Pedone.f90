@@ -87,11 +87,10 @@ module FF_Pair_Pedone_Cut
     implicit none
     class(Pair_Pedone_Cut), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
-    real(dp) :: E_Half
 
     accept = .true.
     curbox % dETable = 0E0_dp
@@ -584,7 +583,7 @@ module FF_Pair_Pedone_Cut
       enddo
     enddo
 
-    E_Diff = E_Diff - curbox%ETotal
+    E_Diff = E_Diff - curbox%E_Inter
     curbox % dETable = curbox%dETable - curbox % ETable
 
   end subroutine

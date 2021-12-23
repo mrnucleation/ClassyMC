@@ -30,7 +30,8 @@ module MetropolisRule
     real(dp), intent(in) :: E_Diff
     logical :: accept
     integer :: iDisp
-    real(dp) :: biasE, chemPot, extraTerms, probTerm
+    real(dp) :: biasE = 1E0_dp
+    real(dp) :: chemPot, extraTerms, probTerm
 
 
     if(IsNan(E_Diff)) then
@@ -62,9 +63,12 @@ module MetropolisRule
       write(0,*) "Coding Error! Probability has not been passed into Sampling "
       error stop
     endif
+!    write(*,*) "Bias", E_diff
+!    write(*,*) "    ", probTerm, extraTerms
 
     biasE = -trialBox%beta * E_Diff + probTerm + extraTerms
-!    write(*,*) biasE, trialBox%beta, E_Diff 
+!    write(*,*) "    ",  biasE
+!    write(*,*)
     if(biasE >= 0.0E0_dp) then
       accept = .true.
     elseif( biasE > log(grnd()) ) then
@@ -95,8 +99,6 @@ module MetropolisRule
     if(present(inProb)) then
       if(inProb <= 0E0_dp) then
         return
-!      write(nout,*) "Probability:", inProb
-!      error stop "CRITICAL ERROR! Probability passed to the Metropolis Sampling Function is zero or negative!"
       endif
     endif
 
@@ -115,7 +117,12 @@ module MetropolisRule
       error stop
     endif
 
+!    write(*,*) "Bias", E_diff1, E_Diff2
+!    write(*,*) "    ", probTerm, extraTerms
+
     biasE = -trialBox1%beta*E_Diff1 - trialBox2%beta*E_Diff2 + probTerm + extraTerms
+!    write(*,*) "    ",  biasE
+!    write(*,*)
     if(biasE > 0.0E0_dp) then
       accept = .true.
     elseif( biasE > log(grnd()) ) then

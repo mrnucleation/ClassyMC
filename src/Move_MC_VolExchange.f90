@@ -1,6 +1,7 @@
 !=========================================================================
-! Monte Carlo move for the Isobaric ensemble. This move scales the dimensions
-! of the simulation box uniformly in all directions. 
+! Monte Carlo move for the Gibbs Ensemble. This move scales the dimensions
+! of the simulation box uniformly in all directions of more than one box
+! at the same time. Intended to keep two boxes in volumetric equlibrium.
 !=========================================================================
 module MCMove_VolExchange
   use CoordinateTypes, only: OrthoVolChange, TriVolChange
@@ -44,9 +45,8 @@ module MCMove_VolExchange
     integer :: nBoxes
 
 
+    call self%CreateTempArray(1)
 
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(1, 1) )
   end subroutine
 !=========================================================================
   subroutine VolExchange_MultiBox(self, accept)
@@ -64,6 +64,8 @@ module MCMove_VolExchange
     real(dp) :: dV, vTotal
     real(dp) :: Prob, Norm, extraTerms, half
     real(dp) :: E_Diff1, E_Diff2, scaleFactor
+    real(dp) :: E_Inter1, E_Inter2
+    real(dp) :: E_Intra1, E_Intra2
     real(dp) :: rescale(1:size(self%boxprob))
 
 
@@ -71,7 +73,7 @@ module MCMove_VolExchange
     !Randomly choose which boxes will exchange volume
     boxNum = ListRNG(self%boxProb)
     box1 => BoxArray(boxNum)%box
-
+    call self%LoadBoxInfo(box1, self%disp1)
     !To avoid picking the same box twice, rescale the probability such that
     !box1's probability is equal to 0.
     rescale = self%boxprob
@@ -90,11 +92,13 @@ module MCMove_VolExchange
     enddo
     boxNum = ListRNG(rescale)
     box2 => BoxArray(boxNum)%box
+    call self%LoadBoxInfo(box2, self%disp2)
 
 
 
     !Increment attempt counter.
     self % atmps = self % atmps + 1E0_dp
+
 
     !Randomly chose the amount of volume that will be exchanged.
     select case(self%style)
@@ -179,7 +183,14 @@ module MCMove_VolExchange
 
 
     !Energy Calculation for Box 1
-    call box1 % EFunc % Method % DiffECalc(box1, self%disp1(1:1), self%tempList, self%tempNNei, E_Diff1, accept)
+    call Box1 % ComputeEnergyDelta(self%disp1(1:1),&
+                                     self%templist, &
+                                     self%tempNNei, &
+                                     E_Inter1, &
+                                     E_Intra1, &
+                                     E_Diff1, &
+                                     accept, &
+                                     computeintra=.false.)
     if(.not. accept) then
       return
     endif
@@ -190,7 +201,15 @@ module MCMove_VolExchange
     endif
 
     !Energy Calculation for Box 2
-    call box2 % EFunc % Method % DiffECalc(box2, self%disp2(1:1), self%tempList, self%tempNNei, E_Diff2, accept)
+    call Box2 % ComputeEnergyDelta(self%disp2(1:1),&
+                                     self%templist, &
+                                     self%tempNNei, &
+                                     E_Inter2, &
+                                     E_Intra2, &
+                                     E_Diff2, &
+                                     accept, &
+                                     computeintra=.false.)
+
     if(.not. accept) then
       return
     endif
@@ -226,20 +245,17 @@ module MCMove_VolExchange
     half = sampling % GetExtraTerms(self%disp2(1:1), box2)
     extraTerms = extraTerms + half
 
-!    write(*,*)  E_Diff1, E_Diff2, extraTerms, prob
-!    accept = sampling % MakeDecision(box1, E_Diff, self%disp1(1:1), logProb=prob,&
-!                                     extraIn=extraTerms)
     accept = sampling % MakeDecision2Box(box1,  box2, E_Diff1, E_Diff2, &
                             self%disp1(1:1), self%disp2(1:1), logProb=prob, &
                             extraIn=extraTerms )
 
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call box1 % UpdateEnergy(E_Diff1)
-      call box1 % UpdatePosition(self%disp1(1:1), self%tempList, self%tempNNei)
+      call Box1 % UpdateEnergy(E_Diff1, E_Inter1)
+      call Box1 % UpdatePosition(self%disp1(1:1), self%tempList, self%tempNNei)
 
-      call box2 % UpdateEnergy(E_Diff2)
-      call box2 % UpdatePosition(self%disp2(1:1), self%tempList, self%tempNNei)
+      call Box2 % UpdateEnergy(E_Diff2, E_Inter2)
+      call Box2 % UpdatePosition(self%disp2(1:1), self%tempList, self%tempNNei)
     endif
 
   end subroutine

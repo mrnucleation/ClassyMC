@@ -73,6 +73,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%disp)
 
     !Propose move
     rawIndx = floor( trialBox%nAtoms * grnd() + 1E0_dp )
@@ -146,7 +147,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
     endif
 
@@ -154,6 +155,7 @@ use VarPrecision
 !=========================================================================
   subroutine PlaneAtomTranslate_Prologue(self)
     use ParallelVar, only: nout
+    use Common_MolInfo, only: mostAtoms
     implicit none
     class(PlaneAtomTranslate), intent(inout) :: self
 
@@ -161,6 +163,7 @@ use VarPrecision
       call self % Constructor
     endif
       
+    call self%CreateTempArray(mostAtoms)
 
     write(nout,"(1x,A,F15.8)") "(Plane Atom Translate) Maximum Displacement: ", self%max_dist
 

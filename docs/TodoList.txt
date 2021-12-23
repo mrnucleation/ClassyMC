@@ -1,16 +1,21 @@
 This is a short list kept by the developer to keep track of features that are still in need of implimentation
 
-1. Finish the Intra Molecular Interaction Framework
-2. Finish Rosenbluth Sampling Modules
+DONE: 1. Finish the Intra Molecular Interaction Framework
+DONE: 2. Finish Rosenbluth Sampling Modules
 3. Start work on allowing the user to select different parallelization schemes.
 4. Impliment Energy Biased AVBMC
-5. CBMC and support for larger molecules is needed.
+PARTIALY DONE: 5. CBMC and support for larger molecules is needed.
 6. Long Range Solver for bulk systems required.
 7. Implimentation of the Stil-Web Potential
 8. Pressure Computations for Gibbs and Iso-volumetric Ensembles
-9. Finish the EasyPair FF style.
+DONE: 9. Finish the EasyPair FF style.
 
 Nice things to think about doing in the future:
 
 1. Internal library for common forcefields.
 2. Impliment More Monte Carlo Moves
+
+
+Current Bug Notes:
+  The volume moves are breaking for molecular systems.  Really need to fix this.  I suspect this 
+  has to do with the shift not being properly computed.

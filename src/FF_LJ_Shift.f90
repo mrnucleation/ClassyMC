@@ -72,7 +72,7 @@ module FF_Pair_LJ_Shift
     class(SimBox), intent(inout) :: curbox
     real(dp), intent(inOut) :: E_T
     logical, intent(out) :: accept
-    integer :: iType, jType, iAtom, jAtom
+    integer :: iType, iAtom, jAtom
     integer :: iLow, iUp, jLow, jUp
     integer :: atmType1, atmType2
     real(dp) :: rx, ry, rz, rsq
@@ -146,7 +146,7 @@ module FF_Pair_LJ_Shift
     implicit none
     class(Pair_LJ_Shift), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout) :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept

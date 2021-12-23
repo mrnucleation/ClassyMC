@@ -106,7 +106,6 @@ use VarPrecision
   subroutine Thermo_Epilogue(self)
     use ParallelVar, only: myid
     implicit none
-    integer :: ierror
     class(ThermoAverage), intent(inout) :: self
 
     call self % WriteInfo
@@ -114,7 +113,7 @@ use VarPrecision
   end subroutine
 !=========================================================================
   subroutine Thermo_Finalize(self)
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     use ParallelVar, only: myid, nout
@@ -123,7 +122,7 @@ use VarPrecision
     class(ThermoAverage), intent(inout) :: self
     real(dp) :: dummy
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     dummy = self%varSum
     call MPI_REDUCE(self%varSum, dummy, 1, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierror) 

@@ -1,0 +1,6 @@
+objects/*.o
+mods/*
+profiling/*
+**/Config_*.clssy
+**/classyMC
+**/classyMC_debug

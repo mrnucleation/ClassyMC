@@ -46,7 +46,7 @@ use VarPrecision
 !========================================================
   subroutine CBMC_Constructor(self)
     use BoxData, only: BoxArray
-    use Common_MolInfo, only: MolData, nMolTypes
+    use Common_MolInfo, only: MolData, nMolTypes, mostAtoms
     use MolCon_LinearCBMC, only: LinearCBMC
     use Template_MolConstructor, only: MolConstructor
     use ParallelVar, only: nout
@@ -75,8 +75,6 @@ use VarPrecision
     enddo
 
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
     allocate( self%patharrays(1:maxAtoms, 1:nMolTypes) )
     self%patharrays = 0
@@ -90,7 +88,6 @@ use VarPrecision
 
         class default
           self%validtype(iType) = .false.
-          error stop
       end select
     enddo
 
@@ -100,6 +97,7 @@ use VarPrecision
     endif
 
 
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !===============================================
   subroutine CBMC_FullMove(self, trialBox, accept) 
@@ -123,13 +121,14 @@ use VarPrecision
     real(dp) :: E_Diff, E_Inter, E_Intra, biasE
     real(dp) :: Prob, ProbFor, ProbRev
     
-    integer :: slice(1:2)
+!    integer :: slice(1:2)
     real(dp), pointer :: atoms(:,:) => null()
 
     boxID = trialBox % boxID
     self % atmps = self % atmps + 1E0_dp
     self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialBox, self%disp)
 
     !Propose move
     nMove = self%UniformMoleculeSelect(trialBox, restrict=self%validtype(1:nMolTypes))
@@ -189,11 +188,14 @@ use VarPrecision
 
 
     !If the particle moved a large distance get a temporary neighborlist
-!    if(any([dx,dy,dz] > neighSkin)) then
-!      call trialBox % NeighList(1) % GetNewList(1, self%tempList, self%tempNNei, self%disp(1))
-!      self%disp(1)%newlist = .true.
-!    else
 
+!    if(any([dx,dy,dz] > neighSkin)) then
+!      call trialBox % NeighList(1) % GetTempListArray(tempList, tempNNei)
+!      do iAtom = 1, nAtoms
+!        call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
+!                                                  self%disp(iAtom))
+!        self%disp(iAtom)%listIndex = iAtom
+!      enddo 
 !    endif
 
     !Check Constraint
@@ -247,7 +249,7 @@ use VarPrecision
 
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%disp(1:nRegrow), self%tempList, self%tempNNei)
     else
 !      slice(1) = molStart
@@ -292,6 +294,7 @@ use VarPrecision
     class(CBMC), intent(inout) :: self
     real(dp) :: accptRate
       
+    write(nout,*) 
     write(nout,"(1x,A,I15)") "CBMC Moves Accepted: ", nint(self%accpt)
     write(nout,"(1x,A,I15)") "CBMC Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()

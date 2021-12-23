@@ -8,8 +8,11 @@ use VarPrecision
   type, public, extends(MCMultiBoxMove) :: ParticleExchange
 !    real(dp) :: atmps = 1E-30_dp
 !    real(dp) :: accpt = 0E0_dp
-    type(Addition), allocatable :: newPart(:)
-    type(Deletion) :: oldPart(1:1)
+    type(Addition), allocatable, private :: newPart(:)
+    type(Deletion), private :: oldPart(1:1)
+
+    real(dp), private, allocatable :: insPoint(:, :)
+    real(dp), private, allocatable :: insProb(:)
 
 !    integer, allocatable :: tempNnei(:)
 !    integer, allocatable :: tempList(:, :)
@@ -18,6 +21,7 @@ use VarPrecision
       procedure, pass :: SafetyCheck => ParticleExchange_SafetyCheck
       procedure, pass :: Constructor => ParticleExchange_Constructor
       procedure, pass :: MultiBox => ParticleExchange_MultiBox
+      procedure, pass :: AllocateProb => ParticleExchange_AllocateProb
 !      procedure, pass :: GeneratePosition => ParticleExchange_GeneratePosition
 !      procedure, pass :: FullMove => ParticleExchange_FullMove
 !      procedure, pass :: Maintenance => ParticleExchange_Maintenance
@@ -30,11 +34,23 @@ use VarPrecision
   subroutine ParticleExchange_SafetyCheck(self)
     use BoxData, only: boxArray
     use SimpleSimBox, only: SimpleBox
+    use Common_MolInfo, only: mostAtoms, nMolTypes
+    use ParallelVar, only: nOut
     implicit none
     class(ParticleExchange), intent(inout) :: self
-    integer :: iBox
+    integer :: iBox, iType, nMolMin, nMolMax, diff, largestVal
 
     !Ensure a boundary condition is set.
+    if(.not. allocated(BoxArray)) then
+      error stop "No boxes to opperate on!"
+    endif
+
+    if( size(BoxArray) < 2 ) then
+      stop "The user has only specified one box! ParticleExchange is designed to work with 2 or more boxes!"
+    endif
+
+    nMolMax = 0
+    largestVal = 0
     do iBox = 1, size(BoxArray)
       select type(box => BoxArray(iBox)%box)
         type is(SimpleBox)
@@ -42,22 +58,30 @@ use VarPrecision
             write(*,*) "a bounding box!"
             write(*,*) "Box Number:", iBox
       end select
+      do iType = 1, nMolTypes
+        select type(box => BoxArray(iBox)%box)
+          class is(SimpleBox)
+            nMolMin = box%GetMinMol(iType)
+            nMolMax = box%GetMaxMol(iType)
+        end select
+        diff = nMolMax-nMolMin
+        largestVal = max(largestVal, diff)
+      enddo
+      if(largestVal <= 0) then
+        write(nout,*) "WARNING! Box's MolMax is equal to its MolMin for all types."
+        write(nout,*) "         This means no swap moves will take place for this box."
+        write(nout,*) "Box Number:", iBox
+      endif
     enddo
 
-
-
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !========================================================
   subroutine ParticleExchange_Constructor(self)
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(ParticleExchange), intent(inout) :: self
-!    integer :: iType, maxAtoms
 
-
-
-!    allocate( self%tempNNei(1) )
-!    allocate( self%tempList(200, 1) )
   end subroutine
 !========================================================
 !  subroutine ParticleExchange_GeneratePosition(self, disp)
@@ -70,6 +94,23 @@ use VarPrecision
 !      dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
 !      dz = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
 !  end subroutine
+!========================================================
+  subroutine  ParticleExchange_AllocateProb(self, nInsPoints)
+    implicit none
+    class(ParticleExchange), intent(inout) :: self
+    integer, intent(in) :: nInsPoints
+
+    if(.not. allocated(self%insPoint) ) then
+      allocate(self%insPoint(1:3, 1:nInsPoints))
+      allocate(self%insProb(1:nInsPoints))
+    else if(size(self%insPoint, 2) < nInsPoints) then
+      deallocate(self%insPoint)
+      deallocate(self%insProb)
+      allocate(self%insPoint(1:3, 1:nInsPoints))
+      allocate(self%insProb(1:nInsPoints))
+    endif
+
+  end subroutine
 !=========================================================================
   subroutine ParticleExchange_MultiBox(self, accept)
     use Box_Utility, only: FindMolecule
@@ -82,25 +123,30 @@ use VarPrecision
     implicit none
     class(ParticleExchange), intent(inout) :: self
     logical, intent(out) :: accept
-    integer :: i, iAtom, boxNum, nAtoms
+    integer :: i, iAtom, iPoint, boxNum, nAtoms
     integer :: rawIndx, atomIndx, nMoveOut, nMoveIn
     integer :: molType, molStart, molEnd
+    integer :: nInsPoints
     class(SimpleBox), pointer :: box1, box2
-    real(dp) :: Prob, ProbSub, Norm, extraTerms, half
-    real(dp) :: vol
-
+    real(dp) :: Prob, ProbForGen, ProbRevGen, Norm, extraTerms, half
+    real(dp) :: vol1, vol2
     real(dp) :: reduced(1:3)
-    real(dp) :: insPoint(1:3, 1), insProb(1)
-    real(dp) :: E_Diff1, E_Diff2, scaleFactor
+    real(dp) :: E_Diff1, E_Diff2
     real(dp) :: E_Inter1, E_Intra1
     real(dp) :: E_Inter2, E_Intra2
     real(dp) :: rescale(1:size(self%boxprob))
+    character(len=30), parameter :: volume="volume"
 
 
 
+    !For this we are taking a particle from box1 and moving it over to box2
+    !Thus box1 is always the "out box" and box2 is always the "in box"
     !Randomly choose which boxes will exchange particles
     boxNum = ListRNG(self%boxProb)
     box1 => BoxArray(boxNum)%box
+    call self%LoadBoxInfo(box1, self%oldPart)
+
+
 
     !To avoid picking the same box twice, rescale the probability such that
     !box1's probability is equal to 0.
@@ -120,6 +166,7 @@ use VarPrecision
     enddo
     boxNum = ListRNG(rescale)
     box2 => BoxArray(boxNum)%box
+    call self%LoadBoxInfo(box2, self%newPart)
 
 
     !Increment attempt counter.
@@ -153,20 +200,21 @@ use VarPrecision
       return
     endif
 
-
-
     !Get the first empty molecule position for box2
     nMoveIn = box2%NMol(molType) + 1
     nMoveIn = box2%MolGlobalIndx(molType, nMoveIn)
     call box2 % GetMolData(nMoveIn, molStart=molStart, molEnd=molEnd)
 
-
     !Generate an Insertion Point for the new particle
-    do i = 1, 3
-      reduced(i) = grnd()
+    nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
+    do iPoint = 1, nInsPoints
+      call self%AllocateProb(nInsPoints)
+      do i = 1, 3
+        reduced(i) = grnd()
+      enddo
+      call box2%GetRealCoords(reduced, self%insPoint(1:3, iPoint))
+      self%insProb(iPoint) = 1E0_dp
     enddo
-    call box2%GetRealCoords(reduced, insPoint)
-
 
     nAtoms = MolData(molType)%nAtoms
     do iAtom = 1, nAtoms
@@ -177,7 +225,7 @@ use VarPrecision
     enddo
 
 
-    call MolData(molType) % molConstruct % GenerateConfig(box2, self%newPart(1:nAtoms), ProbSub, accept ,insPoint, insProb)
+    call MolData(molType) % molConstruct % GenerateConfig(box2, self%newPart(1:nAtoms), ProbForGen, accept ,self%insPoint, self%insProb)
     if(.not. accept) then
       return
     endif
@@ -195,7 +243,6 @@ use VarPrecision
     endif
 
     !Box1's Energy Calculation
-!    call box1 % EFunc % Method % DiffECalc(box1, self%oldPart(1:1), self%tempList, self%tempNNei, E_Diff1, accept)
     call box1%ComputeEnergyDelta(self%oldpart(1:1),&
                                      self%templist,&
                                      self%tempNNei, &
@@ -205,13 +252,10 @@ use VarPrecision
                                      accept, &
                                      computeintra=.true.)
     if(.not. accept) then
-!      write(*,*) "Energy Rejection"
       return
     endif
 
     !Box2's Energy Calculation
-!    call box2% EFunc % Method % DiffECalc(box2, self%newPart(1:nAtoms), self%tempList, &
-!                                              self%tempNNei, E_Diff2, accept)
     call box2%ComputeEnergyDelta(self%newpart(1:nAtoms),&
                                      self%templist,&
                                      self%tempNNei, &
@@ -225,33 +269,55 @@ use VarPrecision
     endif
 
 
-    !Compute the Generation Probability
+    !Compute the Reverse Generation Probability For Swapping the Same Particle Back into
+    !It's Original Position in Box 1
+    nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
+    do iPoint = 1, nInsPoints
+      call self%AllocateProb(nInsPoints)
+      do i = 1, 3
+        reduced(i) = grnd()
+      enddo
+      call box1%GetRealCoords(reduced, self%insPoint(1:3, iPoint))
+      self%insProb(iPoint) = 1E0_dp
+    enddo
+    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), &
+                                                         box1, &
+                                                         ProbRevGen, &
+                                                         accept, &
+                                                         self%insPoint(1:3, 1:nInsPoints), &
+                                                         self%insProb(1:nInsPoints)) 
 
-    !Forward Probability = 1/N_box1 * 1/vol_Box2 
-    !Reverse Probability = 1/(N_box2+1) * 1/vol_Box1
-    !Rev/For = N_box1 * vol_box2 / ( (N_box2+1) * vol_Box1 )
-    vol = box2 % GetThermo(5)
-    Prob = real(box1%nMolTotal, dp) * vol
 
-    vol = box1 % GetThermo(5)
-    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol)
+    !Forward Probability = 1/N_box1 * 1/vol_Box2 * ForwardGenProbility
+    !Reverse Probability = 1/(N_box2+1) * 1/vol_Box1 * ReverseGenProbility
+    !Rev/For = N_box1 * vol_box2 / ( (N_box2+1) * vol_Box1 ) * RevGenProb/ForGenProb 
+    vol2 = box2 % GetThermo_String(volume)
+    Prob = real(box1%nMolTotal, dp) * vol2 * ProbRevGen
+!    write(*,*) "For", box1%nMolTotal, vol2, ProbRevGen
+
+    vol1 = box1 % GetThermo_String(volume)
+    Prob = Prob/(real(box2%nMolTotal+1, dp) * vol1 * ProbForGen)
+!    write(*,*) "Rev", box2%nMolTotal+1, vol1, ProbForGen
 
     extraTerms = sampling % GetExtraTerms(self%oldpart(1:1), box1)
     half = sampling % GetExtraTerms(self%newpart(1:nAtoms), box2)
     extraTerms = extraTerms + half
+!    write(*,*) "extraTerms", extraTerms
 
 
     !Accept/Reject
     accept = sampling % MakeDecision2Box(box1,  box2, E_Diff1, E_Diff2, &
                             self%oldPart(1:1), self%newPart(1:nAtoms), inprob=prob, &
                             extraIn=extraTerms )
+!    write(*,*) E_Diff1, E_Diff2, accept
+!    write(*,*)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call box1 % UpdateEnergy(E_Diff1)
-      call box1 % DeleteMol(self%oldPart(1)%molIndx)
+      call Box1 % UpdateEnergy(E_Diff1, E_Inter1, E_Intra1)
+      call Box1 % DeleteMol(self%oldPart(1)%molIndx)
 
-      call box2 % UpdateEnergy(E_Diff2)
-      call box2 % UpdatePosition(self%newpart(1:nAtoms), self%tempList, self%tempNNei)
+      call Box2 % UpdateEnergy(E_Diff2, E_Inter2, E_Intra2)
+      call Box2 % UpdatePosition(self%newpart(1:nAtoms), self%tempList, self%tempNNei)
     endif
 
   end subroutine
@@ -291,8 +357,6 @@ use VarPrecision
     endif
 !    write(*,*) self%ubVol
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(2000,maxAtoms ) )
     allocate( self%newPart(1:maxAtoms) )
   end subroutine
 !=========================================================================

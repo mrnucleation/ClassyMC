@@ -9,6 +9,7 @@ module Template_Intra_FF
     contains
       procedure, pass :: Constructor 
       procedure, pass :: DetailedECalc 
+      procedure, pass :: GenerateTrial
       procedure, pass :: GenerateDist
       procedure, pass :: GenerateReverseDist
 !      procedure, pass :: ComputeProb
@@ -33,6 +34,16 @@ module Template_Intra_FF
     logical, intent(out) :: accept
 
     accept = .true.
+  end subroutine
+!==========================================================================
+  subroutine GenerateTrial(self, beta, val, bounds)
+    implicit none
+    class(Intra_FF), intent(inout) :: self
+    real(dp), intent(in) :: beta
+    real(dp), intent(out) :: val
+    real(dp), intent(in), optional :: bounds(1:2)
+   
+    val = 0E0_dp
   end subroutine
 !==========================================================================
   subroutine GenerateDist(self, beta, val, probgen, E_T)

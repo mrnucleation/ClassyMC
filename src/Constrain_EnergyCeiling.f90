@@ -37,7 +37,7 @@ module Constrain_EnergyCeiling
     self%boxID = boxID
     self%parent => BoxArray(boxID) % box 
 
-    IF (AllocateStat /= 0) STOP "Allocation Error in EnergyCeiling Constraint"
+!    IF (AllocateStat /= 0) STOP "Allocation Error in EnergyCeiling Constraint"
   end subroutine
 !=====================================================================
   subroutine EnergyCeiling_CheckInitialConstraint(self, trialBox, accept)
@@ -70,6 +70,8 @@ module Constrain_EnergyCeiling
               E_New = E_New/real(nNew, dp)
 !          case(2) ! Per Atom
         end select
+      class default
+        error stop
     end select
 
 

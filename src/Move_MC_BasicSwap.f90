@@ -15,14 +15,17 @@ use VarPrecision
     type(Addition), allocatable :: newPart(:)
     type(Deletion) :: oldPart(1:1)
 
-!    integer, allocatable :: tempNnei(:)
-!    integer, allocatable :: tempList(:, :)
+    real(dp), allocatable :: insPoint(:,:)
+    real(dp), allocatable :: insProb(:)
+!    integer, pointer :: tempNnei(:)
+!    integer, pointer :: tempList(:, :)
 
     contains
     procedure, pass :: SafetyCheck => Basic_Swap_SafetyCheck
       procedure, pass :: Constructor => Basic_Swap_Constructor
 !      procedure, pass :: GeneratePosition => Basic_Swap_GeneratePosition
       procedure, pass :: FullMove => Basic_Swap_FullMove
+      procedure, pass :: AllocateProb => Basic_Swap_AllocateProb
       procedure, pass :: SwapIn => Basic_Swap_SwapIn
       procedure, pass :: SwapOut => Basic_Swap_SwapOut
 !      procedure, pass :: Maintenance => Basic_Swap_Maintenance
@@ -35,6 +38,7 @@ use VarPrecision
   subroutine Basic_Swap_SafetyCheck(self)
     use BoxData, only: boxArray
     use SimpleSimBox, only: SimpleBox
+    use Common_MolInfo, only: mostAtoms
     implicit none
     class(Basic_Swap), intent(inout) :: self
     integer :: iBox
@@ -51,6 +55,7 @@ use VarPrecision
 
 
 
+    call self%CreateTempArray(mostAtoms)
   end subroutine
 !========================================================
   subroutine Basic_Swap_Constructor(self)
@@ -61,8 +66,6 @@ use VarPrecision
 
 
 
-!    allocate( self%tempNNei(1) )
-!    allocate( self%tempList(200, 1) )
   end subroutine
 !========================================================
 !  subroutine Basic_Swap_GeneratePosition(self, disp)
@@ -75,6 +78,41 @@ use VarPrecision
 !      dy = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
 !      dz = self % max_dist * (2E0_dp*grnd() - 1E0_dp)
 !  end subroutine
+!========================================================
+  subroutine Basic_Swap_AllocateProb(self, nInsPoints)
+    implicit none
+    class(Basic_Swap), intent(inout) :: self
+    integer, intent(in) :: nInsPoints
+    integer :: errstat=0
+
+    if((.not. allocated(self%insPoint)) .and. (.not. allocated(self%insProb)) ) then
+      allocate(self%insPoint(1:3, 1:nInsPoints), stat=errstat)
+      if(errstat /= 0) then
+        error stop "Allocation Error trying to allocate newPart!"
+      endif
+      allocate(self%insProb(1:nInsPoints), stat=errstat)
+      if(errstat /= 0) then
+        error stop "Allocation Error trying to allocate insProb!"
+      endif
+    else if(size(self%insPoint, 2) < nInsPoints) then
+      deallocate(self%insPoint)
+      deallocate(self%insProb)
+      allocate(self%insPoint(1:3, 1:nInsPoints), stat=errstat)
+      if(errstat /= 0) then
+        error stop "Allocation Error trying to allocate newPart!"
+      endif
+      allocate(self%insProb(1:nInsPoints), stat=errstat)
+      if(errstat /= 0) then
+        error stop "Allocation Error trying to allocate insProb!"
+      endif
+    else
+      return
+    endif
+    self%insPoint = 0E0_dp
+    self%insProb = 1E0_dp
+
+  end subroutine
+
 !===============================================
   subroutine Basic_Swap_FullMove(self, trialBox, accept) 
     use RandomGen, only: grnd
@@ -105,24 +143,21 @@ use VarPrecision
     logical :: relative
     integer :: nTarget, nType, rawIndx, iConstrain
     integer :: CalcIndex, nMove, nCount
-    integer :: i, iAtom, iDisp
+    integer :: i, iAtom, iPoint, iDisp, nInsPoints
     integer :: molType, molStart, molEnd, atomIndx, nAtoms
-    integer :: targStart
     real(dp) :: reduced(1:3)
-    real(dp) :: insPoint(1:3, 1)
     real(dp) :: dx, dy, dz, vol
     real(dp) :: E_Diff, biasE, radius
     real(dp) :: E_Inter, E_Intra
     real(dp) :: Prob = 1E0_dp
-    real(dp) :: ProbSub
+    real(dp) :: GenProb, GasProb 
+    character(len=30), parameter :: volume = "volume"
 
     self % atmps = self % atmps + 1E0_dp
     self % inatmps = self % inatmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialBox, self%newPart)
 
-!    integer(kind=atomIntType) :: molType, atmIndx, molIndx
-!    real(dp) :: x_new, y_new, z_new
-!    integer :: listIndex = -1
     nType = floor(nMolTypes * grnd() + 1E0_dp)
     if(trialBox%NMol(nType) + 1 > trialBox%NMolMax(nType)) then
       accept = .false.
@@ -134,11 +169,15 @@ use VarPrecision
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart, &
                                molEnd=molEnd)
 
-!    call MolData(molType) % molConstruct % ReverseConfig( trialBox, ProbSub, accept)
-    do i=1,3
-      reduced(i) = grnd()
+    nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
+    call self%AllocateProb(nInsPoints)
+    do iPoint = 1, nInsPoints
+      do i=1,3
+        reduced(i) = grnd()
+      enddo
+      call trialBox%GetRealCoords(reduced, self%insPoint(1:3, iPoint))
+      self%insprob(iPoint) = 1E0_dp 
     enddo
-    call trialBox%GetRealCoords(reduced, insPoint)
 
 
     nAtoms = MolData(molType)%nAtoms
@@ -149,11 +188,17 @@ use VarPrecision
       self%newPart(iAtom)%atmIndx = atomIndx
     enddo
 
-
-    call MolData(molType) % molConstruct % GenerateConfig(trialBox, self%newPart(1:nAtoms), ProbSub,accept,  insPoint)
+    !Generate the full atomic positions for 
+    call MolData(molType) % molConstruct % GenerateConfig(trialBox, &
+                                                      self%newPart(1:nAtoms),&
+                                                      GenProb, &
+                                                      accept, &
+                                                      self%insPoint, &
+                                                      self%insProb)
     if(.not. accept) then
-      return
+        return
     endif
+
 
     do iAtom = 1, nAtoms
       call trialBox % NeighList(1) % GetNewList(iAtom, self%tempList, self%tempNNei, &
@@ -168,8 +213,9 @@ use VarPrecision
     endif
 
     !Energy Calculation
-!    call trialbox% EFunc % Method % DiffECalc(trialBox, self%newPart(1:nAtoms), self%tempList, &
-!                                              self%tempNNei, E_Diff, accept)
+    E_Inter = 0E0_dp
+    E_Intra = 0E0_dp
+    E_Diff = 0E0_dp
     call trialBox%ComputeEnergyDelta(self%newpart(1:nAtoms),&
                                      self%templist,&
                                      self%tempNNei, &
@@ -183,19 +229,29 @@ use VarPrecision
       return
     endif
 
+    !Check Post Energy Constraint
+    accept = trialBox % CheckPostEnergy( self%newPart(1:nAtoms), E_Diff )
+    if(.not. accept) then
+      return
+    endif
+    call MolData(molType) % molConstruct % GasConfig(GasProb)
+
     !Compute the generation probability
     vol = trialBox % GetThermo(5)
+!    vol = trialBox % GetThermo_String(volume)
     Prob = vol/real(trialBox%nMolTotal+1, dp) 
-!    write(*,*) "Prob In", Prob, E_Diff, trialBox%nMolTotal, self%ubVol, nCount, trialBox%nMolTotal+1
+    Prob = GasProb*Prob/GenProb
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff,  self%newPart(1:nAtoms), inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList, self%tempNNei)
     endif
+
+
 
   end subroutine
 !===============================================
@@ -211,6 +267,7 @@ use VarPrecision
     class(Basic_Swap), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
+    integer :: i, iPoint, nInsPoints
     integer :: molType, molStart, molEnd
     integer :: nMove, rawIndx, iConstrain
     integer :: CalcIndex, nNei, nCount
@@ -218,11 +275,14 @@ use VarPrecision
     real(dp) :: E_Diff, biasE, vol
     real(dp) :: E_Inter, E_Intra
     real(dp) :: Prob = 1E0_dp
-    real(dp) :: Probconstruct = 1E0_dp
+    real(dp) :: GenProb, GasProb
+    real(dp) :: reduced(1:3)
+    character(len=30), parameter :: volume = "volume"
 
     self % atmps = self % atmps + 1E0_dp
     self % outatmps = self % outatmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialBox, self%oldPart)
 
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
@@ -233,7 +293,6 @@ use VarPrecision
     call trialBox % GetMolData(nMove, molType=molType, molStart=molStart)
 
     if(trialBox%NMol(molType) - 1 < trialBox%NMolMin(molType)) then
-!      write(*,*) "Bounds Rejection"
       accept = .false.
       return
     endif
@@ -245,8 +304,6 @@ use VarPrecision
     !Check Constraint
     accept = trialBox % CheckConstraint( self%oldPart(1:1) )
     if(.not. accept) then
-!      write(*,*) "Constraint Rejection"
-!      write(*,*) "============================================"
       return
     endif
 
@@ -261,22 +318,38 @@ use VarPrecision
                                      accept, &
                                      computeintra=.true.)
     if(.not. accept) then
-!      write(*,*) "Energy Rejection"
       return
     endif
 
-!    call MolData(molType) % molConstruct % ReverseConfig( trialBox, probconstruct, accept)
 
-    vol = trialBox % GetThermo(5)
+    nInsPoints = MolData(molType) % molConstruct % GetNInsertPoints()
+    call self%AllocateProb(nInsPoints)
+    do iPoint = 1, nInsPoints
+      do i=1,3
+        reduced(i) = grnd()
+      enddo
+      call trialBox%GetRealCoords(reduced, self%insPoint(1:3, iPoint))
+      self%insprob(iPoint) = 1E0_dp 
+    enddo
+
+    call MolData(molType) % molConstruct % ReverseConfig(self%oldpart(1:1), &
+                                                         trialBox, &
+                                                         GenProb, &
+                                                         accept, &
+                                                         self%insPoint(1:3, 1:nInsPoints), &
+                                                         self%insProb(1:nInsPoints)) 
+
+    call MolData(molType) % molConstruct % GasConfig(GasProb)
+    vol = trialBox % GetThermo_String(volume)
     Prob = real(trialBox%nMolTotal, dp)/vol
-!    write(*,*) "Prob Out:", Prob, trialBox%nMolTotal, self%ubVol, nNei, trialBox%nMolTotal-1
+    Prob = Prob*GenProb/GasProb
 
     !Accept/Reject
     accept = sampling % MakeDecision(trialBox, E_Diff,self%oldPart(1:1),inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
     endif
 
@@ -296,10 +369,13 @@ use VarPrecision
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(Basic_Swap), intent(inout) :: self
-    integer :: iType, maxAtoms, maxPoints
+    integer :: iType, maxAtoms, maxPoints, errstat
+    integer :: iBox, maxnei
 
     maxAtoms = 0
     maxPoints = 0
+    maxnei = 0
+    errstat = 0
     do iType = 1, nMolTypes
       if(MolData(iType)%nAtoms > maxAtoms) then
         maxAtoms = MolData(iType)%nAtoms 
@@ -310,11 +386,14 @@ use VarPrecision
     enddo
 
 
-!    write(*,*) self%ubVol
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000,maxAtoms ) )
-    allocate( self%newPart(1:maxAtoms) )
+
+
+    allocate( self%newPart(1:maxAtoms),  stat=errstat)
+    if(errstat /= 0) then
+      write(0,*) "Error Code:", errstat
+      error stop "Allocation Error trying to allocate newPart!"
+    endif
   end subroutine
 !=========================================================================
   subroutine Basic_Swap_Epilogue(self)

@@ -227,7 +227,7 @@ module FF_Pair_Tersoff
     implicit none
     class(Pair_Tersoff), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
@@ -1337,7 +1337,7 @@ module FF_Pair_Tersoff
       enddo
     enddo
 
-    E_Diff = E_Diff - curbox%ETotal
+    E_Diff = E_Diff - curbox%E_Inter
     curbox%dETable = curbox%dETable - curbox%ETable
 
   end subroutine

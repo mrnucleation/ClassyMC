@@ -34,6 +34,7 @@ module FF_EasyEP_LJ_Ele_Cut
       procedure, pass :: Constructor => Constructor_EP_LJ_Ele_Cut
       procedure, pass :: PairFunction => PairFunction_EP_LJ_Ele_Cut
       procedure, pass :: ProcessIO => ProcessIO_EP_LJ_Ele_Cut
+      procedure, pass :: Prologue => Prologue_EP_LJ_Ele_Cut
   end type
 
   contains
@@ -94,9 +95,11 @@ module FF_EasyEP_LJ_Ele_Cut
 
     if(rsq < self%rQCutSq) then
       q = self % qTable(atmType1, atmType2)
-      r = sqrt(rsq)
-      Ele = q/r
-      E_Pair = E_Pair + Ele
+      if(abs(q) > 1E-15_dp) then
+        r = sqrt(rsq)
+        Ele = q/r
+        E_Pair = E_Pair + Ele
+      endif
     endif
 
 
@@ -136,17 +139,6 @@ module FF_EasyEP_LJ_Ele_Cut
         self % rQCutSq = rCut*rCut
         self % rCut = max(self%rLJCut, self%rQCut)
         self % rCutSq = self % rCut * self % rCut
-
-!      case("lj")
-!        select case(nPar)
-!          case(4)
-!            self%eps(type1) = ep
-!            self%sig(type1) = sig
-!            self%rMin(type1) = rMin
-!          case default
-!            lineStat = -1
-!            return
-!        end select
 
       case("charge")
         call GetXCommand(line, command, 2, lineStat)
@@ -197,10 +189,46 @@ module FF_EasyEP_LJ_Ele_Cut
           enddo
         case default
           lineStat = -1
+          write(0,*) line
+          stop "Unknown Command Found"
       end select
     endif
 
   end subroutine
+  !=====================================================================
+  subroutine Prologue_EP_LJ_Ele_Cut(self)
+    use Common_MolInfo, only: nAtomTypes
+    use ParallelVar, only: nout
+    implicit none
+    class(EP_LJ_Ele_Cut), intent(inout) :: self
+    integer :: i, j
+    
+    
+    write(nout,*) "Cutoffs (LJ Q Global):", self%rLJCut, self%rQCut, self%rCut
+    write(nout,*) "Cutoffs Sq (LJ Q Global):", self%rLJCutSq, self%rQCutSq, self%rCutSq
+    write(nout,*)
+
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%epsTable(i,j), j=1,nAtomTypes)
+!    enddo
+
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%sigTable(i,j), j=1,nAtomTypes)
+!    enddo
+
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%rMinTable(i,j), j=1,nAtomTypes)
+!    enddo
+
+!    write(nout,*)
+!    do i = 1, nAtomTypes
+!      write(nout, *) (self%qTable(i,j)/coulombConst, j=1,nAtomTypes)
+!    enddo
+
+  end subroutine
+
   !=====================================================================
 end module
 !=====================================================================

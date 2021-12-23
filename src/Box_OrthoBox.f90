@@ -1,6 +1,6 @@
 !==========================================================================================
 module OrthoBoxDef
-  use SimpleSimBox, only: SimpleBox
+  use SimpleSimBox, only: SimpleBox, SimpleBox_ProcessIO
   use VarPrecision
   use CoordinateTypes
 
@@ -38,6 +38,7 @@ module OrthoBoxDef
     integer :: iType, iMol, iAtom, jType, subIndx, arrayIndx
     integer :: iConstrain, iList, molStart, molEnd
 
+    self%volume = self%boxLx * self%boxLy * self%boxLz
     call self % ComputeEnergy
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
@@ -84,7 +85,6 @@ module OrthoBoxDef
 
 
 
-    self%volume = self%boxLx * self%boxLy * self%boxLz
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Pressure: ", self%pressure
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Dimensions: ", self%volume
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Volume: ", self%volume
@@ -300,55 +300,8 @@ module OrthoBoxDef
     lineStat = 0
     call GetXCommand(line, command, 4, lineStat)
     select case( trim(adjustl(command)) )
-      case("buildfreq")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % maintFreq = intVal
-      case("chempotential")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        call GetXCommand(line, command, 6, lineStat)
-        read(command, *) realVal
-        self % chempot(intVal) = realVal
-
-
-      case("energycalc")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % EFunc => EnergyCalculator(intVal)
-
-      case("temperature")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) realVal
-        self % temperature = realVal
-        self % beta = 1E0_dp/realVal
-
-      case("chempot")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        call GetXCommand(line, command, 6, lineStat)
-        read(command, *) realVal
-        self % chempot(intVal) = realVal
-
-      case("pressure")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) realVal
-        self % pressure = realVal*inPressUnit
-
-      case("neighcut")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        call GetXCommand(line, command, 6, lineStat)
-        read(command, *) realVal
-        self % NeighList(intVal) % rCut = realVal
-
-      case("neighlist")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        call self%NeighList(intVal)%ProcessIO(line, lineStat)
-
       case default
-        lineStat = -1
+        call SimpleBox_ProcessIO(self, line, lineStat)
     end select
 
   end subroutine

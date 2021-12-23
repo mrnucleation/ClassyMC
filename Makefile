@@ -24,13 +24,15 @@ OPTIMIZE_FLAGS_IFORT += -traceback
 OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g 
 #OPTIMIZE_FLAGS_GFORT += -DDETAILED
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
+#OPTIMIZE_FLAGS_GFORT += -Wmaybe-uninitialized
 #OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
+OPTIMIZE_FLAGS_GFORT += -finit-real=zero -finit-integer=0
 #OPTIMIZE_FLAGS_GFORT += -pg
 #OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
 LIBRARY_FLAGS := -shared -fpic
 
-DETAILEDDEBUG_GFORT:=  -cpp -fbacktrace -fcheck=all -g -ffree-line-length-512 -Og -ffpe-trap=overflow,invalid,zero 
+DETAILEDDEBUG_GFORT:=  -cpp -fbacktrace -fcheck=all -g -ffree-line-length-512 -ffpe-trap=overflow,invalid,zero -Waliasing  -Wsurprising
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
 #DEBUGFLAGS:= -fbacktrace -fcheck=all -g
@@ -43,7 +45,7 @@ DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug 
 
 
 
-#PACKAGE_FLAGS := -DPARALLEL
+PACKAGE_FLAGS := -DMPIPARALLEL
 
 
 #PACKAGEMAKEFILES = $(shell find . -name "*.Makefile")
@@ -84,11 +86,13 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_MCMoves.f90\
         		$(SRC)/Common_NeighList.f90\
         		$(SRC)/Debug.f90\
+        		$(SRC)/Data_Graph.f90\
+         		$(SRC)/Constrain_MultiAtomDistCrit.f90\
+         		$(SRC)/Constrain_MolTotal.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
          		$(SRC)/Constrain_EnergyCeiling.f90\
          		$(SRC)/Constrain_EnergyFloor.f90\
          		$(SRC)/Constrain_FreezeType.f90\
-         		$(SRC)/Constrain_HardWall.f90\
 	        	$(SRC)/SearchSort.f90\
         		$(SRC)/Sampling_AcceptAll.f90\
         		$(SRC)/Sampling_AcceptNone.f90\
@@ -97,6 +101,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Sampling_Nested.f90\
         		$(SRC)/Sampling_Umbrella.f90\
         		$(SRC)/Sampling_UmbrellaWHAM.f90\
+        		$(SRC)/Math_CoordinateFunctions.f90\
         		$(SRC)/Move_MC_AVBMC.f90\
         		$(SRC)/Move_MC_AnisoVol.f90\
         		$(SRC)/Move_MC_AtomExchange.f90\
@@ -110,7 +115,6 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_PlaneRotate.f90\
         		$(SRC)/Move_MC_PlaneTranslate.f90\
         		$(SRC)/Move_MC_PlaneAtomTranslate.f90\
-        		$(SRC)/Move_MC_ThermoLambda.f90\
         		$(SRC)/Move_MC_UBSwap.f90\
         		$(SRC)/Move_MC_VolExchange.f90\
         		$(SRC)/ExeptionHandling.f90\
@@ -118,10 +122,12 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Analysis_AngleDistribution.f90\
         		$(SRC)/Analysis_BondDistribution.f90\
         		$(SRC)/Analysis_TorsionDistribution.f90\
+        		$(SRC)/Analysis_TotalSize.f90\
         		$(SRC)/Analysis_BlockAverage.f90\
         		$(SRC)/Analysis_DensityOfStates.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
         		$(SRC)/Analysis_DistPair.f90\
+        		$(SRC)/Analysis_MolFraction.f90\
         		$(SRC)/Analysis_RDF.f90\
         		$(SRC)/Analysis_ThermoAverage.f90\
         		$(SRC)/Analysis_ThermoIntegration.f90\
@@ -135,11 +141,10 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Hybrid.f90\
         		$(SRC)/FF_EP_LJ_Ele_Cut.f90\
         		$(SRC)/FF_EP_LJ_Cut.f90\
+						$(SRC)/FF_EP_LJ_CutShift.f90\
+						$(SRC)/FF_EP_Pedone_Cut.f90\
+						$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_LJ_Cut.f90\
-        		$(SRC)/FF_LJWall.f90\
-        		$(SRC)/FF_LJ_Shift.f90\
-        		$(SRC)/FF_LJ_Ele_Cut.f90\
-        		$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_Tersoff.f90\
         		$(SRC)/FF_ThermoInt.f90\
         		$(SRC)/Intra_AngleHarmonic.f90\
@@ -149,12 +154,14 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Intra_TorsionTrappe.f90\
         		$(SRC)/Intra_TorsionHarmonic.f90\
         		$(SRC)/Intra_TorsionRidgid.f90\
+        		$(SRC)/Intra_Misc1_5_Pair.f90\
         		$(SRC)/MolCon_LinearCBMC.f90\
         		$(SRC)/MolCon_RidgidRegrowth.f90\
         		$(SRC)/MolCon_SimpleRegrowth.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
  	        	$(SRC)/Script_AngleType.f90\
  	        	$(SRC)/Script_BondType.f90\
+ 	        	$(SRC)/Script_MiscType.f90\
  	        	$(SRC)/Script_TorsionType.f90\
  	        	$(SRC)/Script_Constraint.f90\
  	        	$(SRC)/Script_Forcefield.f90\
@@ -173,7 +180,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Traj_LAMMPSDump.f90\
 	        	$(SRC)/Traj_XYZFormat.f90\
 	        	$(SRC)/Traj_XSF.f90\
-				$(SRC)/Input_Format.f90\
+	        	$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_CellRSqList.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
@@ -185,23 +192,23 @@ SRC_MAIN := $(SRC)/Common.f90\
 
 SRC_TEMPLATE := $(SRC)/Template_Master.f90\
         		$(SRC)/RandomNew.f90\
-				$(SRC)/Template_AcceptRule.f90\
-				$(SRC)/Template_Analysis.f90\
-				$(SRC)/Template_BondFF.f90\
-				$(SRC)/Template_AngleFF.f90\
-				$(SRC)/Template_TorsionFF.f90\
-				$(SRC)/Template_MiscIntra.f90\
-				$(SRC)/Template_Constraint.f90\
-				$(SRC)/Template_Forcefield.f90\
-				$(SRC)/Template_SimBox.f90\
+        		$(SRC)/Template_AcceptRule.f90\
+						$(SRC)/Template_Analysis.f90\
+						$(SRC)/Template_BondFF.f90\
+						$(SRC)/Template_AngleFF.f90\
+						$(SRC)/Template_TorsionFF.f90\
+						$(SRC)/Template_MiscIntra.f90\
+						$(SRC)/Template_Constraint.f90\
+						$(SRC)/Template_Forcefield.f90\
+						$(SRC)/Template_SimBox.f90\
         		$(SRC)/Box_SimpleBox.f90\
-				$(SRC)/Box_Ultility.f90\
-				$(SRC)/Template_IntraFF.f90\
-				$(SRC)/Template_NeighList.f90\
-				$(SRC)/Template_Trajectory.f90\
-				$(SRC)/Template_MultiBoxMove.f90\
-				$(SRC)/Template_MoveClass.f90\
-				$(SRC)/Template_MolConstructor.f90
+						$(SRC)/Box_Ultility.f90\
+						$(SRC)/Template_IntraFF.f90\
+						$(SRC)/Template_NeighList.f90\
+						$(SRC)/Template_Trajectory.f90\
+						$(SRC)/Template_MultiBoxMove.f90\
+						$(SRC)/Template_MoveClass.f90\
+						$(SRC)/Template_MolConstructor.f90
 
 OBJ_LIBRARY = $(shell find $(LIB) -name '*.a')
 -include *.Makefile 
@@ -245,7 +252,7 @@ lib_debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(LIBRARY_FLAGS)
 lib_debug: startUP  libclassymc.so  modout finale
 
 gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
-gfortran: COMPFLAGS += $(DEBUGFLAGS)
+gfortran: COMPFLAGS += $(DEBUGFLAGS) 
 gfortran:  startUP classyMC  modout finale 
 
 
@@ -370,7 +377,7 @@ $(OBJ)/Common_BoxData.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Common_Analysis.o: $(OBJ)/Template_Analysis.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
 $(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Sampling_Metropolis.o
-$(OBJ)/Common_MolDef.o: $(OBJ)/Template_MolConstructor.o  $(OBJ)/Template_BondFF.o  $(OBJ)/Template_TorsionFF.o  $(OBJ)/Template_AngleFF.o
+$(OBJ)/Common_MolDef.o: $(OBJ)/Template_MolConstructor.o  $(OBJ)/Template_BondFF.o  $(OBJ)/Template_TorsionFF.o  $(OBJ)/Template_AngleFF.o $(OBJ)/Data_Graph.o
 
 
 
@@ -380,7 +387,7 @@ $(OBJ)/Template_Anaylsis.o: $(OBJ)/Box_SimpleBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_NeighList.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_Master.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Master.o
-$(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o ${OBJ}/Box_SimpleBox.o $(OBJ)/Template_Master.o $(OBJ)/Box_Utility.o $(OBJ)/RandomNew.o
+$(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o ${OBJ}/Box_SimpleBox.o $(OBJ)/Template_Master.o $(OBJ)/Box_Utility.o $(OBJ)/RandomNew.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o $(OBJ)/Template_Master.o $(OBJ)/Input_Format.o
 $(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o  $(OBJ)/Template_Master.o
@@ -389,7 +396,7 @@ $(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 
 $(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
-$(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o
+$(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o  $(OBJ)/ErrorChecking.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o
@@ -428,6 +435,8 @@ $(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 
 $(OBJ)/FF_EP_LJ_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_EP_Pedone_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_EP_LJ_CutShift.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o

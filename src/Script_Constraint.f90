@@ -13,7 +13,9 @@ contains
     use Constrain_EnergyCeiling, only: EnergyCeiling
     use Constrain_EnergyFloor, only: EnergyFloor
     use Constrain_FreezeType, only: FreezeType
-    use Constrain_HardWall, only: HardWall
+!    use Constrain_HardWall, only: HardWall
+    use Constrain_MolTotal, only: MolTotal
+    use Constrain_MultiAtomDistanceCriteria, only: MultiAtomDistCrit
 
     implicit none
     character(len=maxLineLen), intent(in) :: linestore(:) 
@@ -38,6 +40,9 @@ contains
         case("distancecriteria")
           allocate( DistCriteria::BoxArray(BoxNum)%box%Constrain(i)%method )
 
+        case("multidistancecriteria")
+          allocate( MultiAtomDistCrit::BoxArray(BoxNum)%box%Constrain(i)%method )
+
         case("energyceiling")
           allocate( EnergyCeiling ::BoxArray(BoxNum)%box%Constrain(i)%method )
 
@@ -45,11 +50,15 @@ contains
         case("energyfloor")
           allocate( EnergyFloor ::BoxArray(BoxNum)%box%Constrain(i)%method )
 
-        case("hardwall")
-          allocate( HardWall ::BoxArray(BoxNum)%box%Constrain(i)%method )
+!        case("hardwall")
+!          allocate( HardWall ::BoxArray(BoxNum)%box%Constrain(i)%method )
 
         case("freezetype")
           allocate( FreezeType ::BoxArray(BoxNum)%box%Constrain(i)%method )
+
+        case("moltotal")
+          allocate( MolTotal::BoxArray(BoxNum)%box%Constrain(i)%method )
+
 
         case default
           lineStat = -1

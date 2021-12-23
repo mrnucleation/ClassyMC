@@ -10,6 +10,8 @@ module Template_NeighList
       logical :: Strict = .false.
       integer, allocatable :: list(:,:)
       integer, allocatable :: nNeigh(:)
+      integer, allocatable :: templist(:,:)
+      integer, allocatable :: tempNNeigh(:)
       integer :: maxNei
       real(dp) :: rCut = -1E0_dp
       real(dp) :: rCutSq
@@ -22,9 +24,11 @@ module Template_NeighList
       procedure, pass :: BuildList
       procedure, pass :: SortList
       procedure, pass :: GetListArray
+      procedure, pass :: GetTempListBounds
       procedure, pass :: GetNewList
       procedure, pass :: GetMaxNei
       procedure, pass :: GetNeighCount
+      procedure, pass :: GetRCut
       procedure, pass :: AddMol
       procedure, pass :: SwapAtomType
       procedure, pass :: DumpList
@@ -51,10 +55,12 @@ module Template_NeighList
 
   end subroutine
 !===================================================================================
-  subroutine SortList(self)
+  subroutine SortList(self, forcesort)
     use SearchSort, only: QSort
     implicit none
     class(NeighListDef), intent(inout) :: self
+    logical, intent(in), optional :: forcesort
+
 
   end subroutine
 !===================================================================================
@@ -69,12 +75,30 @@ module Template_NeighList
  
   end subroutine
 !===================================================================================
+  subroutine GetTempListBounds(self, b1, b2)
+    implicit none
+    class(NeighListDef), intent(inout), target :: self
+    integer, intent(out) :: b1, b2
+
+    b1 = ubound(self%list, 1)
+    b2 = ubound(self%list, 2)
+
+  end subroutine
+!===================================================================================
   function GetMaxNei(self) result(outval)
     implicit none
     class(NeighListDef), intent(inout), target :: self
     integer :: outval
 
     outval = self%maxnei
+  end function
+!===================================================================================
+  function GetRCut(self) result(outval)
+    implicit none
+    class(NeighListDef), intent(inout), target :: self
+    integer :: outval
+
+    outval = self%rcut
   end function
 !===================================================================================
   subroutine GetNewList(self, iDisp, tempList, tempNNei, disp, nCount, rCount)

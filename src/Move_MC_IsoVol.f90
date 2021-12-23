@@ -47,12 +47,9 @@ module MCMove_Isovol
     use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(IsoVol), intent(inout) :: self
-    integer :: nBoxes
 
 
-
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(1, 1) )
+    call self%CreateTempArray(1)
   end subroutine
 !=========================================================================
   subroutine IsoVol_FullMove(self, trialBox, accept)
@@ -72,6 +69,7 @@ module MCMove_Isovol
     real(dp) :: E_Diff, E_Inter, E_Intra, scaleFactor
 
     self % atmps = self % atmps + 1E0_dp
+    call self%LoadBoxInfo(trialBox, self%disp)
     select case(self%style)
       case(1) !Log Scale
         dV = self%maxDv * (2E0_dp*grnd()-1E0_dp)
@@ -108,6 +106,7 @@ module MCMove_Isovol
         stop "This type of box is not compatible with volume change moves."
     end select
 
+    
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%disp(1:1) )
@@ -139,8 +138,8 @@ module MCMove_Isovol
     endif
 
 
+!    write(*,*) E_Inter
 
-!    write(*,*) E_Diff
     select case(self%style)
       case(1) !Log Scale
         prob = (trialBox%nMolTotal+1) * log(self%disp(1)%volNew / self%disp(1)%volOld) 
@@ -154,7 +153,7 @@ module MCMove_Isovol
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:1), logProb=prob, extraIn=extraTerms)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
     else
       self%detailedrej = self%detailedrej + 1

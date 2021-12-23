@@ -7,6 +7,7 @@ module Input_Forcefield
   use Input_BondType
   use Input_TorsionType
   use Input_Format
+  use Input_MiscType
 
   real(dp) :: engUnit = 1E0_dp 
   real(dp) :: lenUnit = 1E0_dp
@@ -165,6 +166,7 @@ module Input_Forcefield
             error stop
           endif
           call Script_ReadMolDef( lineStore(iLine+1:iLine+lineBuffer-1), intValue, lineStat )
+          call Script_BuildGraph(intValue)
 
 !        -----------------------------------------------------------------------------
         case("moleculetypes")
@@ -218,9 +220,18 @@ module Input_Forcefield
     integer :: i, j, intValue(1:5), iLine, lineBuffer, nLines, curLine
     integer :: AllocateStat, nItems
     character(len=30) :: command
+    integer :: atm1, atm2, atm3, atm4
+    integer :: nIntra
 
     lineStat  = 0
     lineBuffer = 0
+    nIntra = 0
+    atm1 = 0
+    atm2 = 0
+    atm3 = 0
+    atm4 = 0
+    nItems = 0
+    AllocateStat = 0
     nLines = size(cmdBlock)
     do iLine = 1, nLines
       if(lineBuffer .gt. 0) then
@@ -265,12 +276,26 @@ module Input_Forcefield
              nItems = lineBuffer - 1
              MolData(molType)%nBonds = nItems
              allocate(MolData(molType)%bond(1:nItems), stat = AllocateStat)
+             allocate(MolData(molType)%nAtmBonds(1:MolData(molType)%nAtoms), stat = AllocateStat)
+             allocate(MolData(molType)%atmBonds(1:nItems, 1:MolData(molType)%nAtoms), stat = AllocateStat)
+             MolData(molType)%nAtmBonds = 0
+             MolData(molType)%atmBonds = 0
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,3)
                MolData(molType)%bond(i)%bondType = intValue(1)
-               MolData(molType)%bond(i)%mem1 = intValue(2)
-               MolData(molType)%bond(i)%mem2 = intValue(3)
+               atm1 = intValue(2)
+               atm2 = intValue(3)
+               MolData(molType)%bond(i)%mem1 = atm1
+               MolData(molType)%bond(i)%mem2 = atm2
+
+               nIntra = MolData(molType)%nAtmBonds(atm1) + 1
+               MolData(molType)%nAtmBonds(atm1) = nIntra
+               MolData(molType)%atmBonds(nIntra, atm1) = i
+
+               nIntra = MolData(molType)%nAtmBonds(atm2) + 1
+               MolData(molType)%nAtmBonds(atm2) = nIntra
+               MolData(molType)%atmBonds(nIntra, atm2) = i
              enddo   
            else
              write(0,*) "ERROR! The bonds for this molecule has already been defined."
@@ -284,16 +309,36 @@ module Input_Forcefield
              nItems = lineBuffer - 1
              MolData(molType)%nAngles = nItems
              allocate(MolData(molType)%angle(1:nItems), stat = AllocateStat)
+             allocate(MolData(molType)%nAtmAngles(1:MolData(molType)%nAtoms), stat = AllocateStat)
+             allocate(MolData(molType)%atmAngles(1:nItems, 1:MolData(molType)%nAtoms), stat = AllocateStat)
+             MolData(molType)%nAtmAngles = 0
+             MolData(molType)%atmAngles = 0
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,4)
+               atm1 = intValue(2)
+               atm2 = intValue(3)
+               atm3 = intValue(4)
+
                MolData(molType)%angle(i)%angleType = intValue(1)
-               MolData(molType)%angle(i)%mem1 = intValue(2)
-               MolData(molType)%angle(i)%mem2 = intValue(3)
-               MolData(molType)%angle(i)%mem3 = intValue(4)
+               MolData(molType)%angle(i)%mem1 = atm1
+               MolData(molType)%angle(i)%mem2 = atm2
+               MolData(molType)%angle(i)%mem3 = atm3
+
+               nIntra = MolData(molType)%nAtmAngles(atm1) + 1
+               MolData(molType)%nAtmAngles(atm1) = nIntra
+               MolData(molType)%atmAngles(nIntra, atm1) = i
+
+               nIntra = MolData(molType)%nAtmAngles(atm2) + 1
+               MolData(molType)%nAtmAngles(atm2) = nIntra
+               MolData(molType)%atmAngles(nIntra, atm2) = i
+
+               nIntra = MolData(molType)%nAtmAngles(atm3) + 1
+               MolData(molType)%nAtmAngles(atm3) = nIntra
+               MolData(molType)%atmAngles(nIntra, atm3) = i
              enddo   
            else
-             write(0,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             write(0,*) "ERROR! The create angle command has already been used and can not be called twice"
              error stop
            endif
 !        -----------------------------------------------------------------------------
@@ -303,20 +348,57 @@ module Input_Forcefield
              nItems = lineBuffer - 1
              MolData(molType)%nTors = nItems
              allocate(MolData(molType)%torsion(1:nItems), stat = AllocateStat)
+             allocate(MolData(molType)%nAtmTorsions(1:MolData(molType)%nAtoms), stat = AllocateStat)
+             allocate(MolData(molType)%atmTorsions(1:nItems, 1:MolData(molType)%nAtoms), stat = AllocateStat)
+             MolData(molType)%nAtmTorsions = 0
+             MolData(molType)%atmTorsions = 0 
              do i = 1, nItems
                curLine = iLine + i
                read(cmdBlock(curLine),*) (intValue(j), j=1,5)
                MolData(molType)%torsion(i)%torsType = intValue(1)
-               MolData(molType)%torsion(i)%mem1 = intValue(2)
-               MolData(molType)%torsion(i)%mem2 = intValue(3)
-               MolData(molType)%torsion(i)%mem3 = intValue(4)
-               MolData(molType)%torsion(i)%mem4 = intValue(5)
+               atm1 = intValue(2)
+               atm2 = intValue(3)
+               atm3 = intValue(4)
+               atm4 = intValue(5)
+               MolData(molType)%torsion(i)%mem1 = atm1
+               MolData(molType)%torsion(i)%mem2 = atm2
+               MolData(molType)%torsion(i)%mem3 = atm3 
+               MolData(molType)%torsion(i)%mem4 = atm4
+               nIntra = MolData(molType)%nAtmTorsions(atm1) + 1
+               MolData(molType)%nAtmTorsions(atm1) = nIntra
+               MolData(molType)%atmTorsions(nIntra, atm1) = i
+
+               nIntra = MolData(molType)%nAtmTorsions(atm2) + 1
+               MolData(molType)%nAtmTorsions(atm2) = nIntra
+               MolData(molType)%atmTorsions(nIntra, atm2) = i
+
+               nIntra = MolData(molType)%nAtmTorsions(atm3) + 1
+               MolData(molType)%nAtmTorsions(atm3) = nIntra
+               MolData(molType)%atmTorsions(nIntra, atm3) = i
+
+               nIntra = MolData(molType)%nAtmTorsions(atm4) + 1
+               MolData(molType)%nAtmTorsions(atm4) = nIntra
+               MolData(molType)%atmTorsions(nIntra, atm4) = i
              enddo   
            else
-             write(0,*) "ERROR! The create energycalculators command has already been used and can not be called twice"
+             write(0,*) "ERROR! The create torsion command has already been used and can not be called twice"
              error stop
            endif
-
+!        -----------------------------------------------------------------------------
+        case("misc")
+           if( .not. allocated(MolData(molType)%Miscdata) ) then
+             call FindCommandBlock(iLine, cmdBlock, "end_misc", lineBuffer)
+             nItems = lineBuffer - 1
+             MolData(molType)%nMisc = nItems
+             allocate(MolData(molType)%miscdata(1:nItems), stat = AllocateStat)
+             do i = 1, nItems
+               curLine = iLine + i
+               call Script_MiscType(cmdBlock(curLine), molType, i, lineStat)
+             enddo   
+           else
+             write(0,*) "ERROR! The create misc command has already been used and can not be called twice"
+             error stop
+           endif
 !        -----------------------------------------------------------------------------
         case default
           write(0,"(A,2x,I10)") "ERROR! Unknown Command on Line"
@@ -325,6 +407,84 @@ module Input_Forcefield
       end select
 
     enddo
+
+  end subroutine
+!================================================================================
+  subroutine Script_BuildGraph(molnum)
+    use Common_MolInfo, only: MolData
+    implicit none
+    integer, intent(in) :: molnum
+    integer :: iGraph, iEdge
+    integer :: iBond, iAngle, iTorsion
+    integer :: nAtoms, intraType
+    integer :: mem1, mem2, mem3, mem4
+
+    nAtoms = MolData(molnum)%nAtoms
+
+    call MolData(molnum)%molgraph%Constructor(nAtoms)
+
+    do iBond = 1, MolData(molnum)%nBonds
+      intraType = MolData(molnum)%bond(iBond)%bondType
+      mem1 = MolData(molnum)%bond(iBond)%mem1
+      mem2 = MolData(molnum)%bond(iBond)%mem2
+      call MolData(molnum)%molgraph%AddEdge(mem1, mem2, intraType)
+    enddo
+
+    do iAngle = 1, MolData(molnum)%nAngles
+      intraType = MolData(molnum)%angle(iAngle)%angleType
+      mem1 = MolData(molnum)%angle(iAngle)%mem1
+      mem2 = MolData(molnum)%angle(iAngle)%mem2
+      mem3 = MolData(molnum)%angle(iAngle)%mem3
+      call MolData(molnum)%molgraph%AddAngle(mem1, mem2, mem3, intraType)
+    enddo
+
+    do iTorsion = 1, MolData(molnum)%nTors
+      intraType = MolData(molnum)%torsion(iTorsion)%torsType
+      mem1 = MolData(molnum)%torsion(iTorsion)%mem1
+      mem2 = MolData(molnum)%torsion(iTorsion)%mem2
+      mem3 = MolData(molnum)%torsion(iTorsion)%mem3
+      mem4 = MolData(molnum)%torsion(iTorsion)%mem4
+      call MolData(molnum)%molgraph%AddTorsion(mem1, mem2, mem3, mem4, intraType)
+    enddo
+
+
+
+!    write(*,*) "Edges"
+!    do iGraph = 1, size(MolData(molnum)%molgraph%nodes)
+!      if(.not. allocated(MolData(molnum)%molgraph%nodes(iGraph)%edge) ) cycle
+!      do iEdge = 1, size(MolData(molnum)%molgraph%nodes(iGraph)%edge)
+!        write(*,*) iGraph, iEdge, MolData(molnum)%molgraph%nodes(iGraph)%edge(iEdge)
+!      enddo
+!    enddo
+!    write(*,*)
+
+!    write(*,*) "EndAngle"
+!    do iGraph = 1, size(MolData(molnum)%molgraph%nodes)
+!      if(.not. allocated(MolData(molnum)%molgraph%nodes(iGraph)%endangle) ) cycle
+!      do iEdge = 1, size(MolData(molnum)%molgraph%nodes(iGraph)%endangle, 2)
+!        write(*,*) iGraph, iEdge, MolData(molnum)%molgraph%nodes(iGraph)%endangle(1:2,iEdge) 
+!      enddo
+!    enddo
+
+!    write(*,*) "MidAngle"
+!    do iGraph = 1, size(MolData(molnum)%molgraph%nodes)
+!      if(.not. allocated(MolData(molnum)%molgraph%nodes(iGraph)%midangle) ) cycle
+!      do iEdge = 1, size(MolData(molnum)%molgraph%nodes(iGraph)%midangle, 2)
+!        write(*,*) iGraph, iEdge, MolData(molnum)%molgraph%nodes(iGraph)%midangle(1:2,iEdge) 
+!      enddo
+!    enddo
+
+!    write(*,*) "EndTorsion"
+!    do iGraph = 1, size(MolData(molnum)%molgraph%nodes)
+!      if(.not. allocated(MolData(molnum)%molgraph%nodes(iGraph)%endtorsion) ) cycle
+!      do iEdge = 1, size(MolData(molnum)%molgraph%nodes(iGraph)%endtorsion, 2)
+!        write(*,*) iGraph, iEdge, MolData(molnum)%molgraph%nodes(iGraph)%endtorsion(1:3,iEdge) 
+!      enddo
+!    enddo
+
+!    write(*,*) MolData(molnum)%molgraph%IsConnected()
+
+
 
   end subroutine
 !================================================================================
@@ -341,12 +501,15 @@ module Input_Forcefield
     lineStat  = 0
     call GetXCommand(line, command, 2, lineStat)
     select case(trim(adjustl(command)))
-      case("energy")
-        call GetXCommand(line, unitType, 3, lineStat)
-        inEngUnit = FindEngUnit(unitType)
       case("angle")
         call GetXCommand(line, unitType, 3, lineStat)
         inAngUnit = FindAngularUnit(unitType)
+      case("energy")
+        call GetXCommand(line, unitType, 3, lineStat)
+        inEngUnit = FindEngUnit(unitType)
+      case("distance")
+        call GetXCommand(line, unitType, 3, lineStat)
+        inLenUnit = FindLengthUnit(unitType)
       case("length")
         call GetXCommand(line, unitType, 3, lineStat)
         inLenUnit = FindLengthUnit(unitType)
@@ -356,8 +519,6 @@ module Input_Forcefield
 
 
   end subroutine
-
-
 !================================================================================
 end module
 !================================================================================

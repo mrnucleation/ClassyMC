@@ -70,15 +70,17 @@ use SimpleSimBox, only: SimpleBox
 
   end subroutine
 !=========================================================================
-  subroutine DistPair_CalcNewState(self, disp, newVal)
+  subroutine DistPair_CalcNewState(self, disp, accept, newVal)
     use CoordinateTypes, only: Displacement, Perturbation
     implicit none
     class(DistPair), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
     integer :: iDisp
     real(dp), intent(in), optional :: newVal
+    logical, intent(out) :: accept
     real(dp) :: rx, ry, rz, rsq, r
 
+    accept = .true.
     r = self%dist
     select type(disp)
       class is(Displacement)

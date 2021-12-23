@@ -46,7 +46,10 @@ contains
 
       case default
         lineStat = -1
-        return
+        write(0,*) "Invalid Regrowth Type Specified in Molecule Definition!"
+        write(0,*) "Molecule Type: ", molNum
+        write(0,*) "Command:", line
+        stop
     end select
 !    call MolData(molNum)%molConstruct%Constructor(molNum)
     call MolData(molNum)%molConstruct%SetMolType(molNum)

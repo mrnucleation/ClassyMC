@@ -37,15 +37,13 @@ module MCMove_Anisovol
  contains
 !========================================================
   subroutine AnisoVol_Constructor(self)
-    use Common_MolInfo, only: MolData, nMolTypes
     implicit none
     class(AnisoVol), intent(inout) :: self
     integer :: nBoxes
 
 
+    call self%CreateTempArray(1)
 
-    allocate( self%tempNNei(1) )
-    allocate( self%tempList(1, 1) )
   end subroutine
 !=========================================================================
   subroutine AnisoVol_FullMove(self, trialBox, accept)
@@ -80,6 +78,8 @@ module MCMove_Anisovol
         error stop "Invalid Scale style given"
 
     end select
+
+    call self%LoadBoxInfo(trialbox, self%disp)
     if(self%disp(1)%volNew < 0E0_dp) then
       return
     endif
@@ -149,7 +149,7 @@ module MCMove_Anisovol
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:1), logProb=prob, extraIn=extraTerms)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
     endif
 

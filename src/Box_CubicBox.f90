@@ -1,6 +1,6 @@
 !==========================================================================================
 module CubicBoxDef
-  use SimpleSimBox, only: SimpleBox
+  use SimpleSimBox, only: SimpleBox, SimpleBox_ProcessIO
   use VarPrecision
   use CoordinateTypes
 
@@ -153,6 +153,8 @@ module CubicBoxDef
   select type(disp)
     class is(OrthoVolChange)
       scaleFactor = disp(1)%xScale
+    class default
+      error stop
   end select
   
   if(present(rx)) then
@@ -220,54 +222,8 @@ module CubicBoxDef
         self % boxL = realVal
         self % boxL2 = realVal/2.0E0_dp
 
-      case("buildfreq")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % maintFreq = intVal
-        write(nout,*) "Neigh Update Frequency:", self % maintFreq
-
-      case("chempotential")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        call GetXCommand(line, command, 6, lineStat)
-        read(command, *) realVal
-        self % chempot(intVal) = realVal
-
-      case("energycalc")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        self % EFunc => EnergyCalculator(intVal)
-
-      case("energyrecompute")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) logicVal
-        self % forceERecompute = logicVal
-
-      case("neighcut")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        call GetXCommand(line, command, 6, lineStat)
-        read(command, *) realVal
-        self%NeighList(intVal)%rCut = realVal
-
-      case("neighlist")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) intVal
-        call self%NeighList(intVal)%ProcessIO(line, lineStat)
-
-      case("pressure")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) realVal
-        self % pressure = realVal*inPressUnit
-
-      case("temperature")
-        call GetXCommand(line, command, 5, lineStat)
-        read(command, *) realVal
-        self % temperature = realVal
-        self % beta = 1E0_dp/realVal
-
       case default
-        lineStat = -1
+        call SimpleBox_ProcessIO(self, line, lineStat)
     end select
 
   end subroutine
@@ -319,7 +275,6 @@ module CubicBoxDef
     integer :: iAtom, iDims, iConstrain, iType, iList
     integer :: iMol, molStart
 
-
     !Check to see if all particles are properly contained within the simulation box.
     do iAtom = 1, self%nMaxAtoms
       if(.not. self%isactive(iAtom) ) then
@@ -355,12 +310,12 @@ module CubicBoxDef
     write(nout,*) "Box ", self%boxID, " Molecule Count: ", self % NMol
     write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
 
+    self%volume = self%boxL**3
     do iList = 1 ,size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
     call self % ComputeEnergy
 
-    self%volume = self%boxL**3
     write(nout,*) "Box ", self%boxID, " Pressure: ", self%pressure/outPressUnit, pressStr
     write(nout,*) "Box ", self%boxID, " Volume: ", self%volume
     write(nout,*) "Box ", self%boxID, " Number Density: ", self%nMolTotal/self%boxL**3

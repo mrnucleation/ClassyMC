@@ -56,8 +56,6 @@ use VarPrecision
 
 
 
-!    allocate( self%tempNNei(1) )
-!    allocate( self%tempList(200, 1) )
   end subroutine
 !===============================================
   subroutine EB_AVBMC_FullMove(self, trialBox, accept) 
@@ -492,8 +490,6 @@ use VarPrecision
     write(nout,*) "EB_AVBMC Radius:", self%avbmcRad
     write(nout,*) "EB_AVBMC Volume:", self%avbmcVol
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(2000,maxAtoms ) )
     allocate( self%newPart(1:maxAtoms) )
   end subroutine
 !=========================================================================

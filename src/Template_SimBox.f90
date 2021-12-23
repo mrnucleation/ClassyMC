@@ -3,6 +3,8 @@
 ! family of objects. This type is only intended to provide the basic
 ! structure for child classes and should not be used directly. 
 ! Unlike other template classes, the root class used by most box types is the SimpleBox.
+! This defines the skelton for the box template, but most of the key routines are defined
+! in Box_SimpleBox.f90
 !==========================================================================================
 module Template_SimBox
   use MasterTemplate, only: classyClass
@@ -23,6 +25,7 @@ module Template_SimBox
 
     !Thermodynamic Variables
     real(dp) :: ETotal, HTotal
+    real(dp) :: E_Inter, E_Intra
     real(dp) :: pressure = 0E0_dp
     real(dp) :: beta, temperature, volume
 
@@ -42,6 +45,7 @@ module Template_SimBox
 
     integer, allocatable :: MolGlobalIndx(:, :)
     integer, allocatable :: TypeFirst(:), TypeLast(:)
+    integer, allocatable :: TypeMolFirst(:), TypeMolLast(:)
 
     integer :: nLists
     class(NeighListDef), allocatable :: NeighList(:)
@@ -53,6 +57,7 @@ module Template_SimBox
       procedure, public, pass :: GetCoordinates
       procedure, public, pass :: GetAtomTypes
       procedure, public, pass :: GetAtomData
+      procedure, public, pass :: GetTypeAtoms
       procedure, public, pass :: GetMolData
       procedure, public, pass :: BuildNeighList
       procedure, public, pass :: Boundary
@@ -60,11 +65,13 @@ module Template_SimBox
       procedure, public, pass :: ComputeEnergy
       procedure, public, pass :: ProcessIO
       procedure, public, pass :: DumpData
+      procedure, public, pass :: GetBoxID
       procedure, public, pass :: GetThermo
+      procedure, public, pass :: GetThermo_String
       procedure, public, pass :: ThermoLookUp
       procedure, public, pass :: IsActive
-      procedure, public, pass :: UpdateEnergy
-      procedure, public, pass :: UpdatePosition
+!      procedure, public, pass :: UpdateEnergy
+!      procedure, public, pass :: UpdatePosition
       procedure, public, pass :: UpdateVol
       procedure, public, pass :: UpdateNeighLists
 
@@ -102,6 +109,34 @@ module Template_SimBox
     else
         atoms => self%atoms
     endif
+
+  end subroutine
+!==========================================================================================
+function GetBoxID(self) result(boxID)
+    !Returns the start and end incidies of the atoms of this molecule type
+    !that are currently active in the box.
+    implicit none
+    class(SimBox), intent(inout) :: self
+    integer :: boxID
+
+    boxID = self%boxID
+end function
+!==========================================================================================
+subroutine GetTypeAtoms(self, iType, typeStart, typeEnd)
+    !Returns the start and end incidies of the atoms of this molecule type
+    !that are currently active in the box.
+    implicit none
+    class(SimBox), intent(inout) :: self
+    integer, intent(in) :: iType
+    integer, intent(out), optional :: typeStart, typeEnd
+
+    if(present(typeStart)) then
+      typeStart = -1
+    endif
+    if(present(typeEnd)) then
+      typeEnd = -1
+    endif
+
 
   end subroutine
 !==========================================================================================
@@ -143,19 +178,19 @@ module Template_SimBox
     real(dp), intent(inout), optional :: rx, ry, rz 
 
   end subroutine
+!!==========================================================================================
+!  subroutine UpdateEnergy(self, E_Diff)
+!    implicit none
+!    class(SimBox), intent(inout) :: self
+!    real(dp), intent(in) :: E_Diff
+!  end subroutine
 !==========================================================================================
-  subroutine UpdateEnergy(self, E_Diff)
-    implicit none
-    class(SimBox), intent(inout) :: self
-    real(dp), intent(in) :: E_Diff
-  end subroutine
-!==========================================================================================
-  subroutine UpdatePosition(self, disp, tempList, tempNNei)
-    implicit none
-    class(SimBox), intent(inout) :: self
-    class(Perturbation), intent(inout) :: disp(:)
-    integer, intent(in) :: tempList(:,:), tempNNei(:)
-  end subroutine
+!  subroutine UpdatePosition(self, disp, tempList, tempNNei)
+!    implicit none
+!    class(SimBox), intent(inout) :: self
+!    class(Perturbation), intent(inout) :: disp(:)
+!    integer, intent(in), pointer :: tempList(:,:), tempNNei(:)
+!  end subroutine
 !==========================================================================================
   subroutine UpdateNeighLists(self, disp)
     use CoordinateTypes
@@ -187,12 +222,12 @@ module Template_SimBox
     lineStat = 0
   end subroutine
 !==========================================================================================
-  subroutine GetMolData(self, globalIndx, nAtoms, molStart, molEnd, molType, atomSubIndx)
+  subroutine GetMolData(self, globalIndx, nAtoms, molStart, molEnd, molType, slice)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimBox), intent(in) :: self
     integer, intent(in)  :: globalIndx
-    integer, intent(inout), optional :: nAtoms, molStart, molEnd, molType, atomSubIndx
-
+    integer, intent(inout), optional :: nAtoms, molStart, molEnd, molType
+    integer, intent(inout), optional :: slice(1:2)
 
   end subroutine
 !==========================================================================================
@@ -204,12 +239,11 @@ module Template_SimBox
 
 
   end subroutine
-
 !==========================================================================================
 !  Checks to see if the atom is present in the box.  This is required 
   function IsActive(self, atmIndx) result(active)
     implicit none
-    class(SimBox), intent(inout) :: self
+    class(SimBox), intent(in) :: self
     logical :: active
     integer, intent(in) :: atmIndx
 
@@ -224,6 +258,37 @@ module Template_SimBox
     character(len=*), intent(in) :: filename
 
   end subroutine
+!==========================================================================================
+  function GetThermo_String(self, thermoStr) result(thermVal)
+    use Input_Format, only: maxLineLen
+    implicit none
+    class(SimBox), intent(in) :: self
+    character(len=30), intent(in) :: thermoStr
+    real(dp) :: thermVal
+
+    select case(trim(adjustl(thermoStr)))
+      case("energy") !Energy
+        thermVal = self%ETotal
+      case("ethalpy") !Ethalpy
+        thermVal = self%ETotal + self%Pressure*self%Volume
+      case("engergy_mol") !Energy per Molecule
+        thermVal = self%ETotal / self%nMolTotal
+      case("ethalpy_mol") !Enthalpy per Molecule
+        thermVal = (self%ETotal + self%Pressure*self%Volume)/self%nMolTotal
+      case("volume") !Volume
+        thermVal = self%volume
+      case("temperature") !Temperature
+        thermVal = self%temperature
+      case("pressure") !Pressure
+        thermVal = self%pressure
+      case("density") !Density
+        thermVal = self%nMolTotal / self%volume
+      case default
+        thermVal = -1
+        error stop "No Such Thermodynamic value defined."
+    end select
+
+  end function
 !==========================================================================================
   function GetThermo(self, thermInt) result(thermVal)
     use Input_Format, only: maxLineLen
@@ -249,11 +314,12 @@ module Template_SimBox
         thermVal = self%pressure
       case(8) !Density
         thermVal = self%nMolTotal / self%volume
-
+      case default
+        thermVal = -1
+        error stop
     end select
 
   end function
-
 !==========================================================================================
   function ThermoLookup(self, thermoStr) result(thermInt)
     use Input_Format, only: maxLineLen
@@ -286,6 +352,9 @@ module Template_SimBox
 
       case("density") !Density
         thermInt = 8
+      case default
+        thermInt = -1
+        error stop
 
     end select
 

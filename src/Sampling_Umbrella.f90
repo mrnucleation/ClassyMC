@@ -137,7 +137,7 @@ module UmbrellaRule
 !     This subroutine periodically 
   subroutine Umbrella_CollectHist(self)
     use ParallelVar, only: myid, nout, ierror
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
     implicit none
@@ -147,14 +147,14 @@ module UmbrellaRule
     real(dp) :: tol, refBias
     character(len = 100) :: outputString
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     write(nout,*) "Halting for Histogram Collection"
     call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
 #endif
     
 !      This block condences the histogram data from all the different processors
 !      into one collective array on the root (myid = 0) processor.        
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     arraySize = size(self%UHist)     
     if(myid .eq. 0) then
       self%TempHist = 0E0_dp

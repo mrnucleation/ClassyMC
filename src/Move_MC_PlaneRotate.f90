@@ -53,9 +53,9 @@ use ClassyConstants, only: pi
 
 
 !    allocate( self%tempcoords(3, maxAtoms) )
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
+
+    call self%CreateTempArray(maxAtoms)
   end subroutine
 !========================================================
 !  subroutine PlaneRotate_GeneratePosition(self, disp)
@@ -94,6 +94,7 @@ use ClassyConstants, only: pi
 
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%disp)
 
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp)
@@ -223,6 +224,7 @@ use ClassyConstants, only: pi
       return
     endif
 
+!    call trialBox % NeighList(1) % GetTempListArray(self%tempList, self%tempNNei)
     !Energy Calculation
 !    call trialbox% EFunc % Method % ShiftECalc_Single(trialBox, self%disp(1:1), E_Diff)
 !    call trialbox% EFunc % Method % DiffECalc(trialBox, self%disp(1:nAtoms), self%tempList, self%tempNNei, E_Diff, accept)
@@ -249,7 +251,7 @@ use ClassyConstants, only: pi
     accept = sampling % MakeDecision(trialBox, E_Diff, self%disp(1:nAtoms), inProb=Prob)
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter)
       call trialBox % UpdatePosition(self%disp(1:nAtoms), self%tempList, self%tempNNei)
     endif
 
@@ -295,6 +297,7 @@ use ClassyConstants, only: pi
     class(PlaneRotate), intent(inout) :: self
     real(dp) :: accptRate
       
+    write(nout,*) 
     write(nout,"(1x,A,I15)") "Molecule Rotation Moves Accepted: ", nint(self%accpt)
     write(nout,"(1x,A,I15)") "Molecule Rotation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()

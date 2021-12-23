@@ -78,9 +78,9 @@ use VarPrecision
     enddo
 
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
+
+    call self%CreateTempArray(maxAtoms)
   end subroutine
 !========================================================
 !  subroutine PlaneTranslate_GeneratePosition(self, disp)
@@ -99,7 +99,6 @@ use VarPrecision
     use CommonSampling, only: sampling
     use Common_NeighData, only: neighSkin
     use Common_MolInfo, only: MolData, nMolTypes
-    use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     implicit none
     class(PlaneTranslate), intent(inout) :: self
@@ -116,6 +115,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialbox, self%disp)
 
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp )
@@ -198,7 +198,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter)
       call trialBox % UpdatePosition(self%disp(1:nAtoms), self%tempList, self%tempNNei)
     endif
 

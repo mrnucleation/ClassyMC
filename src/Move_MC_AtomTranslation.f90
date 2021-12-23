@@ -59,23 +59,22 @@ use VarPrecision
   end subroutine
 !===============================================
   subroutine AtomTrans_FullMove(self, trialBox, accept) 
-    use ForcefieldData, only: EnergyCalculator
     use RandomGen, only: grnd
     use CommonSampling, only: sampling
-    use Common_NeighData, only: neighSkin
     use Box_Utility, only: FindAtom
     implicit none
     class(AtomTranslate), intent(inout) :: self
     class(SimpleBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
-    integer :: boxID, iAtom, nAtoms, molIndx, atomIndx
-    integer :: nMove, rawIndx, iConstrain
-    integer :: CalcIndex, molStart, molEnd, molType
+    integer :: boxID, molIndx
+    integer :: nMove, rawIndx
+    integer :: molStart, molEnd, molType
     real(dp) :: dx, dy, dz
-    real(dp) :: E_Diff, E_Inter, E_Intra, biasE
+    real(dp) :: E_Diff, E_Inter, E_Intra
     real(dp), parameter :: Prob = 1E0_dp
 
     boxID = trialBox % boxID
+    call self%LoadBoxInfo(trialBox, self%disp)
     self % atmps = self % atmps + 1E0_dp
     self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.
@@ -147,7 +146,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%disp(1:1), self%tempList, self%tempNNei)
     else
       self%detailedrej = self%detailedrej + 1
@@ -164,6 +163,7 @@ use VarPrecision
     real(dp) :: accptRate
  
 
+    write(nout,*) 
     write(nout,"(1x,A,I15)") "Atom Translation Moves Accepted: ", nint(self%accpt)
     write(nout,"(1x,A,I15)") "Atom Translation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()

@@ -8,7 +8,7 @@ use VarPrecision
 contains
 !===========================================================================
   subroutine RunMinimize(boxnum)
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
 
@@ -108,7 +108,7 @@ contains
     call Trajectory(iCycle, iMove)
     call Epilogue
 
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
 #endif
 

@@ -12,6 +12,7 @@ module IntraBond_Harmonic
       procedure, pass :: EFunc => HarmonicBond_EFunc
       procedure, pass :: Constructor => HarmonicBond_Constructor
 !      procedure, pass :: DetailedECalc => HarmonicBond_DetailedECalc
+      procedure, pass :: GenerateTrial => HarmonicBond_GenerateTrial
       procedure, pass :: GenerateDist => HarmonicBond_GenerateDist
 !      procedure, pass :: GenerateReverseDist => HarmonicBond_GenerateReverseDist
       procedure, pass :: ProcessIO => HarmonicBond_ProcessIO
@@ -36,6 +37,33 @@ module IntraBond_Harmonic
 
   end subroutine
 !==========================================================================
+  subroutine HarmonicBond_GenerateTrial(self, beta, val, bounds )
+    use RandomGen, only: grnd, Gaussian
+    implicit none
+    class(HarmonicBond), intent(inout) :: self
+    real(dp), intent(in) :: beta
+    real(dp), intent(out) :: val
+    real(dp), intent(in), optional :: bounds(1:2)
+    real(dp) :: E_Gen, rMax
+    real(dp) :: lb, ub
+
+    if(.not. present(bounds)) then
+      lb = 0E0_dp
+      ub = self%r0+5.0/sqrt(self%k0*beta)
+    else
+      lb = bounds(1)
+      ub = bounds(2)
+    endif
+
+    do
+      val = Gaussian()
+      val = self%r0 + val/sqrt(self%k0*beta)
+      if( (val < lb) .or. (val > ub)  ) cycle
+      exit
+    enddo
+
+  end subroutine
+!==========================================================================
   subroutine HarmonicBond_GenerateDist(self, beta, val, probgen, E_T)
     use RandomGen, only: grnd, Gaussian
     implicit none
@@ -50,11 +78,12 @@ module IntraBond_Harmonic
     probgen = 1E0_dp
     rMax = self%r0+5.0/sqrt(self%k0*beta)
     do
-      val = Gaussian()
-      val = self%r0 + val/sqrt(self%k0*beta)
-      if( (val < 0.0E0_dp) .or. (val > self%r0+5.0/sqrt(self%k0*beta))  ) then
-        cycle
-      endif
+!      val = Gaussian()
+!      val = self%r0 + val/sqrt(self%k0*beta)
+!      if( (val < 0.0E0_dp) .or. (val > self%r0+5.0/sqrt(self%k0*beta))  ) then
+!        cycle
+!      endif
+      call self%GenerateTrial(beta, val)
       probgen = (val/rMax)**2
       if(probgen > grnd()) then
         exit

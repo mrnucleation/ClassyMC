@@ -1,4 +1,9 @@
 !=========================================================================
+! Analyzes the number of molecules of a specific type in the cluster
+! Primarily used to bias the addition algorithm in conjunction with
+! umbrella sampling to compute the free energy as a function of
+! molecule count.
+!=========================================================================
 module Anaylsis_ClusterSize
 use AnaylsisClassDef, only: Analysis
 use VarPrecision
@@ -54,16 +59,28 @@ use VarPrecision
     var = self%nMol
   end function
 !=========================================================================
-  subroutine ClusterSize_CalcNewState(self, disp, newVal)
+  subroutine ClusterSize_CalcNewState(self, disp, accept, newVal)
     use AnalysisData, only: analyCommon
     use CoordinateTypes, only: Perturbation, Deletion, Addition, AtomExchange
     implicit none
     class(ClusterSize), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
     real(dp), intent(in), optional :: newVal
+    logical, intent(out) :: accept
     integer :: Diff
     integer :: molNew, molOld
     integer :: typeNew, typeOld
+
+    select type(anaVar => analyCommon(self%analyID)%val)
+      type is(integer)
+        anaVar = self%nMol 
+    end select
+
+    accept = .true.
+    if(disp(1)%boxID /= self%boxNum) then
+      accept = .false.
+      return
+    endif
 
     Diff = 0
     select type(disp)
@@ -86,7 +103,10 @@ use VarPrecision
             Diff = Diff + 1
          endif
     end select
-!    write(*,*) "Newcalc", Diff, self%nMol
+
+    if(Diff == 0) then
+      accept = .false.
+    endif
 
     select type(anaVar => analyCommon(self%analyID)%val)
       type is(integer)
@@ -123,13 +143,13 @@ use VarPrecision
     integer :: def
 
 
+    def = 0
     if(.not. allocated(anaVar) ) then
       allocate(anaVar, source=def)
-      write(*,*) "Allocated as Integer"
+!      write(*,*) "Allocated as Integer"
     endif
 
   end subroutine
-
 !=========================================================================
 end module
 !=========================================================================

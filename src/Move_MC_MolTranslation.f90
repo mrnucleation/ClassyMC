@@ -77,9 +77,9 @@ use VarPrecision
     enddo
 
 
-    allocate( self%tempNNei(maxAtoms) )
-    allocate( self%tempList(1000, maxAtoms) )
     allocate( self%disp(1:maxAtoms) )
+
+    call self%CreateTempArray(maxAtoms)
   end subroutine
 !========================================================
 !  subroutine MolTrans_GeneratePosition(self, disp)
@@ -115,7 +115,7 @@ use VarPrecision
     self % atmps = self % atmps + 1E0_dp
     self % boxatmps(boxID) = self % boxatmps(boxID) + 1E0_dp
     accept = .true.
-
+    call self%LoadBoxInfo(trialBox, self%disp)
     !Propose move
     rawIndx = floor( trialBox%nMolTotal * grnd() + 1E0_dp )
     call FindMolecule(trialbox, rawIndx, nMove)
@@ -188,7 +188,7 @@ use VarPrecision
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % boxaccpt(boxID) = self % boxaccpt(boxID) + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter)
       call trialBox % UpdatePosition(self%disp(1:nAtoms), self%tempList, self%tempNNei)
     else
       self%detailedrej = self%detailedrej + 1
@@ -245,6 +245,7 @@ use VarPrecision
     class(MolTranslate), intent(inout) :: self
     real(dp) :: accptRate
       
+    write(nout,*) 
     write(nout,"(1x,A,I15)") "Molecule Translation Moves Accepted: ", nint(self%accpt)
     write(nout,"(1x,A,I15)") "Molecule Translation Moves Attempted: ", nint(self%atmps)
     accptRate = self%GetAcceptRate()

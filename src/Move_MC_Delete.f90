@@ -25,8 +25,6 @@ use VarPrecision
     implicit none
     class(MoveDelete), intent(inout) :: self
 
-!    allocate( self%tempNNei(1) )
-!    allocate( self%tempList(10, 1) )
 
   end subroutine
 !===============================================
@@ -47,6 +45,7 @@ use VarPrecision
 
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
+    call self%LoadBoxInfo(trialBox, self%disp)
 
 !    self%disp(1)%newAtom = .false.
     self%disp(1)%MolType = 1
@@ -82,7 +81,7 @@ use VarPrecision
     !Accept/Reject
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
-      call trialBox % UpdateEnergy(E_Diff)
+      call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % DeleteMol(delVal)
 !      call trialBox % UpdatePosition(self%disp(1:1))
     endif

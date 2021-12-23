@@ -25,7 +25,6 @@ module Template_ForceField
   contains
 !=============================================================================+
   subroutine Constructor(self)
-    use Common_MolInfo, only: nMolTypes
     implicit none
     class(forcefield), intent(inout) :: self
 
@@ -47,7 +46,7 @@ module Template_ForceField
     class(forcefield), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
 !    class(displacement), intent(in) :: disp(:)
-    class(Perturbation), intent(in) :: disp(:)
+    class(Perturbation), intent(inout), target :: disp(:)
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
@@ -60,16 +59,18 @@ module Template_ForceField
 
   end subroutine
 !=============================================================================+
-  function SinglePair(self, atmtype1, atmtype2, rsq) result(E_Pair)
+  function SinglePair(self, rsq, atmtype1, atmtype2) result(E_Pair)
     implicit none
     class(forcefield), intent(inout) :: self
     integer, intent(in) :: atmtype1, atmtype2
     real(dp), intent(in) :: rsq
     real(dp) :: E_Pair
 
+    E_Pair = 30E0_dp
+
   end function
 !=============================================================================+
-  function SinglePair_Approx(self, atmtype1, atmtype2, rsq) result(E_Pair)
+  function SinglePair_Approx(self, rsq, atmtype1, atmtype2) result(E_Pair)
     implicit none
     class(forcefield), intent(in) :: self
     integer, intent(in) :: atmtype1, atmtype2
@@ -106,6 +107,8 @@ module Template_ForceField
     implicit none
     class(forcefield), intent(inout) :: self
     real(dp), pointer :: rMinOut(:)
+
+    rMinOut => null()
 
   end function
 !=============================================================================+

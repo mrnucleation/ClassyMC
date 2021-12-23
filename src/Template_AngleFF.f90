@@ -13,6 +13,7 @@ module Template_IntraAngle
       procedure, pass :: EFunc
       procedure, pass :: ComputeProb
       procedure, pass :: ComputeAngle
+!      procedure, pass :: GenerateTrial
       procedure, pass :: GenerateReverseDist
       procedure, pass :: DetailedECalc 
 !      procedure, pass :: DiffECalc
@@ -66,6 +67,7 @@ module Template_IntraAngle
     call self%DetailedECalc(curbox, reducepos(1:3,1:3), E_Angle, accept)
     probgen = exp(-beta*E_Angle)
   end subroutine
+
 !=============================================================================+
   function EFunc(self, angle) result(E_Angle)
     implicit none
@@ -77,14 +79,23 @@ module Template_IntraAngle
   end function
 !=============================================================================+
   function ComputeAngle(self, curbox, atompos) result(theta)
+    use ClassyConstants, only: pi
     implicit none
     class(Angle_FF), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
     real(dp), intent(in) :: atompos(:, :)
     real(dp) :: theta
     
+    integer :: iAtom
+    real(dp) :: temppos(1:3, 1:3)
     real(dp) :: r1, rx1, ry1, rz1
     real(dp) :: r2, rx2, ry2, rz2
+
+!    do iAtom = 1,3
+!      temppos(1:3, iAtom) = atompos(1:3, iAtom) - atompos(1:3, 1)
+!      call curbox%Boundary(temppos(1,iAtom), temppos(2,iAtom), temppos(3,iAtom))
+!    enddo
+
     rx1 = atompos(1, 1) - atompos(1, 2)
     ry1 = atompos(2, 1) - atompos(2, 2)
     rz1 = atompos(3, 1) - atompos(3, 2)
@@ -98,7 +109,20 @@ module Template_IntraAngle
     r2 = sqrt(rx2*rx2 + ry2*ry2 + rz2*rz2)
      
     theta = rx1*rx2 + ry1*ry2 + rz1*rz2
-    theta = acos(theta/(r1*r2))
+    theta = theta/(r1*r2)
+
+    !Safety block to prevent floating point errors from going outside of
+    !-1 < theta < 1
+    if( (theta > -1E0_dp) .and. (theta < 1E0_dp) ) then
+      theta = acos(theta)
+    else if( theta < 0E0_dp ) then
+      theta = pi
+    else if( theta > 0E0_dp ) then
+      theta = 0E0_dp
+    else
+      write(0,*) "Theta:", theta
+      error stop "Invalid Angle Calculation!"
+    endif
 
   end function
 !=============================================================================+
@@ -115,21 +139,6 @@ module Template_IntraAngle
     accept = .true.
     theta = self%ComputeAngle(curbox, atompos)
     E_T = self%EFunc(theta)
-
-!    rx1 = atompos(1, 1) - atompos(1, 2)
-!    ry1 = atompos(2, 1) - atompos(2, 2)
-!    rz1 = atompos(3, 1) - atompos(3, 2)
-!    call curbox % Boundary(rx1, ry1, rz1)
-!    r1 = sqrt(rx1*rx1 + ry1*ry1 + rz1*rz1)
-
-!    rx2 = atompos(1, 3) - atompos(1, 2)
-!    ry2 = atompos(2, 3) - atompos(2, 2)
-!    rz2 = atompos(3, 3) - atompos(3, 2)
-!    call curbox % Boundary(rx2, ry2, rz2)
-!    r2 = sqrt(rx2*rx2 + ry2*ry2 + rz2*rz2)
-     
-!    theta = rx1*rx2 + ry1*ry2 + rz1*rz2
-!    theta = acos(theta/(r1*r2))
 
   end subroutine
 !==========================================================================

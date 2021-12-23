@@ -1,7 +1,7 @@
 !===========================================================================
   program Classy
   !This is a test
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
 
@@ -23,7 +23,7 @@
     character(len=100) :: format_string, fl_name
     character(len=1500) :: outFormat1
  
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     call MPI_INIT(ierror)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, p_size, ierror)
     call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierror)  
@@ -74,7 +74,7 @@
     write(nout, *) "Finished!"
     close(nout)
       
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
     call MPI_FINALIZE(ierror)   
 #endif

@@ -45,7 +45,7 @@ module Constrain_FreezeType
   subroutine FreezeType_CheckInitialConstraint(self, trialBox, accept)
     implicit none
     class(FreezeType), intent(inout) :: self
-    class(SimBox), intent(in) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
 
     accept = .true.
@@ -54,7 +54,7 @@ module Constrain_FreezeType
   subroutine FreezeType_DiffCheck(self, trialBox, disp, accept)
     implicit none
     class(FreezeType), intent(inout) :: self
-    class(SimBox), intent(in) :: trialBox
+    class(SimBox), intent(inout) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
     integer :: iDisp
