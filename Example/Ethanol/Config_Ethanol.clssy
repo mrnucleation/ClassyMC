@@ -1,5 +1,5 @@
- boxtype nobox
-# dimension   157.00000000000000     
+ boxtype cube
+ dimension   157.00000000000000     
  molmin           1
  molmax           5
  mol           1

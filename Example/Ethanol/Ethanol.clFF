@@ -61,8 +61,7 @@ molecule 1
 end_molecule
 
 forcefieldtype
-  EP_LJ_Ele_Cut
-#  LJ_Q_Cut
+  LJ_Ele_Cut
 end_forcefieldtype
 
 # type epsilon sigma q rmin
