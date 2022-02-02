@@ -1,6 +1,6 @@
 !==========================================================================================
 ! CBMC style regrowth algorithm for Branched molecules. Much more general purpose than
-! the linear version.
+! the linear version, but
 !==========================================================================================
 module MolCon_BranchCBMC
   use CoordinateTypes, only: Perturbation, Addition, Displacement, SingleMol, Deletion
@@ -87,7 +87,6 @@ module MolCon_BranchCBMC
 !==========================================================================================
   subroutine BranchCBMC_Prologue(self)
     use Common_MolInfo, only: MolData
-    use Data_Graph, only: graph
     use MolSearch, only: FindBond
 !    use ParallelVar, only: nout
     implicit none
@@ -127,8 +126,34 @@ module MolCon_BranchCBMC
       allocate( self%trialcoords(1:3, 1:self%nAtoms, 1:self%nRosenTrials) )
       allocate( self%trialGenProb(1:self%nRosenTrials) )
       allocate( self%grown(1:self%nAtoms) )  
+      allocate( self%patharray(1:self%nAtoms) )  
+      allocate( self%pathposition(1:self%nAtoms) )  
+      allocate( self%nBranches(1:self%nAtoms) )
+      allocate( self%branchnext(1:self%nAtoms, 1:self%nAtoms) )  
       allocate( self%schedule(1:self%nAtoms) )  
+      allocate( self%scratchschedule(1:self%nAtoms) )  
     endif
+
+    largestVal = 0
+    do iAtom = 1, self%nAtoms
+      largestVal = max(largestVal, MolData(self%molType)%nAtmBonds(iAtom))
+    enddo
+    if(.not. allocated(self%newBonds)) allocate(self%newBonds(1:largestVal))
+    if(.not. allocated(self%newBondTypes)) allocate(self%newBondTypes(1:largestVal))
+
+    largestVal = 0
+    do iAtom = 1, self%nAtoms
+      largestVal = max(largestVal, MolData(self%molType)%nAtmAngles(iAtom))
+    enddo
+    if(.not. allocated(self%newAngles)) allocate(self%newAngles(1:largestVal))
+    if(.not. allocated(self%newAngleTypes)) allocate(self%newAngleTypes(1:largestVal))
+
+    largestVal = 0
+    do iAtom = 1, self%nAtoms
+      largestVal = max(largestVal, MolData(self%molType)%nAtmTorsions(iAtom))
+    enddo
+    if(.not. allocated(self%newTorsions)) allocate(self%newTorsions(1:largestVal))
+    if(.not. allocated(self%newTorsionTypes)) allocate(self%newTorsionTypes(1:largestVal))
 
     !Count the number of bonds each atom has.  This will be used to classify the atom
     !as either a Terminal, Linker, or Branch atom. 
@@ -136,6 +161,32 @@ module MolCon_BranchCBMC
     ! nBonds  = 1 >> Terminal Atom located on the end of a chain
     ! nBonds  = 2 >> Linker Atom. Located in the middle of a linear chain
     ! nBonds >= 3 >> Branch Atom. Has two or more potential paths one can wander down.
+    self%nAtoms = MolData(self%molType)%nAtoms
+    self%include15 = .false.
+    self%nBranches = 0
+    self%branchnext = 0
+    if(self%nAtoms > 1) then
+      allocate( self%freq(1:self%nAtoms) )  
+      self%freq = 0
+      do iBond = 1, size(MolData(self%molType)%bond)
+        atm1 = MolData(self%molType)%bond(iBond)%mem1
+        self%freq(atm1) = self%freq(atm1) + 1
+        atm2 = MolData(self%molType)%bond(iBond)%mem2
+        self%freq(atm2) = self%freq(atm2) + 1
+         !Branchnext is basically a neighborlist
+         !keeping track of which atoms are directly connected.
+         !Used to determine which atoms to grow next
+        nBranch = self%nBranches(atm1) + 1
+        self%nBranches(atm1) = nBranch
+        self%branchnext(nBranch, atm1) = atm2
+
+        nBranch = self%nBranches(atm2) + 1
+        self%nBranches(atm2) = nBranch
+        self%branchnext(nBranch, atm2) = atm1
+      enddo
+    else 
+      iError = -1
+    endif
 
 
   end subroutine

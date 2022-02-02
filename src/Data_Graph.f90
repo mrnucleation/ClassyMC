@@ -205,7 +205,11 @@ module Data_Graph
   end subroutine
   !==================================================================
   subroutine Graph_AddAngle(self, atm1, atm2, atm3, angID)
-     !Adds
+     !Adds a bond angle information to the graph data structure.
+     !integer atm1 => First Atom in the Angle (Side Atom)
+     !integer atm2 => Second Atom in the Angle (Middle Atom)
+     !integer atm3 => Third Atom in the Angle (Side Atom)
+     !integer angID => Angle ID used to look up type of angle.
     implicit none
     class(graph), intent(inout), target :: self
     integer, intent(in) :: atm1, atm2, atm3, angID
