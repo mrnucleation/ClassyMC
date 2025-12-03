@@ -1,0 +1,91 @@
+# =============================================================================
+# Sample LAMMPS Forcefield File for Lennard-Jones System
+# =============================================================================
+# This example demonstrates how to use the LAMMPS interface in ClassyMC
+# for a simple Lennard-Jones fluid (e.g., liquid Argon)
+#
+# Units in this example:
+#   LAMMPS uses "real" units by default in ClassyMC:
+#     - Energy: kcal/mol
+#     - Distance: Angstroms
+#   ClassyMC typically uses reduced units or kJ/mol
+# =============================================================================
+
+# Define the number of molecule types
+moleculetypes 1
+
+# Define the atom types
+# Format: "Element" mass
+atomdef
+  "Ar"  39.948   # Argon
+end_atomdef
+
+# Define molecule type 1 (single Argon atom)
+molecule 1
+  RegrowthType Simple
+  atoms
+    1    # Contains 1 atom of type 1 (Argon)
+  end_atoms
+end_molecule
+
+# Specify we're using the LAMMPS forcefield
+forcefieldtype
+  lammps
+end_forcefieldtype
+
+# =============================================================================
+# LAMMPS Forcefield Configuration
+# =============================================================================
+# In the forcefield block, we configure the LAMMPS pair potential
+#
+# The lammps_cmd lines are passed directly to LAMMPS during initialization.
+# The order matters - box creation and masses must come before pair_style.
+#
+# For Argon LJ parameters (common values):
+#   epsilon = 0.238 kcal/mol (1.0 kJ/mol approximately)
+#   sigma = 3.405 Angstroms
+# =============================================================================
+
+forcefield 1
+  # Set the cutoff distance (in Angstroms)
+  rcut 5.0
+
+  # -----------------------------------------
+  # LAMMPS Commands (executed in order)
+  # -----------------------------------------
+  # Create the simulation box with 1 atom type
+  # The "box" region is automatically created by ClassyMC
+  lammps_cmd create_box 1 box
+  
+  # Set the mass for atom type 1 (Argon)
+  lammps_cmd mass 1 39.948
+  
+  # Define the LJ pair style with cutoff of 12.0 Angstroms
+  lammps_cmd pair_style lj/cut 5.0
+  
+  # Set the LJ parameters: pair_coeff type1 type2 epsilon sigma
+  # For Argon: epsilon = 0.238 kcal/mol, sigma = 3.405 Angstroms
+  lammps_cmd pair_coeff 1 1 0.238 3.405
+
+  # -----------------------------------------
+  # Unit Conversions (adjust based on your ClassyMC setup)
+  # -----------------------------------------
+  # Convert LAMMPS energy (kcal/mol) to ClassyMC energy units
+  # If ClassyMC uses kJ/mol: 1 kcal/mol = 4.184 kJ/mol
+  # If ClassyMC uses reduced units (epsilon): set to 1/epsilon_kcal
+  energy_conversion 4.184
+  
+  # Convert ClassyMC length to LAMMPS length (Angstroms)
+  # Set to 1.0 if ClassyMC also uses Angstroms
+  length_conversion 1.0
+
+  # -----------------------------------------
+  # Minimum distances for overlap checking
+  # -----------------------------------------
+  # Format: atomtype rMin
+  # Atoms closer than rMin are considered overlapping (move rejected)
+  # Typically set to ~0.8*sigma or smaller
+  1  2.5
+
+end_forcefield
+

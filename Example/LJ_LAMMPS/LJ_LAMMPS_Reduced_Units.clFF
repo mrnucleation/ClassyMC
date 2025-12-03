@@ -1,0 +1,65 @@
+# =============================================================================
+# LAMMPS Forcefield File for LJ System in Reduced Units
+# =============================================================================
+# This example uses reduced (dimensionless) LJ units where:
+#   epsilon* = 1.0
+#   sigma* = 1.0
+#   mass* = 1.0
+# This is common for studying generic LJ fluid behavior.
+# =============================================================================
+
+moleculetypes 1
+
+atomdef
+  "LJ"  1.0   # Generic LJ particle with unit mass
+end_atomdef
+
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+forcefieldtype
+  lammps
+end_forcefieldtype
+
+# =============================================================================
+# LAMMPS Reduced Unit Configuration
+# =============================================================================
+# LAMMPS "lj" units use:
+#   mass = mass* (dimensionless)
+#   distance = sigma (LJ length unit)
+#   energy = epsilon (LJ energy unit)
+#   time = sigma*sqrt(mass/epsilon)
+# =============================================================================
+
+forcefield 1
+  # Cutoff at 2.5 sigma (standard for LJ simulations)
+  rcut 17.5
+
+  # Use LAMMPS LJ units for reduced unit simulations
+  lammps_cmd units lj
+  
+  # Create box for 1 atom type
+  lammps_cmd create_box 1 box
+  
+  # Unit mass
+  lammps_cmd mass 1 1.0
+  
+  # Standard LJ cutoff potential at 2.5 sigma
+  lammps_cmd pair_style lj/cut 17.5
+  
+  # Unit LJ parameters: epsilon = 1.0, sigma = 1.0
+  lammps_cmd pair_coeff 1 1 1.0 1.0
+
+  # No conversion needed for reduced units
+  energy_conversion 1.0
+  length_conversion 1.0
+
+  # Minimum separation (typically 0.8 sigma to avoid hardcore overlap)
+  1  0.8
+
+end_forcefield
+

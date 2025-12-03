@@ -1,0 +1,86 @@
+# =============================================================================
+# LAMMPS Forcefield File for Two-Component LJ Mixture
+# =============================================================================
+# This example shows a binary LJ mixture with different sigma and epsilon
+# values for each component, using Lorentz-Berthelot mixing rules.
+# 
+# Common use case: Studying phase separation or mixing behavior
+# =============================================================================
+
+moleculetypes 2
+
+atomdef
+  "A"  1.0    # Component A (smaller, less attractive)
+  "B"  2.0    # Component B (larger, more attractive)
+end_atomdef
+
+# Molecule type 1: Single atom of type A
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+# Molecule type 2: Single atom of type B
+molecule 2
+  RegrowthType Simple
+  atoms
+    2
+  end_atoms
+end_molecule
+
+forcefieldtype
+  lammps
+end_forcefieldtype
+
+# =============================================================================
+# Binary LJ Mixture Configuration
+# =============================================================================
+# Component A: sigma_A = 1.0, epsilon_A = 1.0
+# Component B: sigma_B = 1.5, epsilon_B = 1.5
+#
+# Cross-interactions can be set explicitly or let LAMMPS use mixing rules:
+#   pair_modify mix arithmetic  -> Lorentz-Berthelot rules
+#   sigma_AB = (sigma_A + sigma_B)/2 = 1.25
+#   epsilon_AB = sqrt(epsilon_A * epsilon_B) = 1.225
+# =============================================================================
+
+forcefield 1
+  # Cutoff at 3.0 (to accommodate larger particles)
+  rcut 3.75
+
+  lammps_cmd units lj
+  
+  # Create box for 2 atom types
+  lammps_cmd create_box 2 box
+  
+  # Set masses
+  lammps_cmd mass 1 1.0
+  lammps_cmd mass 2 2.0
+  
+  # Define LJ pair style
+  lammps_cmd pair_style lj/cut 3.75
+  
+  # Use Lorentz-Berthelot mixing rules for cross-interactions
+  lammps_cmd pair_modify mix arithmetic
+  
+  # Set LJ parameters for each pair
+  # pair_coeff type1 type2 epsilon sigma
+  lammps_cmd pair_coeff 1 1 1.0 1.0    # A-A interaction
+  lammps_cmd pair_coeff 2 2 1.5 1.5    # B-B interaction
+  # A-B interaction will be computed from mixing rules
+  # Or you can specify it explicitly:
+  # lammps_cmd pair_coeff 1 2 1.225 1.25
+
+  energy_conversion 1.0
+  length_conversion 1.0
+
+  # Minimum separations for overlap detection
+  # Format: type rMin  OR  type1 type2 rMin
+  1  0.8       # A-A minimum distance
+  2  1.2       # B-B minimum distance
+  1  2  1.0    # A-B minimum distance (cross interaction)
+
+end_forcefield
+

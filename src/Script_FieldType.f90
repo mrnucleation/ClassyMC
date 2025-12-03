@@ -13,6 +13,7 @@ contains
     use FF_HardSphere, only: Pair_HardSphere
     use FF_Hybrid, only: Pair_Hybrid
     use FF_Pair_LJ_Cut, only: Pair_LJ_Cut
+    use FF_Ext_LAMMPS, only: Pair_LAMMPS
     use FF_EasyEP_LJ_Cut, only: EP_LJ_Cut
     use FF_EasyEP_LJ_CutShift, only: EP_LJ_CutShift
     use FF_EasyEP_LJ_Ele_Cut, only: EP_LJ_Ele_Cut
@@ -100,6 +101,13 @@ contains
 !      case("pedone")
 !        allocate(Pair_Pedone_Cut::EnergyCalculator(FFNum) % Method)
 !        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Pedone Cut style"
+
+
+#ifdef LAMMPS
+      case("lammps")
+        allocate(Pair_LAMMPS::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as LAMMPS Library Interface"
+#endif
 
       case("tersoff")
         allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)

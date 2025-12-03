@@ -136,14 +136,15 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Box_OrthoBox.f90\
         		$(SRC)/FF_AENet.f90\
         		$(SRC)/FF_EasyPair_Cut.f90\
+        		$(SRC)/FF_Lammps.f90\
         		$(SRC)/FF_Einstein.f90\
         		$(SRC)/FF_HardSphere.f90\
         		$(SRC)/FF_Hybrid.f90\
         		$(SRC)/FF_EP_LJ_Ele_Cut.f90\
         		$(SRC)/FF_EP_LJ_Cut.f90\
-						$(SRC)/FF_EP_LJ_CutShift.f90\
-						$(SRC)/FF_EP_Pedone_Cut.f90\
-						$(SRC)/FF_Pedone.f90\
+				$(SRC)/FF_EP_LJ_CutShift.f90\
+				$(SRC)/FF_EP_Pedone_Cut.f90\
+				$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_Tersoff.f90\
         		$(SRC)/FF_ThermoInt.f90\
@@ -242,7 +243,36 @@ aenet: COMPFLAGS += $(DEBUGFLAGS)
 #aenet: COMPFLAGS += -DAENET -static-libgfortran -llapack -lblas
 aenet: COMPFLAGS += -DAENET -llapack -lblas
 #aenet: OBJ_LIBRARY += $(LIB)/libaenet.a
-aenet: startUP  classyMCAENet  modout finale 
+aenet: startUP  classyMCAENet  modout finale
+
+# ====================================
+#        LAMMPS Library Integration
+# ====================================
+# To use LAMMPS as a forcefield, you need:
+#   1. LAMMPS compiled as a shared library (liblammps.so)
+#   2. The LAMMPS library in your library path or specify with LAMMPS_LIB_PATH
+#   3. Example: make lammps LAMMPS_LIB_PATH=/path/to/lammps/build
+#
+# For Intel Fortran:
+LAMMPS_LIB_PATH ?= /usr/local/lib
+lammps: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
+lammps: COMPFLAGS += $(DEBUGFLAGS)
+lammps: COMPFLAGS += -DLAMMPS
+lammps: LDFLAGS := -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
+lammps: startUP  classyMCLAMMPS  modout finale
+
+# For GFortran:
+lammps_gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
+lammps_gfortran: COMPFLAGS += $(DEBUGFLAGS)
+lammps_gfortran: COMPFLAGS += -DLAMMPS
+lammps_gfortran: LDFLAGS := -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
+lammps_gfortran: startUP  classyMCLAMMPS  modout finale
+
+# Debug build with LAMMPS:
+lammps_debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
+lammps_debug: COMPFLAGS += -DLAMMPS
+lammps_debug: LDFLAGS := -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
+lammps_debug: startUP  classyMCLAMMPS  modout finale 
 
 #lib: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(LIBRARY_FLAGS)
 lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(LIBRARY_FLAGS)
@@ -316,7 +346,13 @@ classyMCAENet: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
+		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@
+
+classyMCLAMMPS: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
+		@echo =============================================
+		@echo "    Compiling and Linking Source Files (LAMMPS)"
+		@echo =============================================	
+		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ $(LDFLAGS) -o $@ 	
 	
 classyMC_debug: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
 	    
@@ -365,6 +401,7 @@ removeExec:
 		@rm -f $(CUR_DIR)/libclassymc.so
 		@rm -f $(CUR_DIR)/classyMC
 		@rm -f $(CUR_DIR)/classyMCAENet
+		@rm -f $(CUR_DIR)/classyMCLAMMPS
 		@rm -f $(CUR_DIR)/classyMC_debug
 		@rm -f $(CUR_DIR)/classyMC.exe
 
@@ -421,7 +458,7 @@ $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Force
 
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o $(OBJ)/Script_BondType.o $(OBJ)/Script_AngleType.o $(OBJ)/Script_RegrowType.o 
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
-$(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o
+$(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o ${OBJ}/FF_Lammps.o
 $(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XSF.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o $(OBJ)/Traj_POSCAR.o
 $(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Neigh_CellRSqList.o $(OBJ)/Common_BoxData.o
 
@@ -437,6 +474,7 @@ $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 $(OBJ)/FF_EP_LJ_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_EP_Pedone_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_EP_LJ_CutShift.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_Lammps.o: $(OBJ)/FF_EasyPair_Cut.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
 $(OBJ)Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o

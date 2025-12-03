@@ -1,0 +1,38 @@
+#======================================
+# Example Script capable of computing the nucleation free energy
+# of a Lennard-Jones system using the AVBMC or UB approach. 
+#======================================
+#
+  set rng_seed -6
+  set NeighSkin 2.0
+  set moves 267
+  set cycles 10
+  set screenfrequency 10
+  SamplingType Metropolis
+
+  ForceField "LJ_LAMMPS_Reduced_Units.clFF"
+
+  Create Boxes
+    fromfile "LJBulk.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 pressure 100.0
+  modify box 1 temperature 0.8
+  modify box 1 buildfreq 100
+
+  modify box 1 chempotential 1 -9.210340372 
+  NeighList 1 cellrsqlist 1
+
+  Create Moves
+    AtomTranslation 267.0
+    IsoVol 1.0
+  End_Create
+
+ Create trajectory
+   xyz 1 100 "Traj.xyz"
+ End_Create
+
+
+  Run
+#=====================================
