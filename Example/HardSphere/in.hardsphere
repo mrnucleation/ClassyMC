@@ -1,0 +1,30 @@
+#======================================
+  set rng_seed -6
+  set NeighSkin 2.0
+  set moves 1000
+  set cycles 100000
+  SamplingType Metropolis
+
+  ForceField "HardSphere.clFF"
+
+  Create Boxes
+    Preset FCC 2.838727125 6
+  End_Create
+
+  NeighList 1 rsqlist 1
+
+  Create Moves
+    AtomTranslation 1.0
+  End_Create
+
+#  Create analysis
+#    DistPair 1 2
+#  End_Create
+
+  Create trajectory
+    xyz 1 1000 "Traj.xyz"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 300
+#=====================================

@@ -1,0 +1,16 @@
+*.o
+*.mod
+*.exe
+*.so
+*.a
+*.lib
+*.dll
+*.dylib
+*.framework
+*.txt
+objects/*.o
+mods/*
+profiling/*
+**/Config_*.clssy
+**/classyMC
+**/classyMC_debug

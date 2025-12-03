@@ -1,0 +1,7 @@
+ boxtype nobox
+# boxtype cube
+# dimension   9.0000000000000000     
+ molmin           0           
+ molmax         1
+ mol         1
+           1           1           1  -0.0958173546607317        1.2474369389961921        3.1554958616727813     

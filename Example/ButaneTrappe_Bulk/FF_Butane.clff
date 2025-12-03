@@ -1,0 +1,66 @@
+#Forcefield file for the Trappe Model of Ethanol.
+
+moleculetypes 1
+
+atomdef
+#  Element - Atomic Mass
+ "CH3" 15.024       
+ "CH2" 14.016       
+# "N"   14.016       
+end_atomdef
+
+units energy kb
+units angle deg
+
+bonddef
+  ridgid  1.5400 # Alkane[CHx-CHx]
+end_bonddef
+
+AngleDef
+  harmonic 114.0 62500  #Alkane [CHx-CHx-CHx]   
+End_AngleDef
+
+TorsionDef
+  trappe     0.00  355.03  -68.19  791.32 #CHx-CHx-CHx-CHx
+End_TorsionDef
+
+
+molecule 1
+  RegrowthType LinearCBMC 5
+  atoms
+      1    # CH3
+      2    # CH2
+      2    # CH2
+      1    # CH3
+  end_atoms
+
+  bonds
+   1   1 2    # <- CH3-CH2
+   1   2 3    # <- CH2-CH2
+   1   3 4    # <- CH2-CH3
+  end_bonds
+
+  angles
+     1   1 2 3  #  CH3-CH2-CH2
+     1   2 3 4  #  CH2-CH2-CH3
+  end_angles
+
+  torsion
+    1   1 2 3 4    # <- CH3-CH2-CH2-CH3
+  end_torsion     
+end_molecule
+
+forcefieldtype
+  EP_LJ_Cut
+#  LJ_Cut
+end_forcefieldtype
+
+# type epsilon sigma rmin
+forcefield 1
+  rcut 12.5
+  tailcorrection .true.
+#  tailcorrection .false.
+  1  98.00  3.7500   1.1
+  2  46.00  3.9500   1.1
+end_forcefield
+

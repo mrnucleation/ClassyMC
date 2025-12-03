@@ -1,0 +1,43 @@
+#======================================
+  set rng_seed -6
+  set NeighSkin 2.0 
+  set moves 100
+  set cycles 10000000
+
+#  Histogram Based Umbrella Sampling
+  SamplingType UmbrellaWHAM
+  modify Sampling biasvariables 1
+  modify Sampling analysis 1
+  modify Sampling bounds 1 100 0.2 7.0 
+  modify Sampling reference 0.6 
+  modify Sampling whamfreq 500000
+
+  forcefield "IonPair.clFF"
+
+  Create boxes
+    FromFile "PairConfig.clssy"
+  End_Create
+
+#  Points the Umbrella Sampling Module to the first Analysis function.
+
+  neighlist 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 54.5
+
+  Create moves
+    moltranslation 1.0
+  End_Create
+
+  Create analysis
+    DistPair 1 2
+  End_Create
+
+#  Create trajectory
+#    xyz 1 1000 "Traj.xyz"
+#  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 300
+
+
+  run
+#=====================================
