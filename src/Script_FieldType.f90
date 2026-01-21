@@ -24,7 +24,13 @@ contains
 !    use FF_Pair_LJ_Q_Cut, only: Pair_LJ_Q_Cut
     use FF_Pair_Pedone_Cut, only: Pair_Pedone_Cut
     use FF_Pair_Tersoff, only: Pair_Tersoff
+    use FF_Pair_StillWeb, only: Pair_StillWeb
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
+    ! New Ewald-based electrostatics modules
+    use FF_Ewald, only: Pair_Ewald
+    use FF_LJ_Ewald, only: Pair_LJ_Ewald
+    ! Many-body potentials
+    use FF_EAM, only: Pair_EAM
 
 #ifdef AENET
     use FF_AENet, only: Pair_AENet
@@ -44,6 +50,7 @@ contains
 
     lineStat  = 0
     read(line, *) FF_Type
+    call LowerCaseLine(FF_Type)
 
     !Forcefield objects go here!
     select case(trim(adjustl(FF_Type)))
@@ -70,7 +77,7 @@ contains
 !        allocate(Pair_LJ_Cut::EnergyCalculator(FFNum) % Method)
 !        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style"
 
-      case("lj_cut")
+      case("lj_cut", "ep_lj_cut")
         allocate(EP_LJ_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6 LJ Cut style (EasyPair)"
 
@@ -78,6 +85,17 @@ contains
         allocate(EP_LJ_Ele_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as 12-6-1 LJ/Q Cut style (EasyPair)"
 
+      case("ewald")
+        allocate(Pair_Ewald::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Ewald Electrostatics style"
+
+      case("lj_ewald")
+        allocate(Pair_LJ_Ewald::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as LJ + Ewald Electrostatics style"
+
+      case("eam")
+        allocate(Pair_EAM::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as EAM (Embedded Atom Method) style"
 
       case("lj_shift")
 !        allocate(Pair_LJ_Shift::EnergyCalculator(FFNum) % Method)
@@ -112,6 +130,10 @@ contains
       case("tersoff")
         allocate(Pair_Tersoff::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Tersoff style"
+
+      case("stillweb", "sw", "stillinger-weber")
+        allocate(Pair_StillWeb::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Stillinger-Weber style"
 
       case("thermointegration")
         allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)

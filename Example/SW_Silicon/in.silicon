@@ -1,0 +1,29 @@
+#======================================
+# Silicon Monte Carlo with SW Potential
+#======================================
+  set rng_seed -6
+  set NeighSkin 1.0
+  set moves 100
+  set cycles 5000
+  SamplingType Metropolis
+
+  ForceField "Si_SW.clFF"
+
+  Create Boxes
+    fromfile "Si_Diamond.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 300
+  modify box 1 buildfreq 100
+
+  NeighList 1 cellrsqlist 1
+
+  Create Moves
+    AtomTranslation 1000.0
+  End_Create
+
+  modify move 1 maxdisplace 0.05
+
+  Run
+#=====================================

@@ -1,0 +1,44 @@
+#======================================
+# TIP3P Water with Ewald Electrostatics
+# For comparison with LAMMPS
+#======================================
+# Box: 15 Å cubic
+# Molecules: 27 TIP3P water
+# Temperature: 300 K
+#
+# Key parameters for LAMMPS comparison:
+#   LJ: epsilon = 0.1521 kcal/mol = 76.54 kb, sigma = 3.1507 Å (on O only)
+#   Charges: O = -0.834e, H = +0.417e
+#   Ewald alpha = 0.3, kmax = 5
+#   Real-space cutoff: 9.0 Å
+#======================================
+
+  set rng_seed 12345
+  set NeighSkin 2.0
+  set moves 27
+  set cycles 10000
+  set screenfrequency 1000
+  SamplingType Metropolis
+
+  ForceField "TIP3P_Ewald.clFF"
+
+  Create Boxes
+    fromfile "TIP3P_Config.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 300
+  modify box 1 buildfreq 50
+
+  NeighList 1 cellrsqlist 1
+
+  Create Moves
+    MolTranslation 1000.0
+    PlaneRotate 1000.0
+  End_Create
+
+  modify move 1 maxdisplace 0.1
+  modify move 2 maxangle 0.3
+
+  Run
+#=====================================

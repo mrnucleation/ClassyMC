@@ -1,0 +1,27 @@
+# Copper EAM Forcefield
+# Uses analytical test potential for demonstration
+
+moleculetypes 1
+
+atomdef
+#  Element - Atomic Mass
+  "Cu"  63.546
+end_atomdef
+
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+forcefieldtype
+  eam
+end_forcefieldtype
+
+forcefield 1
+  units ev
+  rcut 5.5
+  analytical
+  rmin 1 0.5
+end_forcefield

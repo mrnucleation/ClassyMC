@@ -1,0 +1,45 @@
+# NaCl Forcefield using LJ + Ewald Electrostatics
+# Uses the LJ + Ewald combined forcefield for efficient 
+# Monte Carlo simulations of ionic systems
+
+moleculetypes 2
+
+atomdef
+#  Element - Atomic Mass
+  "Na"  22.99
+  "Cl"  35.45
+end_atomdef
+
+# Na+ molecule (type 1)
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+# Cl- molecule (type 2)
+molecule 2
+  RegrowthType Simple
+  atoms
+    2
+  end_atoms
+end_molecule
+
+forcefieldtype
+  lj_ewald
+end_forcefieldtype
+
+units energy kb
+
+# Na-Cl system using LJ + Ewald
+# type epsilon sigma q rmin
+forcefield 1
+  ljrcut 4.5
+  ewaldrcut 4.5
+  alpha 0.25
+  kmax 5.0
+  1  0.1  2.35   1.0  0.5
+  2  0.1  4.02  -1.0  0.5
+end_forcefield
+

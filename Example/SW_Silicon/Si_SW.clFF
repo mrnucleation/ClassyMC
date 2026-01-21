@@ -1,0 +1,23 @@
+# Silicon Stillinger-Weber Forcefield
+
+moleculetypes 1
+
+atomdef
+  "Si"  28.0855
+end_atomdef
+
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+forcefieldtype
+  stillweb
+end_forcefieldtype
+
+forcefield 1
+  units ev
+  rcut 3.77
+end_forcefield

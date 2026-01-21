@@ -48,8 +48,9 @@ module MolCon_RidgidRegrowth
         self%filename(j:j) = " "
       endif
     enddo
+    self%filename = adjustl(self%filename)
 
-    open(unit=_IOINDEX, file=self%filename, status='old')
+    open(unit=_IOINDEX, file=trim(self%filename), status='old')
 
     nLines = 0
     do
