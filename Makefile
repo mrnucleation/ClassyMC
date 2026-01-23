@@ -32,6 +32,9 @@ OPTIMIZE_FLAGS_GFORT += -finit-real=zero -finit-integer=0
 
 LIBRARY_FLAGS := -shared -fpic
 
+# Linker flags (libraries must come AFTER object files)
+LDFLAGS := -lfftw3
+
 DETAILEDDEBUG_GFORT:=  -cpp -fbacktrace -fcheck=all -g -ffree-line-length-512 -ffpe-trap=overflow,invalid,zero -Waliasing  -Wsurprising
 DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
 #DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
@@ -77,6 +80,7 @@ PYTHON := $(CUR_DIR)/python
 SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/ErrorChecking.f90\
         		$(SRC)/C_To_Fotran.f90\
+        		$(SRC)/fftw3_interface.f90\
         		$(SRC)/Common_BoxData.f90\
         		$(SRC)/Common_TrajData.f90\
         		$(SRC)/Common_Analysis.f90\
@@ -151,6 +155,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_ThermoInt.f90\
         		$(SRC)/FF_Ewald.f90\
         		$(SRC)/FF_LJ_Ewald.f90\
+        		$(SRC)/FF_P3M.f90\
         		$(SRC)/FF_EAM.f90\
         		$(SRC)/Intra_AngleHarmonic.f90\
         		$(SRC)/Intra_AngleRidgid.f90\
@@ -344,7 +349,7 @@ classyMC: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
 		@echo =============================================
 		@echo     Compiling and Linking Source Files
 		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
+		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ $(LDFLAGS) 	
 	
 classyMCAENet: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
 		@echo =============================================
@@ -481,8 +486,9 @@ $(OBJ)/FF_EP_LJ_CutShift.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_Lammps.o: $(OBJ)/FF_EasyPair_Cut.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
 $(OBJ)/FF_Ewald.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 $(OBJ)/FF_LJ_Ewald.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
+$(OBJ)/FF_P3M.o: $(OBJ)/FF_EasyPair_Cut.o $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o $(OBJ)/fftw3_interface.o
 $(OBJ)/FF_EAM.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o
-$(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_LJ_Ewald.o $(OBJ)/FF_EAM.o
+$(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_LJ_Ewald.o $(OBJ)/FF_P3M.o $(OBJ)/FF_EAM.o
 $(OBJ)Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o
