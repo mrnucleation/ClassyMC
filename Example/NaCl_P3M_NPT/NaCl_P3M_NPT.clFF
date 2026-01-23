@@ -1,0 +1,40 @@
+# NaCl Forcefield using P3M Electrostatics - NPT Ensemble
+# Demonstrates volume moves with P3M
+
+moleculetypes 2
+
+atomdef
+  "Na"  22.99
+  "Cl"  35.45
+end_atomdef
+
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+molecule 2
+  RegrowthType Simple
+  atoms
+    2
+  end_atoms
+end_molecule
+
+forcefieldtype
+  p3m
+end_forcefieldtype
+
+units energy kb
+
+forcefield 1
+  rcut 4.5
+  alpha 0.35
+  mesh 32 32 32
+  order 4
+  precision 1.0E-5
+  1  1.0  0.5
+  2 -1.0  0.5
+end_forcefield
+

@@ -1,0 +1,54 @@
+# LAMMPS input script for NaCl electrostatics comparison
+# Use PPPM (equivalent to P3M) for long-range electrostatics
+# 
+# Run: lmp -in in.lammps
+# This calculates the initial energy for comparison with ClassyMC P3M
+
+# ---------- Initialize ----------
+units           real
+atom_style      full
+boundary        p p p
+
+# ---------- Read configuration ----------
+read_data       lammps_nacl.data
+
+# ---------- Pair style: Coulomb only (no LJ) ----------
+# Using pure Coulomb with PPPM for long-range electrostatics
+# rcut = 10 Angstrom (matches ClassyMC P3M)
+# PPPM accuracy = 1e-5 (matches ClassyMC precision)
+
+pair_style      coul/long 10.0
+pair_coeff      * *
+
+# PPPM for long-range electrostatics
+# This is essentially equivalent to P3M
+kspace_style    pppm 1.0e-5
+
+# ---------- Settings ----------
+neighbor        2.0 bin
+neigh_modify    every 1 delay 0
+
+# ---------- Output ----------
+thermo_style    custom step pe ke etotal ecoul elong temp press vol
+thermo          1
+
+# ---------- Compute and report energy ----------
+# Run 0 steps to just compute the initial energy
+run             0
+
+# ---------- Detailed energy breakdown ----------
+print "============================================"
+print "LAMMPS Energy Comparison"
+print "System: 54 ions (27 Na+, 27 Cl-) in 30A box"
+print "============================================"
+print "Total potential energy: $(pe) kcal/mol"
+print "Coulomb energy (short): $(ecoul) kcal/mol"
+print "Coulomb energy (long/PPPM): $(elong) kcal/mol"
+print "============================================"
+print ""
+print "To compare with ClassyMC (units: kb):"
+print "  ClassyMC uses kb (Boltzmann constant) energy units"
+print "  1 kcal/mol = 503.228 kb (at T=300K context)"
+print "  Or use: E(kb) = E(kcal/mol) * 503.228"
+print "============================================"
+

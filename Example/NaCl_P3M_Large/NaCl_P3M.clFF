@@ -1,0 +1,44 @@
+# NaCl Forcefield using P3M Electrostatics - Large System
+# 27 Na+ and 27 Cl- ions in 30x30x30 Angstrom box
+
+moleculetypes 2
+
+atomdef
+#  Element - Atomic Mass
+  "Na"  22.99
+  "Cl"  35.45
+end_atomdef
+
+# Na+ molecule (type 1)
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+# Cl- molecule (type 2)
+molecule 2
+  RegrowthType Simple
+  atoms
+    2
+  end_atoms
+end_molecule
+
+forcefieldtype
+  p3m
+end_forcefieldtype
+
+units energy kb
+
+# P3M forcefield parameters
+forcefield 1
+  rcut 10.0
+  alpha 0.35
+  mesh 32 32 32
+  order 4
+  precision 1.0E-6
+  1  1.0  0.5
+  2 -1.0  0.5
+end_forcefield
+
