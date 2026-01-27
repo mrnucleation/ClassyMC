@@ -18,6 +18,7 @@
 
   modify box 1 chempotential 1 0.0
   NeighList 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 10.5
 
   Create Moves
     MolTranslation 200.0

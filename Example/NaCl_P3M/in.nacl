@@ -5,6 +5,7 @@
   set NeighSkin 4.0
   set moves 10
   set cycles 1000
+  set energyunits kcal-mol
   SamplingType Metropolis
 
   ForceField "NaCl_P3M.clFF"

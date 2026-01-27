@@ -20,6 +20,9 @@ module Input_Moves
   use MCMove_UB_Swap, only: UB_Swap
   use MCMove_VolExchange, only: VolExchange
 !  use Move_ThermoLambda, only: ThermoLambda
+#ifdef EMBPYTHON
+  use MCMove_Python, only: PythonMove
+#endif
 
   contains
 !================================================================================
@@ -89,6 +92,11 @@ module Input_Moves
 
       case("ubswap")
         allocate(UB_Swap::Moves(moveNum)%move)
+
+#ifdef EMBPYTHON
+      case("python")
+        allocate(PythonMove::Moves(moveNum)%move)
+#endif
 
       case default
         lineStat = -1

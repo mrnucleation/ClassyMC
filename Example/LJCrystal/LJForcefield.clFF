@@ -6,14 +6,14 @@ atomdef
 end_atomdef
 
 molecule 1
+  RegrowthType simple
   atoms
     1
   end_atoms
 end_molecule
 
 forcefieldtype
-#  LJ_Cut
-  AENet
+  LJ_Cut
 end_forcefieldtype
 
 # type epsilon sigma rmin

@@ -192,6 +192,7 @@ SRC_MAIN := $(SRC)/Common.f90\
 	        	$(SRC)/Traj_XSF.f90\
 	        	$(SRC)/Input_Format.f90\
  	        	$(SRC)/Neigh_CellRSqList.f90\
+ 	        	$(SRC)/Neigh_CellList.f90\
  	        	$(SRC)/Neigh_RSqList.f90\
         		$(SRC)/VariablePrecision.f90\
         		$(SRC)/Sim_Minimize.f90\
@@ -469,11 +470,13 @@ $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
 $(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o ${OBJ}/FF_Lammps.o
 $(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XSF.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o $(OBJ)/Traj_POSCAR.o
-$(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Neigh_CellRSqList.o $(OBJ)/Common_BoxData.o
+$(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Neigh_CellRSqList.o $(OBJ)/Neigh_CellList.o $(OBJ)/Common_BoxData.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o
 
 $(OBJ)/Neigh_RSqList.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o $(OBJ)/Common_NeighList.o
+$(OBJ)/Neigh_CellRSqList.o: $(OBJ)/Neigh_RSqList.o $(OBJ)/Common_BoxData.o
+$(OBJ)/Neigh_CellList.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o
 $(OBJ)/Sampling_Umbrella.o: $(OBJ)/Sampling_UmbrellaWHAM.o
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
 

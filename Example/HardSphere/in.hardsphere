@@ -27,4 +27,6 @@
 
   modify box 1 energycalc 1
   modify box 1 temperature 300
+
+  Run
 #=====================================

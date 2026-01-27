@@ -282,6 +282,241 @@ end subroutine QSort
     enddo
 
   end subroutine
+!======================================
+  subroutine InsertionSort(list)
+    ! Insertion sort - O(n) for nearly sorted lists, O(n^2) worst case
+    ! Excellent for small lists or lists that are already mostly sorted
+    implicit none
+    integer, intent(inout) :: list(:)
+    integer :: lower, upper
+    integer :: i, j, key
+    
+    lower = LBound(list, dim=1)
+    upper = UBound(list, dim=1)
+    
+    if(upper - lower < 1) return
+    
+    do i = lower + 1, upper
+      key = list(i)
+      j = i - 1
+      do while (j >= lower .and. list(j) > key)
+        list(j + 1) = list(j)
+        j = j - 1
+      enddo
+      list(j + 1) = key
+    enddo
+    
+  end subroutine
+!======================================
+  subroutine AdaptiveSort(list)
+    ! Adaptive sort that chooses the best algorithm based on list properties
+    ! Uses insertion sort for small/nearly-sorted lists, quicksort otherwise
+    implicit none
+    integer, intent(inout) :: list(:)
+    integer :: n, nInversions
+    integer, parameter :: INSERTION_THRESHOLD = 32
+    
+    n = size(list)
+    
+    if(n <= 1) return
+    
+    ! For small lists, always use insertion sort
+    if(n <= INSERTION_THRESHOLD) then
+      call InsertionSort(list)
+      return
+    endif
+    
+    ! Check if list is nearly sorted by counting inversions
+    ! (only check first few elements to avoid O(n) overhead)
+    nInversions = CountInversions(list, min(n, 64))
+    
+    ! If very few inversions, use insertion sort
+    if(nInversions <= n / 8) then
+      call InsertionSort(list)
+    else
+      call QSort(list)
+    endif
+    
+  end subroutine
+!======================================
+  function CountInversions(list, maxCheck) result(nInv)
+    ! Count inversions in the first maxCheck elements
+    implicit none
+    integer, intent(in) :: list(:)
+    integer, intent(in) :: maxCheck
+    integer :: nInv
+    integer :: i, checkLen
+    
+    nInv = 0
+    checkLen = min(size(list), maxCheck)
+    
+    do i = 2, checkLen
+      if(list(i-1) > list(i)) then
+        nInv = nInv + 1
+      endif
+    enddo
+    
+  end function
+!======================================
+  subroutine BinaryInsert(list, nList, val)
+    ! Insert a value into an already sorted list while maintaining sort order
+    ! Uses binary search to find insertion point - O(log n) search + O(n) shift
+    implicit none
+    integer, intent(inout) :: list(:)
+    integer, intent(inout) :: nList
+    integer, intent(in) :: val
+    integer :: low, high, mid
+    integer :: insertPos
+    
+    if(nList < 1) then
+      nList = 1
+      list(1) = val
+      return
+    endif
+    
+    ! If value goes at the end
+    if(val >= list(nList)) then
+      nList = nList + 1
+      list(nList) = val
+      return
+    endif
+    
+    ! If value goes at the beginning
+    if(val <= list(1)) then
+      list(2:nList+1) = list(1:nList)
+      list(1) = val
+      nList = nList + 1
+      return
+    endif
+    
+    ! Binary search for insertion point
+    low = 1
+    high = nList
+    do while(low < high)
+      mid = (low + high) / 2
+      if(list(mid) < val) then
+        low = mid + 1
+      else
+        high = mid
+      endif
+    enddo
+    
+    insertPos = low
+    
+    ! Shift elements and insert
+    list(insertPos+1:nList+1) = list(insertPos:nList)
+    list(insertPos) = val
+    nList = nList + 1
+    
+  end subroutine
+!======================================
+  subroutine BinaryRemove(list, nList, val, success)
+    ! Remove a value from a sorted list while maintaining sort order
+    ! Uses binary search to find the value - O(log n) search + O(n) shift
+    implicit none
+    integer, intent(inout) :: list(:)
+    integer, intent(inout) :: nList
+    integer, intent(in) :: val
+    logical, intent(out) :: success
+    integer :: idx
+    
+    success = .false.
+    if(nList < 1) return
+    
+    ! Find the value using binary search
+    idx = BinarySearch(val, list(1:nList))
+    
+    if(idx == 0) return
+    
+    ! Shift elements to remove
+    if(idx < nList) then
+      list(idx:nList-1) = list(idx+1:nList)
+    endif
+    nList = nList - 1
+    success = .true.
+    
+  end subroutine
+!======================================
+  subroutine MergeRuns(list, scratch, left, mid, right)
+    ! Merge two sorted runs for TimSort-style sorting
+    implicit none
+    integer, intent(inout) :: list(:)
+    integer, intent(inout) :: scratch(:)
+    integer, intent(in) :: left, mid, right
+    integer :: i, j, k
+    
+    ! Copy left run to scratch
+    scratch(1:mid-left+1) = list(left:mid)
+    
+    i = 1
+    j = mid + 1
+    k = left
+    
+    ! Merge back
+    do while(i <= mid - left + 1 .and. j <= right)
+      if(scratch(i) <= list(j)) then
+        list(k) = scratch(i)
+        i = i + 1
+      else
+        list(k) = list(j)
+        j = j + 1
+      endif
+      k = k + 1
+    enddo
+    
+    ! Copy remaining elements from scratch
+    do while(i <= mid - left + 1)
+      list(k) = scratch(i)
+      i = i + 1
+      k = k + 1
+    enddo
+    
+  end subroutine
+!======================================
+  subroutine TimSort(list)
+    ! TimSort-inspired adaptive merge sort
+    ! Excellent for real-world data with existing ordered runs
+    implicit none
+    integer, intent(inout) :: list(:)
+    integer, allocatable :: scratch(:)
+    integer :: n, minRun, runLen
+    integer :: left, mid, right
+    integer, parameter :: MIN_MERGE = 32
+    
+    n = size(list)
+    if(n <= 1) return
+    
+    allocate(scratch(n))
+    
+    ! Calculate minimum run length
+    minRun = MIN_MERGE
+    
+    ! Sort individual runs with insertion sort
+    left = 1
+    do while(left <= n)
+      right = min(left + minRun - 1, n)
+      call InsertionSort(list(left:right))
+      left = left + minRun
+    enddo
+    
+    ! Merge runs
+    runLen = minRun
+    do while(runLen < n)
+      left = 1
+      do while(left <= n)
+        mid = min(left + runLen - 1, n)
+        right = min(left + 2*runLen - 1, n)
+        if(mid < right) then
+          call MergeRuns(list, scratch, left, mid, right)
+        endif
+        left = left + 2*runLen
+      enddo
+      runLen = runLen * 2
+    enddo
+    
+    deallocate(scratch)
+    
+  end subroutine
 
 !======================================
   recursive logical function csr(a, left, right,n) result(swapped)

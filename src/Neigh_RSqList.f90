@@ -1,5 +1,7 @@
 !===================================================================================
 ! This module contains a simple neighborlist
+! This serves as the base class for distance-based neighbor lists.
+! CellRSqList extends this to add cell-based acceleration.
 !===================================================================================
 module RSqListDef
 use VarPrecision
@@ -19,19 +21,31 @@ use Template_NeighList, only: NeighListDef
 !      integer, allocatable :: allowed(:)
 !      integer :: safetyCheck = .false.
 
+      logical :: initialized = .false.
+      integer :: maxAtoms = 0
       class(SimpleBox), pointer :: parent => null()
     contains
+      ! Core neighbor list operations
       procedure, pass :: Constructor => RSqList_Constructor 
       procedure, pass :: BuildList => RSqList_BuildList 
+      procedure, pass :: SortList => RSqList_SortList
       procedure, pass :: GetNewList => RSqList_GetNewList
       procedure, pass :: AddMol => RSqList_AddMol
       procedure, pass :: SwapAtomType => RSqList_SwapAtomType
       procedure, pass :: GetNeighCount => RSqList_GetNeighCount
       procedure, pass :: ProcessIO => RSqList_ProcessIO
-!      procedure, pass :: TransferList
       procedure, pass :: DeleteMol => RSqList_DeleteMol
       procedure, pass :: Prologue => RSqList_Prologue
+      procedure, pass :: Epilogue => RSqList_Epilogue
       procedure, pass :: Update => RSqList_Update
+      
+      ! Utility methods for list manipulation
+      procedure, pass :: InsertAtomSorted => RSqList_InsertAtomSorted
+      procedure, pass :: RemoveAtomSorted => RSqList_RemoveAtomSorted
+      procedure, pass :: SwapAtomLists => RSqList_SwapAtomLists
+      procedure, pass :: PurgeAtom => RSqList_PurgeAtom
+      procedure, pass :: IntegrityCheck => RSqList_IntegrityCheck
+      procedure, pass :: PrintList => RSqList_PrintList
   end type
 
 !===================================================================================
@@ -104,6 +118,8 @@ use Template_NeighList, only: NeighListDef
     IF (AllocateStatus /= 0) error STOP "*** NeighRSQList: Not enough memory ***"
 
     self%restrictType = .false.
+    self%initialized = .true.
+    self%maxAtoms = self%parent%nMaxAtoms
   end subroutine
 !===================================================================================
   subroutine RSqList_Prologue(self)
@@ -628,6 +644,278 @@ use Template_NeighList, only: NeighListDef
 
 
 
+  end subroutine
+!===================================================================================
+! Additional utility methods for RSqList
+!===================================================================================
+  subroutine RSqList_Epilogue(self)
+    implicit none
+    class(RSqList), intent(inout) :: self
+
+    ! Perform any end-of-simulation cleanup or integrity checks
+  end subroutine
+!===================================================================================
+  subroutine RSqList_SortList(self, forcesort)
+    use SearchSort, only: AdaptiveSort, IsSorted
+    implicit none
+    class(RSqList), intent(inout) :: self
+    logical, intent(in), optional :: forcesort
+    integer :: iAtom, nNeigh
+    logical :: forced
+
+    if(present(forcesort)) then
+      forced = forcesort
+    else
+      forced = .false.
+    endif
+
+    if( (.not. self%sorted) .or. (forced) ) then
+      do iAtom = 1, self%parent%nMaxAtoms
+        if( .not. self%parent%IsActive(iAtom) ) then
+          cycle
+        endif
+        nNeigh = self%nNeigh(iAtom)
+        if(nNeigh > 1) then
+          if(.not. IsSorted(self%list(1:nNeigh, iAtom))) then
+            call AdaptiveSort(self%list(1:nNeigh, iAtom))
+          endif
+        endif
+      enddo
+      self%sorted = .true.
+    endif
+
+  end subroutine
+!===================================================================================
+  subroutine RSqList_InsertAtomSorted(self, atmList, nAtmList, newAtom)
+    ! Insert an atom into a sorted list while maintaining sort order
+    use SearchSort, only: BinaryInsert
+    implicit none
+    class(RSqList), intent(in) :: self
+    integer, intent(inout) :: atmList(:)
+    integer, intent(inout) :: nAtmList
+    integer, intent(in) :: newAtom
+
+    if(newAtom < 1) then
+      write(0,*) "ERROR: Invalid atom index passed to InsertAtomSorted"
+      error stop
+    endif
+
+    call BinaryInsert(atmList, nAtmList, newAtom)
+
+  end subroutine
+!===================================================================================
+  subroutine RSqList_RemoveAtomSorted(self, atmList, nAtmList, targetAtom, success)
+    ! Remove an atom from a sorted list
+    use SearchSort, only: BinaryRemove
+    implicit none
+    class(RSqList), intent(in) :: self
+    integer, intent(inout) :: atmList(:)
+    integer, intent(inout) :: nAtmList
+    integer, intent(in) :: targetAtom
+    logical, intent(out) :: success
+
+    call BinaryRemove(atmList, nAtmList, targetAtom, success)
+
+  end subroutine
+!===================================================================================
+  subroutine RSqList_SwapAtomLists(self, atmIndx1, atmIndx2)
+    ! Swap the neighbor lists of two atoms and update all references
+    use SearchSort, only: BinarySearch, AdaptiveSort, IsSorted
+    implicit none
+    class(RSqList), intent(inout) :: self
+    integer, intent(in) :: atmIndx1, atmIndx2
+    integer :: nNeigh1, nNeigh2
+    integer, allocatable :: templist(:)
+    integer, allocatable :: searchlist(:)
+    integer :: jAtom, jNei
+    integer :: nSearch
+    integer :: neiIndx1, neiIndx2
+
+    nNeigh1 = self%nNeigh(atmIndx1)
+    nNeigh2 = self%nNeigh(atmIndx2)
+
+    ! If neither atom has a neighbor, nothing needs to be done
+    if( (nNeigh1 == 0) .and. (nNeigh2 == 0) ) then
+      return
+    endif
+
+    allocate(templist(nNeigh1 + nNeigh2))
+    allocate(searchlist(nNeigh1 + nNeigh2))
+
+    ! Build unique list of atoms whose lists need updating
+    templist(1:nNeigh1+nNeigh2) = [self%list(1:nNeigh1, atmIndx1), &
+                                   self%list(1:nNeigh2, atmIndx2)]
+    if(.not. IsSorted(templist)) then
+      call AdaptiveSort(templist)
+    endif
+
+    nSearch = 0
+    if(size(templist) > 0) then
+      nSearch = 1
+      searchlist(1) = templist(1)
+      do jNei = 2, nNeigh1+nNeigh2
+        if(templist(jNei-1) /= templist(jNei)) then
+          nSearch = nSearch + 1
+          searchlist(nSearch) = templist(jNei)
+        endif
+      enddo
+    endif
+
+    ! Update references in neighbor atoms
+    do jNei = 1, nSearch
+      jAtom = searchlist(jNei)
+      neiIndx1 = BinarySearch(atmIndx1, self%list(1:self%nNeigh(jAtom), jAtom))
+      neiIndx2 = BinarySearch(atmIndx2, self%list(1:self%nNeigh(jAtom), jAtom))
+      if(neiIndx1 /= 0) then
+        self%list(neiIndx1, jAtom) = atmIndx2
+      endif
+      if(neiIndx2 /= 0) then
+        self%list(neiIndx2, jAtom) = atmIndx1
+      endif
+      if(.not. IsSorted(self%list(1:self%nNeigh(jAtom), jAtom))) then
+        call AdaptiveSort(self%list(1:self%nNeigh(jAtom), jAtom))
+      endif
+    enddo
+
+    ! Swap the actual lists
+    if(nNeigh1 == 0) then
+      self%list(1:nNeigh2, atmIndx1) = self%list(1:nNeigh2, atmIndx2)
+    elseif(nNeigh2 == 0) then
+      self%list(1:nNeigh1, atmIndx2) = self%list(1:nNeigh1, atmIndx1)
+    else
+      templist(1:nNeigh1) = self%list(1:nNeigh1, atmIndx1)
+      self%list(1:nNeigh2, atmIndx1) = self%list(1:nNeigh2, atmIndx2)
+      self%list(1:nNeigh1, atmIndx2) = templist(1:nNeigh1)
+    endif
+
+    ! Swap the neighbor counters
+    self%nNeigh(atmIndx1) = nNeigh2
+    self%nNeigh(atmIndx2) = nNeigh1
+
+    self%sorted = .false.
+
+    deallocate(templist)
+    deallocate(searchlist)
+
+  end subroutine
+!===================================================================================
+  subroutine RSqList_PurgeAtom(self, atmIndx)
+    ! Remove an atom from all neighbor lists
+    use SearchSort, only: BinarySearch, AdaptiveSort, IsSorted
+    implicit none
+    class(RSqList), intent(inout) :: self
+    integer, intent(in) :: atmIndx
+    integer :: nNeigh
+    integer :: jAtom, jNei
+    integer :: neiIndx
+
+    ! If the atom lacks neighbors, nothing needs to be done
+    if(self%nNeigh(atmIndx) == 0) then
+      return
+    endif
+
+    ! Remove this atom from all its neighbors' lists
+    do jNei = 1, self%nNeigh(atmIndx)
+      jAtom = self%list(jNei, atmIndx)
+      nNeigh = self%nNeigh(jAtom)
+      neiIndx = BinarySearch(atmIndx, self%list(1:nNeigh, jAtom))
+      
+      if(neiIndx == 0) then
+        write(0,*) "ERROR: Atom's list being searched:", jAtom
+        write(0,*) "Atom being searched for:", atmIndx
+        error stop "Neighborlist Error! Index of neighbor atom not found!"
+      endif
+      
+      if(nNeigh > 1) then
+        if(neiIndx /= nNeigh) then
+          self%list(neiIndx:nNeigh-1, jAtom) = self%list(neiIndx+1:nNeigh, jAtom)
+        endif
+        self%nNeigh(jAtom) = self%nNeigh(jAtom) - 1
+        nNeigh = nNeigh - 1
+        if(nNeigh > 1 .and. .not. IsSorted(self%list(1:nNeigh, jAtom))) then
+          call AdaptiveSort(self%list(1:nNeigh, jAtom))
+        endif
+      else
+        self%nNeigh(jAtom) = 0
+      endif
+    enddo
+
+    self%nNeigh(atmIndx) = 0
+
+  end subroutine
+!===================================================================================
+  subroutine RSqList_IntegrityCheck(self, listindx, movestring)
+    ! Perform sanity checks on the neighborlist
+    use SearchSort, only: SimpleSearch
+    implicit none
+    class(RSqList), intent(inout) :: self
+    integer, intent(in) :: listindx
+    character(len=*), intent(in), optional :: movestring
+    integer :: iAtom, jAtom, jNei
+    integer :: nNeigh, neiIndx
+
+    ! Check if any atom has itself in its own list
+    do iAtom = 1, self%parent%nMaxAtoms
+      if(.not. self%parent%IsActive(iAtom)) cycle
+      nNeigh = self%nNeigh(iAtom)
+      do jNei = 1, nNeigh
+        jAtom = self%list(jNei, iAtom)
+        if(iAtom == jAtom) then
+          write(0,*) "ERROR: NeighList Integrity Failure!"
+          write(0,*) "An atom's neighbor list contains itself!"
+          write(0,*) "Atom ID:", iAtom
+          if(present(movestring)) then
+            call self%PrintList(2, movestring)
+          endif
+          error stop
+        endif
+      enddo
+    enddo
+
+    ! Check symmetry: if A has B as neighbor, B should have A
+    do iAtom = 1, self%parent%nMaxAtoms
+      if(.not. self%parent%IsActive(iAtom)) cycle
+      do jNei = 1, self%nNeigh(iAtom)
+        jAtom = self%list(jNei, iAtom)
+        neiIndx = SimpleSearch(iAtom, self%list(1:self%nNeigh(jAtom), jAtom))
+        if(neiIndx < 1) then
+          write(0,*) "ERROR: NeighList Integrity Failure!"
+          write(0,*) "A Neighbor list asymmetry discovered!"
+          write(0,*) "Atoms:", iAtom, jAtom
+          if(present(movestring)) then
+            call self%PrintList(2, movestring)
+          endif
+          error stop
+        endif
+      enddo
+    enddo
+
+  end subroutine
+!===================================================================================
+  subroutine RSqList_PrintList(self, writeunit, movestring)
+    use ParallelVar, only: nout
+    implicit none
+    class(RSqList), intent(in) :: self
+    integer, intent(in), optional :: writeunit
+    character(len=*), intent(in), optional :: movestring
+    integer :: j, iAtom, outunit
+
+    if(present(writeunit)) then
+      outunit = writeunit
+    else
+      outunit = nout
+    endif
+
+    write(outunit,*) "----------------------------"
+    if(present(movestring)) then
+      write(outunit,*) movestring
+    endif
+    write(outunit,*) "Neighborlist:"
+    do iAtom = 1, self%parent%nMaxAtoms
+      if(self%nNeigh(iAtom) < 1) cycle
+      write(outunit,"(I5,A,1000(I5,1x))") iAtom,"|", (self%list(j, iAtom), j=1,self%nNeigh(iAtom))
+    enddo
+    write(outunit,*) "Sorted?:", self%sorted
   end subroutine
 !===================================================================================
 end module

@@ -1,27 +1,19 @@
 !===================================================================================
 ! This module contains a Cell based Verlet List. 
+! This class extends RSqList and adds cell-based acceleration for building
+! and updating the neighbor list.
 !===================================================================================
 module CellRSqListDef
 use VarPrecision
 use CoordinateTypes
 use Template_SimBox, only: SimBox
 use SimpleSimBox, only: SimpleBox
-use Template_NeighList, only: NeighListDef
+use RSqListDef, only: RSqList
 
-  type, public, extends(NeighListDef) :: CellRSqList
-!      logical :: Sorted = .false.
-!      logical :: Strict = .false.
-!      integer, allocatable :: list(:,:)
-!      integer, allocatable :: nNeigh(:)
-!      integer :: maxNei
-!      real(dp) :: rCut, rCutSq
-!      logical :: restrictType = .false.
-!      integer, allocatable :: allowed(:)
-!      integer :: safetyCheck = .false.
-      logical :: initialized = .false.
-      integer :: maxAtoms
+  type, public, extends(RSqList) :: CellRSqList
+      ! Cell-related data structures
       integer :: nCells = 0
-      integer :: integriyfails = 0
+      integer :: integrityfails = 0
       integer, allocatable :: cellID(:)
       integer, allocatable :: nCellAtoms(:)
       integer, allocatable :: cellList(:, :)
@@ -29,36 +21,43 @@ use Template_NeighList, only: NeighListDef
       integer, allocatable :: supercellList(:, :)
       integer, allocatable :: atomList(:)
 
-
+      ! Cell dimensions
       integer :: nX, nY, nZ
       integer :: coeffX, coeffY, coeffZ
       real(dp) :: dX = -1E0_dp
       real(dp) :: dY = -1E0_dp
       real(dp) :: dZ = -1E0_dp
-      class(SimpleBox), pointer :: parent => null()
+      
+      ! For non-periodic systems (e.g. clusters, gas phase)
+      logical :: usePeriodicBounds = .true.
+      real(dp) :: originX = 0.0_dp, originY = 0.0_dp, originZ = 0.0_dp
+      real(dp) :: boxPadding = 5.0_dp  ! Padding around system for non-periodic
+
     contains
+      ! Override parent class methods
       procedure, pass :: Constructor => CellRSqList_Constructor 
-      procedure, pass :: BuildCellList => CellRSqList_BuildCellList 
       procedure, pass :: BuildList => CellRSqList_BuildList 
       procedure, pass :: SortList => CellRSqList_SortList 
       procedure, pass :: GetNewList => CellRSqList_GetNewList
       procedure, pass :: AddMol => CellRSqList_AddMol
-      procedure, pass :: PurgeAtom => CellRSqList_PurgeAtom
-      procedure, pass :: SwapAtomLists => CellRSqList_SwapAtomLists
+      procedure, pass :: DeleteMol => CellRSqList_DeleteMol
       procedure, pass :: SwapAtomType => CellRSqList_SwapAtomType
       procedure, pass :: GetNeighCount => CellRSqList_GetNeighCount
-      procedure, pass :: GetCellIndex => CellRSqList_GetCellIndex
-      procedure, pass :: GetBins => CellRSqList_GetBins
-      procedure, pass :: GetCellAtoms => CellRSqList_GetCellAtoms
-      procedure, pass :: IntegrityCheck => CellRSqList_IntegrityCheck
       procedure, pass :: ProcessIO => CellRSqList_ProcessIO
-!      procedure, pass :: TransferList
-      procedure, pass :: PrintList => CellRSqList_PrintList
-      procedure, pass :: InsertAtom => CellRSqList_InsertAtom
-      procedure, pass :: DeleteMol => CellRSqList_DeleteMol
       procedure, pass :: Prologue => CellRSqList_Prologue
       procedure, pass :: Epilogue => CellRSqList_Epilogue
       procedure, pass :: Update => CellRSqList_Update
+      procedure, pass :: PurgeAtom => CellRSqList_PurgeAtom
+      procedure, pass :: SwapAtomLists => CellRSqList_SwapAtomLists
+      procedure, pass :: IntegrityCheck => CellRSqList_IntegrityCheck
+      procedure, pass :: PrintList => CellRSqList_PrintList
+      
+      ! Cell-specific methods
+      procedure, pass :: BuildCellList => CellRSqList_BuildCellList 
+      procedure, pass :: GetCellIndex => CellRSqList_GetCellIndex
+      procedure, pass :: GetBins => CellRSqList_GetBins
+      procedure, pass :: GetCellAtoms => CellRSqList_GetCellAtoms
+      procedure, pass :: InsertAtomIntoCell => CellRSqList_InsertAtom
   end type
 
 !===================================================================================
@@ -86,11 +85,17 @@ use Template_NeighList, only: NeighListDef
       endif
     enddo
 
+    self%parent => BoxArray(parentID)%box
+    
+    ! Detect if this is a SimpleBox (no periodic boundaries)
     select type(parbox => BoxArray(parentID)%box)
       type is(SimpleBox)
-        error stop "ERROR! To use a cell based list you must have a box with a well defined boundary!"
+        ! SimpleBox means no defined boundaries - use COM-based cell grid
+        self%usePeriodicBounds = .false.
+        write(nout,*) "CellRSqList: Using non-periodic bounds (COM-centered grid)"
+      class default
+        self%usePeriodicBounds = .true.
     end select
-    self%parent => BoxArray(parentID)%box
 
     if(self%initialized) then
       return
@@ -176,33 +181,38 @@ use Template_NeighList, only: NeighListDef
     integer, intent(in) :: binx, biny, binz
     integer :: cellIndx
 
-    integer :: wrapX, wrapY, wrapZ
+    integer :: finalX, finalY, finalZ
 
-    !In the event the next cell over is across the boundary, wrap it back to the
-    !other side of the box.
-    wrapx = binx
-    wrapy = biny
-    wrapz = binz
-    do while(wrapx < 0) 
-      wrapx = wrapx + self%nx
-    enddo
-    do while(wrapy < 0) 
-      wrapy = wrapy + self%ny
-    enddo
-    do while(wrapz < 0)
-      wrapz = wrapz + self%nz
-    enddo
+    finalx = binx
+    finaly = biny
+    finalz = binz
 
-    wrapx = mod(wrapx, self%nx) 
-    wrapy = mod(wrapy, self%ny) 
-    wrapz = mod(wrapz, self%nz) 
+    if(self%usePeriodicBounds) then
+      ! Periodic: wrap to the other side of the box
+      do while(finalx < 0) 
+        finalx = finalx + self%nx
+      enddo
+      do while(finaly < 0) 
+        finaly = finaly + self%ny
+      enddo
+      do while(finalz < 0)
+        finalz = finalz + self%nz
+      enddo
 
-
+      finalx = mod(finalx, self%nx) 
+      finaly = mod(finaly, self%ny) 
+      finalz = mod(finalz, self%nz) 
+    else
+      ! Non-periodic: clamp to valid range
+      finalx = max(0, min(self%nx - 1, finalx))
+      finaly = max(0, min(self%ny - 1, finaly))
+      finalz = max(0, min(self%nz - 1, finalz))
+    endif
 
     cellIndx = 1
-    cellIndx = cellIndx + self%coeffX * wrapx
-    cellIndx = cellIndx + self%coeffY * wrapy
-    cellIndx = cellIndx + self%coeffZ * wrapz
+    cellIndx = cellIndx + self%coeffX * finalx
+    cellIndx = cellIndx + self%coeffY * finaly
+    cellIndx = cellIndx + self%coeffZ * finalz
 
   end function
 !===================================================================================
@@ -243,14 +253,66 @@ use Template_NeighList, only: NeighListDef
     real(dp) :: boxdim(1:2, 1:3)
     real(dp) :: Lx, Ly, Lz
     real(dp) :: dx, dy, dz
+    real(dp) :: minX, maxX, minY, maxY, minZ, maxZ
     real(dp), pointer :: coords(:,:)
-    !Compute the total number of cells and the size of each cell
-    call self%parent%GetDimensions(boxdim)
+    logical :: first
+
     call self%parent%GetCoordinates(coords)
     self%maxAtoms = self%parent%nMaxAtoms
-    Lx = boxdim(2,1) - boxdim(1,1)
-    Ly = boxdim(2,2) - boxdim(1,2)
-    Lz = boxdim(2,3) - boxdim(1,3)
+
+    if(self%usePeriodicBounds) then
+      ! Periodic: get dimensions from box
+      call self%parent%GetDimensions(boxdim)
+      Lx = boxdim(2,1) - boxdim(1,1)
+      Ly = boxdim(2,2) - boxdim(1,2)
+      Lz = boxdim(2,3) - boxdim(1,3)
+      self%originX = boxdim(1,1)
+      self%originY = boxdim(1,2)
+      self%originZ = boxdim(1,3)
+    else
+      ! Non-periodic: compute bounding box from atom positions
+      first = .true.
+      minX = 0.0_dp; maxX = 0.0_dp
+      minY = 0.0_dp; maxY = 0.0_dp
+      minZ = 0.0_dp; maxZ = 0.0_dp
+      
+      do iType = 1, nMolTypes
+        call self%parent%GetTypeAtoms(iType, typeStart, typeEnd)
+        if(typeStart < 1 .or. typeStart > typeEnd) cycle
+        do iAtom = typeStart, typeEnd
+          if(first) then
+            minX = coords(1, iAtom); maxX = coords(1, iAtom)
+            minY = coords(2, iAtom); maxY = coords(2, iAtom)
+            minZ = coords(3, iAtom); maxZ = coords(3, iAtom)
+            first = .false.
+          else
+            minX = min(minX, coords(1, iAtom))
+            maxX = max(maxX, coords(1, iAtom))
+            minY = min(minY, coords(2, iAtom))
+            maxY = max(maxY, coords(2, iAtom))
+            minZ = min(minZ, coords(3, iAtom))
+            maxZ = max(maxZ, coords(3, iAtom))
+          endif
+        enddo
+      enddo
+      
+      ! Add padding around the system
+      minX = minX - self%boxPadding
+      maxX = maxX + self%boxPadding
+      minY = minY - self%boxPadding
+      maxY = maxY + self%boxPadding
+      minZ = minZ - self%boxPadding
+      maxZ = maxZ + self%boxPadding
+      
+      Lx = maxX - minX
+      Ly = maxY - minY
+      Lz = maxZ - minZ
+      self%originX = minX
+      self%originY = minY
+      self%originZ = minZ
+    endif
+
+    ! Calculate number of cells
     nx = floor(2.0*Lx/self%rCut)
     ny = floor(2.0*Ly/self%rCut)
     nz = floor(2.0*Lz/self%rCut)
@@ -263,7 +325,6 @@ use Template_NeighList, only: NeighListDef
     dz = Lz/real(nz, dp)
     nCells = nx * ny * nz
     self%nCells = nCells
-!    write(*,*) nx,ny,nz, ncells
 
     self%coeffX = 1
     self%coeffY = 1 + self%coeffX * (nx-1)
@@ -277,7 +338,6 @@ use Template_NeighList, only: NeighListDef
     self%nx = nx
     self%ny = ny
     self%nz = nz
-
 
     !Check to see if the cell list is allocated and is large enough to accomodate
     !the number of cells in the system
@@ -297,7 +357,6 @@ use Template_NeighList, only: NeighListDef
       endif
 
     else
-!      allocate(self%cellID(1:maxAtoms))
       allocate(self%nCellAtoms(1:nCells))
       allocate(self%cellList(1:self%maxNei, 1:self%nCells))
       allocate(self%nSuperCellAtoms(1:nCells))
@@ -314,12 +373,12 @@ use Template_NeighList, only: NeighListDef
       call self%parent%GetTypeAtoms(iType, typeStart, typeEnd)
       if( (typeStart < 1) .or. (typeStart > typeEnd) ) cycle
       do iAtom = typeStart, typeEnd
-        binx = floor((coords(1, iAtom) - boxdim(1,1))/dx)
-        biny = floor((coords(2, iAtom) - boxdim(1,2))/dy)
-        binz = floor((coords(3, iAtom) - boxdim(1,3))/dz)
+        binx = floor((coords(1, iAtom) - self%originX)/dx)
+        biny = floor((coords(2, iAtom) - self%originY)/dy)
+        binz = floor((coords(3, iAtom) - self%originZ)/dz)
         cellIndx = self % GetCellIndex(binx, biny, binz)
         self % cellID(iAtom) = cellIndx
-        call self%InsertAtom(self%cellList(:, cellIndx), self%nCellAtoms(cellIndx), iAtom)
+        call self%InsertAtomIntoCell(self%cellList(:, cellIndx), self%nCellAtoms(cellIndx), iAtom)
       enddo
     enddo
 
@@ -377,8 +436,8 @@ use Template_NeighList, only: NeighListDef
           rsq = rx*rx + ry*ry + rz*rz
           if(rsq < self%rCutSq) then
 !            write(*,*) iAtom, jAtom
-            call self%InsertAtom(self%list(:,iAtom), self%nNeigh(iAtom), jAtom)
-            call self%InsertAtom(self%list(:,jAtom), self%nNeigh(jAtom), iAtom)
+            call self%InsertAtomIntoCell(self%list(:,iAtom), self%nNeigh(iAtom), jAtom)
+            call self%InsertAtomIntoCell(self%list(:,jAtom), self%nNeigh(jAtom), iAtom)
           endif
         enddo
       enddo
@@ -458,7 +517,6 @@ use Template_NeighList, only: NeighListDef
     integer :: ub, lb
     real(dp) :: xn, yn, zn
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: boxdim(1:2, 1:3)
     real(dp), pointer :: coords(:,:)
 
 !    write(*,*) loc(tempList(:, iDisp))
@@ -495,17 +553,14 @@ use Template_NeighList, only: NeighListDef
     end select
 
     call self%BuildCellList
-!    if(self%dX < 0E0_dp) then
-!      call self%buildlist(1)
-!    endif
 
     !Get relevant box information from the parent.
     call self%parent%GetCoordinates(coords)
-    call self%parent%GetDimensions(boxdim)
 
-    binx = floor((xn - boxdim(1,1))/self%dx)
-    biny = floor((yn - boxdim(1,2))/self%dy)
-    binz = floor((zn - boxdim(1,3))/self%dz)
+    ! Use stored origin (set by BuildCellList for both periodic and non-periodic)
+    binx = floor((xn - self%originX)/self%dx)
+    biny = floor((yn - self%originY)/self%dy)
+    binz = floor((zn - self%originZ)/self%dz)
     cellIndx = self % GetCellIndex(binx, biny, binz)
 
     lb = lbound(templist, 2)
@@ -532,7 +587,7 @@ use Template_NeighList, only: NeighListDef
         call self%parent%Boundary(rx,ry,rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutSq) then
-          call self%InsertAtom(templist(:,iDisp), tempNNei(iDisp), jAtom)
+          call self%InsertAtomIntoCell(templist(:,iDisp), tempNNei(iDisp), jAtom)
         endif
         if(present(rCount)) then
           if(rsq < rCount*rCount) then
@@ -564,6 +619,7 @@ use Template_NeighList, only: NeighListDef
     integer :: jAtom
     integer :: i, j, k
     integer :: binx, biny, binz
+    integer :: newBinX, newBinY, newBinZ
 
     integer :: nVisits 
     integer :: visitedcells(1:30)
@@ -589,16 +645,25 @@ use Template_NeighList, only: NeighListDef
       do i = -1, 1
         do j = -1, 1
           do k = -1, 1
-            curCell = self%GetCellIndex(binx+i, biny+j, binz+k)
+            newBinX = binx + i
+            newBinY = biny + j
+            newBinZ = binz + k
+            
+            ! For non-periodic systems, skip cells outside bounds
+            if(.not. self%usePeriodicBounds) then
+              if(newBinX < 0 .or. newBinX >= self%nx) cycle
+              if(newBinY < 0 .or. newBinY >= self%ny) cycle
+              if(newBinZ < 0 .or. newBinZ >= self%nz) cycle
+            endif
+            
+            curCell = self%GetCellIndex(newBinX, newBinY, newBinZ)
             if( any( visitedCells(1:nVisits) == curCell) ) then
               cycle
             endif
             nVisits = nVisits + 1
             visitedCells(nVisits) = curCell
             do jAtom = 1, self%nCellAtoms(curCell)
-  !            nAtoms = nAtoms + 1
-  !            atomlist(nAtoms) = self%cellList(jAtom, curcell)
-              call self%InsertAtom(atomlist(:), nAtoms, self%cellList(jAtom, curcell))
+              call self%InsertAtomIntoCell(atomlist(:), nAtoms, self%cellList(jAtom, curcell))
             enddo
           enddo
         enddo
@@ -772,7 +837,7 @@ use Template_NeighList, only: NeighListDef
     endif
   end subroutine
 !===================================================================================
-  subroutine CellRSqList_PurgeAtom(self, atmindx1)
+  subroutine CellRSqList_PurgeAtom(self, atmIndx)
     !--------------------------------
     ! This function removes an atom's entry from a single row of the neighborlist
     !--------------------------------
@@ -780,7 +845,7 @@ use Template_NeighList, only: NeighListDef
     use SearchSort, only: BinarySearch, SimpleSearch, QSort, IsSorted
     implicit none
     class(CellRSqList), intent(inout) :: self
-    integer, intent(in) :: atmindx1
+    integer, intent(in) :: atmIndx
     integer :: nNeigh
     integer :: templist(1:self%maxnei)
     integer :: jAtom, iNei, jNei
@@ -790,23 +855,23 @@ use Template_NeighList, only: NeighListDef
 
 
     !If the atom lacks a neighbor, nothing needs to be done. 
-    if( (self%nNeigh(atmIndx1) == 0)  ) then
+    if( (self%nNeigh(atmIndx) == 0)  ) then
       return
     endif
 
 !    self%sorted = .false.
 !    call self%SortList(forcesort=.true.)
 !    write(2,*) "=================================================="
-!    write(2,*) "Purge: ", atmIndx1
-    do jNei = 1, self%nNeigh(atmIndx1)
-      jAtom = self%list(jNei, atmIndx1)
+!    write(2,*) "Purge: ", atmIndx
+    do jNei = 1, self%nNeigh(atmIndx)
+      jAtom = self%list(jNei, atmIndx)
       nNeigh = self%nNeigh(jAtom) 
-      neiIndx = BinarySearch(atmIndx1, self%list(1:nNeigh, jAtom))
-!      neiIndx = SimpleSearch(atmIndx1, self%list(1:nNeigh, jAtom))
+      neiIndx = BinarySearch(atmIndx, self%list(1:nNeigh, jAtom))
+!      neiIndx = SimpleSearch(atmIndx, self%list(1:nNeigh, jAtom))
       if(neiIndx == 0) then
 !        call self%PrintList(2, "purgeatom")
         write(0,*) "Atom's List Being Searched:", jAtom
-        write(0,*) "Atom Being Searched For:", atmIndx1
+        write(0,*) "Atom Being Searched For:", atmIndx
         error stop "Neighborlist Error! Index of neighbor atom not found!"
       endif
       if(nNeigh > 1) then
@@ -826,14 +891,14 @@ use Template_NeighList, only: NeighListDef
 !      write(2,"(999(1x, I5))") self%list(1:nNeigh, jAtom)
 !      write(2,*)
     enddo
-    self%nNeigh(atmIndx1) = 0
+    self%nNeigh(atmIndx) = 0
 
-    cellID = self%cellID(atmIndx1)
-!    write(2,*) atmIndx1, cellID
+    cellID = self%cellID(atmIndx)
+!    write(2,*) atmIndx, cellID
 !    write(2,*) "Cell List:", cellID
     nCellatoms = self%nCellAtoms(cellID)
 !    write(2,"(999(1x, I3))") self%cellList(1:nCellatoms, cellID)
-    neiIndx = BinarySearch(atmIndx1, self%cellList(1:nCellatoms, cellID))
+    neiIndx = BinarySearch(atmIndx, self%cellList(1:nCellatoms, cellID))
     self%cellList(1:nCellAtoms-1, cellID) = [self%cellList(1:neiIndx-1, cellID), &
                                              self%cellList(neiIndx+1:nCellAtoms, cellID)]
     self%nCellAtoms(cellID) = nCellatoms - 1
@@ -843,7 +908,7 @@ use Template_NeighList, only: NeighListDef
     endif
 
 !    write(2,"(999(1x, I3))") self%cellList(1:nCellatoms, cellID)
-    self%cellID(atmIndx1) = 0
+    self%cellID(atmIndx) = 0
 
 !    write(2,*) "=================================================="
 
@@ -895,28 +960,26 @@ use Template_NeighList, only: NeighListDef
     integer :: iDisp, iAtom, iNei, nNei, neiIndx, j
     integer :: binX, binY, binZ, cellIndx
     real(dp) :: rx, ry, rz, rsq
-    real(dp) :: boxdim(1:2, 1:3)
 
 !    call self%PrintList(2, "addmol")
 
     select type(disp)
       class is(Addition)
-        call self%parent%GetDimensions(boxdim)
         do iDisp = 1, size(disp)
            iAtom = disp(iDisp)%atmIndx
-           binx = floor((disp(iDisp)%x_new - boxdim(1,1))/self%dx)
-           biny = floor((disp(iDisp)%y_new - boxdim(1,2))/self%dy)
-           binz = floor((disp(iDisp)%z_new - boxdim(1,3))/self%dz)
+           binx = floor((disp(iDisp)%x_new - self%originX)/self%dx)
+           biny = floor((disp(iDisp)%y_new - self%originY)/self%dy)
+           binz = floor((disp(iDisp)%z_new - self%originZ)/self%dz)
            cellIndx = self % GetCellIndex(binx, biny, binz)
            self % cellID(iAtom) = cellIndx
 
-           call self%InsertAtom(self%cellList(:,cellIndx), self%nCellAtoms(cellIndx), iAtom)
+           call self%InsertAtomIntoCell(self%cellList(:,cellIndx), self%nCellAtoms(cellIndx), iAtom)
 
            self%nNeigh(iAtom) = tempNNei(iDisp)
            self%list(1:tempNNei(iDisp), iAtom ) = templist(1:tempNNei(iDisp), iDisp)
            do iNei = 1, tempNNei(iDisp)
              neiIndx = tempList(iNei, iDisp)
-             call self%InsertAtom(self%list(:,neiIndx), self%nNeigh(neiIndx), iAtom)
+             call self%InsertAtomIntoCell(self%list(:,neiIndx), self%nNeigh(neiIndx), iAtom)
 
            enddo
        enddo
@@ -1366,6 +1429,12 @@ use Template_NeighList, only: NeighListDef
           read(parList(i), *) intVal
           self%allowed(intVal) = .true.
         enddo
+
+      case("padding")
+        ! Set padding around system for non-periodic simulations
+        call GetXCommand(line, command, 7, lineStat)
+        read(command,*) realVal
+        self%boxPadding = realVal
 
       case default
         lineStat = -1

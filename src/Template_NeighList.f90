@@ -20,6 +20,7 @@ module Template_NeighList
 
       
     contains
+      ! Core operations
       procedure, pass :: Constructor
       procedure, pass :: BuildList
       procedure, pass :: SortList
@@ -35,6 +36,11 @@ module Template_NeighList
       procedure, pass :: TransferList
       procedure, pass :: DeleteMol
       procedure, pass :: ProcessIO
+      
+      ! Lifecycle hooks
+      procedure, pass :: Prologue
+      procedure, pass :: Epilogue
+      procedure, pass :: Update
   end type
 
 !===================================================================================
@@ -201,6 +207,24 @@ module Template_NeighList
 
     lineStat = 0
 
+  end subroutine
+!===================================================================================
+  subroutine Prologue(self)
+    ! Called at the start of a simulation
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+  end subroutine
+!===================================================================================
+  subroutine Epilogue(self)
+    ! Called at the end of a simulation
+    implicit none
+    class(NeighListDef), intent(inout) :: self
+  end subroutine
+!===================================================================================
+  subroutine Update(self)
+    ! Called during simulation to perform periodic updates
+    implicit none
+    class(NeighListDef), intent(inout) :: self
   end subroutine
 !===================================================================================
 

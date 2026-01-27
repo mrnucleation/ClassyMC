@@ -36,9 +36,9 @@ units energy kb
 # Format: type q rmin
 forcefield 1
   rcut 4.5
-  alpha 0.35
-  mesh 32 32 32
-  order 4
+  alpha 0.25
+  mesh 42 42 42
+  order 5
   precision 1.0E-5
   1  1.0  0.5
   2 -1.0  0.5
