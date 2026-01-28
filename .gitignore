@@ -8,6 +8,7 @@
 *.dylib
 *.framework
 *.txt
+*.xyz
 objects/*.o
 mods/*
 profiling/*
