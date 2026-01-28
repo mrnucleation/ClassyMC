@@ -1,0 +1,46 @@
+#======================================
+# Example: Python Constraint Integration
+# 
+# This example demonstrates using a Python script to define
+# custom constraints for Monte Carlo simulations.
+#
+# Build with: make PYTHON=1
+# Run with: ./classyMC in.python_constraint
+#======================================
+
+set rng_seed -6
+set NeighSkin 6.0
+set moves 100
+set cycles 10000
+SamplingType Metropolis
+
+ForceField "LJ.clFF"
+
+Create Boxes
+  fromfile "Config.clssy"
+End_Create
+
+modify box 1 energycalc 1
+modify box 1 temperature 1.0
+modify box 1 pressure 0.001
+modify box 1 buildfreq 1
+
+modify box 1 chempotential 1 0.0
+NeighList 1 cellrsqlist 1
+modify box 1 neighlist 1 rcut 10.5
+
+# Python constraint - uses radius_constraint.py module
+Create constraint
+  python radius_constraint
+end_create
+
+Create Moves
+  MolTranslation 200.0
+End_Create
+
+Create trajectory
+  dump 1 1000 "Traj.dump"
+End_Create
+
+Run
+#=====================================

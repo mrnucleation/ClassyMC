@@ -4,14 +4,38 @@
 !  This module is designed to pass Classy style
 !  object information into Python.  
 !
-!  For a valid Analysis script the compute function must be defined
+!  For a valid Analysis script the following functions must be defined:
+!
 !  def compute(boxlist):
-!      return (float)
+!      """Compute the analysis value for the current configuration.
+!      
+!      Args:
+!          boxlist: List of box dictionaries containing simulation state
+!      
+!      Returns:
+!          float: The computed analysis value
+!      """
+!      return 0.0
 !
-!  
-!  def compute_new(boxlist, disp):
-!      return (float)
+!  def compute_new(boxlist, displist):
+!      """Compute the analysis value for a proposed new configuration.
+!      
+!      Args:
+!          boxlist: List of box dictionaries (current state)
+!          displist: List of displacement dictionaries describing the move
+!      
+!      Returns:
+!          float: The computed analysis value for the new state
+!      """
+!      return 0.0
 !
+!  def update(boxlist):
+!      """Called after an accepted move to update internal state.
+!      
+!      Args:
+!          boxlist: List of box dictionaries (now updated)
+!      """
+!      pass
 !
 !=========================================================================
 #define errcheck_macro if(ierror/=0) then;call err_print;stop;endif
@@ -145,23 +169,24 @@ module Anaylsis_PythonFunc
 
   end subroutine
 !=========================================================================
-  subroutine PythonFunc_CalcNewState(self, disp, newVal)
+  subroutine PythonFunc_CalcNewState(self, disp, accept, newVal)
     use CoordinateTypes, only: Displacement, Perturbation
     use ClassyPyObj, only: createdisplist
     implicit none
     class(PythonFunc), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
-    integer :: iDisp
+    logical, intent(out) :: accept
     real(dp), intent(in), optional :: newVal
+    integer :: iDisp
     type(object) :: returnobj
     type(object) :: item
     type(list) :: displist
     integer :: listlen, ierror
     real(dp) :: returnval
 
+    accept = .true.
+
     displist = createdisplist(disp)
-
-
 
     ierror = self%newargs%setitem(1, displist)
     errcheck_macro

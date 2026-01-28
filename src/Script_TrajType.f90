@@ -13,6 +13,7 @@ contains
     use Traj_POSCAR, only: TrajPOSCAR
     use Traj_XYZ, only: trajXYZ
     use Traj_XSF, only: trajXSF
+    use Traj_Python, only: PythonTraj
     implicit none
     character(len=*), intent(in) :: line
     integer, intent(in) :: TrajNum
@@ -36,6 +37,14 @@ contains
 
       case("xsf")
         allocate(trajXSF::TrajArray(TrajNum) % traj)
+
+      case("python")
+        allocate(PythonTraj::TrajArray(TrajNum) % traj)
+        select type(traj => TrajArray(TrajNum) % traj)
+          type is(PythonTraj)
+            call traj%ProcessIO(line, lineStat)
+        end select
+        return  ! ProcessIO handles all the settings for Python trajectories
 
       case default
         lineStat = -1

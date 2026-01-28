@@ -10,7 +10,7 @@ PYLIB=%(pythonlib)s
 PYINC=-I%(pythoninc)s
 LIBS=%(pylibs)s
 OPTS=%(pyopt)s
-SRC_MAIN := $(PYTHON)/forpy_mod.f90 $(PYTHON)/Analysis_Python.f90 $(PYTHON)/Move_Python.f90 $(PYTHON)/Python_CommonTypes.f90 $(PYTHON)/Sim_Python.f90 $(SRC_MAIN)
+SRC_MAIN := $(PYTHON)/forpy_mod.f90 $(PYTHON)/Analysis_Python.f90 $(PYTHON)/Move_Python.f90 $(PYTHON)/Traj_Python.f90 $(PYTHON)/Python_CommonTypes.f90 $(PYTHON)/Sim_Python.f90 $(SRC_MAIN)
 PACKAGE_FLAGS += -DEMBPYTHON   $(PYINC) $(LIBS)
 OBJ_LIBRARY += $(PYLIB)  
 
@@ -21,6 +21,8 @@ $(OBJ)/Common.o += $(OBJ)/forpy_mod.o $(OBJ)/Sim_Python.o
 
 $(OBJ)/Analysis_Python.o: $(OBJ)/forpy_mod.o  $(OBJ)/Template_Analysis.o $(OBJ)/Input_Format.o $(OBJ)/Common_Analysis.o  $(OBJ)/Common_BoxData.o  $(OBJ)/Python_CommonTypes.o
 $(OBJ)/Move_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Template_MoveClass.o $(OBJ)/Input_Format.o $(OBJ)/Common_MCMoves.o $(OBJ)/Common_BoxData.o $(OBJ)/Python_CommonTypes.o $(OBJ)/Common_Sampling.o
+$(OBJ)/Traj_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Template_Trajectory.o $(OBJ)/Input_Format.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
+$(OBJ)/Script_TrajType.o: $(OBJ)/Traj_Python.o
 """
 
 configopts['pythonlib'] = distutils.sysconfig.get_config_var('LIBPL') \

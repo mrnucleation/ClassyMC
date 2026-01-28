@@ -1,0 +1,43 @@
+#======================================
+# Example: Python Trajectory Integration
+# 
+# This example demonstrates using Python scripts for
+# custom trajectory output, with optional ASE integration.
+#
+# Build with: make PYTHON=1
+# Run with: ./classyMC in.python_trajectory
+#======================================
+
+set rng_seed -6
+set NeighSkin 6.0
+set moves 100
+set cycles 5000
+SamplingType Metropolis
+
+ForceField "LJ.clFF"
+
+Create Boxes
+  fromfile "Config.clssy"
+End_Create
+
+modify box 1 energycalc 1
+modify box 1 temperature 1.0
+modify box 1 pressure 0.001
+modify box 1 buildfreq 1
+
+modify box 1 chempotential 1 0.0
+NeighList 1 cellrsqlist 1
+modify box 1 neighlist 1 rcut 10.5
+
+Create Moves
+  MolTranslation 200.0
+End_Create
+
+# Python trajectory - uses simple_trajectory.py module
+# Format: python boxnum freq filename module_name
+Create trajectory
+  python 1 500 "traj.xyz" simple_trajectory
+End_Create
+
+Run
+#=====================================

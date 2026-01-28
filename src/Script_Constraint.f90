@@ -16,6 +16,7 @@ contains
 !    use Constrain_HardWall, only: HardWall
     use Constrain_MolTotal, only: MolTotal
     use Constrain_MultiAtomDistanceCriteria, only: MultiAtomDistCrit
+    use Constrain_Python, only: PythonConstraint
 
     implicit none
     character(len=maxLineLen), intent(in) :: linestore(:) 
@@ -46,7 +47,6 @@ contains
         case("energyceiling")
           allocate( EnergyCeiling ::BoxArray(BoxNum)%box%Constrain(i)%method )
 
-
         case("energyfloor")
           allocate( EnergyFloor ::BoxArray(BoxNum)%box%Constrain(i)%method )
 
@@ -59,6 +59,8 @@ contains
         case("moltotal")
           allocate( MolTotal::BoxArray(BoxNum)%box%Constrain(i)%method )
 
+        case("python")
+          allocate( PythonConstraint::BoxArray(BoxNum)%box%Constrain(i)%method )
 
         case default
           lineStat = -1

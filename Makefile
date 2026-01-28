@@ -1,82 +1,81 @@
 #SHELL = /bin/sh
 CUR_DIR := $(shell pwd)
+
+# ====================================
+#        Package Configuration
+# ====================================
+# Enable packages by setting to 1 on command line:
+#   make PYTHON=1 AENET=1 LAMMPS=1
+#
+# Or set compiler:
+#   make FC=gfortran PYTHON=1
+#   make COMPILER=gfortran PYTHON=1
+#
+# Debug mode:
+#   make DEBUG=1 PYTHON=1
+#
+# Build shared library:
+#   make lib PYTHON=1
+
+PYTHON ?= 0
+AENET ?= 0
+LAMMPS ?= 0
+DEBUG ?= 0
+COMPILER ?= gfortran
+
+# External library paths (override on command line if needed)
+LAMMPS_LIB_PATH ?= /usr/local/lib
+AENET_LIB_PATH ?= $(LIB)
+
 # ====================================
 #        Compiler Options
 # ====================================
 FC := mpif90
-#FC := /opt/openmpi/bin/mpif90
-#FC := mpifort
-#FC := gfortran
 AR := ar
 CC := mpicc
+
+# Intel Fortran flags
 OPTIMIZE_FLAGS_IFORT := -O3
 OPTIMIZE_FLAGS_IFORT += -xHost
-#OPTIMIZE_FLAGS_IFORT += -ipo
 OPTIMIZE_FLAGS_IFORT += -no-prec-div
 OPTIMIZE_FLAGS_IFORT += -no-wrap-margin
 OPTIMIZE_FLAGS_IFORT += -fpp
-#OPTIMIZE_FLAGS_IFORT += -fpe0
-#OPTIMIZE_FLAGS_IFORT += -pg
 OPTIMIZE_FLAGS_IFORT += -traceback 
-#OPTIMIZE_FLAGS_IFORT += -prof-gen -prof-dir=$(CUR_DIR)/profiling
-#OPTIMIZE_FLAGS_IFORT += -prof-use -prof-dir=$(CUR_DIR)/profiling
 
+DEBUG_FLAGS_IFORT := -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
+
+# GFortran flags
 OPTIMIZE_FLAGS_GFORT := -O3 -cpp -g 
-#OPTIMIZE_FLAGS_GFORT += -DDETAILED
 OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
-#OPTIMIZE_FLAGS_GFORT += -Wmaybe-uninitialized
-#OPTIMIZE_FLAGS_GFORT += -ffpe-trap=overflow,invalid,zero
 OPTIMIZE_FLAGS_GFORT += -finit-real=zero -finit-integer=0
-#OPTIMIZE_FLAGS_GFORT += -pg
-#OPTIMIZE_FLAGS_GFORT += -lblas -llapack
 
+DEBUG_FLAGS_GFORT := -cpp -fbacktrace -fcheck=all -g -ffree-line-length-512 -ffpe-trap=overflow,invalid,zero -Waliasing -Wsurprising
+
+# Library build flags
 LIBRARY_FLAGS := -shared -fpic
 
-# Linker flags (libraries must come AFTER object files)
+# Base linker flags
 LDFLAGS := -lfftw3
 
-DETAILEDDEBUG_GFORT:=  -cpp -fbacktrace -fcheck=all -g -ffree-line-length-512 -ffpe-trap=overflow,invalid,zero -Waliasing  -Wsurprising
-DETAILEDDEBUG_IFORT:= -check all -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv -fpp -no-wrap-margin
-#DEBUGFLAGS:= -check all -warn -traceback -g -fpe0 -O0 -fp-stack-check -debug all -ftrapuv 
-#DEBUGFLAGS:= -fbacktrace -fcheck=all -g
-#DEBUGFLAGS += -fpe0
-#DEBUGFLAGS += -pg 
-#DEBUGFLAGS += -ffpe-trap=invalid
-#DEBUGFLAGS += -Wunused-parameter 
-#DEBUGFLAGS := -fimplicit-none  -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fwhole-file -fcheck=all -fbacktrace
-#COMPFLAGS := $(DEBUGFLAGS) $(OPTIMIZE_FLAGS)
-
-
-
+# Base package flags (always enabled)
 PACKAGE_FLAGS := -DMPIPARALLEL
-
-
-#PACKAGEMAKEFILES = $(shell find . -name "*.Makefile")
-#include $(PACKAGEMAKEFILES)
 
 # ====================================
 #        Directory List
 # ====================================
-
 SRC := $(CUR_DIR)/src
 LIB := $(CUR_DIR)/lib
 MOD := $(CUR_DIR)/mods
 OBJ := $(CUR_DIR)/objects
-PYTHON := $(CUR_DIR)/python
-
+PYTHON_DIR := $(CUR_DIR)/python
 
 # Define file extensions
 .SUFFIXES:
 .SUFFIXES: .f .f90 .o .mod 
-# ====================================
-#        Compiler specific commands
-# ====================================
 
-#MODFLAGS := -I $(MODS) -J $(MODS)
 # ====================================
 #        Source Files
 # ====================================
-
 SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/ErrorChecking.f90\
         		$(SRC)/C_To_Fotran.f90\
@@ -146,9 +145,9 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Hybrid.f90\
         		$(SRC)/FF_EP_LJ_Ele_Cut.f90\
         		$(SRC)/FF_EP_LJ_Cut.f90\
-				$(SRC)/FF_EP_LJ_CutShift.f90\
-				$(SRC)/FF_EP_Pedone_Cut.f90\
-				$(SRC)/FF_Pedone.f90\
+        		$(SRC)/FF_EP_LJ_CutShift.f90\
+        		$(SRC)/FF_EP_Pedone_Cut.f90\
+        		$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_Tersoff.f90\
         		$(SRC)/FF_StilWeb.f90\
@@ -204,217 +203,310 @@ SRC_MAIN := $(SRC)/Common.f90\
 SRC_TEMPLATE := $(SRC)/Template_Master.f90\
         		$(SRC)/RandomNew.f90\
         		$(SRC)/Template_AcceptRule.f90\
-						$(SRC)/Template_Analysis.f90\
-						$(SRC)/Template_BondFF.f90\
-						$(SRC)/Template_AngleFF.f90\
-						$(SRC)/Template_TorsionFF.f90\
-						$(SRC)/Template_MiscIntra.f90\
-						$(SRC)/Template_Constraint.f90\
-						$(SRC)/Template_Forcefield.f90\
-						$(SRC)/Template_SimBox.f90\
-        		$(SRC)/Box_SimpleBox.f90\
-						$(SRC)/Box_Ultility.f90\
-						$(SRC)/Template_IntraFF.f90\
-						$(SRC)/Template_NeighList.f90\
-						$(SRC)/Template_Trajectory.f90\
-						$(SRC)/Template_MultiBoxMove.f90\
-						$(SRC)/Template_MoveClass.f90\
-						$(SRC)/Template_MolConstructor.f90
+				$(SRC)/Template_Analysis.f90\
+				$(SRC)/Template_BondFF.f90\
+				$(SRC)/Template_AngleFF.f90\
+				$(SRC)/Template_TorsionFF.f90\
+				$(SRC)/Template_MiscIntra.f90\
+				$(SRC)/Template_Constraint.f90\
+				$(SRC)/Template_Forcefield.f90\
+				$(SRC)/Template_SimBox.f90\
+        $(SRC)/Box_SimpleBox.f90\
+				$(SRC)/Box_Ultility.f90\
+				$(SRC)/Template_IntraFF.f90\
+				$(SRC)/Template_NeighList.f90\
+				$(SRC)/Template_Trajectory.f90\
+				$(SRC)/Template_MultiBoxMove.f90\
+				$(SRC)/Template_MoveClass.f90\
+				$(SRC)/Template_MolConstructor.f90
 
-OBJ_LIBRARY = $(shell find $(LIB) -name '*.a')
--include *.Makefile 
+# ====================================
+#        Python Package Sources
+# ====================================
+# These modules are always compiled (have stubs when EMBPYTHON not defined)
+# because Script files reference them unconditionally
+SRC_PYTHON_ALWAYS := $(PYTHON_DIR)/Traj_Python.f90\
+                     $(PYTHON_DIR)/Constrain_Python.f90
 
-#SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
-SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) 
+# These require full Python embedding support
+SRC_PYTHON := $(PYTHON_DIR)/forpy_mod.f90\
+              $(PYTHON_DIR)/Python_CommonTypes.f90\
+              $(PYTHON_DIR)/Analysis_Python.f90\
+              $(PYTHON_DIR)/Sim_Python.f90
 
 # ====================================
 #        Object Files
 # ====================================
-OBJ_MAIN:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_MAIN))
-OBJ_MAIN:=$(patsubst $(PYTHON)/%.f90, $(OBJ)/%.o, $(OBJ_MAIN))
-OBJ_TEMPLATE:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_TEMPLATE))
-OBJ_AENET:=$(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_AENET))
-OBJ_COMPLETE:= $(OBJ_TEMPLATE) $(OBJ_MAIN) 
-# ====================================
-#        Compile Commands
-# ====================================
-default: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-default: COMPFLAGS += $(DEBUGFLAGS)
-default: SRC_COMPLETE += $(SRC)/Main.f90
-default: startUP  classyMC modout finale 
+OBJ_LIBRARY = $(shell find $(LIB) -name '*.a' 2>/dev/null)
 
-debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
-debug: SRC_COMPLETE += $(SRC)/Main.f90
-debug: startUP_debug classyMC_debug  modout finale
+# Include any additional makefiles (for backward compatibility)
+-include *.Makefile 
 
-aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-#aenet: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
-aenet: COMPFLAGS += $(DEBUGFLAGS)
-#aenet: COMPFLAGS += -DAENET -static-libgfortran -llapack -lblas
-aenet: COMPFLAGS += -DAENET -llapack -lblas
-#aenet: OBJ_LIBRARY += $(LIB)/libaenet.a
-aenet: startUP  classyMCAENet  modout finale
+# Always include Traj_Python (has stubs for non-Python builds)
+SRC_COMPLETE := $(SRC_TEMPLATE) $(SRC_MAIN) $(SRC_PYTHON_ALWAYS)
+
+OBJ_MAIN := $(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_MAIN))
+OBJ_MAIN := $(patsubst $(PYTHON_DIR)/%.f90, $(OBJ)/%.o, $(OBJ_MAIN))
+OBJ_TEMPLATE := $(patsubst $(SRC)/%.f90, $(OBJ)/%.o, $(SRC_TEMPLATE))
+OBJ_PYTHON := $(patsubst $(PYTHON_DIR)/%.f90, $(OBJ)/%.o, $(SRC_PYTHON))
+OBJ_PYTHON_ALWAYS := $(patsubst $(PYTHON_DIR)/%.f90, $(OBJ)/%.o, $(SRC_PYTHON_ALWAYS))
+OBJ_COMPLETE := $(OBJ_TEMPLATE) $(OBJ_MAIN) $(OBJ_PYTHON_ALWAYS) 
 
 # ====================================
-#        LAMMPS Library Integration
+#        Package Configuration Logic
 # ====================================
-# To use LAMMPS as a forcefield, you need:
-#   1. LAMMPS compiled as a shared library (liblammps.so)
-#   2. The LAMMPS library in your library path or specify with LAMMPS_LIB_PATH
-#   3. Example: make lammps LAMMPS_LIB_PATH=/path/to/lammps/build
-#
-# For Intel Fortran:
-LAMMPS_LIB_PATH ?= /usr/local/lib
-lammps: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(PACKAGE_FLAGS)
-lammps: COMPFLAGS += $(DEBUGFLAGS)
-lammps: COMPFLAGS += -DLAMMPS
-lammps: LDFLAGS := -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
-lammps: startUP  classyMCLAMMPS  modout finale
 
-# For GFortran:
-lammps_gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
-lammps_gfortran: COMPFLAGS += $(DEBUGFLAGS)
-lammps_gfortran: COMPFLAGS += -DLAMMPS
-lammps_gfortran: LDFLAGS := -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
-lammps_gfortran: startUP  classyMCLAMMPS  modout finale
+# Select compiler flags based on COMPILER variable
+ifeq ($(COMPILER),gfortran)
+  ifeq ($(DEBUG),1)
+    BASE_COMPFLAGS := $(DEBUG_FLAGS_GFORT)
+  else
+    BASE_COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
+  endif
+else
+  # Default to Intel
+  ifeq ($(DEBUG),1)
+    BASE_COMPFLAGS := $(DEBUG_FLAGS_IFORT)
+  else
+    BASE_COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
+  endif
+endif
 
-# Debug build with LAMMPS:
-lammps_debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
-lammps_debug: COMPFLAGS += -DLAMMPS
-lammps_debug: LDFLAGS := -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
-lammps_debug: startUP  classyMCLAMMPS  modout finale 
+# Python package configuration
+PYTHON_INCLUDE :=
+PYTHON_LDFLAGS :=
+PYTHON_LIBS :=
 
-#lib: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(LIBRARY_FLAGS)
-lib: COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT) $(LIBRARY_FLAGS)
-lib:  startUP  libclassymc.so  modout finale 
+ifeq ($(PYTHON),1)
+  PACKAGE_FLAGS += -DEMBPYTHON
+  
+  # Python configuration (auto-detected)
+  # Python 3.8+ requires --embed flag for embedding Python
+  PYTHON_CONFIG := $(shell which python3-config 2>/dev/null || which python-config 2>/dev/null)
+  ifneq ($(PYTHON_CONFIG),)
+    PYTHON_INCLUDE := $(shell $(PYTHON_CONFIG) --includes 2>/dev/null)
+    # Try --embed first (Python 3.8+), fallback to without
+    PYTHON_LDFLAGS := $(shell $(PYTHON_CONFIG) --ldflags --embed 2>/dev/null || $(PYTHON_CONFIG) --ldflags 2>/dev/null)
+    PYTHON_LIBS := $(shell $(PYTHON_CONFIG) --libs --embed 2>/dev/null || $(PYTHON_CONFIG) --libs 2>/dev/null)
+  else
+    # Fallback to sysconfig-based detection
+    PYTHON_INCLUDE := -I$(shell python3 -c "import sysconfig; print(sysconfig.get_path('include'))" 2>/dev/null)
+    PYTHON_LIBDIR := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))" 2>/dev/null)
+    PYTHON_VERSION := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('LDVERSION') or sysconfig.get_config_var('VERSION'))" 2>/dev/null)
+    PYTHON_LDFLAGS := -L$(PYTHON_LIBDIR)
+    PYTHON_LIBS := -lpython$(PYTHON_VERSION)
+  endif
+  
+  LDFLAGS += $(PYTHON_LDFLAGS) $(PYTHON_LIBS)
+  
+  # Add Python sources
+  SRC_COMPLETE := $(SRC_PYTHON) $(SRC_COMPLETE)
+  OBJ_COMPLETE := $(OBJ_PYTHON) $(OBJ_COMPLETE)
+endif
 
-lib_debug: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(LIBRARY_FLAGS)
-lib_debug: startUP  libclassymc.so  modout finale
+# AENet package configuration
+ifeq ($(AENET),1)
+  PACKAGE_FLAGS += -DAENET
+  LDFLAGS += -llapack -lblas
+  ifneq ($(wildcard $(AENET_LIB_PATH)/libaenet.a),)
+    OBJ_LIBRARY += $(AENET_LIB_PATH)/libaenet.a
+  endif
+endif
 
+# LAMMPS package configuration
+ifeq ($(LAMMPS),1)
+  PACKAGE_FLAGS += -DLAMMPS
+  LDFLAGS += -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
+endif
+
+# Build final COMPFLAGS with all package flags and Python includes
+COMPFLAGS := $(BASE_COMPFLAGS) $(PACKAGE_FLAGS) $(PYTHON_INCLUDE)
+
+# ====================================
+#        Build Targets
+# ====================================
+
+# Default target
+default: startUP classyMC modout finale
+
+# Shared library target
+lib: COMPFLAGS += $(LIBRARY_FLAGS)
+lib: startUP libclassymc.so modout finale
+
+# Debug target (can also use DEBUG=1)
+debug: DEBUG=1
+debug: COMPFLAGS := $(DEBUG_FLAGS_IFORT) $(PACKAGE_FLAGS)
+debug: startUP classyMC modout finale
+
+# GFortran target (can also use COMPILER=gfortran)
+gfortran: COMPILER=gfortran
 gfortran: COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT) $(PACKAGE_FLAGS)
-gfortran: COMPFLAGS += $(DEBUGFLAGS) 
-gfortran:  startUP classyMC  modout finale 
+gfortran: startUP classyMC modout finale
 
+# Legacy targets for backward compatibility
+aenet: AENET=1
+aenet: COMPFLAGS := $(BASE_COMPFLAGS) $(PACKAGE_FLAGS) -DAENET
+aenet: LDFLAGS += -llapack -lblas
+aenet: startUP classyMC modout finale
 
+lammps: LAMMPS=1
+lammps: COMPFLAGS := $(BASE_COMPFLAGS) $(PACKAGE_FLAGS) -DLAMMPS
+lammps: LDFLAGS += -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
+lammps: startUP classyMC modout finale
 
-#debugaenet: COMPFLAGS := $(DETAILEDDEBUG_GFORT)
-debugaenet: COMPFLAGS := $(DETAILEDDEBUG_IFORT) $(PACKAGE_FLAGS)
-debugaenet: COMPFLAGS += -DAENET
-debugaenet: startUP classyMCAENet  modout finale
+# Clean targets
+clean: removeObjects removeExec finale
 
-
-debug_gfortran: COMPFLAGS := $(DETAILEDDEBUG_GFORT) $(PACKAGE_FLAGS)
-debug_gfortran: COMPFLAGS += $(DEBUGFLAGS) -cpp
-debug_gfortran: startUP_debug classyMC_debug  modout finale
-
-#neat: startUP classyMC removeObject finale
-
-clean:  removeObjects removeExec finale    
+# Help target
+help:
+	@echo "=============================================================="
+	@echo "                    ClassyMC Build System"
+	@echo "=============================================================="
+	@echo ""
+	@echo "Usage: make [target] [OPTIONS]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  default     Build ClassyMC executable (default)"
+	@echo "  lib         Build shared library (libclassymc.so)"
+	@echo "  debug       Build with debug flags"
+	@echo "  gfortran    Build with GFortran compiler"
+	@echo "  clean       Remove all build artifacts"
+	@echo "  help        Show this help message"
+	@echo ""
+	@echo "Package Options (set to 1 to enable):"
+	@echo "  PYTHON=1    Enable embedded Python support"
+	@echo "              Allows Python scripts for moves, analysis, trajectories"
+	@echo ""
+	@echo "  AENET=1     Enable AENet neural network potentials"
+	@echo "              Requires LAPACK/BLAS libraries"
+	@echo ""
+	@echo "  LAMMPS=1    Enable LAMMPS as a force field backend"
+	@echo "              Set LAMMPS_LIB_PATH if not in /usr/local/lib"
+	@echo ""
+	@echo "Build Options:"
+	@echo "  DEBUG=1          Enable debug mode with detailed checks"
+	@echo "  COMPILER=ifort   Use Intel Fortran (default)"
+	@echo "  COMPILER=gfortran Use GNU Fortran"
+	@echo ""
+	@echo "Library Paths (override defaults):"
+	@echo "  LAMMPS_LIB_PATH=/path/to/lammps/lib"
+	@echo "  AENET_LIB_PATH=/path/to/aenet/lib"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make                           # Basic build"
+	@echo "  make PYTHON=1                  # Build with Python support"
+	@echo "  make PYTHON=1 AENET=1          # Python + AENet"
+	@echo "  make DEBUG=1 PYTHON=1          # Debug build with Python"
+	@echo "  make COMPILER=gfortran PYTHON=1  # GFortran with Python"
+	@echo "  make lib PYTHON=1              # Shared library with Python"
+	@echo "  make LAMMPS=1 LAMMPS_LIB_PATH=/opt/lammps/lib"
+	@echo ""
+	@echo "=============================================================="
 
 # ====================================
-#        Compile Commands
+#        Compile Rules
 # ====================================
 
 %.o: %.mod
 
-.f90.o :     
-		@echo Creating $<
-		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c -o $@ $<
+.f90.o:
+	@echo "Compiling $<"
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) -c -o $@ $<
 
-
-.f90.mod :     
-		@echo Creating $<
-		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c -o $@ $<
+.f90.mod:
+	@echo "Compiling $<"
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) -c -o $@ $<
 
 $(OBJ)/%.o: $(SRC)/%.f90
-		@echo Creating $<
-		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
+	@echo "Compiling $<"
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
-$(OBJ)/%.o: $(PYTHON)/%.f90
-		@echo Creating $<
-		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
+$(OBJ)/%.o: $(PYTHON_DIR)/%.f90
+	@echo "Compiling $<"
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
 $(OBJ)/%.o: $(TEMPLATE)/%.f90
-		@echo Creating $<
-		@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
+	@echo "Compiling $<"
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) -c $< -o $@ 
 
+# ====================================
+#        Link Targets
+# ====================================
 
-libclassymc.so: $(OBJ_COMPLETE)  $(OBJ_LIBRARY)
-		@echo =============================================
-		@echo     Compiling and Linking Source Files
-		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
+libclassymc.so: $(OBJ_COMPLETE) $(OBJ_LIBRARY)
+	@echo "============================================="
+	@echo "    Linking Shared Library"
+	@echo "============================================="
+	@$(FC) $(COMPFLAGS) $(LIBRARY_FLAGS) $(MODFLAGS) $^ -o $@ $(LDFLAGS)
 
-       
 classyMC: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
-		@echo =============================================
-		@echo     Compiling and Linking Source Files
-		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ $(LDFLAGS) 	
-	
-classyMCAENet: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
-		@echo =============================================
-		@echo     Compiling and Linking Source Files
-		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@
+	@echo "============================================="
+	@echo "    Linking ClassyMC Executable"
+	@echo "============================================="
+	@echo "    Packages enabled:"
+ifeq ($(PYTHON),1)
+	@echo "      - Python (embedded interpreter)"
+endif
+ifeq ($(AENET),1)
+	@echo "      - AENet (neural network potentials)"
+endif
+ifeq ($(LAMMPS),1)
+	@echo "      - LAMMPS (force field backend)"
+endif
+	@echo "============================================="
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) $^ -o $@ $(LDFLAGS)
 
-classyMCLAMMPS: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
-		@echo =============================================
-		@echo "    Compiling and Linking Source Files (LAMMPS)"
-		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ $(LDFLAGS) -o $@ 	
-	
-classyMC_debug: $(OBJ_COMPLETE) $(SRC)/Main.f90 $(OBJ_LIBRARY)
-	    
-		@echo =============================================
-		@echo     Compiling and Linking Source Files
-		@echo =============================================	
-		@$(FC) $(COMPFLAGS) $(MODFLAGS)  $^ -o $@ 	
-		
+# ====================================
+#        Utility Targets
+# ====================================
+
 startUP:
-		@echo ==================================================================
-		@echo ---------------------- Begin ---------------------------------		
-		@echo Current Directory:$(CUR_DIR)		
-		@echo Compiler and Flags used:	$(FC) $(COMPFLAGS) 		
-		@echo		
-		@mv $(MOD)/*.mod $(CUR_DIR)/ || echo 
-
-startUP_debug:
-		@echo ==================================================================
-		@echo ---------------------- Begin ---------------------------------		
-		@echo Current Directory:$(CUR_DIR)		
-		@echo Compiler and Flags used:	$(FC) $(COMPFLAGS)
-		@mv $(MOD)/*.mod $(CUR_DIR)/ || echo 
-		@echo		
+	@echo "=================================================================="
+	@echo "                     ClassyMC Build Starting"
+	@echo "=================================================================="
+	@echo "  Directory: $(CUR_DIR)"
+	@echo "  Compiler:  $(FC)"
+	@echo "  Flags:     $(COMPFLAGS)"
+ifeq ($(PYTHON),1)
+	@echo "  Python:    ENABLED"
+	@echo "    Include: $(PYTHON_INCLUDE)"
+	@echo "    Libs:    $(PYTHON_LIBS)"
+endif
+ifeq ($(AENET),1)
+	@echo "  AENet:     ENABLED"
+endif
+ifeq ($(LAMMPS),1)
+	@echo "  LAMMPS:    ENABLED ($(LAMMPS_LIB_PATH))"
+endif
+	@echo "=================================================================="
+	@mv $(MOD)/*.mod $(CUR_DIR)/ 2>/dev/null || true
 
 modout:
-		@mv  $(CUR_DIR)/*.mod $(MOD)/ || echo
+	@mv $(CUR_DIR)/*.mod $(MOD)/ 2>/dev/null || true
 
 finale:
-		@echo
-		@echo ---------------------- Finished! ---------------------------------
-		@echo ==================================================================		
+	@echo ""
+	@echo "======================== Build Complete ========================="
+	@echo "=================================================================="
 
 removeObjects:
-		@echo =============================================
-		@echo            Cleaning Directory
-		@echo =============================================		
-		@echo		
-		@rm -f ./*.o ./*.mod				
-		@rm -f $(SRC)/*.o $(SRC)/*.mod		
-		@rm -f $(MOD)/*.o $(MOD)/*.mod			
-		@rm -f $(SRC)/*/*.o $(SRC)/*/*.mod
-		@rm -f $(OBJ)/*.o		
+	@echo "============================================="
+	@echo "         Cleaning Build Artifacts"
+	@echo "============================================="
+	@rm -f ./*.o ./*.mod
+	@rm -f $(SRC)/*.o $(SRC)/*.mod
+	@rm -f $(MOD)/*.o $(MOD)/*.mod
+	@rm -f $(SRC)/*/*.o $(SRC)/*/*.mod
+	@rm -f $(OBJ)/*.o
 
 removeExec:
-		@rm -f $(CUR_DIR)/Python.Makefile
-		@rm -f $(CUR_DIR)/libclassymc.so
-		@rm -f $(CUR_DIR)/classyMC
-		@rm -f $(CUR_DIR)/classyMCAENet
-		@rm -f $(CUR_DIR)/classyMCLAMMPS
-		@rm -f $(CUR_DIR)/classyMC_debug
-		@rm -f $(CUR_DIR)/classyMC.exe
-
+	@rm -f $(CUR_DIR)/Python.Makefile
+	@rm -f $(CUR_DIR)/libclassymc.so
+	@rm -f $(CUR_DIR)/classyMC
+	@rm -f $(CUR_DIR)/classyMCAENet
+	@rm -f $(CUR_DIR)/classyMCLAMMPS
+	@rm -f $(CUR_DIR)/classyMC_debug
+	@rm -f $(CUR_DIR)/classyMC.exe
 
 # ====================================
 #        Dependencies
@@ -424,31 +516,28 @@ $(OBJ)/Common_BoxData.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Common_Analysis.o: $(OBJ)/Template_Analysis.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
 $(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Sampling_Metropolis.o
-$(OBJ)/Common_MolDef.o: $(OBJ)/Template_MolConstructor.o  $(OBJ)/Template_BondFF.o  $(OBJ)/Template_TorsionFF.o  $(OBJ)/Template_AngleFF.o $(OBJ)/Data_Graph.o
+$(OBJ)/Common_MolDef.o: $(OBJ)/Template_MolConstructor.o $(OBJ)/Template_BondFF.o $(OBJ)/Template_TorsionFF.o $(OBJ)/Template_AngleFF.o $(OBJ)/Data_Graph.o
 
-
-
-$(OBJ)/Template_Constraint.o: $(OBJ)/Template_SimBox.o  $(OBJ)/Template_Master.o
-$(OBJ)/Template_AcceptRule.o: $(OBJ)/Common.o $(OBJ)/Input_Format.o $(OBJ)/Template_SimBox.o  $(OBJ)/Template_Master.o
+$(OBJ)/Template_Constraint.o: $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_AcceptRule.o: $(OBJ)/Common.o $(OBJ)/Input_Format.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_Anaylsis.o: $(OBJ)/Box_SimpleBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_NeighList.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_Master.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o ${OBJ}/Box_SimpleBox.o $(OBJ)/Template_Master.o $(OBJ)/Box_Utility.o $(OBJ)/RandomNew.o
-$(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o  $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o $(OBJ)/Template_Master.o $(OBJ)/Input_Format.o
-$(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o  $(OBJ)/Template_Master.o
+$(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_AngleFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 
 $(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
-$(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o  $(OBJ)/ErrorChecking.o
+$(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o $(OBJ)/ErrorChecking.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Presets.o: $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
-
 
 $(OBJ)/Move_MC_AVBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_CBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o $(OBJ)/MolCon_LinearCBMC.o  
@@ -462,14 +551,12 @@ $(OBJ)/Move_MC_MolTranslation.o: $(OBJ)/Common_Sampling.o
 $(OBJ)/MolCon_SimpleRegrowth.o: $(OBJ)/Template_MolConstructor.o
 $(OBJ)/MolCon_LinearCBMC.o: $(OBJ)/Template_MolConstructor.o $(OBJ)/MolSearch.o
 
-
-
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o $(OBJ)/Script_NeighType.o $(OBJ)/Script_TrajType.o $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 
-$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o  ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o $(OBJ)/Script_BondType.o $(OBJ)/Script_AngleType.o $(OBJ)/Script_RegrowType.o 
+$(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o $(OBJ)/Script_BondType.o $(OBJ)/Script_AngleType.o $(OBJ)/Script_RegrowType.o 
 $(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
 $(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o ${OBJ}/FF_Lammps.o
-$(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XSF.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o $(OBJ)/Traj_POSCAR.o
+$(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XSF.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o $(OBJ)/Traj_POSCAR.o $(OBJ)/Traj_Python.o
 $(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Neigh_CellRSqList.o $(OBJ)/Neigh_CellList.o $(OBJ)/Common_BoxData.o
 
 $(OBJ)/RandomNew.o: $(OBJ)/Common.o $(OBJ)/Units.o
@@ -492,8 +579,27 @@ $(OBJ)/FF_LJ_Ewald.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_Ort
 $(OBJ)/FF_P3M.o: $(OBJ)/FF_EasyPair_Cut.o $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o $(OBJ)/fftw3_interface.o
 $(OBJ)/FF_EAM.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o
 $(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_LJ_Ewald.o $(OBJ)/FF_P3M.o $(OBJ)/FF_EAM.o
-$(OBJ)Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
+$(OBJ)/Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
-$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o  $(OBJ)/Units.o  $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o
+$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o $(OBJ)/Units.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o
 
+# ====================================
+#        Python Package Dependencies
+# ====================================
+# These modules are always compiled (have stubs), base dependencies only
+$(OBJ)/Traj_Python.o: $(OBJ)/Template_Trajectory.o $(OBJ)/Input_Format.o
+$(OBJ)/Constrain_Python.o: $(OBJ)/Template_Constraint.o $(OBJ)/Input_Format.o $(OBJ)/Box_SimpleBox.o
+$(OBJ)/Script_Constraint.o: $(OBJ)/Constrain_Python.o
 
+# Full Python embedding dependencies (only when PYTHON=1)
+ifeq ($(PYTHON),1)
+$(OBJ)/Python_CommonTypes.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
+$(OBJ)/Sim_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Sim_MonteCarlo.o
+$(OBJ)/Analysis_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Template_Analysis.o $(OBJ)/Input_Format.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_BoxData.o $(OBJ)/Python_CommonTypes.o
+#$(OBJ)/Move_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Template_MoveClass.o $(OBJ)/Input_Format.o $(OBJ)/Common_MCMoves.o $(OBJ)/Common_BoxData.o $(OBJ)/Python_CommonTypes.o $(OBJ)/Common_Sampling.o
+# Additional dependencies when Python is enabled
+$(OBJ)/Traj_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
+$(OBJ)/Constrain_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Python_CommonTypes.o
+endif
+
+.PHONY: default lib debug gfortran aenet lammps clean help startUP modout finale removeObjects removeExec
