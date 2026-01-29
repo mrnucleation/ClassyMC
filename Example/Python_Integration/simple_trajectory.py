@@ -12,7 +12,7 @@ Usage in input file:
 """
 
 import numpy as np
-
+import ase
 
 _output_file = None
 _frame_count = 0

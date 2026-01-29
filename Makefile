@@ -516,27 +516,28 @@ $(OBJ)/Common_BoxData.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Common_Analysis.o: $(OBJ)/Template_Analysis.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o
 $(OBJ)/Common_Sampling.o: $(OBJ)/Template_AcceptRule.o $(OBJ)/Sampling_Metropolis.o
-$(OBJ)/Common_MolDef.o: $(OBJ)/Template_MolConstructor.o $(OBJ)/Template_BondFF.o $(OBJ)/Template_TorsionFF.o $(OBJ)/Template_AngleFF.o $(OBJ)/Data_Graph.o
+$(OBJ)/Common_MolDef.o: $(OBJ)/Template_MolConstructor.o $(OBJ)/Template_BondFF.o $(OBJ)/Template_TorsionFF.o $(OBJ)/Template_AngleFF.o  $(OBJ)/Template_MiscIntra.o $(OBJ)/Data_Graph.o
+${OBJ}/Common_TrajData.o: $(OBJ)/Template_Trajectory.o
 
 $(OBJ)/Template_Constraint.o: $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_AcceptRule.o: $(OBJ)/Common.o $(OBJ)/Input_Format.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_Anaylsis.o: $(OBJ)/Box_SimpleBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_SimBox.o: $(OBJ)/Common.o ${OBJ}/Input_Format.o $(OBJ)/Template_NeighList.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_Master.o: $(OBJ)/VariablePrecision.o
-$(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Master.o
-$(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o ${OBJ}/Box_SimpleBox.o $(OBJ)/Template_Master.o $(OBJ)/Box_Utility.o $(OBJ)/RandomNew.o
+$(OBJ)/Template_MultiBoxMove.o: $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Master.o $(OBJ)/Box_Ultility.o
+$(OBJ)/Template_MoveClass.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o ${OBJ}/Box_SimpleBox.o $(OBJ)/Template_Master.o $(OBJ)/Box_Ultility.o $(OBJ)/RandomNew.o
 $(OBJ)/Template_Forcefield.o: $(OBJ)/Common.o $(OBJ)/Common_MolDef.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_NeighList.o: $(OBJ)/SearchSort.o $(OBJ)/Template_Master.o $(OBJ)/Input_Format.o
 $(OBJ)/Template_MolConstructor.o: $(OBJ)/Template_SimBox.o $(OBJ)/Template_Master.o
 $(OBJ)/Template_AngleFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
-$(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
+$(OBJ)/Template_BondFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o $(OBJ)/RandomNew.o
 $(OBJ)/Template_TorsionFF.o: $(OBJ)/Template_IntraFF.o $(OBJ)/Template_Master.o
 
 $(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
 $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o $(OBJ)/ErrorChecking.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
-$(OBJ)/Box_Utility.o: $(OBJ)/Box_SimpleBox.o
+$(OBJ)/Box_Ultility.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Presets.o: $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 
 $(OBJ)/Move_MC_AVBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o
@@ -581,7 +582,7 @@ $(OBJ)/FF_EAM.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o
 $(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_LJ_Ewald.o $(OBJ)/FF_P3M.o $(OBJ)/FF_EAM.o
 $(OBJ)/Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
-$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o $(OBJ)/Units.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o
+$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o $(OBJ)/Units.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o $(OBJ)/Template_MultiBoxMove.o
 
 # ====================================
 #        Python Package Dependencies
