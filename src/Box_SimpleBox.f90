@@ -1163,10 +1163,9 @@ module SimpleSimBox
     class(SimpleBox), intent(inout) :: self
     class(Perturbation), intent(inout) :: disp(:)
     integer, intent(inout), pointer :: templist(:,:), tempNNei(:)
-    logical :: accept
     logical :: newlist
-    integer :: iDisp, dispIndx, dispLen
-    integer :: nDisp, iList
+    integer :: iDisp, dispIndx
+    integer :: nDisp
     real(dp) :: tempdr(1:3), tempdrsq
     real(dp) :: dx, dy, dz
     real(dp) :: E_rcut, Nei_RCut
@@ -1175,16 +1174,16 @@ module SimpleSimBox
     newlist = .false.
     E_rcut = self%EFunc%Method%GetCutOff()
     Nei_RCut = self%NeighList(1)%GetRCut()
-    if( (iList == 1) .and. (E_rcut > Nei_RCut)) then
+    if(E_rcut > Nei_RCut) then
       write(0,*) "ERROR! User set the first neighbor list's RCut shorter than required by the Forcefield!!"
       write(0,*) "Boost NeighborList rCut to address this error"
-      stop
+     !errors stop
     endif
     neighSkin = Nei_RCut - E_rcut
     nDisp = size(disp)
     select type(disp)
       class is(Displacement)
-      do iDisp = 1, dispLen
+      do iDisp = 1, nDisp
         dispIndx = disp(iDisp) % atmIndx
         dx = disp(iDisp)%x_new - self%atoms(1, dispIndx)
         dy = disp(iDisp)%y_new - self%atoms(2, dispIndx)
@@ -1203,7 +1202,7 @@ module SimpleSimBox
       enddo
 
       if(newlist) then
-        do iDisp = 1, dispLen
+        do iDisp = 1, nDisp
           call self%NeighList(1)%GetNewList(iDisp, tempList, tempNNei, disp(iDisp))
         enddo
       endif
@@ -2149,52 +2148,35 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
     real(dp) :: tempE, drsq
     real(dp) :: molMax
     real(dp) :: neighSkin, E_RCut, Nei_RCut
+    real(dp) :: maxdr_actual, maxdr2_actual
 
 
     !Check to see if the particles have shifted enough from their original position to justify a
     !neighorlist rebuild.
-!    self%maxdr = 0E0_dp
-!    self%maxdr2 = 0E0_dp
-!    do iType = 1, nMolTypes
-!      do iMol = 1, self%NMol(iType)
-!        molmax = 0E0_dp
-!        molIndx = self%MolGlobalIndx(iType, iMol)
-!        call self%GetMolData(molIndx, molStart=molStart, molEnd=molEnd)
-!        do iAtom = molStart, molEnd
-!          molmax = max(self%drsq(iAtom), molmax)
-!        enddo
-!        if(molmax > self%maxdr) then
-!          self%maxdr2 = self%maxdr
-!          self%maxdr = molmax
-!        else
-!          if(molmax > self%maxdr2) then
-!            self%maxdr2 = molmax
-!          endif
-!        endif
-!      enddo
-!    enddo
+    !Note: self%maxdr and self%maxdr2 are stored as SQUARED values during accumulation.
+    !We use local variables for the actual (non-squared) distances to avoid corrupting
+    !the stored values for subsequent move comparisons.
+    maxdr_actual = sqrt(self%maxdr)
+    maxdr2_actual = sqrt(self%maxdr2)
 
-    self%maxdr = sqrt(self%maxdr)
-    self%maxdr2 = sqrt(self%maxdr2)
-
-!    write(*,*) maxdr, maxdr2
     !Keep track of the largest displacement between rebuilds seen through the course of the simulation
     E_rcut = self%EFunc%Method%GetCutOff()
     do iList = 1, size(self%NeighList)
       Nei_RCut = self%NeighList(iList)%GetRCut()
       if( (iList == 1) .and. (E_rcut > Nei_RCut)) then
-        error stop "ERROR! User set the first neighbor list's RCut shorter than required by the Forcefield!!"
+        write(0,*) "WARNING! User set the first neighbor list's RCut shorter than required by the Forcefield!!"
+        write(0,*) iList, E_rcut, Nei_RCut
+       ! error stop "ERROR! User set the first neighbor list's RCut shorter than required by the Forcefield!!"
+        write(0,*) "Boost NeighborList rCut to address this warning"
       endif
       neighSkin = Nei_RCut - E_rcut
-      if( (self%maxdr + self%maxdr2) > self%rebuildsensitivity * neighSkin ) then
-!        write(*,*) maxdr, maxdr2, neighSkin
+      if( (maxdr_actual + maxdr2_actual) > self%rebuildsensitivity * neighSkin ) then
         self%rebuilds = self%rebuilds + 1
-        if(self%maxdr > neighskin*0.7E0_dp) then
+        if(maxdr_actual > neighskin*0.7E0_dp) then
           self%dangerbuilds = self%dangerbuilds + 1
-  !        write(__StdErr__, *) "Warning, Dangerous Neighborlist Build Detected!"
         endif
-        if(self%maxdr > self%largestdr) then
-          self%largestdr = self%maxdr
+        if(maxdr_actual > self%largestdr) then
+          self%largestdr = maxdr_actual
         endif
         call self % NeighList(iList) % BuildList(iList)
         self%dr = 0E0_dp

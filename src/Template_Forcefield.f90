@@ -6,6 +6,7 @@ module Template_ForceField
 
   type, public, extends(classyClass) :: forcefield
     real(dp) :: rCut, rCutSq
+    logical :: isSubPair = .false.  ! True if this is a sub-forcefield in a hybrid
     contains
       procedure, pass :: Constructor 
       procedure, pass :: DetailedECalc 

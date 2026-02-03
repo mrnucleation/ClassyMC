@@ -30,11 +30,16 @@ contains
     use FF_Ewald, only: Pair_Ewald
     use FF_LJ_Ewald, only: Pair_LJ_Ewald
     use FF_P3M, only: Pair_P3M
+    use FF_FMM, only: Pair_FMM
     ! Many-body potentials
     use FF_EAM, only: Pair_EAM
 
 #ifdef AENET
     use FF_AENet, only: Pair_AENet
+#endif
+
+#ifdef EMBPYTHON
+    use FF_PythonEnergy, only: Pair_PythonEnergy
 #endif
 
     use ParallelVar, only: nout
@@ -98,6 +103,10 @@ contains
         allocate(Pair_P3M::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as P3M (Particle-Particle Particle-Mesh) Electrostatics style"
 
+      case("fmm", "multipole", "fast-multipole")
+        allocate(Pair_FMM::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as FMM (Fast Multipole Method) Electrostatics style"
+
       case("eam")
         allocate(Pair_EAM::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as EAM (Embedded Atom Method) style"
@@ -143,6 +152,12 @@ contains
       case("thermointegration")
         allocate(Pair_ThermoIntegration::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Thermo Integration Style"
+
+#ifdef EMBPYTHON
+      case("pythonenergy", "python_energy", "pyenergy")
+        allocate(Pair_PythonEnergy::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Python Energy style"
+#endif
 
       case default
 !        write(*,*) "Here"

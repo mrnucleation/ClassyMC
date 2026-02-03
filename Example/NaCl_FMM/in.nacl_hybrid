@@ -1,0 +1,59 @@
+#======================================
+# NaCl Monte Carlo with Hybrid Forcefield (LJ + FMM)
+#
+# This example demonstrates the Hybrid forcefield combining:
+#   - Lennard-Jones for short-range van der Waals interactions
+#   - Fast Multipole Method (FMM) for long-range electrostatics
+#
+# Parameters:
+#   Charges scaled by λ = 0.885: q_Na = +0.885 e, q_Cl = -0.885 e
+#   σ_Na = 2.52 Å, ε_Na/kB = 17.44 K
+#   σ_Cl = 3.85 Å, ε_Cl/kB = 192.45 K
+#======================================
+  set rng_seed -6
+  set NeighSkin 3.0
+  set moves 512
+  set cycles 100
+  set screenfrequency 10
+  SamplingType Metropolis
+  set pressureunits bar
+  set energyunits kcal-mol
+
+  ForceField "NaCl_Hybrid.clFF"
+
+  Create Boxes
+    #fromfile "NaCl_Config_Large.clssy"
+    fromfile "Config_&_1.clssy"
+  End_Create
+
+  # Use the hybrid forcefield (forcefield 3) for energy calculations
+  modify box 1 energycalc 1
+  modify box 1 temperature 300
+  modify box 1 buildfreq 100
+  modify box 1 pressure 1.0
+
+  NeighList 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 15.0
+
+  Create Moves
+    AtomTranslation 512.0
+    IsoVol 1.0
+  End_Create
+
+  modify move 1 maxdisplace 0.1
+  modify move 1 tunemax .true.
+  modify move 2 maxdv 0.01
+  modify move 2 style log
+  modify move 2 tunemax .true.
+
+  #BlockAverage (BoxNum) (BlockAvg Variable) (Avg Frequency) (Block Size) (FileName)
+  Create Analysis
+     BlockAverage 1 density 1 100 'density&.dat'
+  End_Create
+
+  Create Trajectory
+     dump 1 100 "Traj&.dump" 
+  End_Create
+
+  Run
+#=====================================

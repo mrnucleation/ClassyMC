@@ -1,0 +1,37 @@
+#======================================
+# Example: Python Energy Function
+# This example demonstrates using a Python-defined 
+# Lennard-Jones potential for energy calculations.
+#======================================
+
+  set rng_seed 12345
+  set moves 64
+  set cycles 5000
+  set screenfrequency 50
+  SamplingType Metropolis
+
+  ForceField "PythonEnergy.clFF"
+
+  Create Boxes
+    fromfile "PythonEnergy.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 1.5
+  modify box 1 pressure 0.001
+
+  # Use all-atoms neighbor list (no cell list for small system)
+  NeighList 1 cellrsqlist 1
+  modify box 1 buildfreq 10
+  modify box 1 neighlist 1 rcut 7.0
+
+  Create Moves
+    MolTranslation 100.0
+  End_Create
+
+  Create trajectory
+    dump 1 1000 "Traj.dump"
+  End_Create
+
+  Run
+#=====================================

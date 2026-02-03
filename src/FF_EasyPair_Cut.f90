@@ -142,7 +142,7 @@ module FF_EasyPair_Cut
       E_Total = E_Total + E_Corr
       write(nout,*) "Total Tail Corrections:", E_Corr
     endif
-    E_T = E_Total    
+    E_T = E_Total
   end subroutine
 !============================================================================
   subroutine DiffECalc_EasyPair_Cut(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
@@ -477,8 +477,12 @@ module FF_EasyPair_Cut
       enddo
     enddo
 
-    E_Diff = E_Diff - curbox%E_Inter
-    curbox % dETable = curbox%dETable - curbox % ETable
+    ! Only subtract E_Inter if this is the main forcefield (not a sub-pair in a hybrid)
+    ! For sub-pairs, the hybrid handles the E_Inter subtraction
+    if (.not. self%isSubPair) then
+      E_Diff = E_Diff - curbox%E_Inter
+      curbox % dETable = curbox%dETable - curbox % ETable
+    endif
 
   end subroutine
   !=====================================================================

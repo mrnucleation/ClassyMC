@@ -48,6 +48,7 @@ use VarPrecision
     use BoxData, only: BoxArray
     use Common_MolInfo, only: MolData, nMolTypes, mostAtoms
     use MolCon_LinearCBMC, only: LinearCBMC
+    use MolCon_BranchCBMC, only: BranchCBMC
     use Template_MolConstructor, only: MolConstructor
     use ParallelVar, only: nout
     implicit none
@@ -83,6 +84,10 @@ use VarPrecision
     do iType = 1, nMolTypes
       select type(molcon => MolData(iType)%molConstruct)
         class is(LinearCBMC)
+          nAtoms = MolData(iType)%nAtoms 
+          call molcon % GetPath( self%patharrays(1:nAtoms, iType) )
+
+        class is(BranchCBMC)
           nAtoms = MolData(iType)%nAtoms 
           call molcon % GetPath( self%patharrays(1:nAtoms, iType) )
 

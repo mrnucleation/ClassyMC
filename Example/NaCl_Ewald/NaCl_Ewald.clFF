@@ -36,10 +36,12 @@ units energy kb
 # type epsilon sigma q rmin
 forcefield 1
   ljrcut 4.5
-  ewaldrcut 4.5
+  ewaldrcut 7.0
   alpha 0.25
   kmax 5.0
-  1  0.1  2.35   1.0  0.5
-  2  0.1  4.02  -1.0  0.5
+  charge 1 1.0
+  charge 2 -1.0
+  1  23.60105  2.58478  0.5
+  2  75.48309  4.4 0.5
 end_forcefield
 

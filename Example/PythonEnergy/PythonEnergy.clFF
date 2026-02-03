@@ -1,0 +1,24 @@
+moleculetypes 1
+
+atomdef
+#  Element - Atomic Mass
+  "Ar"  39.948
+end_atomdef
+
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+# Use Python-defined energy function
+forcefieldtype
+  pythonenergy
+end_forcefieldtype
+
+# Configure the Python energy module
+forcefield 1
+  module lj_energy
+  rcut 4.0
+end_forcefield

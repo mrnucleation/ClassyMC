@@ -21,7 +21,7 @@ PYTHON ?= 0
 AENET ?= 0
 LAMMPS ?= 0
 DEBUG ?= 0
-COMPILER ?= gfortran
+COMPILER ?= mpif90
 
 # External library paths (override on command line if needed)
 LAMMPS_LIB_PATH ?= /usr/local/lib
@@ -90,6 +90,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_NeighList.f90\
         		$(SRC)/Debug.f90\
         		$(SRC)/Data_Graph.f90\
+        		$(SRC)/Data_Queue.f90\
          		$(SRC)/Constrain_MultiAtomDistCrit.f90\
          		$(SRC)/Constrain_MolTotal.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
@@ -155,6 +156,8 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_Ewald.f90\
         		$(SRC)/FF_LJ_Ewald.f90\
         		$(SRC)/FF_P3M.f90\
+        		$(SRC)/FF_FMM.f90\
+        		$(SRC)/SphericalHarmonics.f90\
         		$(SRC)/FF_EAM.f90\
         		$(SRC)/Intra_AngleHarmonic.f90\
         		$(SRC)/Intra_AngleRidgid.f90\
@@ -165,6 +168,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Intra_TorsionRidgid.f90\
         		$(SRC)/Intra_Misc1_5_Pair.f90\
         		$(SRC)/MolCon_LinearCBMC.f90\
+        		$(SRC)/MolCon_BranchCBMC.f90\
         		$(SRC)/MolCon_RidgidRegrowth.f90\
         		$(SRC)/MolCon_SimpleRegrowth.f90\
  	        	$(SRC)/Script_AnalysisType.f90\
@@ -232,6 +236,8 @@ SRC_PYTHON_ALWAYS := $(PYTHON_DIR)/Traj_Python.f90\
 SRC_PYTHON := $(PYTHON_DIR)/forpy_mod.f90\
               $(PYTHON_DIR)/Python_CommonTypes.f90\
               $(PYTHON_DIR)/Analysis_Python.f90\
+              $(PYTHON_DIR)/Move_Python.f90\
+              $(PYTHON_DIR)/Energy_Python.f90\
               $(PYTHON_DIR)/Sim_Python.f90
 
 # ====================================
@@ -541,7 +547,7 @@ $(OBJ)/Box_Ultility.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Presets.o: $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 
 $(OBJ)/Move_MC_AVBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o
-$(OBJ)/Move_MC_CBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o $(OBJ)/MolCon_LinearCBMC.o  
+$(OBJ)/Move_MC_CBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o $(OBJ)/MolCon_LinearCBMC.o $(OBJ)/MolCon_BranchCBMC.o  
 $(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o $(OBJ)/Common_Sampling.o $(OBJ)/Move_MC_MolTranslation.o
 $(OBJ)/Move_MC_IsoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_AnisoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
@@ -551,6 +557,8 @@ $(OBJ)/Move_GA_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Bo
 $(OBJ)/Move_MC_MolTranslation.o: $(OBJ)/Common_Sampling.o
 $(OBJ)/MolCon_SimpleRegrowth.o: $(OBJ)/Template_MolConstructor.o
 $(OBJ)/MolCon_LinearCBMC.o: $(OBJ)/Template_MolConstructor.o $(OBJ)/MolSearch.o
+$(OBJ)/MolCon_BranchCBMC.o: $(OBJ)/Template_MolConstructor.o $(OBJ)/MolSearch.o $(OBJ)/Data_Queue.o $(OBJ)/Math_CoordinateFunctions.o
+$(OBJ)/Data_Queue.o: $(OBJ)/VariablePrecision.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o $(OBJ)/Script_NeighType.o $(OBJ)/Script_TrajType.o $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 
@@ -579,7 +587,9 @@ $(OBJ)/FF_Ewald.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoB
 $(OBJ)/FF_LJ_Ewald.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 $(OBJ)/FF_P3M.o: $(OBJ)/FF_EasyPair_Cut.o $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o $(OBJ)/fftw3_interface.o
 $(OBJ)/FF_EAM.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o
-$(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_LJ_Ewald.o $(OBJ)/FF_P3M.o $(OBJ)/FF_EAM.o
+$(OBJ)/SphericalHarmonics.o: $(OBJ)/VariablePrecision.o
+$(OBJ)/FF_FMM.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o $(OBJ)/SphericalHarmonics.o
+$(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_LJ_Ewald.o $(OBJ)/FF_P3M.o $(OBJ)/FF_FMM.o $(OBJ)/FF_EAM.o
 $(OBJ)/Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o $(OBJ)/Units.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o $(OBJ)/Template_MultiBoxMove.o
@@ -597,7 +607,7 @@ ifeq ($(PYTHON),1)
 $(OBJ)/Python_CommonTypes.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
 $(OBJ)/Sim_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Sim_MonteCarlo.o
 $(OBJ)/Analysis_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Template_Analysis.o $(OBJ)/Input_Format.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_BoxData.o $(OBJ)/Python_CommonTypes.o
-#$(OBJ)/Move_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Template_MoveClass.o $(OBJ)/Input_Format.o $(OBJ)/Common_MCMoves.o $(OBJ)/Common_BoxData.o $(OBJ)/Python_CommonTypes.o $(OBJ)/Common_Sampling.o
+$(OBJ)/Move_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Template_MoveClass.o $(OBJ)/Input_Format.o $(OBJ)/Common_MCMoves.o $(OBJ)/Common_BoxData.o $(OBJ)/Python_CommonTypes.o $(OBJ)/Common_Sampling.o
 # Additional dependencies when Python is enabled
 $(OBJ)/Traj_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
 $(OBJ)/Constrain_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Python_CommonTypes.o

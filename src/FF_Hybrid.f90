@@ -8,18 +8,17 @@ module FF_Hybrid
 
   type, public, extends(forcefield) :: Pair_Hybrid
 !    real(dp) :: rCut, rCutSq
-    integer :: NFFields = 1
+    integer :: NFFields = 0
     integer, allocatable :: ECalcIndx(:)
     real(dp), allocatable :: EDiff(:)
     contains
-!      procedure, pass :: Constructor => Hybrid_Constructor
+      procedure, pass :: Constructor => Hybrid_Constructor
       procedure, pass :: DetailedECalc => Hybrid_DetailedECalc
-!      procedure, pass :: DiffECalc
+      procedure, pass :: DiffECalc => Hybrid_DiffECalc
 !      procedure, pass :: ShiftECalc_Single => Hybrid_ShiftECalc_Single
-!      procedure, pass :: ShiftECalc_Multi
 !      procedure, pass :: NewECalc => Hybrid_NewECalc
 !      procedure, pass :: OldECalc => Hybrid_OldECalc
-!      procedure, pass :: VolECalc => Hybrid_VolECalc
+!      procedure, pass :: OrthoVolECalc => Hybrid_OrthoVolECalc
       procedure, pass :: ProcessIO => Hybrid_ProcessIO
       procedure, pass :: GetCutOff => Hybrid_GetCutOff
       procedure, pass :: Update => Hybrid_Update
@@ -27,13 +26,15 @@ module FF_Hybrid
 
   contains
 !=============================================================================+
-!  subroutine Hybrid_Constructor(self)
-!    use Common_MolInfo, only: nMolTypes
-!    implicit none
-!    class(Pair_Hybrid), intent(inout) :: self
-!
-!
-!  end subroutine
+  subroutine Hybrid_Constructor(self)
+    implicit none
+    class(Pair_Hybrid), intent(inout) :: self
+
+    self%NFFields = 0
+    self%rCut = 0E0_dp
+    self%rCutSq = 0E0_dp
+
+  end subroutine
 !=============================================================================+
   subroutine Hybrid_DetailedECalc(self, curbox, E_T, accept)
     use ParallelVar, only: nout
@@ -51,6 +52,7 @@ module FF_Hybrid
 
     do iField = 1, self%NFFields 
       call EnergyCalculator(self%ECalcIndx(iField)) % Method % DetailedECalc(curbox, ESub, accept)
+      write(nout,*) "SubEnergy", iField,":", ESub
       E_T = E_T + ESub
     enddo
 
@@ -62,27 +64,39 @@ module FF_Hybrid
     implicit none
     class(Pair_Hybrid), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
-    class(Perturbation), intent(inout) :: disp(:)
-    integer, intent(in), pointer :: tempList(:,:), tempNNei(:)
+    class(Perturbation), intent(inout), target :: disp(:)
+    integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
     integer :: iField
-    real(dp) :: E_Half
     real(dp) :: ESub
 
     accept = .true.
     E_Diff = 0E0_dp
-    self%EDiff = 0E0_dp
+    if(allocated(self%EDiff)) then
+      self%EDiff = 0E0_dp
+    endif
 
+    ! Check if this is a volume change move
     do iField = 1, self%NFFields 
-        call EnergyCalculator(self%ECalcIndx(iField)) % Method %DiffECalc(curbox, disp, tempList, tempNNei, ESub, accept)
+      call EnergyCalculator(self%ECalcIndx(iField)) % Method % DiffECalc(curbox, disp, tempList, tempNNei, ESub, accept)
       if(.not. accept) then
-        self%EDiff = 0E0_dp
+        if(allocated(self%EDiff)) self%EDiff = 0E0_dp
         return
       endif
-      self%EDiff(iField) = ESub
+      if(allocated(self%EDiff)) self%EDiff(iField) = ESub
       E_Diff = E_Diff + ESub
     enddo
+
+    ! For volume changes, sub-forcefields return E_new (not E_new - E_old)
+    ! The hybrid handles the E_Inter subtraction here
+    select type(disp)
+      class is(OrthoVolChange)
+        E_Diff = E_Diff - curbox%E_Inter
+        curbox%dETable = curbox%dETable - curbox%ETable
+    end select
+
+
 
   end subroutine
 !=============================================================================+
@@ -116,6 +130,8 @@ module FF_Hybrid
           call GetXCommand(line, command, 1+iField, lineStat)
           read(command, *) intVal
           self%ECalcIndx(iField) = intVal
+          ! Mark sub-forcefields so they don't subtract E_Inter themselves
+          EnergyCalculator(intVal) % Method % isSubPair = .true.
         enddo
 
       case default
@@ -124,6 +140,110 @@ module FF_Hybrid
 
 
   end subroutine
+!=============================================================================+
+! The following subroutines are commented out because they are not part of the
+! base forcefield template interface. They can be enabled once the base template
+! is updated to include these methods.
+!=============================================================================+
+!  subroutine Hybrid_ShiftECalc_Single(self, curbox, disp, E_Diff, accept, tempList, tempNNei)
+!    implicit none
+!    class(Pair_Hybrid), intent(inout) :: self
+!    class(SimBox), intent(inout) :: curbox
+!    type(Displacement), intent(inout) :: disp(:)
+!    integer, intent(in), target, optional :: tempList(:,:), tempNNei(:)
+!    real(dp), intent(inOut) :: E_Diff
+!    logical, intent(out) :: accept
+!    integer :: iField
+!    real(dp) :: ESub
+!
+!    accept = .true.
+!    E_Diff = 0E0_dp
+!    self%EDiff = 0E0_dp
+!
+!    do iField = 1, self%NFFields
+!      call EnergyCalculator(self%ECalcIndx(iField)) % Method % ShiftECalc_Single(curbox, disp, ESub, accept, tempList, tempNNei)
+!      if(.not. accept) then
+!        self%EDiff = 0E0_dp
+!        return
+!      endif
+!      self%EDiff(iField) = ESub
+!      E_Diff = E_Diff + ESub
+!    enddo
+!
+!  end subroutine
+!=============================================================================+
+!  subroutine Hybrid_NewECalc(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
+!    implicit none
+!    class(Pair_Hybrid), intent(inout) :: self
+!    class(SimBox), intent(inout) :: curbox
+!    type(Addition), intent(inout) :: disp(:)
+!    integer, intent(in) :: tempList(:,:), tempNNei(:)
+!    real(dp), intent(inOut) :: E_Diff
+!    logical, intent(out) :: accept
+!    integer :: iField
+!    real(dp) :: ESub
+!
+!    accept = .true.
+!    E_Diff = 0E0_dp
+!    self%EDiff = 0E0_dp
+!
+!    do iField = 1, self%NFFields
+!      call EnergyCalculator(self%ECalcIndx(iField)) % Method % NewECalc(curbox, disp, tempList, tempNNei, ESub, accept)
+!      if(.not. accept) then
+!        self%EDiff = 0E0_dp
+!        return
+!      endif
+!      self%EDiff(iField) = ESub
+!      E_Diff = E_Diff + ESub
+!    enddo
+!
+!  end subroutine
+!=============================================================================+
+!  subroutine Hybrid_OldECalc(self, curbox, disp, E_Diff)
+!    implicit none
+!    class(Pair_Hybrid), intent(inout) :: self
+!    class(SimBox), intent(inout) :: curbox
+!    type(Deletion), intent(inout) :: disp(:)
+!    real(dp), intent(inOut) :: E_Diff
+!    integer :: iField
+!    real(dp) :: ESub
+!
+!    E_Diff = 0E0_dp
+!    self%EDiff = 0E0_dp
+!
+!    do iField = 1, self%NFFields
+!      call EnergyCalculator(self%ECalcIndx(iField)) % Method % OldECalc(curbox, disp, ESub)
+!      self%EDiff(iField) = ESub
+!      E_Diff = E_Diff + ESub
+!    enddo
+!
+!  end subroutine
+!=============================================================================+
+!  subroutine Hybrid_OrthoVolECalc(self, curbox, disp, E_Diff, accept)
+!    implicit none
+!    class(Pair_Hybrid), intent(inout) :: self
+!    class(SimBox), intent(inout) :: curbox
+!    type(OrthoVolChange), intent(inout) :: disp(:)
+!    real(dp), intent(inOut) :: E_Diff
+!    logical, intent(out) :: accept
+!    integer :: iField
+!    real(dp) :: ESub
+!
+!    accept = .true.
+!    E_Diff = 0E0_dp
+!    self%EDiff = 0E0_dp
+!
+!    do iField = 1, self%NFFields
+!      call EnergyCalculator(self%ECalcIndx(iField)) % Method % OrthoVolECalc(curbox, disp, ESub, accept)
+!      if(.not. accept) then
+!        self%EDiff = 0E0_dp
+!        return
+!      endif
+!      self%EDiff(iField) = ESub
+!      E_Diff = E_Diff + ESub
+!    enddo
+!
+!  end subroutine
 !=============================================================================+
   function Hybrid_GetCutOff(self) result(rCut)
     implicit none
@@ -147,7 +267,7 @@ module FF_Hybrid
     implicit none
     class(Pair_Hybrid), intent(inout) :: self
 
-    self%EDiff = 0E0_dp
+    if(allocated(self%EDiff)) self%EDiff = 0E0_dp
   end subroutine
 !=============================================================================+
 end module

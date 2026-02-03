@@ -9,6 +9,7 @@
 *.framework
 *.txt
 *.xyz
+*.pyc
 objects/*.o
 mods/*
 profiling/*

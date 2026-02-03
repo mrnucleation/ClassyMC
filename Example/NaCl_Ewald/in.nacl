@@ -5,7 +5,11 @@
   set NeighSkin 2.0
   set moves 10
   set cycles 1000
+  set screenfrequency 10
   SamplingType Metropolis
+
+  set energyunits kcal-mol
+  set pressureunits bar
 
   ForceField "NaCl_Ewald.clFF"
 
@@ -16,11 +20,13 @@
   modify box 1 energycalc 1
   modify box 1 temperature 300
   modify box 1 buildfreq 100
+  modify box 1 pressure 1.0
 
   NeighList 1 cellrsqlist 1
 
   Create Moves
     AtomTranslation 1000.0
+    Isovol 1.0
   End_Create
 
   modify move 1 maxdisplace 0.1

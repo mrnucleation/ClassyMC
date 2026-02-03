@@ -26,6 +26,7 @@ module ClassyPyObj
 
     type(ndarray) :: np_atoms, np_boxdim, np_chempot
     type(ndarray) :: np_nmol, np_ETable, np_atomtype
+    type(ndarray) :: np_moltype, np_molsubindx, np_molindx
 
     character(len=30) :: dictkey, tempstr
     real(dp), allocatable :: boxDim(:,:)
@@ -82,6 +83,17 @@ module ClassyPyObj
     errcheck
     ierror = boxdict%setitem("energytable", np_ETable)
 
+    ierror = ndarray_create(np_moltype, BoxArray(boxnum)%box%MolType)
+    errcheck
+    ierror = boxdict%setitem("moltype", np_moltype)
+
+    ierror = ndarray_create(np_molsubindx, BoxArray(boxnum)%box%MolSubIndx)
+    errcheck
+    ierror = boxdict%setitem("molsubindx", np_molsubindx)
+
+    ierror = ndarray_create(np_molindx, BoxArray(boxnum)%box%MolIndx)
+    errcheck
+    ierror = boxdict%setitem("molindx", np_molindx)
 
   end function
 !=========================================================================
@@ -96,6 +108,7 @@ module ClassyPyObj
 
     type(ndarray) :: np_atoms, np_boxdim, np_chempot
     type(ndarray) :: np_nmol, np_ETable, np_atomtype
+    type(ndarray) :: np_moltype, np_molsubindx, np_molindx
 
     character(len=30) :: dictkey, tempstr
     real(dp), asynchronous, allocatable :: boxDim(:,:)
@@ -149,6 +162,17 @@ module ClassyPyObj
     errcheck
     ierror = boxdict%setitem("energytable", np_ETable)
 
+    ierror = ndarray_create_nocopy(np_moltype, BoxArray(boxnum)%box%MolType)
+    errcheck
+    ierror = boxdict%setitem("moltype", np_moltype)
+
+    ierror = ndarray_create_nocopy(np_molsubindx, BoxArray(boxnum)%box%MolSubIndx)
+    errcheck
+    ierror = boxdict%setitem("molsubindx", np_molsubindx)
+
+    ierror = ndarray_create_nocopy(np_molindx, BoxArray(boxnum)%box%MolIndx)
+    errcheck
+    ierror = boxdict%setitem("molindx", np_molindx)
 
   end function
 

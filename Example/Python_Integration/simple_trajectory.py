@@ -1,39 +1,40 @@
 """
-Simple XYZ Trajectory Writer for ClassyMC
+Simple VASP Trajectory Writer for ClassyMC
 
-This module writes trajectory frames in extended XYZ format,
-which is widely compatible with visualization tools like VMD,
-OVITO, and ASE.
+This module writes trajectory frames as VASP POSCAR files using ASE,
+with incrementing file IDs for each frame.
 
 Usage in input file:
     Create trajectory
-        python 1 500 "traj.xyz" simple_trajectory
+        python 1 500 "POSCAR" simple_trajectory
     End_Create
+
+This will create files: POSCAR_000001, POSCAR_000002, etc.
 """
 
 import numpy as np
-import ase
+from ase import Atoms
+from ase.io import write as ase_write
 
-_output_file = None
+_base_filename = None
 _frame_count = 0
 
 
 def prologue(boxinfo):
     """Initialize trajectory output."""
-    global _output_file, _frame_count
+    global _base_filename, _frame_count
     
-    filename = boxinfo['filename']
+    _base_filename = boxinfo['filename']
     _frame_count = 0
     
-    print(f"Simple Trajectory: Opening {filename}")
-    _output_file = open(filename, 'w')
+    print(f"Simple Trajectory: Will write VASP files with base name {_base_filename}")
 
 
 def write_frame(boxinfo, cycle):
-    """Write a single trajectory frame."""
-    global _output_file, _frame_count
+    """Write a single trajectory frame as a VASP POSCAR file."""
+    global _base_filename, _frame_count
 
-    print("Hi from Python")
+    _frame_count += 1
     
     raw_atoms = boxinfo['raw_atoms']
     atom_types = boxinfo['atomtype']
@@ -62,37 +63,28 @@ def write_frame(boxinfo, cycle):
             positions.append(pos)
             symbols.append(symbol)
     
-    natoms = len(positions)
-    
-    # Build cell string for extended XYZ
+    # Build cell matrix
     cell = np.zeros((3, 3))
     for i in range(min(ndim, 3)):
         cell[i, i] = box_dims[1, i] - box_dims[0, i]
     
-    lattice_str = f'{cell[0,0]:.6f} {cell[0,1]:.6f} {cell[0,2]:.6f} '
-    lattice_str += f'{cell[1,0]:.6f} {cell[1,1]:.6f} {cell[1,2]:.6f} '
-    lattice_str += f'{cell[2,0]:.6f} {cell[2,1]:.6f} {cell[2,2]:.6f}'
+    # Create ASE Atoms object
+    atoms = Atoms(
+        symbols=symbols,
+        positions=positions,
+        cell=cell,
+        pbc=True
+    )
     
-    # Write frame
-    _output_file.write(f"{natoms}\n")
-    _output_file.write(f'Lattice="{lattice_str}" Cycle={cycle} ')
-    _output_file.write(f'Properties=species:S:1:pos:R:3\n')
+    # Write VASP POSCAR file with incrementing ID
+    output_filename = f"{_base_filename}_{_frame_count:06d}"
+    ase_write(output_filename, atoms, format='vasp')
     
-    for i in range(natoms):
-        _output_file.write(f"{symbols[i]:4s} ")
-        _output_file.write(f"{positions[i][0]:15.8f} ")
-        _output_file.write(f"{positions[i][1]:15.8f} ")
-        _output_file.write(f"{positions[i][2]:15.8f}\n")
-    
-    _output_file.flush()
-    _frame_count += 1
+    print(f"Simple Trajectory: Wrote {output_filename} (cycle {cycle})")
 
 
 def epilogue(boxinfo):
-    """Close trajectory file."""
-    global _output_file, _frame_count
+    """Finalize trajectory output."""
+    global _frame_count
     
-    print(f"Simple Trajectory: Wrote {_frame_count} frames")
-    
-    if _output_file is not None:
-        _output_file.close()
+    print(f"Simple Trajectory: Wrote {_frame_count} VASP POSCAR files")

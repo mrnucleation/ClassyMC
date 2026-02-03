@@ -1,0 +1,52 @@
+#======================================
+# Isobutane (2-methylpropane) test case
+# Tests BranchCBMC regrowth for branched molecules
+#======================================
+  set rng_seed 12345
+  set NeighSkin 4.0
+  set moves 50
+  set cycles 5000
+  set screenfrequency 100
+  set configfrequency 100
+
+  SamplingType Metropolis
+
+  ForceField "Isobutane_Trappe.clFF"
+
+  Create Boxes
+    fromfile "Isobutane_Config.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 261.4    # Near boiling point of isobutane
+  set pressureunits bar
+  modify box 1 pressure 1.0
+  modify box 1 buildfreq 10
+
+  NeighList 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 16.0
+
+  Create Moves
+    MolTranslation 50.0
+    PlaneRotate 50.0
+    CBMC 20.0
+  End_Create
+
+  # Translation move settings
+  modify move 1 maxdisplace 0.5
+  modify move 1 dynamiclimit 1.0
+  modify move 1 tunemax .true.
+
+  # Rotation move settings
+  modify move 2 tunemax .true.
+
+  Create Analysis
+     blockaverage 1 density 1 500 "isobutane_density.dat"
+  End_Create
+
+  Create trajectory
+    dump 1 100 "Traj.dump"
+  End_Create
+
+  Run
+#=====================================

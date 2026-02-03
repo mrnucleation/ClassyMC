@@ -1,0 +1,89 @@
+# LAMMPS input script for NaCl system under NPT ensemble
+# System: 64 Na+ + 64 Cl- ions in 25x25x25 Å box
+# Conditions: T = 300 K, P = 1 bar
+#
+# Forcefield parameters:
+#   Na: q = +1.0 e, σ = 2.52 Å, ε/kB = 17.44 K
+#   Cl: q = -1.0 e, σ = 3.85 Å, ε/kB = 192.45 K
+
+# ==============================================================================
+# Initialization
+# ==============================================================================
+units           real              # Å, fs, kcal/mol, K
+atom_style      charge
+boundary        p p p             # periodic boundaries
+
+read_data NaCl_4x4x4.data
+
+mass 1 22.9898
+mass 2 35.45
+
+
+
+# ==============================================================================
+# Force Field Parameters
+# ==============================================================================
+
+# Convert ε from K to kcal/mol: multiply by kB = 0.001987204 kcal/(mol·K)
+
+pair_style      lj/cut/coul/long 4.0 7.0
+pair_coeff      2 2 0.04690 2.58478
+pair_coeff      1 1 0.15000 4.40000
+pair_modify     tail no
+kspace_style    pppm 1e-4
+
+#set type 1 charge 1.0
+#set type 2 charge -1.0
+
+
+# Neighbor list settings
+neighbor        2.0 bin
+neigh_modify    delay 0 every 1 check yes
+
+# ==============================================================================
+# Simulation Settings
+# ==============================================================================
+
+timestep        1.0               # 1 fs timestep
+
+# Thermodynamic output
+thermo_style    custom step temp press vol density pe ke etotal enthalpy
+thermo          100
+thermo_modify norm yes
+
+# ==============================================================================
+# Equilibration (NVT)
+# ==============================================================================
+velocity        all create 300.0 12345 dist gaussian
+
+fix             nvt all nvt temp 300.0 300.0 100.0
+run             10000              # 10 ps equilibration
+unfix           nvt
+
+# ==============================================================================
+# Production Run (NPT)
+# ==============================================================================
+
+# NPT ensemble: T = 300 K, P = 1 bar (986.923 atm in LAMMPS real units)
+# Note: 1 bar = 0.986923 atm
+fix             npt all npt temp 300.0 300.0 100.0 iso 0.986923 0.986923 1000.0
+
+# Density output - compute running average
+variable        rho equal density
+variable        rho2 equal v_rho*v_rho
+fix             density_avg all ave/time 100 1 100 v_rho v_rho2 file density_lammps.dat
+
+# Trajectory output
+dump            traj all custom 1000 traj.lammpstrj id type q x y z
+dump_modify     traj sort id
+
+# Production run
+run             500000            # 500 ps production
+
+# ==============================================================================
+# Finalization
+# ==============================================================================
+write_data      final_config.data
+write_restart   final_state.restart
+
+print           "Simulation completed successfully!"

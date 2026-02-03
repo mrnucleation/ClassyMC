@@ -36,7 +36,7 @@ End_Create
 # Python trajectory - uses simple_trajectory.py module
 # Format: python boxnum freq filename module_name
 Create trajectory
-  python 1 500 "traj.xyz" simple_trajectory
+  python 1 500 "poscar" simple_trajectory
 End_Create
 
 Run

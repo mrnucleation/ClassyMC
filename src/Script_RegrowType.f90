@@ -9,6 +9,7 @@ contains
     use Common_MolInfo, only: MolData
     use ForcefieldData, only: nForceFields
     use MolCon_LinearCBMC, only: LinearCBMC
+    use MolCon_BranchCBMC, only: BranchCBMC
     use MolCon_SimpleRegrowth, only: SimpleRegrowth
     use MolCon_RidgidRegrowth, only: RidgidRegrowth
     use ParallelVar, only: nout
@@ -43,6 +44,11 @@ contains
         allocate(LinearCBMC :: MolData(molNum)%molConstruct )
         MolData(molNum)%ridgid = .false.
         write(nout,*) "Molecule uses Linear CBMC"
+
+      case("branchcbmc")
+        allocate(BranchCBMC :: MolData(molNum)%molConstruct )
+        MolData(molNum)%ridgid = .false.
+        write(nout,*) "Molecule uses Branched CBMC"
 
       case default
         lineStat = -1

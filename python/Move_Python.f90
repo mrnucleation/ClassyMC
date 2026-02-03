@@ -96,6 +96,12 @@ module MCMove_Python
                              AtomExchange, VolChange, OrthoVolChange
   use SimpleSimBox, only: SimpleBox
   use VarPrecision
+  use iso_c_binding, only: C_CHAR
+#ifdef EMBPYTHON
+  use forpy_mod, only: dict, dict_create, get_sys_path, list, call_py, module_py, import_py, &
+                       object, call_py_noret, tuple, &
+                       tuple_create, list_create, cast, err_print, is_none
+#endif
   
   ! Move type constants
   integer, parameter :: MOVE_DISPLACEMENT = 1
@@ -106,9 +112,6 @@ module MCMove_Python
   integer, parameter :: MOVE_ORTHOVOLCHANGE = 6
 
 #ifdef EMBPYTHON
-  use forpy_mod, only: dict, dict_create, get_sys_path, list, call_py, module_py, import_py, &
-                       object, call_py_noret, tuple, &
-                       tuple_create, list_create, cast, err_print, is_none
 !------------------------------------------------------------------------------
   type, public, extends(MCMove) :: PythonMove
     logical, private :: initialized = .false.
@@ -174,7 +177,7 @@ module MCMove_Python
     integer :: ierror
     integer :: iBox, nBoxes, iType, maxAtoms
     type(object) :: returnobj
-    character(len=30) :: moveTypeStr
+    character(kind=C_CHAR, len=:), allocatable :: moveTypeStr
 
     if(self%initialized) then
       return
@@ -438,7 +441,7 @@ module MCMove_Python
     end subroutine
     !-----------------------------------------------------------------------
     subroutine ParseDisplacement(ddict, ok)
-      type(dict), intent(in) :: ddict
+      type(dict), intent(inout) :: ddict
       logical, intent(out) :: ok
       integer :: ierr
       
@@ -488,7 +491,7 @@ module MCMove_Python
     end subroutine
     !-----------------------------------------------------------------------
     subroutine ParseDeletion(ddict, ok)
-      type(dict), intent(in) :: ddict
+      type(dict), intent(inout) :: ddict
       logical, intent(out) :: ok
       integer :: ierr
       
@@ -518,7 +521,7 @@ module MCMove_Python
     end subroutine
     !-----------------------------------------------------------------------
     subroutine ParseAddition(ddict, ok)
-      type(dict), intent(in) :: ddict
+      type(dict), intent(inout) :: ddict
       logical, intent(out) :: ok
       integer :: ierr
       
@@ -567,7 +570,7 @@ module MCMove_Python
     end subroutine
     !-----------------------------------------------------------------------
     subroutine ParseAtomExchange(ddict, ok)
-      type(dict), intent(in) :: ddict
+      type(dict), intent(inout) :: ddict
       logical, intent(out) :: ok
       integer :: ierr
       
@@ -603,7 +606,7 @@ module MCMove_Python
     end subroutine
     !-----------------------------------------------------------------------
     subroutine ParseVolChange(ddict, ok)
-      type(dict), intent(in) :: ddict
+      type(dict), intent(inout) :: ddict
       logical, intent(out) :: ok
       integer :: ierr
       
@@ -627,7 +630,7 @@ module MCMove_Python
     end subroutine
     !-----------------------------------------------------------------------
     subroutine ParseOrthoVolChange(ddict, ok)
-      type(dict), intent(in) :: ddict
+      type(dict), intent(inout) :: ddict
       logical, intent(out) :: ok
       integer :: ierr
       
