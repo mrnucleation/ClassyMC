@@ -124,6 +124,7 @@ module FF_FMM
     procedure, pass :: NewECalc => New_FMM
     procedure, pass :: OldECalc => Old_FMM
     procedure, pass :: OrthoVolECalc => OrthoVol_FMM
+    procedure, pass :: ScaleOctreeForVolume => ScaleOctree_FMM  ! Uniform scale centers/sizes for IsoVol (tree bins)
     procedure, pass :: ManyBody => ManyBody_FMM
     procedure, pass :: ProcessIO => ProcessIO_FMM
     procedure, pass :: Prologue => Prologue_FMM
@@ -205,59 +206,25 @@ subroutine Detailed_FMM(self, curbox, E_T, accept)
   logical, intent(out) :: accept
   
   real(dp) :: E_coulomb, E_periodic
-  real(dp) :: rx, ry, rz, rsq, r
-  real(dp) :: qi, qj, E_pair
   real(dp) :: dipole(3), dipole_sq
   real(dp) :: Lx, Ly, Lz, volume
-  integer :: iAtom, jAtom, atmType1, atmType2
+  real(dp) :: qi, E_near, E_far
+  integer :: iAtom, atmType1
   real(dp), pointer :: atoms(:,:) => null()
 
   accept = .true.
   curbox%ETable = 0.0_dp
   
+  call self%BuildOctree(curbox)
+  call self%BuildInteractionLists()
+  call self%ComputeMultipoles(curbox)
+  call self%ComputeLocalExpansions()
+  call self%ComputeNearFieldOctree(curbox, E_near, accept)
+  if (.not. accept) return
+  call self%ComputeFarField(curbox, E_far)  ! Direct far for consistency (multipole not yet verified)
+  E_coulomb = E_near + E_far
+  
   call curbox%GetCoordinates(atoms)
-  
-  ! Simple O(N^2) direct Coulomb summation
-  ! This is consistent with the shift calculation
-  E_coulomb = 0.0_dp
-  
-  do iAtom = 1, curbox%nMaxAtoms - 1
-    if (.not. curbox%IsActive(iAtom)) cycle
-    
-    atmType1 = curbox%AtomType(iAtom)
-    qi = self%q(atmType1)
-    if (abs(qi) < 1.0E-15_dp) cycle
-    
-    do jAtom = iAtom + 1, curbox%nMaxAtoms
-      if (.not. curbox%IsActive(jAtom)) cycle
-      
-      ! Skip intramolecular pairs
-      if (curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
-      
-      atmType2 = curbox%AtomType(jAtom)
-      qj = self%q(atmType2)
-      if (abs(qj) < 1.0E-15_dp) cycle
-      
-      rx = atoms(1, iAtom) - atoms(1, jAtom)
-      ry = atoms(2, iAtom) - atoms(2, jAtom)
-      rz = atoms(3, iAtom) - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
-      rsq = rx*rx + ry*ry + rz*rz
-      
-      if (rsq < self%rMinTable(atmType1, atmType2)) then
-        accept = .false.
-        return
-      endif
-      
-      if (rsq < self%rCutNearSq) then
-        r = sqrt(rsq)
-        E_pair = qi * qj * coulombConst / r
-        E_coulomb = E_coulomb + E_pair
-        curbox%ETable(iAtom) = curbox%ETable(iAtom) + E_pair
-        curbox%ETable(jAtom) = curbox%ETable(jAtom) + E_pair
-      endif
-    enddo
-  enddo
   
   ! Get box dimensions and cache them
   select type(curbox)
@@ -301,8 +268,8 @@ subroutine Detailed_FMM(self, curbox, E_T, accept)
     E_periodic = 2.0_dp * pi * coulombConst * dipole_sq / (3.0_dp * volume)
   endif
   
-  self%E_near_total = E_coulomb
-  self%E_far_total = 0.0_dp
+  self%E_near_total = E_near
+  self%E_far_total = E_far
   self%E_self_total = 0.0_dp
   self%E_periodic_total = E_periodic
   
@@ -366,8 +333,7 @@ subroutine Shift_FMM_Single(self, curbox, disp, E_Diff, accept)
 
   integer :: iDisp, iAtom, jAtom, dispLen, jNei
   integer :: atmType1, atmType2
-  real(dp) :: rx, ry, rz, rsq, r
-  real(dp) :: E_old, E_new, E_pair
+  integer :: leafIdx, nodeJ, j, k   ! For tree lists in pair delta
   real(dp) :: qi, qj, rmin_ij
   real(dp), pointer :: atoms(:,:) => null()
   integer, pointer :: nNeigh(:) => null()
@@ -382,15 +348,14 @@ subroutine Shift_FMM_Single(self, curbox, disp, E_Diff, accept)
   real(dp) :: xnew, ynew, znew
 
   call curbox%GetCoordinates(atoms)
-  call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
 
   dispLen = size(disp)
   E_Diff = 0.0_dp
-  E_old = 0.0_dp
-  E_new = 0.0_dp
   accept = .true.
 
-  ! Loop over displaced atoms
+  ! Loop over displaced atoms: compute pair deltas using tree's near/far lists from moved atom's leaf
+  ! (standard for table consistency: update both i and j dETable; E_Diff = sum pair_delta)
+  ! Uses ComputePairDelta_FMM helper for old/new E_pair.
   do iDisp = 1, dispLen
     iAtom = disp(iDisp)%atmIndx
     atmType1 = curbox%AtomType(iAtom)
@@ -398,57 +363,43 @@ subroutine Shift_FMM_Single(self, curbox, disp, E_Diff, accept)
     
     if (abs(qi) < 1.0E-15_dp) cycle
 
-    ! Near-field contribution using neighbor list (assumes neighbor-skin is sufficient)
-    do jNei = 1, nNeigh(iAtom)
-      jAtom = neighlist(jNei, iAtom)
-      if (.not. curbox%IsActive(jAtom)) cycle
-      if (jAtom == iAtom) cycle
-      if (curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
+    ! Get leaf for old position (use mapping for exact; lists from old tree)
+    leafIdx = self%particleToLeaf(iAtom)
 
-      atmType2 = curbox%AtomType(jAtom)
-      qj = self%q(atmType2)
-      if (abs(qj) < 1.0E-15_dp) cycle
+    ! 1. Own leaf particles (skip self/intra)
+    if (allocated(self%nodes(leafIdx)%particles)) then
+      do j = 1, size(self%nodes(leafIdx)%particles)
+        jAtom = self%nodes(leafIdx)%particles(j)
+        if (jAtom == iAtom .or. .not. curbox%IsActive(jAtom) .or. curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
+        call ComputePairDelta_FMM(self, curbox, atoms, iAtom, qi, jAtom, disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new, E_Diff, accept)
+        if (.not. accept) return
+      enddo
+    endif
 
-      rmin_ij = self%rMinTable(atmType1, atmType2)
+    ! 2. Near cells
+    do k = 1, self%nodes(leafIdx)%nNear
+      nodeJ = self%nodes(leafIdx)%nearList(k)
+      if (.not. allocated(self%nodes(nodeJ)%particles)) cycle
+      do j = 1, size(self%nodes(nodeJ)%particles)
+        jAtom = self%nodes(nodeJ)%particles(j)
+        if (.not. curbox%IsActive(jAtom) .or. curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
+        call ComputePairDelta_FMM(self, curbox, atoms, iAtom, qi, jAtom, disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new, E_Diff, accept)
+        if (.not. accept) return
+      enddo
+    enddo
 
-      ! New position energy
-      rx = disp(iDisp)%x_new - atoms(1, jAtom)
-      ry = disp(iDisp)%y_new - atoms(2, jAtom)
-      rz = disp(iDisp)%z_new - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
-      rsq = rx*rx + ry*ry + rz*rz
-
-      if (rsq < rmin_ij) then
-        accept = .false.
-        return
-      endif
-
-      if (rsq < self%rCutNearSq) then
-        r = sqrt(rsq)
-        E_pair = qi * qj * coulombConst / r
-        E_new = E_new + E_pair
-        curbox%dETable(iAtom) = curbox%dETable(iAtom) + E_pair
-        curbox%dETable(jAtom) = curbox%dETable(jAtom) + E_pair
-      endif
-
-      ! Old position energy
-      rx = atoms(1, iAtom) - atoms(1, jAtom)
-      ry = atoms(2, iAtom) - atoms(2, jAtom)
-      rz = atoms(3, iAtom) - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
-      rsq = rx*rx + ry*ry + rz*rz
-
-      if (rsq < self%rCutNearSq) then
-        r = sqrt(rsq)
-        E_pair = qi * qj * coulombConst / r
-        E_old = E_old + E_pair
-        curbox%dETable(iAtom) = curbox%dETable(iAtom) - E_pair
-        curbox%dETable(jAtom) = curbox%dETable(jAtom) - E_pair
-      endif
+    ! 3. Far cells (full direct)
+    do k = 1, self%nodes(leafIdx)%nFar
+      nodeJ = self%nodes(leafIdx)%farList(k)
+      if (.not. allocated(self%nodes(nodeJ)%particles)) cycle
+      do j = 1, size(self%nodes(nodeJ)%particles)
+        jAtom = self%nodes(nodeJ)%particles(j)
+        if (.not. curbox%IsActive(jAtom) .or. curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
+        call ComputePairDelta_FMM(self, curbox, atoms, iAtom, qi, jAtom, disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new, E_Diff, accept)
+        if (.not. accept) return
+      enddo
     enddo
   enddo
-
-  E_Diff = E_new - E_old
   
   ! Compute periodic correction change if periodic boundaries
   if (self%isPeriodic) then
@@ -832,6 +783,10 @@ subroutine OrthoVol_FMM(self, curbox, disp, E_Diff, accept)
   E_Diff = 0.0_dp
   curbox%dETable = 0.0_dp
 
+  ! Scale tree boxes uniformly (centers/sizes * scale) for volume change consistency.
+  ! (Commented: trial scale would require inverse on reject; Detailed rebuild suffices post-accept for test.)
+  ! call self%ScaleOctreeForVolume(disp(1)%xScale, disp(1)%yScale, disp(1)%zScale)
+
   ! Compute new energy with scaled positions
   ! For volume moves, molecules are translated by scaling their center of mass
   ! Atoms within a molecule maintain their relative positions to the COM
@@ -896,14 +851,13 @@ subroutine OrthoVol_FMM(self, curbox, disp, E_Diff, accept)
           return
         endif
         
-        ! Compute Coulomb energy
-        if (rsq < self%rCutNearSq) then
-          r = sqrt(rsq)
-          E_Pair = qi * qj * coulombConst / r
-          E_New = E_New + E_Pair
-          curbox%dETable(iAtom) = curbox%dETable(iAtom) + E_Pair
-          curbox%dETable(jAtom) = curbox%dETable(jAtom) + E_Pair
-        endif
+        ! Compute Coulomb energy (full direct, no rcut - includes far field for consistency with DetailedECalc)
+        ! (rmin check already done above; tree not used here as volume changes all positions)
+        r = sqrt(rsq)
+        E_Pair = qi * qj * coulombConst / r
+        E_New = E_New + E_Pair
+        curbox%dETable(iAtom) = curbox%dETable(iAtom) + E_Pair
+        curbox%dETable(jAtom) = curbox%dETable(jAtom) + E_Pair
       enddo
     enddo
   enddo
@@ -975,6 +929,24 @@ subroutine OrthoVol_FMM(self, curbox, disp, E_Diff, accept)
     E_Diff = E_New
   endif
 
+end subroutine
+!=============================================================================
+subroutine ScaleOctree_FMM(self, scaleX, scaleY, scaleZ)
+  ! Uniformly scale octree node centers and sizes by volume scale factors (for IsoVol).
+  ! Interaction lists remain valid since relative separations preserved.
+  ! (Used to keep tree consistent with scaled positions after volume accept; rebuild in Detailed also works.)
+  ! Note: If multipole active, M/L would require recompute here.
+  implicit none
+  class(Pair_FMM), intent(inout) :: self
+  real(dp), intent(in) :: scaleX, scaleY, scaleZ
+  integer :: iNode
+
+  do iNode = 1, self%nNodes
+    self%nodes(iNode)%center(1) = self%nodes(iNode)%center(1) * scaleX
+    self%nodes(iNode)%center(2) = self%nodes(iNode)%center(2) * scaleY
+    self%nodes(iNode)%center(3) = self%nodes(iNode)%center(3) * scaleZ
+    self%nodes(iNode)%halfWidth = self%nodes(iNode)%halfWidth * scaleX  ! Isotropic for IsoVol; lists valid
+  enddo
 end subroutine
 !=============================================================================
 subroutine ManyBody_FMM(self, curbox, atmtype1, pos1, atmtypes, posN, E_Many, accept)
@@ -1828,8 +1800,10 @@ subroutine ComputeFarFieldMultipole_FMM(self, curbox, E_far)
         enddo
       enddo
       
-      ! Energy contribution (divide by 2 to avoid double counting)
+      ! Energy contribution (divide by 2 to avoid double counting for total E_far)
+      ! Add full to ETable (consistent with near/direct and ETable convention: sum/2 = total)
       E_far = E_far + 0.5_dp * qi * real(phi, dp) * coulombConst
+      curbox%ETable(iAtom) = curbox%ETable(iAtom) + qi * real(phi, dp) * coulombConst
     enddo
   enddo
 
@@ -1957,6 +1931,11 @@ subroutine UpdateMultipoleForMove_FMM(self, curbox, iAtom, x_old, y_old, z_old, 
   ! Update particle to leaf mapping
   self%particleToLeaf(iAtom) = newLeaf
 
+  ! If crossed to new leaf, update particles lists (for near direct sums)
+  if (newLeaf /= oldLeaf) then
+    call MoveParticleBetweenLeaves(self%nodes(oldLeaf), self%nodes(newLeaf), iAtom)
+  endif
+
 end subroutine
 !=============================================================================
 subroutine AcceptUpdate_FMM(self)
@@ -1981,6 +1960,48 @@ subroutine RejectUpdate_FMM(self)
   
   ! Restore particle mapping
   self%particleToLeaf = self%particleToLeaf_old
+
+end subroutine
+!=============================================================================
+subroutine MoveParticleBetweenLeaves(oldNode, newNode, iAtom)
+  ! Helper to move particle between leaf lists when crossing cells
+  ! (minimal impl for near-field direct sums)
+  implicit none
+  type(OctreeNode), intent(inout) :: oldNode, newNode
+  integer, intent(in) :: iAtom
+  integer :: n, i, pos
+  integer, allocatable :: temp(:)
+
+  ! Remove from old leaf list
+  if (allocated(oldNode%particles)) then
+    n = size(oldNode%particles)
+    pos = 0
+    do i = 1, n
+      if (oldNode%particles(i) == iAtom) pos = i
+    enddo
+    if (pos > 0) then
+      if (n > 1) then
+        allocate(temp(n-1))
+        temp(1:pos-1) = oldNode%particles(1:pos-1)
+        temp(pos:n-1) = oldNode%particles(pos+1:n)
+        call move_alloc(temp, oldNode%particles)
+      else
+        deallocate(oldNode%particles)
+      endif
+    endif
+  endif
+
+  ! Add to new leaf list (duplicate simple add)
+  if (.not. allocated(newNode%particles)) then
+    allocate(newNode%particles(1))
+    newNode%particles(1) = iAtom
+  else
+    n = size(newNode%particles)
+    allocate(temp(n+1))
+    temp(1:n) = newNode%particles
+    temp(n+1) = iAtom
+    call move_alloc(temp, newNode%particles)
+  endif
 
 end subroutine
 !=============================================================================
@@ -2033,14 +2054,16 @@ subroutine GetParticleEnergy_FMM(self, curbox, iAtom, x, y, z, E, accept)
   real(dp), intent(out) :: E
   logical, intent(out) :: accept
 
-  integer :: jAtom, atmType1, atmType2, jNei
+  integer :: jAtom, atmType1, atmType2
+  integer :: leafIdx, k, j, nodeJ
   real(dp) :: qi, qj, rx, ry, rz, rsq, r
+  real(dp) :: dx, dy, dz
   real(dp), pointer :: atoms(:,:) => null()
-  integer, pointer :: nNeigh(:) => null()
-  integer, pointer :: neighlist(:,:) => null()
+  complex(dp) :: Rlm(self%nExpansion)
+  complex(dp) :: phi
+  integer :: l, m, idx
   
   call curbox%GetCoordinates(atoms)
-  call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
   
   E = 0.0_dp
   accept = .true.
@@ -2050,33 +2073,126 @@ subroutine GetParticleEnergy_FMM(self, curbox, iAtom, x, y, z, E, accept)
   
   if (abs(qi) < 1.0E-15_dp) return
   
-  ! Near-field contribution using neighbor list
-  do jNei = 1, nNeigh(iAtom)
-    jAtom = neighlist(jNei, iAtom)
-    if (.not. curbox%IsActive(jAtom)) cycle
-    if (jAtom == iAtom) cycle
-    if (curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
-
-    atmType2 = curbox%AtomType(jAtom)
-    qj = self%q(atmType2)
-
-    rx = x - atoms(1, jAtom)
-    ry = y - atoms(2, jAtom)
-    rz = z - atoms(3, jAtom)
-    call curbox%Boundary(rx, ry, rz)
-    rsq = rx*rx + ry*ry + rz*rz
-
-    if (rsq < self%rMinTable(atmType1, atmType2)) then
-      accept = .false.
-      return
-    endif
-
-    if (rsq < self%rCutNearSq) then
+  ! Find leaf for this position
+  leafIdx = self%FindLeafForPosition(x, y, z)
+  
+  ! Near-field: direct sum to own leaf + nearList cells (full pair energy)
+  ! Own leaf
+  if (allocated(self%nodes(leafIdx)%particles)) then
+    do j = 1, size(self%nodes(leafIdx)%particles)
+      jAtom = self%nodes(leafIdx)%particles(j)
+      if (jAtom == iAtom) cycle
+      if (.not. curbox%IsActive(jAtom)) cycle
+      if (curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
+      atmType2 = curbox%AtomType(jAtom)
+      qj = self%q(atmType2)
+      rx = x - atoms(1, jAtom)
+      ry = y - atoms(2, jAtom)
+      rz = z - atoms(3, jAtom)
+      call curbox%Boundary(rx, ry, rz)
+      rsq = rx*rx + ry*ry + rz*rz
+      if (rsq < self%rMinTable(atmType1, atmType2)) then
+        accept = .false.
+        return
+      endif
       r = sqrt(rsq)
       E = E + qi * qj * coulombConst / r
-    endif
+    enddo
+  endif
+  ! Near cells
+  do k = 1, self%nodes(leafIdx)%nNear
+    nodeJ = self%nodes(leafIdx)%nearList(k)
+    if (.not. allocated(self%nodes(nodeJ)%particles)) cycle
+    do j = 1, size(self%nodes(nodeJ)%particles)
+      jAtom = self%nodes(nodeJ)%particles(j)
+      if (.not. curbox%IsActive(jAtom)) cycle
+      if (curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
+      atmType2 = curbox%AtomType(jAtom)
+      qj = self%q(atmType2)
+      rx = x - atoms(1, jAtom)
+      ry = y - atoms(2, jAtom)
+      rz = z - atoms(3, jAtom)
+      call curbox%Boundary(rx, ry, rz)
+      rsq = rx*rx + ry*ry + rz*rz
+      if (rsq < self%rMinTable(atmType1, atmType2)) then
+        accept = .false.
+        return
+      endif
+      r = sqrt(rsq)
+      E = E + qi * qj * coulombConst / r
+    enddo
+  enddo
+  
+  ! Far-field: direct sum over farList cells (full, consistent with Detailed/ComputeFarField direct)
+  do k = 1, self%nodes(leafIdx)%nFar
+    nodeJ = self%nodes(leafIdx)%farList(k)
+    if (.not. allocated(self%nodes(nodeJ)%particles)) cycle
+    do j = 1, size(self%nodes(nodeJ)%particles)
+      jAtom = self%nodes(nodeJ)%particles(j)
+      if (.not. curbox%IsActive(jAtom)) cycle
+      if (curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
+      atmType2 = curbox%AtomType(jAtom)
+      qj = self%q(atmType2)
+      rx = x - atoms(1, jAtom)
+      ry = y - atoms(2, jAtom)
+      rz = z - atoms(3, jAtom)
+      call curbox%Boundary(rx, ry, rz)
+      rsq = rx*rx + ry*ry + rz*rz
+      if (rsq < self%rMinTable(atmType1, atmType2)) then
+        accept = .false.
+        return
+      endif
+      r = sqrt(rsq)
+      E = E + qi * qj * coulombConst / r
+    enddo
   enddo
 
+end subroutine
+!=============================================================================
+subroutine ComputePairDelta_FMM(self, curbox, atoms, iAtom, qi, jAtom, xnew, ynew, znew, E_Diff, accept)
+  ! Helper for Shift: compute E_pair delta (old vs new pos for i-j), add to E_Diff and both dETable
+  ! Ensures table consistency (individuals + sum) and no drift in tablecheck.
+  implicit none
+  class(Pair_FMM), intent(in) :: self
+  class(SimBox), intent(inout) :: curbox
+  real(dp), pointer :: atoms(:,:)
+  integer, intent(in) :: iAtom, jAtom
+  real(dp), intent(in) :: qi, xnew, ynew, znew
+  real(dp), intent(inout) :: E_Diff
+  logical, intent(inout) :: accept
+  integer :: atmType2
+  real(dp) :: qj, rx, ry, rz, rsq, r, E_old_pair, E_new_pair, delta
+
+  atmType2 = curbox%AtomType(jAtom)
+  qj = self%q(atmType2)
+  if (abs(qj) < 1.0E-15_dp) return
+
+  ! Old pair (current positions)
+  rx = atoms(1, iAtom) - atoms(1, jAtom)
+  ry = atoms(2, iAtom) - atoms(2, jAtom)
+  rz = atoms(3, iAtom) - atoms(3, jAtom)
+  call curbox%Boundary(rx, ry, rz)
+  rsq = rx*rx + ry*ry + rz*rz
+  r = sqrt(rsq)
+  E_old_pair = qi * qj * coulombConst / r
+
+  ! New pair at trial pos
+  rx = xnew - atoms(1, jAtom)
+  ry = ynew - atoms(2, jAtom)
+  rz = znew - atoms(3, jAtom)
+  call curbox%Boundary(rx, ry, rz)
+  rsq = rx*rx + ry*ry + rz*rz
+  if (rsq < self%rMinTable(curbox%AtomType(iAtom), atmType2)) then
+    accept = .false.
+    return
+  endif
+  r = sqrt(rsq)
+  E_new_pair = qi * qj * coulombConst / r
+
+  delta = E_new_pair - E_old_pair
+  E_Diff = E_Diff + delta
+  curbox%dETable(iAtom) = curbox%dETable(iAtom) + delta
+  curbox%dETable(jAtom) = curbox%dETable(jAtom) + delta
 end subroutine
 !=============================================================================
 subroutine ProcessIO_FMM(self, line)
