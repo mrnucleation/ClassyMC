@@ -148,6 +148,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_EP_LJ_Cut.f90\
         		$(SRC)/FF_EP_LJ_CutShift.f90\
         		$(SRC)/FF_EP_Pedone_Cut.f90\
+        		$(SRC)/FF_EP_TosiFumi_Cut.f90\
         		$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_Tersoff.f90\
@@ -581,6 +582,7 @@ $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
 
 $(OBJ)/FF_EP_LJ_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_EP_Pedone_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_EP_TosiFumi_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_EP_LJ_CutShift.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_Lammps.o: $(OBJ)/FF_EasyPair_Cut.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
 $(OBJ)/FF_Ewald.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o

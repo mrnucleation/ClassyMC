@@ -29,11 +29,11 @@ end_molecule
 
 forcefieldtype
   hybrid
-  EP_LJ_Cut
+  #EP_LJ_Cut
+  tosifumi
   fmm
 end_forcefieldtype
 
-units energy kb
 
 # Forcefield 3: Hybrid combining LJ and FMM
 forcefield 1
@@ -41,15 +41,18 @@ forcefield 1
   forcefields 2 3
 end_forcefield
 
+units energy ev
 #Forcefield 1: Lennard-Jones (short-range van der Waals)
-# Format: type epsilon sigma rmin
 forcefield 2
-  rCut 4.0
-  tailcorrection .false.
-  # Na: ε/kB = 17.44 K, σ = 2.52 Å
-  1  23.60105  2.58478  0.5
-  # Cl: ε/kB = 192.45 K, σ = 3.85 Å
-  2  75.48309  4.4 0.5
+  rCut 10.0
+  tailcorrection .true.
+  rmin 1 1 1.5
+  rmin 1 2 1.5
+  rmin 2 2 1.5
+
+  pair   1 1    487.0 0.23768  1.05   0.50 #Na-Na
+  pair   1 2 145134.0 0.23768  6.99   8.70 #Na-Cl
+  pair   2 2 405774.0 0.23768  72.40 145.40 #Cl-Cl
 end_forcefield
 
 # Forcefield 2: FMM (long-range electrostatics)
@@ -60,9 +63,9 @@ forcefield 3
   # Maximum octree depth
   maxlevel 4
   # Particles per leaf cell
-  ncrit 10
+  ncrit 5
   # Near-field cutoff
-  rcut 7.0
+  rcut 10.0
   # Enable periodic boundaries
   periodic true
   # Charge assignments with λ = 0.885 scaling

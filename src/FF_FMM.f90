@@ -534,7 +534,9 @@ subroutine New_FMM(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
       rx = disp(iDisp)%x_new - atoms(1, jAtom)
       ry = disp(iDisp)%y_new - atoms(2, jAtom)
       rz = disp(iDisp)%z_new - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
+      if (self%isPeriodic) then
+        call curbox%Boundary(rx, ry, rz)
+      endif
       rsq = rx*rx + ry*ry + rz*rz
 
       if (rsq < self%rMinTable(atmType1, atmType2)) then
@@ -671,7 +673,9 @@ subroutine Old_FMM(self, curbox, disp, E_Diff)
       rx = atoms(1, iAtom) - atoms(1, jAtom)
       ry = atoms(2, iAtom) - atoms(2, jAtom)
       rz = atoms(3, iAtom) - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
+      if (self%isPeriodic) then
+        call curbox%Boundary(rx, ry, rz)
+      endif
       rsq = rx*rx + ry*ry + rz*rz
 
       if (rsq < self%rCutNearSq) then
@@ -809,7 +813,9 @@ subroutine OrthoVol_FMM(self, curbox, disp, E_Diff, accept)
       
       ! Get atom position relative to COM, apply boundary, add back COM
       iTemp(1:3) = atoms(1:3, iAtom) - curbox%centerMass(1:3, molIndx1)
+    if (self%isPeriodic) then
       call curbox%Boundary(iTemp(1), iTemp(2), iTemp(3))
+    endif
       iTemp(1:3) = iTemp(1:3) + curbox%centerMass(1:3, molIndx1)
       
       ! Loop over higher-indexed atoms (to count each pair once)
@@ -832,7 +838,9 @@ subroutine OrthoVol_FMM(self, curbox, disp, E_Diff, accept)
         
         ! Get j atom position relative to COM, apply boundary, add back COM
         jTemp(1:3) = atoms(1:3, jAtom) - curbox%centerMass(1:3, molIndx2)
-        call curbox%Boundary(jTemp(1), jTemp(2), jTemp(3))
+        if (self%isPeriodic) then
+          call curbox%Boundary(jTemp(1), jTemp(2), jTemp(3))
+        endif
         jTemp(1:3) = jTemp(1:3) + curbox%centerMass(1:3, molIndx2)
         
         ! Compute distance with scaled positions
@@ -841,7 +849,9 @@ subroutine OrthoVol_FMM(self, curbox, disp, E_Diff, accept)
         rz = iTemp(3) + dzi - jTemp(3) - dzj
         
         ! Apply boundary with new box dimensions
-        call curbox%BoundaryNew(rx, ry, rz, disp)
+        if (self%isPeriodic) then
+          call curbox%BoundaryNew(rx, ry, rz, disp)
+        endif
         rsq = rx*rx + ry*ry + rz*rz
         
         ! Check for overlap
@@ -979,7 +989,9 @@ subroutine ManyBody_FMM(self, curbox, atmtype1, pos1, atmtypes, posN, E_Many, ac
     rx = pos1(1) - posN(1, jAtom)
     ry = pos1(2) - posN(2, jAtom)
     rz = pos1(3) - posN(3, jAtom)
-    call curbox%Boundary(rx, ry, rz)
+    if (self%isPeriodic) then
+      call curbox%Boundary(rx, ry, rz)
+    endif
     rsq = rx*rx + ry*ry + rz*rz
     
     if (rsq < self%rMinTable(atmtype1, atmType2)) then
@@ -1031,7 +1043,8 @@ subroutine BuildOctree_FMM(self, curbox)
   self%cachedLz = Lz
   
   ! Box center and half-width
-  self%boxCenter = [Lx/2.0_dp, Ly/2.0_dp, Lz/2.0_dp]
+  !self%boxCenter = [Lx/2.0_dp, Ly/2.0_dp, Lz/2.0_dp]
+  self%boxCenter = [0.0_dp, 0.0_dp, 0.0_dp]
   self%boxHalfWidth = max(Lx, Ly, Lz) / 2.0_dp
   
   ! Count active atoms
@@ -1527,7 +1540,9 @@ subroutine ComputeNearField_FMM(self, curbox, E_near, accept)
       rx = atoms(1, iAtom) - atoms(1, jAtom)
       ry = atoms(2, iAtom) - atoms(2, jAtom)
       rz = atoms(3, iAtom) - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
+      if (self%isPeriodic) then
+        call curbox%Boundary(rx, ry, rz)
+      endif
       rsq = rx*rx + ry*ry + rz*rz
       
       if (rsq < self%rMinTable(atmType1, atmType2)) then
@@ -1598,7 +1613,9 @@ subroutine ComputeNearField_Octree_FMM(self, curbox, E_near, accept)
         rx = atoms(1, iAtom) - atoms(1, jAtom)
         ry = atoms(2, iAtom) - atoms(2, jAtom)
         rz = atoms(3, iAtom) - atoms(3, jAtom)
-        call curbox%Boundary(rx, ry, rz)
+        if (self%isPeriodic) then
+          call curbox%Boundary(rx, ry, rz)
+        endif
         rsq = rx*rx + ry*ry + rz*rz
         
         if (rsq < self%rMinTable(atmType1, atmType2)) then
@@ -1650,7 +1667,9 @@ subroutine ComputeNearField_Octree_FMM(self, curbox, E_near, accept)
           rx = atoms(1, iAtom) - atoms(1, jAtom)
           ry = atoms(2, iAtom) - atoms(2, jAtom)
           rz = atoms(3, iAtom) - atoms(3, jAtom)
-          call curbox%Boundary(rx, ry, rz)
+          if (self%isPeriodic) then
+            call curbox%Boundary(rx, ry, rz)
+          endif
           rsq = rx*rx + ry*ry + rz*rz
           
           if (rsq < self%rMinTable(atmType1, atmType2)) then
@@ -1732,7 +1751,9 @@ subroutine ComputeFarField_FMM(self, curbox, E_far)
           rx = atoms(1, iAtom) - atoms(1, jAtom)
           ry = atoms(2, iAtom) - atoms(2, jAtom)
           rz = atoms(3, iAtom) - atoms(3, jAtom)
-          call curbox%Boundary(rx, ry, rz)
+          if (self%isPeriodic) then
+            call curbox%Boundary(rx, ry, rz)
+          endif
           rsq = rx*rx + ry*ry + rz*rz
           
           ! Direct Coulomb interaction
@@ -2089,7 +2110,9 @@ subroutine GetParticleEnergy_FMM(self, curbox, iAtom, x, y, z, E, accept)
       rx = x - atoms(1, jAtom)
       ry = y - atoms(2, jAtom)
       rz = z - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
+      if (self%isPeriodic) then
+        call curbox%Boundary(rx, ry, rz)
+      endif
       rsq = rx*rx + ry*ry + rz*rz
       if (rsq < self%rMinTable(atmType1, atmType2)) then
         accept = .false.
@@ -2112,7 +2135,9 @@ subroutine GetParticleEnergy_FMM(self, curbox, iAtom, x, y, z, E, accept)
       rx = x - atoms(1, jAtom)
       ry = y - atoms(2, jAtom)
       rz = z - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
+      if (self%isPeriodic) then
+        call curbox%Boundary(rx, ry, rz)
+      endif
       rsq = rx*rx + ry*ry + rz*rz
       if (rsq < self%rMinTable(atmType1, atmType2)) then
         accept = .false.
@@ -2136,7 +2161,9 @@ subroutine GetParticleEnergy_FMM(self, curbox, iAtom, x, y, z, E, accept)
       rx = x - atoms(1, jAtom)
       ry = y - atoms(2, jAtom)
       rz = z - atoms(3, jAtom)
-      call curbox%Boundary(rx, ry, rz)
+      if (self%isPeriodic) then
+        call curbox%Boundary(rx, ry, rz)
+      endif
       rsq = rx*rx + ry*ry + rz*rz
       if (rsq < self%rMinTable(atmType1, atmType2)) then
         accept = .false.
@@ -2171,7 +2198,9 @@ subroutine ComputePairDelta_FMM(self, curbox, atoms, iAtom, qi, jAtom, xnew, yne
   rx = atoms(1, iAtom) - atoms(1, jAtom)
   ry = atoms(2, iAtom) - atoms(2, jAtom)
   rz = atoms(3, iAtom) - atoms(3, jAtom)
-  call curbox%Boundary(rx, ry, rz)
+  if (self%isPeriodic) then
+    call curbox%Boundary(rx, ry, rz)
+  endif
   rsq = rx*rx + ry*ry + rz*rz
   r = sqrt(rsq)
   E_old_pair = qi * qj * coulombConst / r
@@ -2180,7 +2209,9 @@ subroutine ComputePairDelta_FMM(self, curbox, atoms, iAtom, qi, jAtom, xnew, yne
   rx = xnew - atoms(1, jAtom)
   ry = ynew - atoms(2, jAtom)
   rz = znew - atoms(3, jAtom)
-  call curbox%Boundary(rx, ry, rz)
+  if (self%isPeriodic) then
+    call curbox%Boundary(rx, ry, rz)
+  endif
   rsq = rx*rx + ry*ry + rz*rz
   if (rsq < self%rMinTable(curbox%AtomType(iAtom), atmType2)) then
     accept = .false.

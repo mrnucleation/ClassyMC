@@ -5,25 +5,21 @@
 #   - Lennard-Jones for short-range van der Waals interactions
 #   - Fast Multipole Method (FMM) for long-range electrostatics
 #
-# Parameters:
-#   Charges scaled by λ = 0.885: q_Na = +0.885 e, q_Cl = -0.885 e
-#   σ_Na = 2.52 Å, ε_Na/kB = 17.44 K
-#   σ_Cl = 3.85 Å, ε_Cl/kB = 192.45 K
 #======================================
   set rng_seed -6
   set NeighSkin 3.0
   set moves 512
-  set cycles 100
-  set screenfrequency 10
+  set cycles 100000
+  set screenfrequency 1000
   SamplingType Metropolis
   set pressureunits bar
-  set energyunits kcal-mol
+  set energyunits ev
 
   ForceField "NaCl_Hybrid.clFF"
 
   Create Boxes
-    #fromfile "NaCl_Config_Large.clssy"
-    fromfile "Config_&_1.clssy"
+   fromfile "NaCl_Config_Large.clssy"
+   #fromfile "Config_&_1.clssy"
   End_Create
 
   # Use the hybrid forcefield (forcefield 3) for energy calculations

@@ -18,6 +18,7 @@ contains
     use FF_EasyEP_LJ_CutShift, only: EP_LJ_CutShift
     use FF_EasyEP_LJ_Ele_Cut, only: EP_LJ_Ele_Cut
     use FF_EasyEP_Pedone_Cut, only: EP_Pedone_Cut
+    use FF_EasyEP_TosiFumi_Cut, only: EP_TosiFumi_Cut
 !    use FF_Pair_LJ_Wall, only: Pair_LJ_Wall
 !    use FF_Pair_LJ_Shift, only: Pair_LJ_Shift
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
@@ -128,6 +129,10 @@ contains
         allocate(EP_Pedone_Cut::EnergyCalculator(FFNum) % Method)
 !        allocate(Pair_Pedone_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Pedone Cut style"
+
+      case("tosifumi", "tosi-fumi", "bmh")
+        allocate(EP_TosiFumi_Cut::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Tosi-Fumi (Born-Mayer-Huggins) Cut style"
 
         !Depreciating the old Pedone code in favor of the EP Style
 !      case("pedone")
