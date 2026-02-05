@@ -10,6 +10,7 @@
 *.txt
 *.xyz
 *.pyc
+*.dump
 objects/*.o
 mods/*
 profiling/*
