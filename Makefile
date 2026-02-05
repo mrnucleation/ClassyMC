@@ -149,6 +149,10 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/FF_EP_LJ_CutShift.f90\
         		$(SRC)/FF_EP_Pedone_Cut.f90\
         		$(SRC)/FF_EP_TosiFumi_Cut.f90\
+        		$(SRC)/FF_EP_Power_Cut.f90\
+        		$(SRC)/FF_EP_Exp_Cut.f90\
+        		$(SRC)/FF_EP_Erfc_Cut.f90\
+        		$(SRC)/FF_EP_PowerDenom_Cut.f90\
         		$(SRC)/FF_Pedone.f90\
         		$(SRC)/FF_LJ_Cut.f90\
         		$(SRC)/FF_Tersoff.f90\
@@ -584,6 +588,10 @@ $(OBJ)/FF_EP_LJ_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_EP_Pedone_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_EP_TosiFumi_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_EP_LJ_CutShift.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_EP_Power_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_EP_Exp_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_EP_Erfc_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
+$(OBJ)/FF_EP_PowerDenom_Cut.o: $(OBJ)/FF_EasyPair_Cut.o
 $(OBJ)/FF_Lammps.o: $(OBJ)/FF_EasyPair_Cut.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o
 $(OBJ)/FF_Ewald.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 $(OBJ)/FF_LJ_Ewald.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
@@ -591,7 +599,7 @@ $(OBJ)/FF_P3M.o: $(OBJ)/FF_EasyPair_Cut.o $(OBJ)/Template_Forcefield.o $(OBJ)/Un
 $(OBJ)/FF_EAM.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o
 $(OBJ)/SphericalHarmonics.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/FF_FMM.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o $(OBJ)/SphericalHarmonics.o
-$(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_LJ_Ewald.o $(OBJ)/FF_P3M.o $(OBJ)/FF_FMM.o $(OBJ)/FF_EAM.o
+$(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_LJ_Ewald.o $(OBJ)/FF_P3M.o $(OBJ)/FF_FMM.o $(OBJ)/FF_EAM.o $(OBJ)/FF_EP_Power_Cut.o $(OBJ)/FF_EP_Exp_Cut.o $(OBJ)/FF_EP_Erfc_Cut.o $(OBJ)/FF_EP_PowerDenom_Cut.o
 $(OBJ)/Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
 $(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o $(OBJ)/Units.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o $(OBJ)/Template_MultiBoxMove.o

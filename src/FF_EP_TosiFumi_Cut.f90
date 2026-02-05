@@ -87,7 +87,7 @@ module FF_EasyEP_TosiFumi_Cut
     ! Tosi-Fumi potential: A * exp(-r/p) - C/r^6
     E_Rep = A_ij * exp(-r / rho_ij)
     E_Disp = -C6_ij / r6
-    E_Disp = E_Disp + C8_ij / r8
+    E_Disp = E_Disp - C8_ij / r8
     E_Pair = E_Rep + E_Disp
 
     ! Apply energy shift if enabled
@@ -188,7 +188,7 @@ module FF_EasyEP_TosiFumi_Cut
     r8 = r6* r * r  ! r^8
     E_Rep = self%A(iType, jType) * exp(-r / self%rho(iType, jType))
     E_Disp = -self%C6(iType, jType) / r6
-    E_Disp = E_Disp + self%C8(iType, jType) / r8
+    E_Disp = E_Disp - self%C8(iType, jType) / r8
 
     EShift_val = E_Rep + E_Disp
 

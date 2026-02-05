@@ -19,6 +19,10 @@ contains
     use FF_EasyEP_LJ_Ele_Cut, only: EP_LJ_Ele_Cut
     use FF_EasyEP_Pedone_Cut, only: EP_Pedone_Cut
     use FF_EasyEP_TosiFumi_Cut, only: EP_TosiFumi_Cut
+    use FF_EasyEP_Power_Cut, only: EP_Power_Cut
+    use FF_EasyEP_Exp_Cut, only: EP_Exp_Cut
+    use FF_EasyEP_Erfc_Cut, only: EP_Erfc_Cut
+    use FF_EasyEP_PowerDenom_Cut, only: EP_PowerDenom_Cut
 !    use FF_Pair_LJ_Wall, only: Pair_LJ_Wall
 !    use FF_Pair_LJ_Shift, only: Pair_LJ_Shift
 !    use FF_Pair_LJ_Cut_NoNei, only: Pair_LJ_Cut_NoNei
@@ -133,6 +137,22 @@ contains
       case("tosifumi", "tosi-fumi", "bmh")
         allocate(EP_TosiFumi_Cut::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Tosi-Fumi (Born-Mayer-Huggins) Cut style"
+
+      case("power_cut", "ep_power")
+        allocate(EP_Power_Cut::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as flexible A/r^n Cut style (EasyPair)"
+
+      case("exp_cut", "ep_exp")
+        allocate(EP_Exp_Cut::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as flexible A*exp(-Br) Cut style (EasyPair)"
+
+      case("erfc_cut", "ep_erfc")
+        allocate(EP_Erfc_Cut::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as scaled erfc(ar)/r Cut style (EasyPair)"
+
+      case("powerdenom_cut", "ep_powerdenom")
+        allocate(EP_PowerDenom_Cut::EnergyCalculator(FFNum) % Method)
+        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as flexible A/(B + D r^n) Cut style (EasyPair)"
 
         !Depreciating the old Pedone code in favor of the EP Style
 !      case("pedone")
