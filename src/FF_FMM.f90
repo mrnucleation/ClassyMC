@@ -534,9 +534,7 @@ subroutine New_FMM(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
       rx = disp(iDisp)%x_new - atoms(1, jAtom)
       ry = disp(iDisp)%y_new - atoms(2, jAtom)
       rz = disp(iDisp)%z_new - atoms(3, jAtom)
-      if (self%isPeriodic) then
-        call curbox%Boundary(rx, ry, rz)
-      endif
+      call curbox%Boundary(rx, ry, rz)
       rsq = rx*rx + ry*ry + rz*rz
 
       if (rsq < self%rMinTable(atmType1, atmType2)) then

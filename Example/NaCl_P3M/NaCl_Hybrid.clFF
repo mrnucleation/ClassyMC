@@ -1,0 +1,66 @@
+# NaCl Forcefield using Hybrid (Tosifumi + P3M)
+# Combines Tosifumi for short-range interactions
+# with P3M for long-range electrostatics
+#
+
+moleculetypes 2
+
+atomdef
+#  Element - Atomic Mass
+  "Na"  22.99
+  "Cl"  35.45
+end_atomdef
+
+# Na+ molecule (type 1)
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+# Cl- molecule (type 2)
+molecule 2
+  RegrowthType Simple
+  atoms
+    2
+  end_atoms
+end_molecule
+
+forcefieldtype
+  hybrid
+  tosifumi
+  p3m
+end_forcefieldtype
+
+
+# Forcefield 1: Hybrid combining Tosifumi and P3M
+forcefield 1
+  nfields 2
+  forcefields 2 3
+end_forcefield
+
+units energy ev
+# Forcefield 2: Tosifumi (short-range van der Waals)
+forcefield 2
+  rCut 10.0
+  tailcorrection .true.
+  rmin 1 1 1.5
+  rmin 1 2 1.5
+  rmin 2 2 1.5
+
+  pair   1 1    487.0 0.23768  1.05   0.50 #Na-Na
+  pair   1 2 145134.0 0.23768  6.99   8.70 #Na-Cl
+  pair   2 2 405774.0 0.23768  72.40 145.40 #Cl-Cl
+end_forcefield
+
+# Forcefield 3: P3M (long-range electrostatics)
+forcefield 3
+  rcut 10.0
+  alpha 0.25
+  mesh 42 42 42
+  order 5
+  precision 1.0E-5
+  1  1.0  1.2
+  2 -1.0  1.2
+end_forcefield

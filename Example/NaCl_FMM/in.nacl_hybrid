@@ -9,7 +9,7 @@
   set rng_seed -6
   set NeighSkin 3.0
   set moves 512
-  set cycles 100000
+  set cycles 10
   set screenfrequency 1000
   SamplingType Metropolis
   set pressureunits bar

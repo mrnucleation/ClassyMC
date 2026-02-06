@@ -8,6 +8,7 @@
 *.dylib
 *.framework
 *.txt
+*.dat
 *.xyz
 *.pyc
 *.dump
@@ -15,5 +16,7 @@ objects/*.o
 mods/*
 profiling/*
 **/Config_*.clssy
+**/*.dat
+**/*.dump
 **/classyMC
 **/classyMC_debug

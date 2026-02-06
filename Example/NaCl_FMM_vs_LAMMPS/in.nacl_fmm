@@ -1,0 +1,36 @@
+#======================================
+# NaCl FMM Coulomb Energy Test
+#
+# Computes initial Coulomb energy using FMM
+# for comparison with LAMMPS coul/long + PPPM
+#======================================
+  set rng_seed -6
+  set NeighSkin 3.0
+  set moves 1
+  set cycles 0
+  set screenfrequency 1
+  SamplingType Metropolis
+  set pressureunits bar
+  set energyunits ev
+
+  ForceField "NaCl_FMM_Coulomb.clFF"
+
+  Create Boxes
+   fromfile "NaCl_Config.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 300
+  modify box 1 buildfreq 100
+
+  NeighList 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 15.0
+
+  Create Moves
+    AtomTranslation 1.0
+  End_Create
+
+  modify move 1 maxdisplace 0.0
+
+  Run
+#=====================================

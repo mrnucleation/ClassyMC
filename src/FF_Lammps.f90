@@ -205,6 +205,8 @@ module FF_Ext_LAMMPS
     ! Storage for LAMMPS input script commands
     character(len=maxLineLen), allocatable :: setupCommands(:)
     integer :: nSetupCommands = 0
+    character(len=maxLineLen), allocatable :: postSetupCommands(:)
+    integer :: nPostSetupCommands = 0
     character(len=maxLineLen) :: inputScript = ""
     
     ! Atom type mapping (Classy type -> LAMMPS type)
@@ -265,6 +267,8 @@ contains
     ! Allocate setup commands array
     allocate(self%setupCommands(100), stat = AllocateStat)
     self%nSetupCommands = 0
+    allocate(self%postSetupCommands(100), stat = AllocateStat)
+    self%nPostSetupCommands = 0
     
   end subroutine
 !=============================================================================+
@@ -439,8 +443,13 @@ contains
       deallocate(atomTypesArr)
     endif
     
+    ! Execute post-creation commands (e.g., set type charges, fixes that require atoms)
+    do i = 1, self%nPostSetupCommands
+      write(nout, *) "  POST CMD: ", trim(self%postSetupCommands(i))
+      call lammps_command(self%lmp, trim(self%postSetupCommands(i)) // c_null_char)
+    enddo
+
     ! Setup compute for potential energy
-    ! call lammps_command(self%lmp, "compute pe_compute all etotal pe" // c_null_char)  ! Invalid: no such compute style 'etotal'; causing segfault in thermo init
     call lammps_command(self%lmp, "thermo_style custom step pe" // c_null_char)
     call lammps_command(self%lmp, "thermo 1" // c_null_char)
     
@@ -518,12 +527,11 @@ contains
     ! Run a single step to evaluate energy (run 0 just computes)
     call lammps_command(self%lmp, "run 0 pre no post no" // c_null_char)
     
-    ! Get potential energy from custom compute via thermo keyword
-
+    ! Get potential energy from LAMMPS via thermo keyword
+    ! Note: lammps_get_thermo("pe") always returns the TOTAL system PE
+    ! (not per-atom), regardless of thermo_modify norm setting.
     pe_value = lammps_get_thermo(self%lmp, "pe" // c_null_char)
-    n_atoms = lammps_get_natoms(self%lmp)
-    !write(6, *) "DEBUG GetEnergy: raw pe=", pe_value, " converted=", pe_value * self%energyConversion
-    E_Total = pe_value * self%energyConversion * n_atoms
+    E_Total = pe_value * self%energyConversion
     
   end function
 !=============================================================================+
@@ -887,6 +895,19 @@ contains
         self%setupCommands(self%nSetupCommands) = trim(restOfLine)
         write(nout, *) "Added LAMMPS command: ", trim(restOfLine)
         
+      case("lammps_postcmd")
+        ! Add a LAMMPS command to be executed AFTER atom creation
+        ! Use for commands that require atoms to exist (e.g., set type charge)
+        self%nPostSetupCommands = self%nPostSetupCommands + 1
+        type1 = index(line, "lammps_postcmd")
+        if (type1 > 0) then
+          restOfLine = adjustl(line(type1 + 14:))  ! 14 = len("lammps_postcmd")
+        else
+          restOfLine = ""
+        endif
+        self%postSetupCommands(self%nPostSetupCommands) = trim(restOfLine)
+        write(nout, *) "Added LAMMPS post-creation command: ", trim(restOfLine)
+        
       case("inputscript")
         ! Specify a LAMMPS input script file
         call GetXCommand(line, command, 2, lineStat)
@@ -993,6 +1014,7 @@ contains
     if (allocated(self%tempcoords)) deallocate(self%tempcoords)
     if (allocated(self%atomTypes)) deallocate(self%atomTypes)
     if (allocated(self%setupCommands)) deallocate(self%setupCommands)
+    if (allocated(self%postSetupCommands)) deallocate(self%postSetupCommands)
     if (allocated(self%typeMap)) deallocate(self%typeMap)
     
     write(nout, *) "LAMMPS Forcefield Epilogue Complete"

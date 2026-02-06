@@ -1,0 +1,46 @@
+# NaCl Forcefield - FMM Coulomb Only
+# Pure electrostatics using Fast Multipole Method
+# For energy comparison with LAMMPS coul/long + PPPM
+
+moleculetypes 2
+
+atomdef
+#  Element - Atomic Mass
+  "Na"  22.99
+  "Cl"  35.45
+end_atomdef
+
+# Na+ molecule (type 1)
+molecule 1
+  RegrowthType Simple
+  atoms
+    1
+  end_atoms
+end_molecule
+
+# Cl- molecule (type 2)
+molecule 2
+  RegrowthType Simple
+  atoms
+    2
+  end_atoms
+end_molecule
+
+forcefieldtype
+  fmm
+end_forcefieldtype
+
+units energy kb
+
+# FMM Coulomb parameters
+forcefield 1
+  order 6
+  maxlevel 4
+  ncrit 10
+  rcut 10.0
+  periodic true
+  charge 1  1.0
+  charge 2 -1.0
+  rmin 1 1.2
+  rmin 2 1.2
+end_forcefield

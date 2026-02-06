@@ -1,31 +1,54 @@
 #======================================
-# NaCl Monte Carlo with P3M Electrostatics
+# NaCl Monte Carlo with Hybrid Forcefield (Tosifumi + P3M)
+#
+# This example demonstrates the Hybrid forcefield combining:
+#   - Tosifumi for short-range van der Waals interactions
+#   - P3M for long-range electrostatics
+#
 #======================================
   set rng_seed -6
-  set NeighSkin 4.0
-  set moves 10
-  set cycles 1000
-  set energyunits kcal-mol
+  set NeighSkin 3.0
+  set moves 512
+  set cycles 10
+  set screenfrequency 1000
   SamplingType Metropolis
+  set pressureunits bar
+  set energyunits ev
 
-  ForceField "NaCl_P3M.clFF"
+  ForceField "NaCl_Hybrid.clFF"
 
   Create Boxes
-    fromfile "NaCl_Config.clssy"
+   fromfile "NaCl_Config.clssy"
   End_Create
 
+  # Use the hybrid forcefield (forcefield 1) for energy calculations
   modify box 1 energycalc 1
   modify box 1 temperature 300
   modify box 1 buildfreq 100
+  modify box 1 pressure 1.0
 
   NeighList 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 15.0
 
   Create Moves
-    AtomTranslation 1000.0
+    AtomTranslation 512.0
+    IsoVol 1.0
   End_Create
 
   modify move 1 maxdisplace 0.1
+  modify move 1 tunemax .true.
+  modify move 2 maxdv 0.01
+  modify move 2 style log
+  modify move 2 tunemax .true.
+
+  #BlockAverage (BoxNum) (BlockAvg Variable) (Avg Frequency) (Block Size) (FileName)
+  Create Analysis
+     BlockAverage 1 density 1 100 'density&.dat'
+  End_Create
+
+  Create Trajectory
+     dump 1 100 "Traj&.dump" 
+  End_Create
 
   Run
 #=====================================
-

@@ -38,15 +38,24 @@ module FF_EasyPair_Cut
   contains
   !=============================================================================+
   subroutine Constructor_EasyPair_Cut(self)
+    use Common_MolInfo, only: nAtomTypes
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
     integer :: AllocateStat
 
+    if (.not. allocated(self%rMin)) then
+      allocate(self%rMin(1:nAtomTypes), stat=AllocateStat)
+      IF (AllocateStat /= 0) error STOP "Allocation in the EasyPair_Cut Pair Style"
+    endif
+    if (.not. allocated(self%rMinTable)) then
+      allocate(self%rMinTable(1:nAtomTypes, 1:nAtomTypes), stat=AllocateStat)
+      IF (AllocateStat /= 0) error STOP "Allocation in the EasyPair_Cut Pair Style"
+    endif
+
+    self%rMin = 0.5E0_dp
     self%rMinTable = 0.5E0_dp
     self%rCut = 5E0_dp
     self%rCutSq = 5E0_dp**2
-
-    IF (AllocateStat /= 0) error STOP "Allocation in the EasyPair_Cut Pair Style"
 
   end subroutine
   !======================================================================+
