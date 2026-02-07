@@ -14,6 +14,7 @@ module Input_Moves
   use MCMove_MolTranslation, only: MolTranslate
   use MCMove_ParticleExchange, only: ParticleExchange
   use MCMove_PlaneRotation, only: PlaneRotate
+  use MCMove_3DRotation, only: Rotate3D
   use MCMove_PlaneTranslation, only: PlaneTranslate
   use MCMove_PlaneAtomTranslation, only: PlaneAtomTranslate
   use MCMove_IsoVol, only: IsoVol
@@ -80,6 +81,9 @@ module Input_Moves
 
       case("planerotate")
         allocate(PlaneRotate::Moves(moveNum)%move)
+
+      case("rotate3d")
+        allocate(Rotate3D::Moves(moveNum)%move)
 
       case("planeatomtranslation")
         allocate(PlaneAtomTranslate::Moves(moveNum)%move)

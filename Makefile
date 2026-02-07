@@ -68,6 +68,7 @@ LIB := $(CUR_DIR)/lib
 MOD := $(CUR_DIR)/mods
 OBJ := $(CUR_DIR)/objects
 PYTHON_DIR := $(CUR_DIR)/python
+TEST_DIR := $(CUR_DIR)/tests
 
 # Define file extensions
 .SUFFIXES:
@@ -117,6 +118,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_MolTranslation.f90\
         		$(SRC)/Move_MC_IsoVol.f90\
         		$(SRC)/Move_MC_PlaneRotate.f90\
+        		$(SRC)/Move_MC_3DRotate.f90\
         		$(SRC)/Move_MC_PlaneTranslate.f90\
         		$(SRC)/Move_MC_PlaneAtomTranslate.f90\
         		$(SRC)/Move_MC_UBSwap.f90\
@@ -365,6 +367,19 @@ lammps: COMPFLAGS := $(BASE_COMPFLAGS) $(PACKAGE_FLAGS) -DLAMMPS
 lammps: LDFLAGS += -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
 lammps: startUP classyMC modout finale
 
+# Test targets
+test: startUP test_delta_energy modout finale
+	@echo "Running energy delta test..."
+	@cd $(TEST_DIR)/delta_energy && $(CUR_DIR)/test_delta_energy
+	@echo ""
+	@echo "All tests passed!"
+
+test_delta_energy: $(OBJ_COMPLETE) $(TEST_DIR)/Test_EnergyDelta.f90 $(OBJ_LIBRARY)
+	@echo "============================================="
+	@echo "    Linking Test: Energy Delta"
+	@echo "============================================="
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) $^ -o $(CUR_DIR)/test_delta_energy $(LDFLAGS)
+
 # Clean targets
 clean: removeObjects removeExec finale
 
@@ -518,6 +533,7 @@ removeExec:
 	@rm -f $(CUR_DIR)/classyMCLAMMPS
 	@rm -f $(CUR_DIR)/classyMC_debug
 	@rm -f $(CUR_DIR)/classyMC.exe
+	@rm -f $(CUR_DIR)/test_delta_energy
 
 # ====================================
 #        Dependencies
@@ -623,4 +639,4 @@ $(OBJ)/Traj_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_Cubi
 $(OBJ)/Constrain_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Python_CommonTypes.o
 endif
 
-.PHONY: default lib debug gfortran aenet lammps clean help startUP modout finale removeObjects removeExec
+.PHONY: default lib debug gfortran aenet lammps clean help startUP modout finale removeObjects removeExec test test_delta_energy

@@ -1,8 +1,12 @@
+# TIP3P Water Model with FMM Electrostatics
+# Uses two forcefields: LJ for dispersion, FMM for electrostatics
+#
+
 moleculetypes 1
 
 atomdef
 #  Element - Atomic Mass
-  "O"  16.00
+  "O"  15.9994
   "H"  1.008
 end_atomdef
 
@@ -15,8 +19,6 @@ units angle deg
 AngleDef
   ridgid 104.52
 End_AngleDef
-
-
 
 molecule 1
   RegrowthType Simple
@@ -37,16 +39,42 @@ molecule 1
   end_angles
 end_molecule
 
+# Two forcefields: LJ for dispersion, FMM for electrostatics
 forcefieldtype
-  LJ_Q_Cut
+ hybrid
+  ep_lj_cut
+  fmm
 end_forcefieldtype
 
 units energy kb
-# type epsilon sigma q rmin
+
+# Forcefield 3: Hybrid combining LJ and FMM
 forcefield 1
-  LJRCut 4.5
-  QRCut 4.5
-  1  76.62634    3.15066       -0.834   1.0
-  2  0.0         0.0            0.417   0.6
+  nfields 2
+  forcefields 2 3
 end_forcefield
 
+
+
+# Forcefield 1: LJ interactions (on oxygen only)
+# type epsilon(kb) sigma(Å) rmin(Å)
+forcefield 2
+  rcut 5.0
+  tailcorrection .true.
+  1  51.33  3.188  0.8
+  2  0.0       0.0      0.5
+end_forcefield
+
+# Forcefield 2: FMM electrostatics
+# type charge(e) rmin(Å)
+forcefield 3
+  order 6
+  maxlevel 4
+  ncrit 10
+  rcut 5.0
+  periodic true
+  charge 1  -0.830
+  charge 2   0.415
+  rmin 1 0.0
+  rmin 2 0.0
+end_forcefield

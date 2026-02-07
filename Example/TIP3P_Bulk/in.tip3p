@@ -2,9 +2,12 @@
   set rng_seed -6
 #  set rng_seed 4272
   set NeighSkin 2.0
-  set moves 500
-  set cycles 1000000
-  SamplingType Metropolis
+  set moves 53
+  set cycles 500
+  set screenfrequency 100
+#  set energycheck 1
+  SamplingType AcceptAll
+#  SamplingType Metropolis
 #  SamplingType UmbrellaWHAM
 #  SamplingType Umbrella
 #  modify Sampling biasvariables 1
@@ -19,22 +22,36 @@
     fromfile "TIPStart.clssy"
   End_Create
 
-  modify box 1 energycalc 1
-  modify box 1 temperature 300
-  modify box 1 buildfreq 1000
+  set pressureunits bar
 
-#  modify box 1 chempotential 1 -9.210340372
+  modify box 1 energycalc 1
+  modify box 1 temperature 500
+  modify box 1 pressure 1.0
+  modify box 1 buildfreq 10
+
   modify box 1 chempotential 1 -2.420680744
-  NeighList 1 rsqlist 1
+  NeighList 1 cellrsqlist 1
 
   Create Moves
-    MolTranslation 1000.0
-    PlaneRotate 1000.0
-#    UBSwap 1.0
+    MolTranslation 53.0
+    PlaneRotate 53.0
+    Rotate3D 53.0
+    IsoVol 1.0
   End_Create
 
-  modify move 1 maxdisplace 0.01
+  modify move 1 maxdisplace 0.1
+  modify move 1 dynamiclimit 1.0
+  modify move 1 tunemax .true.
+  modify move 1 dynamictarget 0.4
+
+
   modify move 2 maxangle 3.14
+  modify move 2 dynamiclimit 3.14
+  modify move 2 tunemax .true.
+
+  modify move 4 maxdv 0.01
+  modify move 4 style log
+  modify move 4 tunemax .true.
 
 #  Create constraint 1
 #    distancecriteria 1 4.0 1
