@@ -48,6 +48,7 @@ use Template_NeighList, only: NeighListDef
       procedure, pass :: GetBins => CellList_GetBins
       procedure, pass :: GetCellAtoms => CellList_GetCellAtoms
       procedure, pass :: GetNeighborCells => CellList_GetNeighborCells
+      procedure, pass :: UpdateCellDimensions => CellList_UpdateCellDimensions
       procedure, pass :: InsertAtom => CellList_InsertAtom
       procedure, pass :: RemoveAtom => CellList_RemoveAtom
       procedure, pass :: MoveAtom => CellList_MoveAtom
@@ -159,6 +160,45 @@ use Template_NeighList, only: NeighListDef
   subroutine CellList_Update(self)
     implicit none
     class(CellList), intent(inout) :: self
+  end subroutine
+!===================================================================================
+  subroutine CellList_UpdateCellDimensions(self)
+    ! Update cell dimensions based on current box size without rebuilding atom assignments
+    ! This is called when we need current cell geometry for queries (like GetNewList)
+    ! but don't want the overhead of a full rebuild
+    implicit none
+    class(CellList), intent(inout) :: self
+    real(dp) :: boxdim(1:2, 1:3)
+    real(dp) :: Lx, Ly, Lz
+    
+    ! Get current box dimensions
+    call self%parent%GetDimensions(boxdim)
+    
+    ! Store origin (lower corner of box)
+    self%originX = boxdim(1,1)
+    self%originY = boxdim(1,2)
+    self%originZ = boxdim(1,3)
+    
+    Lx = boxdim(2,1) - boxdim(1,1)
+    Ly = boxdim(2,2) - boxdim(1,2)
+    Lz = boxdim(2,3) - boxdim(1,3)
+    
+    ! Calculate number of cells in each direction
+    self%nx = max(1, floor(Lx/self%cellSize))
+    self%ny = max(1, floor(Ly/self%cellSize))
+    self%nz = max(1, floor(Lz/self%cellSize))
+    
+    ! Calculate actual cell sizes
+    self%dx = Lx/real(self%nx, dp)
+    self%dy = Ly/real(self%ny, dp)
+    self%dz = Lz/real(self%nz, dp)
+    
+    ! Calculate cell index coefficients
+    self%coeffX = 1
+    self%coeffY = 1 + self%coeffX * (self%nx - 1)
+    self%coeffZ = 1 + self%coeffX * (self%nx - 1)
+    self%coeffZ = self%coeffZ + self%coeffY * (self%ny - 1)
+    
   end subroutine
 !===================================================================================
   function CellList_GetCellIndex(self, binx, biny, binz) result(cellIndx)
@@ -399,6 +439,9 @@ use Template_NeighList, only: NeighListDef
     integer :: ub, lb
     real(dp) :: xn, yn, zn
     real(dp) :: rx, ry, rz, rsq
+    real(dp) :: boxdim(1:2, 1:3)
+    real(dp) :: Lx, Ly, Lz
+    real(dp) :: expected_Lx, expected_Ly, expected_Lz, dimension_change
     real(dp), pointer :: coords(:,:)
 
     if(present(nCount)) then
@@ -425,8 +468,26 @@ use Template_NeighList, only: NeighListDef
         error stop "CellList_GetNewList: Unsupported displacement type"
     end select
 
-    ! Make sure cell list is up to date
-    call self%BuildList(1)
+    ! Check if cell dimensions need updating (e.g., after volume moves)
+    ! Compare current box dimensions to stored cell structure dimensions
+    call self%parent%GetDimensions(boxdim)
+    Lx = boxdim(2,1) - boxdim(1,1)
+    Ly = boxdim(2,2) - boxdim(1,2)
+    Lz = boxdim(2,3) - boxdim(1,3)
+    
+    ! If box size has changed by more than a small threshold, update cell dimensions
+    ! This is needed for correct cell index calculations after volume moves
+    if (self%initialized) then
+      expected_Lx = self%dx * self%nx
+      expected_Ly = self%dy * self%ny
+      expected_Lz = self%dz * self%nz
+      dimension_change = max(abs(Lx - expected_Lx)/expected_Lx, &
+                             abs(Ly - expected_Ly)/expected_Ly, &
+                             abs(Lz - expected_Lz)/expected_Lz)
+      if (dimension_change > 0.01E0_dp) then  ! 1% change threshold
+        call self%UpdateCellDimensions()
+      endif
+    endif
 
     ! Get coordinates
     call self%parent%GetCoordinates(coords)

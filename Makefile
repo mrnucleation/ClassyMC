@@ -21,11 +21,15 @@ PYTHON ?= 0
 AENET ?= 0
 LAMMPS ?= 0
 DEBUG ?= 0
+PROFILE ?= 0
 COMPILER ?= mpif90
 
 # External library paths (override on command line if needed)
-LAMMPS_LIB_PATH ?= /usr/local/lib
+LAMMPS_LIB_PATH ?=
 AENET_LIB_PATH ?= $(LIB)
+
+# Common library search paths (used for auto-detection)
+LAMMPS_LIB_SEARCH_PATHS ?= /usr/local/lib /usr/lib /usr/lib64 /usr/local/lib64 /opt/lammps/lib /opt/local/lib
 
 # ====================================
 #        Compiler Options
@@ -50,6 +54,9 @@ OPTIMIZE_FLAGS_GFORT += -fbacktrace -fcheck=bounds -ffree-line-length-512
 OPTIMIZE_FLAGS_GFORT += -finit-real=zero -finit-integer=0
 
 DEBUG_FLAGS_GFORT := -cpp -fbacktrace -fcheck=all -g -ffree-line-length-512 -ffpe-trap=overflow,invalid,zero -Waliasing -Wsurprising
+
+PROFILE_FLAGS_GFORT := -O3 -cpp -g -pg -fbacktrace -ffree-line-length-512
+PROFILE_FLAGS_IFORT := -O3 -g -pg -xHost -no-prec-div -no-wrap-margin -fpp -traceback
 
 # Library build flags
 LIBRARY_FLAGS := -shared -fpic
@@ -140,6 +147,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Box_Presets.f90\
         		$(SRC)/Box_CubicBox.f90\
         		$(SRC)/Box_OrthoBox.f90\
+        		$(SRC)/Box_APeriodicOrtho.f90\
         		$(SRC)/FF_AENet.f90\
         		$(SRC)/FF_EasyPair_Cut.f90\
         		$(SRC)/FF_Lammps.f90\
@@ -273,6 +281,8 @@ OBJ_COMPLETE := $(OBJ_TEMPLATE) $(OBJ_MAIN) $(OBJ_PYTHON_ALWAYS)
 ifeq ($(COMPILER),gfortran)
   ifeq ($(DEBUG),1)
     BASE_COMPFLAGS := $(DEBUG_FLAGS_GFORT)
+  else ifeq ($(PROFILE),1)
+    BASE_COMPFLAGS := $(PROFILE_FLAGS_GFORT)
   else
     BASE_COMPFLAGS := $(OPTIMIZE_FLAGS_GFORT)
   endif
@@ -280,6 +290,8 @@ else
   # Default to Intel
   ifeq ($(DEBUG),1)
     BASE_COMPFLAGS := $(DEBUG_FLAGS_IFORT)
+  else ifeq ($(PROFILE),1)
+    BASE_COMPFLAGS := $(PROFILE_FLAGS_IFORT)
   else
     BASE_COMPFLAGS := $(OPTIMIZE_FLAGS_IFORT)
   endif
@@ -329,7 +341,17 @@ endif
 # LAMMPS package configuration
 ifeq ($(LAMMPS),1)
   PACKAGE_FLAGS += -DLAMMPS
-  LDFLAGS += -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
+  LAMMPS_LIB_FILE := $(firstword $(foreach p,$(LAMMPS_LIB_SEARCH_PATHS),$(wildcard $(p)/liblammps*.so) $(wildcard $(p)/liblammps*.a)))
+  ifeq ($(LAMMPS_LIB_PATH),)
+    ifneq ($(LAMMPS_LIB_FILE),)
+      LAMMPS_LIB_PATH := $(dir $(LAMMPS_LIB_FILE))
+    endif
+  endif
+  ifneq ($(LAMMPS_LIB_PATH),)
+    LDFLAGS += -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
+  else
+    LDFLAGS += -llammps -lstdc++
+  endif
 endif
 
 # Build final COMPFLAGS with all package flags and Python includes
@@ -350,6 +372,12 @@ lib: startUP libclassymc.so modout finale
 debug: DEBUG=1
 debug: COMPFLAGS := $(DEBUG_FLAGS_IFORT) $(PACKAGE_FLAGS)
 debug: startUP classyMC modout finale
+
+# Profile target (can also use PROFILE=1)
+profile: PROFILE=1
+profile: COMPFLAGS := $(PROFILE_FLAGS_IFORT) $(PACKAGE_FLAGS)
+profile: LDFLAGS += -pg
+profile: startUP classyMC modout finale
 
 # GFortran target (can also use COMPILER=gfortran)
 gfortran: COMPILER=gfortran
@@ -395,6 +423,7 @@ help:
 	@echo "  default     Build ClassyMC executable (default)"
 	@echo "  lib         Build shared library (libclassymc.so)"
 	@echo "  debug       Build with debug flags"
+	@echo "  profile     Build with profiling flags (-pg for gprof)"
 	@echo "  gfortran    Build with GFortran compiler"
 	@echo "  clean       Remove all build artifacts"
 	@echo "  help        Show this help message"
@@ -407,10 +436,11 @@ help:
 	@echo "              Requires LAPACK/BLAS libraries"
 	@echo ""
 	@echo "  LAMMPS=1    Enable LAMMPS as a force field backend"
-	@echo "              Set LAMMPS_LIB_PATH if not in /usr/local/lib"
+	@echo "              Auto-detects lib path; override with LAMMPS_LIB_PATH"
 	@echo ""
 	@echo "Build Options:"
 	@echo "  DEBUG=1          Enable debug mode with detailed checks"
+	@echo "  PROFILE=1        Enable profiling with gprof (-pg flag)"
 	@echo "  COMPILER=ifort   Use Intel Fortran (default)"
 	@echo "  COMPILER=gfortran Use GNU Fortran"
 	@echo ""
@@ -423,6 +453,7 @@ help:
 	@echo "  make PYTHON=1                  # Build with Python support"
 	@echo "  make PYTHON=1 AENET=1          # Python + AENet"
 	@echo "  make DEBUG=1 PYTHON=1          # Debug build with Python"
+	@echo "  make PROFILE=1                 # Profiling build (use with gprof)"
 	@echo "  make COMPILER=gfortran PYTHON=1  # GFortran with Python"
 	@echo "  make lib PYTHON=1              # Shared library with Python"
 	@echo "  make LAMMPS=1 LAMMPS_LIB_PATH=/opt/lammps/lib"
@@ -502,7 +533,7 @@ ifeq ($(AENET),1)
 	@echo "  AENet:     ENABLED"
 endif
 ifeq ($(LAMMPS),1)
-	@echo "  LAMMPS:    ENABLED ($(LAMMPS_LIB_PATH))"
+	@echo "  LAMMPS:    ENABLED ($(if $(LAMMPS_LIB_PATH),$(LAMMPS_LIB_PATH),system default))"
 endif
 	@echo "=================================================================="
 	@mv $(MOD)/*.mod $(CUR_DIR)/ 2>/dev/null || true
@@ -564,6 +595,7 @@ $(OBJ)/Analysis_ThermoIntegration.o: $(OBJ)/FF_ThermoInt.o
 $(OBJ)/Box_SimpleBox.o: $(OBJ)/Common.o $(OBJ)/Template_NeighList.o $(OBJ)/Input_Format.o $(OBJ)/Common_ECalc.o $(OBJ)/Template_SimBox.o $(OBJ)/Template_Constraint.o $(OBJ)/Units.o $(OBJ)/Common_NeighList.o $(OBJ)/ErrorChecking.o
 $(OBJ)/Box_CubicBox.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_OrthoBox.o: $(OBJ)/Box_SimpleBox.o
+$(OBJ)/Box_APeriodicOrtho.o: $(OBJ)/Box_OrthoBox.o
 $(OBJ)/Box_Ultility.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Presets.o: $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 
@@ -584,7 +616,8 @@ $(OBJ)/Data_Queue.o: $(OBJ)/VariablePrecision.o
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o $(OBJ)/Script_NeighType.o $(OBJ)/Script_TrajType.o $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 
 $(OBJ)/Script_Forcefield.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/Move_MC_AtomTranslation.o ${OBJ}/Units.o $(OBJ)/Script_FieldType.o $(OBJ)/Script_BondType.o $(OBJ)/Script_AngleType.o $(OBJ)/Script_RegrowType.o 
-$(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o
+$(OBJ)/Script_SimBoxes.o: $(OBJ)/Box_APeriodicOrtho.o
+$(OBJ)/Script_LoadCoords.o: ${OBJ}/Script_SimBoxes.o $(OBJ)/Box_APeriodicOrtho.o
 $(OBJ)/Script_FieldType.o: ${OBJ}/Input_Format.o ${OBJ}/Template_Forcefield.o ${OBJ}/FF_LJ_Cut.o ${OBJ}/Move_MC_AtomTranslation.o $(OBJ)/Common_ECalc.o ${OBJ}/FF_Lammps.o
 $(OBJ)/Script_TrajType.o: ${OBJ}/Common_TrajData.o ${OBJ}/Template_Trajectory.o ${OBJ}/Traj_XSF.o ${OBJ}/Traj_XYZFormat.o $(OBJ)/Traj_LAMMPSDump.o $(OBJ)/Traj_POSCAR.o $(OBJ)/Traj_Python.o
 $(OBJ)/Script_NeighType.o: ${OBJ}/Neigh_RSqList.o $(OBJ)/Neigh_CellRSqList.o $(OBJ)/Neigh_CellList.o $(OBJ)/Common_BoxData.o
@@ -639,4 +672,4 @@ $(OBJ)/Traj_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_Cubi
 $(OBJ)/Constrain_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Python_CommonTypes.o
 endif
 
-.PHONY: default lib debug gfortran aenet lammps clean help startUP modout finale removeObjects removeExec test test_delta_energy
+.PHONY: default lib debug profile gfortran aenet lammps clean help startUP modout finale removeObjects removeExec test test_delta_energy

@@ -27,6 +27,10 @@ module ClassyPyObj
     type(ndarray) :: np_atoms, np_boxdim, np_chempot
     type(ndarray) :: np_nmol, np_ETable, np_atomtype
     type(ndarray) :: np_moltype, np_molsubindx, np_molindx
+    type(ndarray) :: np_nlist, np_nneigh
+    type(list) :: neighlists_py
+    type(dict) :: neighdict
+    integer :: iList
 
     character(len=30) :: dictkey, tempstr
     real(dp), allocatable :: boxDim(:,:)
@@ -95,6 +99,30 @@ module ClassyPyObj
     errcheck
     ierror = boxdict%setitem("molindx", np_molindx)
 
+    ! Add neighbor list arrays if available
+    if(allocated(BoxArray(boxnum)%box%NeighList)) then
+      ierror = list_create(neighlists_py)
+      errcheck
+      do iList = 1, size(BoxArray(boxnum)%box%NeighList)
+        if(allocated(BoxArray(boxnum)%box%NeighList(iList)%list)) then
+          ierror = dict_create(neighdict)
+          errcheck
+          ierror = ndarray_create(np_nlist, BoxArray(boxnum)%box%NeighList(iList)%list)
+          errcheck
+          ierror = neighdict%setitem("list", np_nlist)
+          errcheck
+          ierror = ndarray_create(np_nneigh, BoxArray(boxnum)%box%NeighList(iList)%nNeigh)
+          errcheck
+          ierror = neighdict%setitem("nneigh", np_nneigh)
+          errcheck
+          ierror = neighlists_py%append(neighdict)
+          errcheck
+        endif
+      enddo
+      ierror = boxdict%setitem("neighlists", neighlists_py)
+      errcheck
+    endif
+
   end function
 !=========================================================================
   function createboxdict_nocopy(boxnum) result(boxdict)
@@ -109,6 +137,10 @@ module ClassyPyObj
     type(ndarray) :: np_atoms, np_boxdim, np_chempot
     type(ndarray) :: np_nmol, np_ETable, np_atomtype
     type(ndarray) :: np_moltype, np_molsubindx, np_molindx
+    type(ndarray) :: np_nlist, np_nneigh
+    type(list) :: neighlists_py
+    type(dict) :: neighdict
+    integer :: iList
 
     character(len=30) :: dictkey, tempstr
     real(dp), asynchronous, allocatable :: boxDim(:,:)
@@ -173,6 +205,30 @@ module ClassyPyObj
     ierror = ndarray_create_nocopy(np_molindx, BoxArray(boxnum)%box%MolIndx)
     errcheck
     ierror = boxdict%setitem("molindx", np_molindx)
+
+    ! Add neighbor list arrays if available
+    if(allocated(BoxArray(boxnum)%box%NeighList)) then
+      ierror = list_create(neighlists_py)
+      errcheck
+      do iList = 1, size(BoxArray(boxnum)%box%NeighList)
+        if(allocated(BoxArray(boxnum)%box%NeighList(iList)%list)) then
+          ierror = dict_create(neighdict)
+          errcheck
+          ierror = ndarray_create_nocopy(np_nlist, BoxArray(boxnum)%box%NeighList(iList)%list)
+          errcheck
+          ierror = neighdict%setitem("list", np_nlist)
+          errcheck
+          ierror = ndarray_create_nocopy(np_nneigh, BoxArray(boxnum)%box%NeighList(iList)%nNeigh)
+          errcheck
+          ierror = neighdict%setitem("nneigh", np_nneigh)
+          errcheck
+          ierror = neighlists_py%append(neighdict)
+          errcheck
+        endif
+      enddo
+      ierror = boxdict%setitem("neighlists", neighlists_py)
+      errcheck
+    endif
 
   end function
 

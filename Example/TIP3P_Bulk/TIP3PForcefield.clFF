@@ -61,7 +61,7 @@ end_forcefield
 forcefield 2
   rcut 5.0
   tailcorrection .true.
-  1  51.33  3.188  0.8
+  1  76.525  3.15066  0.8
   2  0.0       0.0      0.5
 end_forcefield
 
@@ -69,12 +69,12 @@ end_forcefield
 # type charge(e) rmin(Å)
 forcefield 3
   order 6
-  maxlevel 4
+  maxlevel 5
   ncrit 10
   rcut 5.0
   periodic true
-  charge 1  -0.830
-  charge 2   0.415
+  charge 1  -0.834
+  charge 2   0.417
   rmin 1 0.0
   rmin 2 0.0
 end_forcefield

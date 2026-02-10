@@ -30,6 +30,11 @@
 !              - 'moltype': numpy array - molecule type per atom
 !              - 'molsubindx': numpy array - molecule sub-index per atom
 !              - 'energytable': numpy array - per-atom energies
+!              - 'neighlists': list of dicts (one per neighbor list), each containing:
+!                  - 'list': numpy array (maxNei x nMaxAtoms) - neighbor indices per atom
+!                  - 'nneigh': numpy array (nMaxAtoms) - number of neighbors per atom
+!                  Note: For atom i, valid neighbors are list[0:nneigh[i], i]
+!                        (Fortran column-major order, so atom index is the 2nd axis)
 !      
 !      Returns:
 !          dict: Dictionary containing:

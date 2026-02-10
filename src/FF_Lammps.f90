@@ -242,6 +242,16 @@ contains
 
 #ifdef LAMMPS
 !=============================================================================+
+  subroutine LammpsCommandSafe(ptr, cmd)
+    implicit none
+    type(c_ptr), value :: ptr
+    character(len=*), intent(in) :: cmd
+
+    if (len_trim(cmd) == 0) return
+    
+    call lammps_command(ptr, trim(cmd) // c_null_char)
+  end subroutine LammpsCommandSafe
+!=============================================================================+
   subroutine Constructor_LAMMPS(self)
     use Common_MolInfo, only: nAtomTypes
     use ParallelVar, only: nout
@@ -283,7 +293,7 @@ contains
     character(len=512) :: cmd
     real(dp) :: tempdim(3,3)
     real(dp), pointer :: atoms(:,:) => null()
-    logical :: hasUnits, hasAtomStyle
+    logical :: hasUnits, hasAtomStyle, hasPairStyle
     
     ! For suppressing LAMMPS output
     integer, parameter :: nargs = 5
@@ -348,33 +358,34 @@ contains
     ! These MUST come before region/box definition in LAMMPS
     hasUnits = .false.
     hasAtomStyle = .false.
+    hasPairStyle = .false.
     
     ! Check if user specified units or atom_style, and execute them first
     do i = 1, self%nSetupCommands
       if (index(self%setupCommands(i), "units ") == 1) then
-        call lammps_command(self%lmp, trim(self%setupCommands(i)) // c_null_char)
+        call LammpsCommandSafe(self%lmp, trim(self%setupCommands(i)))
         hasUnits = .true.
       else if (index(self%setupCommands(i), "atom_style ") == 1) then
-        call lammps_command(self%lmp, trim(self%setupCommands(i)) // c_null_char)
+        call LammpsCommandSafe(self%lmp, trim(self%setupCommands(i)))
         hasAtomStyle = .true.
       endif
     enddo
     
     ! Apply defaults only if user didn't specify
     if (.not. hasUnits) then
-    call lammps_command(self%lmp, "units real" // c_null_char)
+    call LammpsCommandSafe(self%lmp, "units real")
     endif
     if (.not. hasAtomStyle) then
-    call lammps_command(self%lmp, "atom_style atomic" // c_null_char)
+    call LammpsCommandSafe(self%lmp, "atom_style atomic")
     endif
-    call lammps_command(self%lmp, "atom_modify map array sort 0 0.0" // c_null_char)
+    call LammpsCommandSafe(self%lmp, "atom_modify map array sort 0 0.0")
     
     ! Create simulation box region
     write(cmd, '(A,6(F12.4,1X))') "region box block ", &
         self%boxlo(1), self%boxhi(1), &
         self%boxlo(2), self%boxhi(2), &
         self%boxlo(3), self%boxhi(3)
-    call lammps_command(self%lmp, trim(cmd) // c_null_char)
+    call LammpsCommandSafe(self%lmp, trim(cmd))
     
     ! Execute remaining user-defined setup commands (create_box, mass, pair_style, pair_coeff)
     !write(nout, *) "DEBUG: Executing user LAMMPS commands:"
@@ -382,9 +393,16 @@ contains
       ! Skip units and atom_style commands (already executed above)
       if (index(self%setupCommands(i), "units ") == 1) cycle
       if (index(self%setupCommands(i), "atom_style ") == 1) cycle
+      if (index(self%setupCommands(i), "pair_style ") == 1) hasPairStyle = .true.
       write(nout, *) "  CMD: ", trim(self%setupCommands(i))
-      call lammps_command(self%lmp, trim(self%setupCommands(i)) // c_null_char)
+      call LammpsCommandSafe(self%lmp, trim(self%setupCommands(i)))
     enddo
+
+    if (.not. hasPairStyle) then
+      write(0, *) "ERROR! No LAMMPS pair_style was provided."
+      write(0, *) "Add a 'lammps_cmd pair_style ...' line in the forcefield file."
+      error stop
+    endif
     
     ! Now create atoms in LAMMPS based on ClassyMC simulation box
     ! This must be done AFTER create_box but BEFORE run/scatter_atoms
@@ -446,12 +464,16 @@ contains
     ! Execute post-creation commands (e.g., set type charges, fixes that require atoms)
     do i = 1, self%nPostSetupCommands
       write(nout, *) "  POST CMD: ", trim(self%postSetupCommands(i))
-      call lammps_command(self%lmp, trim(self%postSetupCommands(i)) // c_null_char)
+      call LammpsCommandSafe(self%lmp, trim(self%postSetupCommands(i)))
     enddo
 
+    ! Setup neighbor list (required before first run)
+    call LammpsCommandSafe(self%lmp, "neighbor 2.0 bin")
+    call LammpsCommandSafe(self%lmp, "neigh_modify delay 0 every 1 check yes")
+
     ! Setup compute for potential energy
-    call lammps_command(self%lmp, "thermo_style custom step pe" // c_null_char)
-    call lammps_command(self%lmp, "thermo 1" // c_null_char)
+    call LammpsCommandSafe(self%lmp, "thermo_style custom step pe")
+    call LammpsCommandSafe(self%lmp, "thermo 1")
     
     ! DEBUG: Dump atom positions to verify they were created correctly
     !call lammps_command(self%lmp, "dump debug_dump all custom 1 lammps_debug.dump id type x y z" // c_null_char)
@@ -525,7 +547,7 @@ contains
     real(c_double) :: pe_value
     
     ! Run a single step to evaluate energy (run 0 just computes)
-    call lammps_command(self%lmp, "run 0 pre no post no" // c_null_char)
+    call LammpsCommandSafe(self%lmp, "run 0 pre no post no")
     
     ! Get potential energy from LAMMPS via thermo keyword
     ! Note: lammps_get_thermo("pe") always returns the TOTAL system PE
@@ -633,7 +655,7 @@ contains
     ! Ensure LAMMPS is synchronized with curbox accepted state before computing trial
     ! (Previous rejected moves might have left LAMMPS in a trial state)
     call self%UpdatePositions(curbox)
-    call lammps_command(self%lmp, "run 0" // c_null_char)
+    call LammpsCommandSafe(self%lmp, "run 0")
     
     call curbox%GetCoordinates(atoms)
     call curbox%Neighlist(1)%GetListArray(neighlist, nNeigh)
@@ -695,7 +717,7 @@ contains
         call lammps_scatter_atoms(self%lmp, "x" // c_null_char, 1_c_int, 3_c_int, self%tempcoords)
         
         ! Force neighbor list rebuild and energy computation
-        call lammps_command(self%lmp, "run 0" // c_null_char)
+        call LammpsCommandSafe(self%lmp, "run 0")
         
         E_New = self%GetEnergy()
         E_Diff = E_New - E_Old
@@ -704,7 +726,7 @@ contains
         ! Revert LAMMPS positions to old state
         self%tempcoords = disp_old_coords
         call lammps_scatter_atoms(self%lmp, "x" // c_null_char, 1_c_int, 3_c_int, self%tempcoords)
-        call lammps_command(self%lmp, "run 0" // c_null_char)
+        call LammpsCommandSafe(self%lmp, "run 0")
         deallocate(disp_old_coords)
         
       class is(Addition)
@@ -719,14 +741,14 @@ contains
         
         ! Apply trial (UpdatePositions includes the added particle from curbox)
         call self%UpdatePositions(curbox)
-        call lammps_command(self%lmp, "run 0" // c_null_char)
+        call LammpsCommandSafe(self%lmp, "run 0")
         E_New = self%GetEnergy()
         E_Diff = E_New - E_Old
         
         ! Revert LAMMPS to old state (without the added particle)
         self%tempcoords = disp_old_coords
         call lammps_scatter_atoms(self%lmp, "x" // c_null_char, 1_c_int, 3_c_int, self%tempcoords)
-        call lammps_command(self%lmp, "run 0" // c_null_char)
+        call LammpsCommandSafe(self%lmp, "run 0")
         deallocate(disp_old_coords)
         
       class is(Deletion)
@@ -741,14 +763,14 @@ contains
         
         ! Apply trial (UpdatePositions excludes the deleted particle from curbox)
         call self%UpdatePositions(curbox)
-        call lammps_command(self%lmp, "run 0" // c_null_char)
+        call LammpsCommandSafe(self%lmp, "run 0")
         E_New = self%GetEnergy()
         E_Diff = E_New - E_Old
         
         ! Revert LAMMPS to old state (with the deleted particle)
         self%tempcoords = disp_old_coords
         call lammps_scatter_atoms(self%lmp, "x" // c_null_char, 1_c_int, 3_c_int, self%tempcoords)
-        call lammps_command(self%lmp, "run 0" // c_null_char)
+        call LammpsCommandSafe(self%lmp, "run 0")
         deallocate(disp_old_coords)
         
       class is(OrthoVolChange)
@@ -832,7 +854,7 @@ contains
         
         
         ! Update LAMMPS internal state
-        call lammps_command(self%lmp, "run 0" // c_null_char)
+        call LammpsCommandSafe(self%lmp, "run 0")
         
         ! Get trial energy
         E_New = self%GetEnergy()
@@ -844,7 +866,7 @@ contains
         self%boxlo = vol_old_boxlo
         self%boxhi = vol_old_boxhi
         call lammps_reset_box(self%lmp, self%boxlo, self%boxhi, 0.0_c_double, 0.0_c_double, 0.0_c_double)
-        call lammps_command(self%lmp, "run 0" // c_null_char)
+        call LammpsCommandSafe(self%lmp, "run 0")
         
         E_Circle = self%GetEnergy()
         write(6, *) "DEBUG DiffECalc: E_Old=", E_Old, " E_New=", E_New, " E_Diff=", E_Diff, " E_Circle=", E_Circle

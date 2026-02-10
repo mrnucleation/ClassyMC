@@ -9,6 +9,7 @@ module Input_LoadCoords
     use ForcefieldData, only: nForceFields
     use Input_Format, only: maxLineLen, LoadFile, GetXCommand, ReplaceText
     use Input_SimBoxes, only: Script_BoxType
+    use APeriodicOrthoDef, only: APeriodicOrthoBox
     use ParallelVar, only: nout, myid
     implicit none
     character(len=50), intent(inout) :: fileName      
@@ -64,6 +65,13 @@ module Input_LoadCoords
           call Script_BoxType(newline, boxNum, lineStat)
         case("dimension")
           call BoxArray(boxNum)%box%LoadDimension(lineStore(iLine), lineStat)
+        case("boundary")
+          select type(box => BoxArray(boxNum)%box)
+            type is(APeriodicOrthoBox)
+              call box%LoadBoundaryFlags(lineStore(iLine), lineStat)
+            class default
+              write(nout,*) "WARNING! 'boundary' keyword is only valid for 'aperiodic_ortho' box type. Ignoring."
+          end select
         case("mol")
           read(lineStore(iLine), *) dummy, (BoxArray(boxNum)%box%NMol(j), j=1,nMolTypes) 
         case("molmin")

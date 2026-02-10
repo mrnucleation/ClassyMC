@@ -1,0 +1,40 @@
+#======================================
+# Example: APeriodic Orthorhombic Box with Python Energy
+# This example demonstrates:
+#   - APeriodic orthorhombic box (X,Y periodic, Z non-periodic)
+#   - Python-defined Lennard-Jones potential
+#   - Two atom types (Ar and Ne)
+#   - Slab geometry ideal for interfaces
+#======================================
+
+  set rng_seed 54321
+  set moves 64
+  set cycles 2000
+  set screenfrequency 50
+  SamplingType Metropolis
+
+  ForceField "APeriodic_FF.clFF"
+
+  Create Boxes
+    fromfile "APeriodic_Config.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 1.2
+  modify box 1 pressure 0.001
+
+  # Use cell-based neighbor list for efficiency
+  NeighList 1 cellrsqlist 1
+  modify box 1 buildfreq 10
+  modify box 1 neighlist 1 rcut 6.5
+
+  Create Moves
+    MolTranslation 100.0
+  End_Create
+
+  Create trajectory
+    dump 1 200 "Traj.dump"
+  End_Create
+
+  Run
+#=====================================

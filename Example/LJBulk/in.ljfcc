@@ -11,18 +11,20 @@
     fromfile "LJBulk.clssy"
   End_Create
 
+
+
   modify box 1 energycalc 1
-  modify box 1 temperature 1.0
-  modify box 1 pressure 0.001
+  modify box 1 temperature 0.7
+  modify box 1 pressure 0.0001
   modify box 1 buildfreq 1
 
   modify box 1 chempotential 1 0.0
-  NeighList 1 cellrsqlist 1
-  modify box 1 neighlist 1 rcut 10.5
+  NeighList 1 celllist 1
+#  modify box 1 neighlist 1 rcut 6.5
 
   Create Moves
-    MolTranslation 200.0
-#    IsoVol 1.0
+    MolTranslation 267.0
+    IsoVol 1.0
 #    UBSwap 1.0
 #    BasicSwap 1.0
   End_Create

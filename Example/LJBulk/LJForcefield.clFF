@@ -18,6 +18,7 @@ end_forcefieldtype
 
 # type epsilon sigma rmin
 forcefield 1
+  tailcorrection .true.
   rCut 2.5
   1  1.0  1.0 0.5
 end_forcefield

@@ -18,5 +18,6 @@ profiling/*
 **/Config_*.clssy
 **/*.dat
 **/*.dump
+**/*.pyc
 **/classyMC
 **/classyMC_debug

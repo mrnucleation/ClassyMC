@@ -54,6 +54,7 @@ use RSqListDef, only: RSqList
       
       ! Cell-specific methods
       procedure, pass :: BuildCellList => CellRSqList_BuildCellList 
+      procedure, pass :: UpdateCellDimensions => CellRSqList_UpdateCellDimensions
       procedure, pass :: GetCellIndex => CellRSqList_GetCellIndex
       procedure, pass :: GetBins => CellRSqList_GetBins
       procedure, pass :: GetCellAtoms => CellRSqList_GetCellAtoms
@@ -384,6 +385,98 @@ use RSqListDef, only: RSqList
 
   end subroutine
 !===================================================================================
+  subroutine CellRSqList_UpdateCellDimensions(self)
+    ! Update cell dimensions based on current box size without rebuilding atom assignments
+    ! This is called when we need current cell geometry for queries (like GetNewList)
+    ! but don't want the overhead of a full rebuild
+    use Common_MolInfo, only: nMolTypes
+    implicit none
+    class(CellRSqList), intent(inout) :: self
+    real(dp) :: boxdim(1:2, 1:3)
+    real(dp) :: Lx, Ly, Lz
+    real(dp) :: minX, maxX, minY, maxY, minZ, maxZ
+    integer :: nx, ny, nz
+    real(dp), pointer :: coords(:,:)
+    integer :: iType, iAtom, typeStart, typeEnd
+    logical :: first
+    
+    call self%parent%GetCoordinates(coords)
+    
+    if(self%usePeriodicBounds) then
+      ! Periodic: get dimensions from box
+      call self%parent%GetDimensions(boxdim)
+      Lx = boxdim(2,1) - boxdim(1,1)
+      Ly = boxdim(2,2) - boxdim(1,2)
+      Lz = boxdim(2,3) - boxdim(1,3)
+      self%originX = boxdim(1,1)
+      self%originY = boxdim(1,2)
+      self%originZ = boxdim(1,3)
+    else
+      ! Non-periodic: compute bounding box from atom positions
+      ! (This is expensive but necessary for non-periodic systems)
+      first = .true.
+      minX = 0.0_dp; maxX = 0.0_dp
+      minY = 0.0_dp; maxY = 0.0_dp
+      minZ = 0.0_dp; maxZ = 0.0_dp
+      
+      do iType = 1, nMolTypes
+        call self%parent%GetTypeAtoms(iType, typeStart, typeEnd)
+        if(typeStart < 1 .or. typeStart > typeEnd) cycle
+        do iAtom = typeStart, typeEnd
+          if(first) then
+            minX = coords(1, iAtom); maxX = coords(1, iAtom)
+            minY = coords(2, iAtom); maxY = coords(2, iAtom)
+            minZ = coords(3, iAtom); maxZ = coords(3, iAtom)
+            first = .false.
+          else
+            minX = min(minX, coords(1, iAtom))
+            maxX = max(maxX, coords(1, iAtom))
+            minY = min(minY, coords(2, iAtom))
+            maxY = max(maxY, coords(2, iAtom))
+            minZ = min(minZ, coords(3, iAtom))
+            maxZ = max(maxZ, coords(3, iAtom))
+          endif
+        enddo
+      enddo
+      
+      minX = minX - self%boxPadding
+      maxX = maxX + self%boxPadding
+      minY = minY - self%boxPadding
+      maxY = maxY + self%boxPadding
+      minZ = minZ - self%boxPadding
+      maxZ = maxZ + self%boxPadding
+      
+      Lx = maxX - minX
+      Ly = maxY - minY
+      Lz = maxZ - minZ
+      self%originX = minX
+      self%originY = minY
+      self%originZ = minZ
+    endif
+
+    ! Calculate number of cells
+    nx = floor(2.0*Lx/self%rCut)
+    ny = floor(2.0*Ly/self%rCut)
+    nz = floor(2.0*Lz/self%rCut)
+    if(nx < 1) nx = 1
+    if(ny < 1) ny = 1
+    if(nz < 1) nz = 1
+    
+    self%dx = Lx/real(nx, dp)
+    self%dy = Ly/real(ny, dp)
+    self%dz = Lz/real(nz, dp)
+    
+    self%coeffX = 1
+    self%coeffY = 1 + self%coeffX * (nx-1)
+    self%coeffZ = 1 + self%coeffX * (nx-1)
+    self%coeffZ = self%coeffZ + self%coeffY * (ny-1)
+    
+    self%nx = nx
+    self%ny = ny
+    self%nz = nz
+    
+  end subroutine
+!===================================================================================
   subroutine CellRSqList_BuildList(self, listindx)
     use SearchSort, only: QSort, IsSorted
     use Common_MolInfo, only: nMolTypes
@@ -517,6 +610,9 @@ use RSqListDef, only: RSqList
     integer :: ub, lb
     real(dp) :: xn, yn, zn
     real(dp) :: rx, ry, rz, rsq
+    real(dp) :: boxdim(1:2, 1:3)
+    real(dp) :: Lx, Ly, Lz
+    real(dp) :: expected_Lx, expected_Ly, expected_Lz, dimension_change
     real(dp), pointer :: coords(:,:)
 
 !    write(*,*) loc(tempList(:, iDisp))
@@ -552,7 +648,28 @@ use RSqListDef, only: RSqList
         error stop
     end select
 
-    call self%BuildCellList
+    ! Check if cell dimensions need updating (e.g., after volume moves)
+    ! Compare current box dimensions to stored cell structure dimensions
+    if (self%usePeriodicBounds) then
+      call self%parent%GetDimensions(boxdim)
+      Lx = boxdim(2,1) - boxdim(1,1)
+      Ly = boxdim(2,2) - boxdim(1,2)
+      Lz = boxdim(2,3) - boxdim(1,3)
+      
+      ! If box size has changed by more than a small threshold, update cell dimensions
+      ! This is needed for correct cell index calculations after volume moves
+      if (self%sorted) then  ! Only check if we have a valid cell structure
+        expected_Lx = self%dx * self%nx
+        expected_Ly = self%dy * self%ny
+        expected_Lz = self%dz * self%nz
+        dimension_change = max(abs(Lx - expected_Lx)/expected_Lx, &
+                               abs(Ly - expected_Ly)/expected_Ly, &
+                               abs(Lz - expected_Lz)/expected_Lz)
+        if (dimension_change > 0.01E0_dp) then  ! 1% change threshold
+          call self%UpdateCellDimensions()
+        endif
+      endif
+    endif
 
     !Get relevant box information from the parent.
     call self%parent%GetCoordinates(coords)

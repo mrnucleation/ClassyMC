@@ -26,7 +26,8 @@ end module
 !===================================================================      
 module Units
   use VarPrecision
-  real(dp), parameter :: PaToBoltz = 0.724297303E-7_dp
+  !real(dp), parameter :: PaToBoltz = 0.724297303E-7_dp
+  real(dp), parameter :: PaToBoltz = 7.24280122067E-08_dp
 
   real(dp) :: inEngUnit = 1E0_dp
   real(dp) :: inLenUnit = 1E0_dp

@@ -3,11 +3,10 @@
 #  set rng_seed 4272
   set NeighSkin 2.0
   set moves 53
-  set cycles 500
+  set cycles 50000
   set screenfrequency 100
 #  set energycheck 1
-  SamplingType AcceptAll
-#  SamplingType Metropolis
+  SamplingType Metropolis
 #  SamplingType UmbrellaWHAM
 #  SamplingType Umbrella
 #  modify Sampling biasvariables 1
@@ -25,7 +24,7 @@
   set pressureunits bar
 
   modify box 1 energycalc 1
-  modify box 1 temperature 500
+  modify box 1 temperature 300
   modify box 1 pressure 1.0
   modify box 1 buildfreq 10
 

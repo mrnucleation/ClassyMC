@@ -9,7 +9,7 @@
   set rng_seed -6
   set NeighSkin 3.0
   set moves 512
-  set cycles 10
+  set cycles 10000
   set screenfrequency 1000
   SamplingType Metropolis
   set pressureunits bar
@@ -21,6 +21,8 @@
    fromfile "NaCl_Config_Large.clssy"
    #fromfile "Config_&_1.clssy"
   End_Create
+
+
 
   # Use the hybrid forcefield (forcefield 3) for energy calculations
   modify box 1 energycalc 1

@@ -6,6 +6,7 @@ module Input_SimBoxes
   use SimpleSimBox, only: Simplebox
   use CubicBoxDef, only: CubeBox
   use OrthoBoxDef, only: OrthoBox
+  use APeriodicOrthoDef, only: APeriodicOrthoBox
   contains
 !================================================================================
   subroutine Script_BoxType(line, boxNum, lineStat)
@@ -35,6 +36,10 @@ module Input_SimBoxes
       case("ortho")
         allocate(OrthoBox::BoxArray(boxNum)%box) 
         BoxArray(boxNum)%box%boxStr = "ortho"
+
+      case("aperiodic_ortho")
+        allocate(APeriodicOrthoBox::BoxArray(boxNum)%box)
+        BoxArray(boxNum)%box%boxStr = "aperiodic_ortho"
 
       case default
 !        write(*,*) command

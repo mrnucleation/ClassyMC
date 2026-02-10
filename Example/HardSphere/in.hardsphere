@@ -1,32 +1,48 @@
 #======================================
   set rng_seed -6
-  set NeighSkin 2.0
-  set moves 1000
-  set cycles 100000
+  set NeighSkin 20.0
+  set moves 800
+  set cycles 600000
+  set screenfrequency 100
   SamplingType Metropolis
 
   ForceField "HardSphere.clFF"
 
   Create Boxes
-    Preset FCC 2.838727125 6
+    fromfile "HS_Start.clssy"
   End_Create
 
-  NeighList 1 rsqlist 1
+  NeighList 1 celllist 1
+#  modify box 1 neighlist 1 cellsize 25.0
+
+  set pressureunits bar
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 300
+  modify box 1 pressure 1.0
+  modify box 1 buildfreq 100
 
   Create Moves
-    AtomTranslation 1.0
+    AtomTranslation 800.0
+    Isovol 10.0
   End_Create
+
+  modify move 1 tunemax .false.
+  modify move 1 dynamiclimit 2.5
+  modify move 1 maxdisplace 1.6
+
+  modify move 2 maxdv 10.1
+  modify move 2 style log
+  modify move 2 tunemax .true.
 
 #  Create analysis
 #    DistPair 1 2
 #  End_Create
 
   Create trajectory
-    xyz 1 1000 "Traj.xyz"
+    dump 1 1000 "Traj.dump"
   End_Create
 
-  modify box 1 energycalc 1
-  modify box 1 temperature 300
 
   Run
 #=====================================

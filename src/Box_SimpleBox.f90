@@ -2209,7 +2209,7 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
   end subroutine
 !==========================================================================================
   subroutine SimpleBox_ScreenOut(self)
-    use Common_MolInfo, only: nMolTypes
+    use Common_MolInfo, only: nMolTypes, MolData, AtomData
     use ParallelVar, only: nout
     use Input_Format, only: ReplaceText
     use Units, only: outEngUnit, outLenUnit
@@ -2217,9 +2217,11 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
     class(SimpleBox), intent(inout) :: self
     logical :: accept
     integer :: iConstrain, iMol
-    integer :: iType, molStart
+    integer :: iType, molStart, molEnd, iAtom, atmType, typeStart, typeEnd
     character(len=200) :: tempStr
     character(len=80) :: tempStr2
+    real(dp) :: totalMass, numberDensity, massDensity
+    real(dp) :: amu_to_g
 
     write(tempStr, "(A)") "      ************************ Box %s ************************ "
     write(tempStr2, "(I50)") self%boxID
@@ -2240,9 +2242,42 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
     tempStr = ReplaceText(tempStr, "%s2", trim(adjustl(tempStr2)))
     write(nout, "(A)") trim(tempStr)
 
-    write(nout, "(A, 999(1x,I10))") "        Number of Molecules By Type: ", self%nMol(1:nMolTypes)
 
+    ! Calculate densities
+    ! Number density = N / V  (in molecules/Angstrom^3)
+    ! Mass density = (total_mass * amu_to_g) / (volume * ang^3_to_cm^3)
+    !              = (total_mass * 1.66054E-24 g/amu) / (volume * 1E-24 cm^3/ang^3)
+    !              = (total_mass * 1.66054) / volume  in g/cm^3
+    
+    if(self%Volume > 0E0_dp) then
+      ! Calculate total mass in amu by summing over all active atoms
+      totalMass = 0E0_dp
+      do iType = 1, nMolTypes
+        call self%GetTypeAtoms(iType, typeStart=molStart, typeEnd=molEnd)
+        if(molStart > 0) then
+          do iAtom = molStart, molEnd
+            atmType = self%AtomType(iAtom)
+            totalMass = totalMass + AtomData(atmType)%mass
+          enddo
+        endif
+      enddo
 
+      ! Number density in molecules/Angstrom^3
+      numberDensity = real(self%nMolTotal, dp) / self%Volume
+
+      ! Mass density in g/cm^3
+      ! Conversion: 1 amu/Angstrom^3 = 1.66054 g/cm^3
+      amu_to_g = 1.66054E-24_dp  ! g/amu
+      massDensity = totalMass * amu_to_g / (self%Volume * 1E-24_dp)  ! g/cm^3
+
+      write(tempStr, "(A)") "        Number Density: %s1   Mass Density: %s2 g/cm^3"
+      write(tempStr2, "(E40.8)") numberDensity * (outLenUnit**3)
+      tempStr = ReplaceText(tempStr, "%s1", trim(adjustl(tempStr2)))
+      write(tempStr2, "(F40.8)") massDensity
+      tempStr = ReplaceText(tempStr, "%s2", trim(adjustl(tempStr2)))
+      write(nout, "(A)") trim(tempStr)
+      write(nout, "(A, 999(1x,I10))") "        Number of Molecules By Type: ", self%nMol(1:nMolTypes)
+    endif
 
 
   end subroutine

@@ -42,7 +42,7 @@ forcefield 1
 
   # LAMMPS setup commands (executed before atoms are created)
   lammps_cmd atom_style charge
-  lammps_cmd create_box 2 box
+  lammps_cmd create_box 1 box
   lammps_cmd mass 1 22.99
   lammps_cmd mass 2 35.45
   lammps_cmd pair_style coul/long 10.0
@@ -63,7 +63,7 @@ forcefield 1
   length_conversion 1.0
 
   # Minimum distances for overlap checking
-  1  1.2
-  2  1.2
+  1  0.6
+  2  0.6
 
 end_forcefield
