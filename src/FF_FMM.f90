@@ -221,7 +221,8 @@ subroutine Detailed_FMM(self, curbox, E_T, accept)
   call self%ComputeLocalExpansions()
   call self%ComputeNearFieldOctree(curbox, E_near, accept)
   if (.not. accept) return
-  call self%ComputeFarField(curbox, E_far)  ! Direct far for consistency (multipole not yet verified)
+  ! Use direct far-field as the authoritative energy
+  call self%ComputeFarField(curbox, E_far)
   E_coulomb = E_near + E_far
   
   call curbox%GetCoordinates(atoms)
@@ -273,12 +274,9 @@ subroutine Detailed_FMM(self, curbox, E_T, accept)
   self%E_self_total = 0.0_dp
   self%E_periodic_total = E_periodic
   
-  write(nout,*) "FMM Direct Coulomb Energy:", E_coulomb
+  write(nout,*) "FMM Near-Field Energy:", E_near
+  write(nout,*) "FMM Far-Field Energy:", E_far
   write(nout,*) "FMM Periodic Correction:", E_periodic
-  if (self%isPeriodic) then
-    write(nout,*) "FMM Dipole^2:", dipole_sq
-    write(nout,*) "FMM Volume:", volume
-  endif
   write(nout,*) "FMM Total Energy:", E_coulomb + E_periodic
   
   E_T = E_coulomb + E_periodic
@@ -1572,11 +1570,12 @@ subroutine ComputeMultipoles_FMM(self, curbox)
       dy = atoms(2, iAtom) - self%nodes(nodeIdx)%center(2)
       dz = atoms(3, iAtom) - self%nodes(nodeIdx)%center(3)
       
-      ! Compute regular solid harmonics
+      ! Compute regular solid harmonics at particle position relative to cell center
       call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm)
       
-      ! Add to multipole moments
-      self%nodes(nodeIdx)%M = self%nodes(nodeIdx)%M + qi * Rlm
+      ! P2M: M_n^m = sum_i q_i * conj(R_n^m(y_i - c))
+      ! The conjugate is essential for the addition theorem to work correctly
+      self%nodes(nodeIdx)%M = self%nodes(nodeIdx)%M + qi * conjg(Rlm)
     enddo
   enddo
   
@@ -1619,12 +1618,24 @@ contains
 end subroutine
 !=============================================================================
 subroutine ComputeLocalExpansions_FMM(self)
-  ! Compute local expansions using M2L and propagate down (L2L)
+  ! Compute local expansions using M2L at leaf level and propagate down via L2L.
+  !
+  ! Full FMM pipeline:
+  !   1. M2L: Convert far-field multipoles to local expansions at each leaf
+  !   2. L2L: Propagate local expansions from parent to children (downward pass)
+  !
+  ! Currently uses flat leaf-only interaction lists. The M2L is done at leaf level
+  ! and L2L propagates any parent-level local contributions down to children.
   implicit none
   class(Pair_FMM), intent(inout) :: self
 
   integer :: iLeaf, nodeI, k, nodeJ
   real(dp) :: dx, dy, dz
+  
+  ! Clear all local expansions before computing
+  do nodeI = 1, self%nNodes
+    self%nodes(nodeI)%L = (0.0_dp, 0.0_dp)
+  enddo
   
   ! M2L: for each leaf, convert far-field multipoles to local
   do iLeaf = 1, self%nLeaves
@@ -1633,7 +1644,7 @@ subroutine ComputeLocalExpansions_FMM(self)
     do k = 1, self%nodes(nodeI)%nFar
       nodeJ = self%nodes(nodeI)%farList(k)
       
-      ! Translation vector from source to target
+      ! Translation vector from source to target (d = target - source)
       dx = self%nodes(nodeI)%center(1) - self%nodes(nodeJ)%center(1)
       dy = self%nodes(nodeI)%center(2) - self%nodes(nodeJ)%center(2)
       dz = self%nodes(nodeI)%center(3) - self%nodes(nodeJ)%center(3)
@@ -1652,6 +1663,45 @@ subroutine ComputeLocalExpansions_FMM(self)
                         self%nodes(nodeJ)%M, self%nodes(nodeI)%L)
     enddo
   enddo
+  
+  ! L2L downward pass: propagate local expansions from parent to children
+  ! This is needed when M2L is done at higher levels (hierarchical FMM).
+  ! For the current flat leaf-only lists, M2L is already at leaf level,
+  ! but we still do L2L in case any parent nodes accumulated L contributions.
+  call L2L_Downward(self, self%rootNode)
+
+contains
+
+  recursive subroutine L2L_Downward(self, nodeIdx)
+    class(Pair_FMM), intent(inout) :: self
+    integer, intent(in) :: nodeIdx
+    
+    integer :: i, childIdx
+    real(dp) :: dx, dy, dz
+    
+    if (self%nodes(nodeIdx)%isLeaf) return
+    
+    ! Translate this node's local expansion to each child
+    do i = 1, 8
+      childIdx = self%nodes(nodeIdx)%children(i)
+      if (childIdx <= 0) cycle
+      
+      ! Translation vector: tau = child_center - parent_center
+      dx = self%nodes(childIdx)%center(1) - self%nodes(nodeIdx)%center(1)
+      dy = self%nodes(childIdx)%center(2) - self%nodes(nodeIdx)%center(2)
+      dz = self%nodes(childIdx)%center(3) - self%nodes(nodeIdx)%center(3)
+      
+      call SH_L2L_Coeff(dx, dy, dz, self%expansionOrder, &
+                        self%nodes(nodeIdx)%L, self%nodes(childIdx)%L)
+    enddo
+    
+    ! Then recurse into children
+    do i = 1, 8
+      childIdx = self%nodes(nodeIdx)%children(i)
+      if (childIdx > 0) call L2L_Downward(self, childIdx)
+    enddo
+    
+  end subroutine
 
 end subroutine
 !=============================================================================
@@ -2091,19 +2141,19 @@ subroutine UpdateMultipoleForMove_FMM(self, curbox, iAtom, x_old, y_old, z_old, 
     self%nodes(newLeaf)%M_old = self%nodes(newLeaf)%M
   endif
   
-  ! Remove old contribution from old leaf
+  ! Remove old contribution from old leaf (P2M uses conjugate)
   dx = x_old - self%nodes(oldLeaf)%center(1)
   dy = y_old - self%nodes(oldLeaf)%center(2)
   dz = z_old - self%nodes(oldLeaf)%center(3)
   call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm_old)
-  self%nodes(oldLeaf)%M = self%nodes(oldLeaf)%M - qi * Rlm_old
+  self%nodes(oldLeaf)%M = self%nodes(oldLeaf)%M - qi * conjg(Rlm_old)
   
-  ! Add new contribution to new leaf
+  ! Add new contribution to new leaf (P2M uses conjugate)
   dx = x_new - self%nodes(newLeaf)%center(1)
   dy = y_new - self%nodes(newLeaf)%center(2)
   dz = z_new - self%nodes(newLeaf)%center(3)
   call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm_new)
-  self%nodes(newLeaf)%M = self%nodes(newLeaf)%M + qi * Rlm_new
+  self%nodes(newLeaf)%M = self%nodes(newLeaf)%M + qi * conjg(Rlm_new)
   
   ! Update particle to leaf mapping
   self%particleToLeaf(iAtom) = newLeaf
@@ -2431,6 +2481,18 @@ subroutine ProcessIO_FMM(self, line)
           self%isPeriodic = .true.
         case("false", "no", "0", ".false.")
           self%isPeriodic = .false.
+      end select
+
+    case("usemultipole", "use_multipole", "multipole")
+      call GetXCommand(line, command, 2, lineStat)
+      select case(trim(adjustl(command)))
+        case("true", "yes", "1", ".true.")
+          ! Multipole far-field will be used once verified
+          ! Currently the direct far-field is always used for energy
+          ! This flag is noted but does not yet switch the energy pathway
+          continue
+        case("false", "no", "0", ".false.")
+          continue
       end select
 
     case("precision")

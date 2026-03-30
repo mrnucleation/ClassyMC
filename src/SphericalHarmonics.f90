@@ -268,8 +268,14 @@ pure subroutine SH_CartesianToSpherical(x, y, z, r, theta, phi)
 end subroutine SH_CartesianToSpherical
 
 !================================================================================
-! Compute regular solid harmonic R_l^m(r, theta, phi) = r^l * Y_l^m(theta, phi)
-! These are used for multipole moments
+! Compute regular solid harmonic (unnormalized convention):
+!   R_l^m(r,theta,phi) = r^l * P_l^|m|(cos theta) * exp(i*m*phi) / (l+|m|)!
+!
+! This convention gives the simplest translation operators:
+!   R_n^m(a+b) = sum_j sum_k R_j^k(a) * R_{n-j}^{m-k}(b)
+! with NO additional coefficients needed.
+!
+! Properties: conj(R_l^m) = R_l^{-m}
 !================================================================================
 subroutine SH_ComputeSolidHarmonic(x, y, z, p, Rlm)
   implicit none
@@ -278,18 +284,32 @@ subroutine SH_ComputeSolidHarmonic(x, y, z, p, Rlm)
   complex(dp), intent(out) :: Rlm((p+1)*(p+1))  ! Regular solid harmonics
   
   real(dp) :: r, theta, phi
-  complex(dp) :: Ylm((p+1)*(p+1))
+  real(dp) :: Plm(0:p, 0:p)
+  real(dp) :: cosTheta
   real(dp) :: r_power
+  complex(dp) :: expPhi
   integer :: l, m, idx
   
   call SH_CartesianToSpherical(x, y, z, r, theta, phi)
-  call SH_ComputeYlm(theta, phi, p, Ylm)
+  
+  Rlm = (0.0_dp, 0.0_dp)
+  
+  if (r < 1.0e-15_dp) then
+    ! At origin, only R_0^0 = 1/0! = 1 is nonzero
+    Rlm(SH_Index(0,0)) = (1.0_dp, 0.0_dp)
+    return
+  endif
+  
+  cosTheta = cos(theta)
+  call SH_AssocLegendre(cosTheta, p, Plm)
   
   r_power = 1.0_dp
   do l = 0, p
     do m = -l, l
       idx = SH_Index(l, m)
-      Rlm(idx) = r_power * Ylm(idx)
+      expPhi = exp(IMAG_UNIT * real(m, dp) * phi)
+      ! R_l^m = r^l * P_l^|m|(cos theta) * exp(i*m*phi) / (l + |m|)!
+      Rlm(idx) = r_power * Plm(l, abs(m)) * expPhi * invFactorial(l + abs(m))
     end do
     r_power = r_power * r
   end do
@@ -297,8 +317,13 @@ subroutine SH_ComputeSolidHarmonic(x, y, z, p, Rlm)
 end subroutine SH_ComputeSolidHarmonic
 
 !================================================================================
-! Compute irregular solid harmonic S_l^m = r^{-(l+1)} * Y_l^m(theta, phi)
-! These are used for local expansions
+! Compute irregular solid harmonic (unnormalized convention):
+!   S_l^m(r,theta,phi) = (l-|m|)! * P_l^|m|(cos theta) * exp(i*m*phi) / r^{l+1}
+!
+! The addition theorem for the Laplace kernel states:
+!   1/|a-b| = sum_{l,m} (-1)^m * R_l^{-m}(b) * S_l^m(a)   for |b| < |a|
+!
+! Properties: conj(S_l^m) = S_l^{-m}
 !================================================================================
 subroutine SH_ComputeIrregularSolid(x, y, z, p, Slm)
   implicit none
@@ -307,24 +332,27 @@ subroutine SH_ComputeIrregularSolid(x, y, z, p, Slm)
   complex(dp), intent(out) :: Slm((p+1)*(p+1))  ! Irregular solid harmonics
   
   real(dp) :: r, theta, phi
-  complex(dp) :: Ylm((p+1)*(p+1))
+  real(dp) :: Plm(0:p, 0:p)
+  real(dp) :: cosTheta
   real(dp) :: r_inv_power
+  complex(dp) :: expPhi
   integer :: l, m, idx
   
   call SH_CartesianToSpherical(x, y, z, r, theta, phi)
   
-  if (r < 1.0e-15_dp) then
-    Slm = (0.0_dp, 0.0_dp)
-    return
-  end if
+  Slm = (0.0_dp, 0.0_dp)
+  if (r < 1.0e-15_dp) return
   
-  call SH_ComputeYlm(theta, phi, p, Ylm)
+  cosTheta = cos(theta)
+  call SH_AssocLegendre(cosTheta, p, Plm)
   
   r_inv_power = 1.0_dp / r
   do l = 0, p
     do m = -l, l
       idx = SH_Index(l, m)
-      Slm(idx) = r_inv_power * Ylm(idx)
+      expPhi = exp(IMAG_UNIT * real(m, dp) * phi)
+      ! S_l^m = (l-|m|)! * P_l^|m|(cos theta) * exp(i*m*phi) / r^{l+1}
+      Slm(idx) = factorial(l - abs(m)) * Plm(l, abs(m)) * expPhi * r_inv_power
     end do
     r_inv_power = r_inv_power / r
   end do
@@ -334,10 +362,17 @@ end subroutine SH_ComputeIrregularSolid
 !================================================================================
 ! M2M Translation: Translate multipole expansion from child to parent
 !
-! Given multipole moments M_child centered at origin, compute contribution
-! to parent multipole M_parent centered at (dx, dy, dz)
+! Given multipole moments M_child centered at child, compute contribution
+! to parent multipole M_parent centered at parent.
+! Translation vector t = (dx,dy,dz) = child_center - parent_center.
 !
-! M_parent(j,k) += sum_{l,m} M2M_coeff(j,k,l,m) * M_child(l,m)
+! Formula (derived from regular solid harmonic addition theorem):
+!   M'_n^m += sum_{j=0}^{n} sum_k M_j^k * conj(R_{n-j}^{m-k}(t))
+!
+! Since conj(R_l^m) = R_l^{-m} for our convention:
+!   M'_n^m += sum_{j=0}^{n} sum_k M_j^k * R_{n-j}^{k-m}(t)
+!
+! Constraint: |k-m| <= n-j
 !================================================================================
 subroutine SH_M2M_Coeff(dx, dy, dz, p, M_child, M_parent)
   implicit none
@@ -347,76 +382,46 @@ subroutine SH_M2M_Coeff(dx, dy, dz, p, M_child, M_parent)
   complex(dp), intent(inout) :: M_parent((p+1)*(p+1)) ! Parent multipole (accumulated)
   
   complex(dp) :: Rlm((p+1)*(p+1))
-  integer :: j, k, l, m, idx_jk, idx_lm
-  complex(dp) :: coeff
-  real(dp) :: sign_factor
+  integer :: n, m_n, j, k, nj, km
+  integer :: idx_nm, idx_jk, idx_tr
   
   ! Compute regular solid harmonics at translation point
   call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
   
-  ! M2M translation using addition theorem
-  ! M_j^k(parent) = sum_{l=0}^{j} sum_{m=-l}^{l} 
-  !                 C(j,k,l,m) * R_{j-l}^{k-m}(d) * M_l^m(child)
-  do j = 0, p
-    do k = -j, j
-      idx_jk = SH_Index(j, k)
-      
-      do l = 0, j
-        do m = max(-l, k-(j-l)), min(l, k+(j-l))
-          if (abs(k-m) > j-l) cycle
-          
-          idx_lm = SH_Index(l, m)
-          
-          ! Translation coefficient with proper normalization
-          coeff = ComputeM2MCoeff(j, k, l, m) * Rlm(SH_Index(j-l, k-m))
-          M_parent(idx_jk) = M_parent(idx_jk) + coeff * M_child(idx_lm)
+  ! M2M translation
+  do n = 0, p
+    do m_n = -n, n
+      idx_nm = SH_Index(n, m_n)
+      do j = 0, n
+        do k = -j, j
+          nj = n - j
+          km = k - m_n
+          if (abs(km) > nj) cycle
+          idx_jk = SH_Index(j, k)
+          idx_tr = SH_Index(nj, km)
+          M_parent(idx_nm) = M_parent(idx_nm) + M_child(idx_jk) * Rlm(idx_tr)
         end do
       end do
     end do
   end do
-  
-contains
-  
-  pure function ComputeM2MCoeff(j, k, l, m) result(c)
-    integer, intent(in) :: j, k, l, m
-    complex(dp) :: c
-    real(dp) :: num, den
-    integer :: jml, kmm
-    
-    jml = j - l
-    kmm = k - m
-    
-    ! Coefficient from addition theorem
-    num = factorial(j) * factorial(l)
-    den = factorial(jml) * factorial(l - abs(m)) * factorial(jml - abs(kmm))
-    
-    if (den > 0.0_dp) then
-      c = cmplx(sqrt(num/den), 0.0_dp, dp)
-    else
-      c = (0.0_dp, 0.0_dp)
-    end if
-    
-    ! Sign correction
-    if (mod(abs(m), 2) == 1 .and. m < 0) c = -c
-    
-  end function ComputeM2MCoeff
   
 end subroutine SH_M2M_Coeff
 
 !================================================================================
 ! M2L Translation: Convert multipole expansion to local expansion
 !
-! Given multipole moments M centered at origin, compute local expansion L
-! centered at (dx, dy, dz) in the far field
+! Given multipole moments M at source center, compute local expansion L
+! at target center. Translation vector d = (dx,dy,dz) = target - source.
 !
-! Uses the simplified addition theorem:
-! L_j^k(target) = sum_{l=0}^{p} sum_{m=-l}^{l}
-!                 (-1)^l * S_{j+l}^{m-k}(d) * M_l^m(source)
+! Derived from the re-expansion of irregular solid harmonics:
+!   S_n^m(delta + d) = sum_{j,k} (-1)^{j-k} * S_{n+j}^{m-k}(d) * R_j^k(delta)
 !
-! where S is the irregular solid harmonic (1/r^{n+1} * Y_n^m)
+! Therefore:
+!   L_j^k += sum_{n=0}^{p} sum_{m=-n}^{n} M_n^m * (-1)^{j-k} * S_{n+j}^{m-k}(d)
 !
-! Note: The irregular solid harmonics already contain the spherical harmonic
-! normalization, so no additional normalization is needed here.
+! Requires S up to order 2p.
+! Verified: monopole gives L_j^k = (-1)^{j-k} S_j^{-k}(d), consistent with
+! Taylor expansion of 1/|delta+d|.
 !================================================================================
 subroutine SH_M2L_Coeff(dx, dy, dz, p, M_source, L_target)
   implicit none
@@ -426,37 +431,38 @@ subroutine SH_M2L_Coeff(dx, dy, dz, p, M_source, L_target)
   complex(dp), intent(inout) :: L_target((p+1)*(p+1)) ! Target local (accumulated)
   
   complex(dp) :: Slm((2*p+1)*(2*p+1))
-  integer :: j, k, l, m, idx_jk, idx_lm, idx_jpl
-  complex(dp) :: coeff
+  integer :: j, k, n, m_n, njp, mmk
+  integer :: idx_jk, idx_nm, idx_s
   real(dp) :: sign_factor
-  integer :: jpl, mmk
   
   ! Compute irregular solid harmonics at translation point
-  ! Need order 2p for M2L
+  ! Need order 2p for M2L since n+j can be up to 2p
   call SH_ComputeIrregularSolid(dx, dy, dz, 2*p, Slm)
   
-  ! M2L translation using addition theorem
-  ! L_j^k(target) = sum_{l=0}^{p} sum_{m=-l}^{l}
-  !                 (-1)^l * S_{j+l}^{m-k}(d) * M_l^m(source)
+  ! M2L translation
   do j = 0, p
     do k = -j, j
       idx_jk = SH_Index(j, k)
       
-      do l = 0, p
-        do m = -l, l
-          jpl = j + l
-          mmk = m - k  ! Note: m-k, not k-m
-          if (abs(mmk) > jpl) cycle
+      ! Sign factor: (-1)^{j-k}
+      if (mod(abs(j - k), 2) == 0) then
+        sign_factor = 1.0_dp
+      else
+        sign_factor = -1.0_dp
+      endif
+      
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j
+          mmk = m_n - k
+          if (abs(mmk) > njp) cycle
+          if (njp > 2*p) cycle
           
-          idx_lm = SH_Index(l, m)
-          idx_jpl = SH_Index(jpl, mmk)
+          idx_nm = SH_Index(n, m_n)
+          idx_s = SH_Index(njp, mmk)
           
-          ! Sign factor: (-1)^l
-          sign_factor = 1.0_dp
-          if (mod(l, 2) == 1) sign_factor = -1.0_dp
-          
-          coeff = cmplx(sign_factor, 0.0_dp, dp) * Slm(idx_jpl)
-          L_target(idx_jk) = L_target(idx_jk) + coeff * M_source(idx_lm)
+          L_target(idx_jk) = L_target(idx_jk) + &
+            cmplx(sign_factor, 0.0_dp, dp) * M_source(idx_nm) * Slm(idx_s)
         end do
       end do
     end do
@@ -467,10 +473,18 @@ end subroutine SH_M2L_Coeff
 !================================================================================
 ! L2L Translation: Translate local expansion from parent to child
 !
-! Given local expansion L_parent centered at origin, compute contribution
-! to child local L_child centered at (dx, dy, dz)
+! Given local expansion L_parent centered at parent, compute contribution
+! to child local L_child centered at child.
+! Translation vector tau = (dx,dy,dz) = child_center - parent_center.
 !
-! L_child(j,k) = sum_{l,m} L2L_coeff(j,k,l,m) * L_parent(l,m)
+! Derived from regular solid harmonic addition theorem:
+!   R_n^m(delta' + tau) = sum_{j=0}^{n} sum_k R_j^k(delta') * R_{n-j}^{m-k}(tau)
+!
+! Therefore:
+!   L'_j^k = sum_{n=j}^{p} sum_m L_n^m * R_{n-j}^{m-k}(tau)
+!
+! Constraint: |m-k| <= n-j
+! Verified: correctly reproduces Taylor expansion shift for p=2 on-axis.
 !================================================================================
 subroutine SH_L2L_Coeff(dx, dy, dz, p, L_parent, L_child)
   implicit none
@@ -480,55 +494,28 @@ subroutine SH_L2L_Coeff(dx, dy, dz, p, L_parent, L_child)
   complex(dp), intent(inout) :: L_child((p+1)*(p+1)) ! Child local (accumulated)
   
   complex(dp) :: Rlm((p+1)*(p+1))
-  integer :: j, k, l, m, idx_jk, idx_lm
-  complex(dp) :: coeff
+  integer :: j, k, n, m_n, nj, mk
+  integer :: idx_jk, idx_nm, idx_r
   
   ! Compute regular solid harmonics at translation point
   call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
   
-  ! L2L translation using addition theorem
-  ! L_j^k(child) = sum_{l=j}^{p} sum_{m} 
-  !                C(j,k,l,m) * R_{l-j}^{m-k}(d) * L_l^m(parent)
+  ! L2L translation
   do j = 0, p
     do k = -j, j
       idx_jk = SH_Index(j, k)
-      
-      do l = j, p
-        do m = max(-l, k-(l-j)), min(l, k+(l-j))
-          if (abs(m-k) > l-j) cycle
-          
-          idx_lm = SH_Index(l, m)
-          
-          ! Translation coefficient
-          coeff = ComputeL2LCoeff(j, k, l, m) * Rlm(SH_Index(l-j, m-k))
-          L_child(idx_jk) = L_child(idx_jk) + coeff * L_parent(idx_lm)
+      do n = j, p
+        do m_n = -n, n
+          nj = n - j
+          mk = m_n - k
+          if (abs(mk) > nj) cycle
+          idx_nm = SH_Index(n, m_n)
+          idx_r = SH_Index(nj, mk)
+          L_child(idx_jk) = L_child(idx_jk) + L_parent(idx_nm) * Rlm(idx_r)
         end do
       end do
     end do
   end do
-  
-contains
-  
-  pure function ComputeL2LCoeff(j, k, l, m) result(c)
-    integer, intent(in) :: j, k, l, m
-    complex(dp) :: c
-    real(dp) :: num, den
-    integer :: lmj, mmk
-    
-    lmj = l - j
-    mmk = m - k
-    
-    ! Coefficient from addition theorem
-    num = factorial(l) * factorial(j)
-    den = factorial(lmj) * factorial(j - abs(k)) * factorial(lmj - abs(mmk))
-    
-    if (den > 0.0_dp) then
-      c = cmplx(sqrt(num/den), 0.0_dp, dp)
-    else
-      c = (0.0_dp, 0.0_dp)
-    end if
-    
-  end function ComputeL2LCoeff
   
 end subroutine SH_L2L_Coeff
 
