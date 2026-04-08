@@ -67,8 +67,6 @@ module FF_FMM
     integer :: maxLevel = 4              ! Maximum tree depth
     integer :: nCrit = 40                ! Max particles per leaf
     logical :: isPeriodic = .true.       ! Periodic boundary conditions
-    real(dp) :: rCutNear                 ! Near-field cutoff
-    real(dp) :: rCutNearSq               ! Near-field cutoff squared
     
     ! Precision control
     real(dp) :: fmmPrecision = 1.0E-6_dp ! Target precision
@@ -174,10 +172,8 @@ subroutine Constructor_FMM(self)
   self%maxLevel = 4
   self%nCrit = 40
   self%isPeriodic = .true.
-  self%rCutNear = 10.0_dp   ! Default near-field cutoff (should cover ~3 leaf cells)
-  self%rCutNearSq = self%rCutNear**2
-  self%rCut = self%rCutNear
-  self%rCutSq = self%rCutNearSq
+  self%rCut = 10.0_dp   ! Default near-field cutoff (should cover ~3 leaf cells)
+  self%rCutSq = self%rCut**2
   
   self%initialized = .false.
   self%treeBuilt = .false.
@@ -1153,7 +1149,7 @@ subroutine ManyBody_FMM(self, curbox, atmtype1, pos1, atmtypes, posN, E_Many, ac
       return
     endif
     
-    if (rsq < self%rCutNearSq .and. rsq > 1.0E-10_dp) then
+    if (rsq < self%rCutSq .and. rsq > 1.0E-10_dp) then
       r = sqrt(rsq)
       E_pair = qi * qj * coulombConst / r
       E_Many = E_Many + E_pair
@@ -2452,10 +2448,8 @@ subroutine ProcessIO_FMM(self, line)
     case("rcut")
       call GetXCommand(line, command, 2, lineStat)
       read(command, *) rCut
-      self%rCutNear = rCut * inLenUnit
-      self%rCutNearSq = self%rCutNear**2
-      self%rCut = self%rCutNear
-      self%rCutSq = self%rCutNearSq
+      self%rCut = rCut * inLenUnit
+      self%rCutSq = self%rCut**2
 
     case("p", "order", "expansion_order")
       call GetXCommand(line, command, 2, lineStat)
@@ -2557,7 +2551,7 @@ subroutine Prologue_FMM(self)
   write(nout, *) "  Expansion order (p):", self%expansionOrder
   write(nout, *) "  Maximum tree depth:", self%maxLevel
   write(nout, *) "  Particles per leaf (nCrit):", self%nCrit
-  write(nout, *) "  Near-field cutoff:", self%rCutNear
+  write(nout, *) "  Near-field cutoff:", self%rCut
   write(nout, *) "  Periodic boundaries:", self%isPeriodic
   write(nout, *) "  Target precision:", self%fmmPrecision
   write(nout, *) ""
@@ -2583,7 +2577,7 @@ function GetCutOff_FMM(self) result(rCut)
   class(Pair_FMM), intent(inout) :: self
   real(dp) :: rCut
 
-  rCut = self%rCutNear
+  rCut = self%rCut
 
 end function
 !=============================================================================
