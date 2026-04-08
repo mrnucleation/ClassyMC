@@ -39,10 +39,10 @@ module OrthoBoxDef
     integer :: iConstrain, iList, molStart, molEnd
 
     self%volume = self%boxLx * self%boxLy * self%boxLz
-    call self % ComputeEnergy
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
+    call self % ComputeEnergy
 
 
     write(nout, "(1x,A,I2,A,E15.8)") "Box ", self%boxID, " Initial Energy: ", self % ETotal/outEngUnit

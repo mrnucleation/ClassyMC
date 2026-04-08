@@ -2300,10 +2300,11 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
     write(nout,*) "Box ", self%boxID, " Total Molecule Count: ", self % nMolTotal
     write(nout,*) "Box ", self%boxID, " Temperature: ", self % temperature
 
-    call self % ComputeEnergy
     do iList = 1, size(self%NeighList)
       call self % NeighList(iList) % BuildList(iList)
     enddo
+    call self % ComputeEnergy
+
     self%dr = 0E0_dp
     self%drsq = 0E0_dp
     if( allocated(self%Constrain) ) then
