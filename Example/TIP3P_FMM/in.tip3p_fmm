@@ -1,48 +1,58 @@
 #======================================
-# NaCl Monte Carlo with Hybrid Forcefield (LJ + FMM)
+# TIP3P Water with FMM Electrostatics
 #
 # This example demonstrates the Hybrid forcefield combining:
 #   - Lennard-Jones for short-range van der Waals interactions
 #   - Fast Multipole Method (FMM) for long-range electrostatics
 #
+# Box: 25 Å cubic
+# Molecules: 500 TIP3P water (liquid density ~1 g/cm³)
+# Temperature: 300 K
+#
+# Key parameters:
+#   LJ: epsilon = 76.54 kb, sigma = 3.1507 Å (on O only)
+#   Charges: O = -0.834e, H = +0.417e
+#   FMM: order = 4, maxlevel = 4, ncrit = 10
+#   Real-space cutoff: 9.0 Å
 #======================================
-  set rng_seed -6
-  set NeighSkin 3.0
-  set moves 512
-  set cycles 20000
-  set screenfrequency 1000
-  SamplingType Metropolis
-  set pressureunits bar
-  set energyunits ev
 
-  ForceField "NaCl_Hybrid.clFF"
+  set rng_seed -3
+  set NeighSkin 2.0
+  set moves 500
+  set cycles 400
+  set screenfrequency 100
+  SamplingType Metropolis
+
+  set pressureunits bar
+
+  ForceField "TIP3P_FMM.clFF"
 
   Create Boxes
-   fromfile "NaCl_Config_Large.clssy"
-   #fromfile "Config_&_1.clssy"
+    fromfile "TIP3P_Config.clssy"
   End_Create
 
-
-
-  # Use the hybrid forcefield (forcefield 3) for energy calculations
+  # Hybrid forcefield (forcefield 1) handles both LJ and FMM
   modify box 1 energycalc 1
   modify box 1 temperature 300
-  modify box 1 buildfreq 100
+  modify box 1 buildfreq 50
   modify box 1 pressure 1.0
 
   NeighList 1 cellrsqlist 1
-  modify box 1 neighlist 1 rcut 15.0
+  modify box 1 neighlist 1 rcut 11.0
 
   Create Moves
-    AtomTranslation 512.0
-    IsoVol 1.0
+    MolTranslation 1000.0
+    PlaneRotate 1000.0
+   # IsoVol 1.0
   End_Create
 
   modify move 1 maxdisplace 0.1
   modify move 1 tunemax .true.
-  modify move 2 maxdv 0.01
-  modify move 2 style log
+  modify move 2 maxangle 0.3
   modify move 2 tunemax .true.
+  #modify move 3 maxdv 0.01
+  #modify move 3 style log
+  #modify move 3 tunemax .true.
 
   #BlockAverage (BoxNum) (BlockAvg Variable) (Avg Frequency) (Block Size) (FileName)
   Create Analysis
@@ -50,7 +60,7 @@
   End_Create
 
   Create Trajectory
-     dump 1 100 "Traj&.dump" 
+     dump 1 100 "Traj&.dump"
   End_Create
 
   Run

@@ -7,6 +7,9 @@
 *.dll
 *.dylib
 *.framework
+*.log
+log.lammps
+Config_**.clssy
 *.txt
 *.dat
 *.xyz

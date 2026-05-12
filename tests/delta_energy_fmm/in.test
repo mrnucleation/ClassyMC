@@ -1,0 +1,69 @@
+#======================================
+# Test input: NaCl system for FMM energy delta testing.
+# Uses AcceptAll so every proposed move is accepted.
+# cycles=0 so Script_ReadParameters initializes but
+# does not run the MC loop -- the test driver takes over.
+#
+# Defines one of each move type so the test driver can
+# exercise each displacement class independently:
+#   Move 1: MolTranslation   (Displacement)
+#   Move 2: AtomTranslation  (Displacement)
+#   Move 3: PlaneRotate      (Displacement, no-op for single atoms)
+#   Move 4: Rotate3D         (Displacement, no-op for single atoms)
+#   Move 5: IsoVol           (OrthoVolChange)
+#======================================
+  set rng_seed 42
+  set NeighSkin 2.0
+  set moves 1
+  set cycles 0
+  set screenfrequency 1
+  SamplingType AcceptAll
+
+  set energyunits ev
+  set pressureunits bar
+
+  ForceField "NaCl_FMM.clFF"
+
+  Create Boxes
+    fromfile "NaCl_Config.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 500
+  modify box 1 pressure 1.0
+  modify box 1 buildfreq 10
+
+  NeighList 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 15.0
+
+  Create Moves
+    MolTranslation 1.0
+    AtomTranslation 1.0
+    PlaneRotate 1.0
+    Rotate3D 1.0
+    IsoVol 1.0
+  End_Create
+
+# MolTranslation settings
+  modify move 1 maxdisplace 0.1
+  modify move 1 tunemax .false.
+
+# AtomTranslation settings
+  modify move 2 maxdisplace 0.1
+  modify move 2 tunemax .false.
+
+# PlaneRotate settings
+  modify move 3 maxangle 0.5
+  modify move 3 tunemax .false.
+
+# Rotate3D settings
+  modify move 4 maxangle 0.5
+  modify move 4 tunemax .false.
+
+# IsoVol settings (small perturbation to keep box stable)
+  modify move 5 maxdv 0.001
+  modify move 5 style log
+  modify move 5 tunemax .false.
+
+  Run
+#=====================================

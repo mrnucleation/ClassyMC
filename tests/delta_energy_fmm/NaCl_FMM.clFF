@@ -1,6 +1,5 @@
 # NaCl Forcefield - FMM Coulomb Only
-# Pure electrostatics using Fast Multipole Method
-# For energy comparison with LAMMPS coul/long + PPPM
+# For delta energy consistency testing
 
 moleculetypes 2
 
@@ -34,9 +33,8 @@ units energy kb
 
 # FMM Coulomb parameters
 forcefield 1
-  usemultipole true
   order 6
-  maxlevel 5
+  maxlevel 4
   ncrit 10
   rcut 10.0
   periodic true

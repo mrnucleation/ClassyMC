@@ -42,7 +42,7 @@ end_forcefield
 
 #Forcefield 1: Lennard-Jones (short-range van der Waals)
 forcefield 2
-  rCut 10.0
+  rCut 7.0
   tailcorrection .true.
   1  17.44  2.52 1.8
   2  192.45  3.85 2.0
@@ -51,13 +51,13 @@ end_forcefield
 # Forcefield 2: FMM (long-range electrostatics)
 forcefield 3
   usemultipole true
-  order 4
-  maxlevel 4
-  ncrit 5
-  rcut 10.0
+  order 5
+  maxlevel 6
+  ncrit 6
+  rcut 7.0
   periodic true
-  charge 1 0.885
-  charge 2 -0.885
+  charge 1 1.0
+  charge 2 -1.0
   rmin 1 0.5
   rmin 2 0.5
 end_forcefield

@@ -27,21 +27,34 @@ molecule 2
 end_molecule
 
 forcefieldtype
-  lj_ewald
+  hybrid
+  EP_LJ_Cut
+  ewald
 end_forcefieldtype
 
 units energy kb
 
-# Na-Cl system using LJ + Ewald
-# type epsilon sigma q rmin
+# Na-Cl system using hybrid LJ + Ewald
 forcefield 1
-  ljrcut 4.5
-  ewaldrcut 7.0
+  nfields 2
+  forcefields 2 3
+end_forcefield
+
+# Lennard-Jones
+# type epsilon sigma rmin
+forcefield 2
+  rcut 4.5
+  1  23.60105  2.58478  0.5
+  2  75.48309  4.4      0.5
+end_forcefield
+
+# Ewald electrostatics
+# type charge rmin
+forcefield 3
+  rcut 7.0
   alpha 0.25
   kmax 5.0
-  charge 1 1.0
-  charge 2 -1.0
-  1  23.60105  2.58478  0.5
-  2  75.48309  4.4 0.5
+  1   1.0  0.5
+  2  -1.0  0.5
 end_forcefield
 

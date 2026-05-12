@@ -108,11 +108,21 @@ module FF_FMM
     ! Flags
     logical :: initialized = .false.
     logical :: treeBuilt = .false.
+    logical :: useMultipole = .false.
     
     ! MC move tracking
     integer :: lastMovedParticle
     integer :: lastOldLeaf
     integer :: lastNewLeaf
+    
+    ! Pending move tracking for incremental M updates (O(N) far-field)
+    logical :: hasPendingMove = .false.
+    integer :: pendingAtomIdx = 0
+    real(dp) :: pendingOldX = 0.0_dp
+    real(dp) :: pendingOldY = 0.0_dp
+    real(dp) :: pendingOldZ = 0.0_dp
+    integer :: nSavedLeaves = 0
+    integer :: savedLeaves(20) = 0
     
   contains
     procedure, pass :: Constructor => Constructor_FMM
@@ -124,6 +134,8 @@ module FF_FMM
     procedure, pass :: OrthoVolECalc => OrthoVol_FMM
     procedure, pass :: ScaleOctreeForVolume => ScaleOctree_FMM  ! Uniform scale centers/sizes for IsoVol (tree bins)
     procedure, pass :: ManyBody => ManyBody_FMM
+    procedure, pass :: DiagnosticMultipoleCompare => DiagnosticMultipoleCompare_FMM
+    procedure, pass :: SingleCellM2LTest => SingleCellM2LTest_FMM
     procedure, pass :: ProcessIO => ProcessIO_FMM
     procedure, pass :: Prologue => Prologue_FMM
     procedure, pass :: GetCutOff => GetCutOff_FMM
@@ -145,6 +157,10 @@ module FF_FMM
     procedure, pass :: RejectUpdate => RejectUpdate_FMM
     procedure, pass :: FindLeafForPosition => FindLeafForPosition_FMM
     procedure, pass :: GetParticleEnergy => GetParticleEnergy_FMM
+    procedure, pass :: ResolvePendingMove => ResolvePendingMove_FMM
+    procedure, pass :: EvalFarFieldPotential => EvalFarFieldPotential_FMM
+    procedure, pass :: TentativeMultipoleUpdate => TentativeMultipoleUpdate_FMM
+    procedure, pass :: VerifyMultipoles => VerifyMultipoles_FMM
     
   end type Pair_FMM
 
@@ -211,14 +227,17 @@ subroutine Detailed_FMM(self, curbox, E_T, accept)
   accept = .true.
   if (.not. self%isSubPair) curbox%ETable = 0.0_dp
   
+  call curbox%GetCoordinates(atoms)
+  
   call self%BuildOctree(curbox)
   call self%BuildInteractionLists()
   call self%ComputeMultipoles(curbox)
   call self%ComputeLocalExpansions()
   call self%ComputeNearFieldOctree(curbox, E_near, accept)
   if (.not. accept) return
-  ! Use direct far-field as the authoritative energy
+
   call self%ComputeFarField(curbox, E_far)
+  write(nout,'(A,I6)') " FMM nLeaves=", self%nLeaves
   E_coulomb = E_near + E_far
   
   call curbox%GetCoordinates(atoms)
@@ -340,16 +359,13 @@ subroutine Shift_FMM_Single(self, curbox, disp, E_Diff, accept)
   real(dp) :: E_periodic_diff
   integer :: kAtom, kType
   real(dp) :: xnew, ynew, znew
-
+  
   call curbox%GetCoordinates(atoms)
 
   dispLen = size(disp)
   E_Diff = 0.0_dp
   accept = .true.
 
-  ! Loop over displaced atoms: compute pair deltas using tree's near/far lists from moved atom's leaf
-  ! (standard for table consistency: update both i and j dETable; E_Diff = sum pair_delta)
-  ! Uses ComputePairDelta_FMM helper for old/new E_pair.
   do iDisp = 1, dispLen
     iAtom = disp(iDisp)%atmIndx
     atmType1 = curbox%AtomType(iAtom)
@@ -357,14 +373,12 @@ subroutine Shift_FMM_Single(self, curbox, disp, E_Diff, accept)
     
     if (abs(qi) < 1.0E-15_dp) cycle
 
-    ! Get leaf for old position (use mapping for exact; lists from old tree)
     leafIdx = self%particleToLeaf(iAtom)
     newLeaf = leafIdx
     if (self%treeBuilt) then
       newLeaf = self%FindLeafForPosition(disp(iDisp)%x_new, disp(iDisp)%y_new, disp(iDisp)%z_new)
     endif
 
-    ! If the particle crosses leaves (or mapping is invalid), do a full scan to avoid misses
     if (leafIdx <= 0 .or. newLeaf <= 0 .or. newLeaf /= leafIdx) then
       do jAtom = 1, curbox%nMaxAtoms
         if (jAtom == iAtom) cycle
@@ -396,7 +410,7 @@ subroutine Shift_FMM_Single(self, curbox, disp, E_Diff, accept)
         enddo
       enddo
 
-      ! 3. Far cells (full direct)
+      ! 3. Far-field: direct pair sums over tree far-field cells
       do k = 1, self%nodes(leafIdx)%nFar
         nodeJ = self%nodes(leafIdx)%farList(k)
         if (.not. allocated(self%nodes(nodeJ)%particles)) cycle
@@ -1471,7 +1485,6 @@ subroutine BuildInteractionLists_FMM(self)
   ! For each leaf, determine which other leaves are near or far
   do iLeaf = 1, self%nLeaves
     nodeI = self%leafNodes(iLeaf)
-    threshold = 3.0_dp * self%nodes(nodeI)%halfWidth * 2.0_dp
     
     nearCount = 0
     farCount = 0
@@ -1480,6 +1493,9 @@ subroutine BuildInteractionLists_FMM(self)
       if (iLeaf == jLeaf) cycle
       
       nodeJ = self%leafNodes(jLeaf)
+      
+      ! Well-separation criterion must account for BOTH cell sizes
+      threshold = 3.0_dp * (self%nodes(nodeI)%halfWidth + self%nodes(nodeJ)%halfWidth)
       
       dx = self%nodes(nodeI)%center(1) - self%nodes(nodeJ)%center(1)
       dy = self%nodes(nodeI)%center(2) - self%nodes(nodeJ)%center(2)
@@ -1501,8 +1517,28 @@ subroutine BuildInteractionLists_FMM(self)
         nearCount = nearCount + 1
         tempNear(nearCount) = nodeJ
       else
-        farCount = farCount + 1
-        tempFar(farCount) = nodeJ
+        ! For periodic systems, ensure the expansion displacement (R - r) 
+        ! stays within the minimum image range for ALL source-target pairs.
+        ! max|R_a - r_a| = |d_a| + hw_source + hw_target per axis.
+        block
+          logical :: periodic_ok
+          real(dp) :: hwI, hwJ
+          periodic_ok = .true.
+          if (self%isPeriodic) then
+            hwI = self%nodes(nodeI)%halfWidth
+            hwJ = self%nodes(nodeJ)%halfWidth
+            if (abs(dx) + hwI + hwJ >= self%cachedLx/2.0_dp) periodic_ok = .false.
+            if (abs(dy) + hwI + hwJ >= self%cachedLy/2.0_dp) periodic_ok = .false.
+            if (abs(dz) + hwI + hwJ >= self%cachedLz/2.0_dp) periodic_ok = .false.
+          endif
+          if (periodic_ok) then
+            farCount = farCount + 1
+            tempFar(farCount) = nodeJ
+          else
+            nearCount = nearCount + 1
+            tempNear(nearCount) = nodeJ
+          endif
+        end block
       endif
     enddo
     
@@ -1534,7 +1570,7 @@ subroutine ComputeMultipoles_FMM(self, curbox)
   class(Pair_FMM), intent(inout) :: self
   class(SimBox), intent(inout) :: curbox
 
-  integer :: iLeaf, nodeIdx, iAtom, j
+  integer :: iLeaf, nodeIdx, iAtom, j, l, m
   integer :: atmType
   real(dp) :: qi, dx, dy, dz
   real(dp), pointer :: atoms(:,:) => null()
@@ -1569,9 +1605,13 @@ subroutine ComputeMultipoles_FMM(self, curbox)
       ! Compute regular solid harmonics at particle position relative to cell center
       call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm)
       
-      ! P2M: M_n^m = sum_i q_i * conj(R_n^m(y_i - c))
-      ! The conjugate is essential for the addition theorem to work correctly
-      self%nodes(nodeIdx)%M = self%nodes(nodeIdx)%M + qi * conjg(Rlm)
+      ! P2M: M_l^m = sum_i q_i * R_l^{-m}(y_i - c)
+      do l = 0, self%expansionOrder
+        do m = -l, l
+          self%nodes(nodeIdx)%M(SH_Index(l,m)) = self%nodes(nodeIdx)%M(SH_Index(l,m)) &
+            + qi * Rlm(SH_Index(l,-m))
+        enddo
+      enddo
     enddo
   enddo
   
@@ -1972,10 +2012,6 @@ subroutine ComputeFarField_FMM(self, curbox, E_far)
 end subroutine
 !=============================================================================
 subroutine ComputeFarFieldMultipole_FMM(self, curbox, E_far)
-  ! Compute far-field energy from local expansions using multipole approximation
-  !
-  ! NOTE: This routine requires correct spherical harmonic translation operators.
-  ! Use ComputeFarField (direct summation) until the multipole operators are verified.
   implicit none
   class(Pair_FMM), intent(inout) :: self
   class(SimBox), intent(inout) :: curbox
@@ -1989,11 +2025,15 @@ subroutine ComputeFarFieldMultipole_FMM(self, curbox, E_far)
   complex(dp) :: phi
   integer :: l, m, idx
   
+  integer :: molIdx, molStart, molEnd, iA, iB
+  integer :: leafA, leafB, k, atmTypeA, atmTypeB
+  real(dp) :: qA, qB, rx, ry, rz, r, E_pair, E_intra_corr
+  logical :: isNear
+  
   call curbox%GetCoordinates(atoms)
   
   E_far = 0.0_dp
   
-  ! For each particle, evaluate local expansion at its position
   do iLeaf = 1, self%nLeaves
     nodeIdx = self%leafNodes(iLeaf)
     
@@ -2006,15 +2046,12 @@ subroutine ComputeFarFieldMultipole_FMM(self, curbox, E_far)
       
       if (abs(qi) < 1.0E-15_dp) cycle
       
-      ! Position relative to cell center
       dx = atoms(1, iAtom) - self%nodes(nodeIdx)%center(1)
       dy = atoms(2, iAtom) - self%nodes(nodeIdx)%center(2)
       dz = atoms(3, iAtom) - self%nodes(nodeIdx)%center(3)
       
-      ! Compute regular solid harmonics at particle position
       call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm)
       
-      ! Evaluate local expansion: phi = sum_{l,m} L_l^m * R_l^m(r)
       phi = (0.0_dp, 0.0_dp)
       do l = 0, self%expansionOrder
         do m = -l, l
@@ -2023,13 +2060,558 @@ subroutine ComputeFarFieldMultipole_FMM(self, curbox, E_far)
         enddo
       enddo
       
-      ! Energy contribution (divide by 2 to avoid double counting for total E_far)
-      ! Add full to ETable (consistent with near/direct and ETable convention: sum/2 = total)
       E_far = E_far + 0.5_dp * qi * real(phi, dp) * coulombConst
-      curbox%ETable(iAtom) = curbox%ETable(iAtom) + qi * real(phi, dp) * coulombConst
     enddo
   enddo
 
+  ! Intramolecular far-field correction: the local expansions include
+  ! contributions from ALL far-field charges, including same-molecule atoms
+  ! whose leaf cells happen to be in the far-field.  Subtract those.
+  E_intra_corr = 0.0_dp
+  do iAtom = 1, curbox%nMaxAtoms
+    if (.not. curbox%IsActive(iAtom)) cycle
+    molIdx = curbox%MolIndx(iAtom)
+    molStart = curbox%MolStartIndx(molIdx)
+    if (iAtom /= molStart) cycle
+    molEnd = curbox%MolEndIndx(molIdx)
+    if (molEnd == molStart) cycle
+
+    do iA = molStart, molEnd - 1
+      if (.not. curbox%IsActive(iA)) cycle
+      leafA = self%particleToLeaf(iA)
+      if (leafA <= 0) cycle
+      atmTypeA = curbox%AtomType(iA)
+      qA = self%q(atmTypeA)
+      if (abs(qA) < 1.0E-15_dp) cycle
+
+      do iB = iA + 1, molEnd
+        if (.not. curbox%IsActive(iB)) cycle
+        leafB = self%particleToLeaf(iB)
+        if (leafB <= 0) cycle
+        if (leafA == leafB) cycle
+
+        atmTypeB = curbox%AtomType(iB)
+        qB = self%q(atmTypeB)
+        if (abs(qB) < 1.0E-15_dp) cycle
+
+        ! Check A→B: is leafB in leafA's far-field?
+        isNear = .false.
+        do k = 1, self%nodes(leafA)%nNear
+          if (self%nodes(leafA)%nearList(k) == leafB) then
+            isNear = .true.
+            exit
+          endif
+        enddo
+        if (isNear) then
+          idx = 0
+        else
+          idx = 1
+        endif
+
+        ! Check B→A: is leafA in leafB's far-field?
+        isNear = .false.
+        do k = 1, self%nodes(leafB)%nNear
+          if (self%nodes(leafB)%nearList(k) == leafA) then
+            isNear = .true.
+            exit
+          endif
+        enddo
+        if (.not. isNear) idx = idx + 1
+
+        if (idx > 0) then
+          rx = atoms(1, iA) - atoms(1, iB)
+          ry = atoms(2, iA) - atoms(2, iB)
+          rz = atoms(3, iA) - atoms(3, iB)
+          if (self%isPeriodic) call curbox%Boundary(rx, ry, rz)
+          r = sqrt(rx*rx + ry*ry + rz*rz)
+
+          E_pair = qA * qB * coulombConst / r
+          E_intra_corr = E_intra_corr + 0.5_dp * real(idx, dp) * E_pair
+        endif
+      enddo
+    enddo
+  enddo
+
+  block
+    use ParallelVar, only: nout
+    write(nout,*) " E_far_raw=", E_far, " E_intra_corr=", E_intra_corr
+  end block
+  E_far = E_far - E_intra_corr
+
+end subroutine
+!=============================================================================
+subroutine DiagnosticMultipoleCompare_FMM(self, curbox, E_far_direct)
+  use ParallelVar, only: nout
+  implicit none
+  class(Pair_FMM), intent(inout) :: self
+  class(SimBox), intent(inout) :: curbox
+  real(dp), intent(in) :: E_far_direct
+
+  integer :: iLeaf, nodeIdx, j, iAtom, jAtom
+  integer :: atmType, atmType2, k, nodeJ, ii
+  real(dp) :: qi, qj, dx, dy, dz, rx, ry, rz, rsq, r
+  real(dp), pointer :: atoms(:,:) => null()
+  complex(dp) :: Rlm(self%nExpansion)
+  complex(dp) :: phi
+  integer :: l, m, idx
+  real(dp) :: E_far_multi, phi_multi, phi_direct
+  integer :: nSampled
+  real(dp) :: maxErr, avgErr, relErr
+
+  call curbox%GetCoordinates(atoms)
+
+  E_far_multi = 0.0_dp
+  maxErr = 0.0_dp
+  avgErr = 0.0_dp
+  nSampled = 0
+
+  do iLeaf = 1, self%nLeaves
+    nodeIdx = self%leafNodes(iLeaf)
+    if (.not. allocated(self%nodes(nodeIdx)%particles)) cycle
+
+    do j = 1, size(self%nodes(nodeIdx)%particles)
+      iAtom = self%nodes(nodeIdx)%particles(j)
+      atmType = curbox%AtomType(iAtom)
+      qi = self%q(atmType)
+      if (abs(qi) < 1.0E-15_dp) cycle
+
+      dx = atoms(1, iAtom) - self%nodes(nodeIdx)%center(1)
+      dy = atoms(2, iAtom) - self%nodes(nodeIdx)%center(2)
+      dz = atoms(3, iAtom) - self%nodes(nodeIdx)%center(3)
+      call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm)
+
+      phi = (0.0_dp, 0.0_dp)
+      do l = 0, self%expansionOrder
+        do m = -l, l
+          idx = SH_Index(l, m)
+          phi = phi + self%nodes(nodeIdx)%L(idx) * Rlm(idx)
+        enddo
+      enddo
+      phi_multi = real(phi, dp)
+
+      phi_direct = 0.0_dp
+      do k = 1, self%nodes(nodeIdx)%nFar
+        nodeJ = self%nodes(nodeIdx)%farList(k)
+        if (.not. allocated(self%nodes(nodeJ)%particles)) cycle
+        do ii = 1, size(self%nodes(nodeJ)%particles)
+          jAtom = self%nodes(nodeJ)%particles(ii)
+          atmType2 = curbox%AtomType(jAtom)
+          qj = self%q(atmType2)
+          if (abs(qj) < 1.0E-15_dp) cycle
+          rx = atoms(1, iAtom) - atoms(1, jAtom)
+          ry = atoms(2, iAtom) - atoms(2, jAtom)
+          rz = atoms(3, iAtom) - atoms(3, jAtom)
+          if (self%isPeriodic) call curbox%Boundary(rx, ry, rz)
+          rsq = rx*rx + ry*ry + rz*rz
+          r = sqrt(rsq)
+          phi_direct = phi_direct + qj / r
+        enddo
+      enddo
+
+      E_far_multi = E_far_multi + 0.5_dp * qi * phi_multi * coulombConst
+
+      if (abs(phi_direct) > 1.0E-15_dp) then
+        relErr = abs(phi_multi - phi_direct) / abs(phi_direct)
+        if (relErr > maxErr) maxErr = relErr
+        avgErr = avgErr + relErr
+        nSampled = nSampled + 1
+      endif
+
+      if (nSampled <= 5) then
+        ! Count intramolecular atoms in far-field cells
+        block
+          integer :: nIntraFar, molI, jj, jjAtom
+          real(dp) :: phi_intra
+          nIntraFar = 0
+          phi_intra = 0.0_dp
+          molI = curbox%MolIndx(iAtom)
+          do k = 1, self%nodes(nodeIdx)%nFar
+            nodeJ = self%nodes(nodeIdx)%farList(k)
+            if (.not. allocated(self%nodes(nodeJ)%particles)) cycle
+            do jj = 1, size(self%nodes(nodeJ)%particles)
+              jjAtom = self%nodes(nodeJ)%particles(jj)
+              if (curbox%MolIndx(jjAtom) == molI) then
+                nIntraFar = nIntraFar + 1
+                rx = atoms(1,iAtom)-atoms(1,jjAtom)
+                ry = atoms(2,iAtom)-atoms(2,jjAtom)
+                rz = atoms(3,iAtom)-atoms(3,jjAtom)
+                if (self%isPeriodic) call curbox%Boundary(rx,ry,rz)
+                phi_intra = phi_intra + self%q(curbox%AtomType(jjAtom)) / sqrt(rx*rx+ry*ry+rz*rz)
+              endif
+            enddo
+          enddo
+          write(nout, '(A,I6,A,ES14.6,A,ES14.6,A,F8.4,A,I3,A,ES12.4,A,F8.4)') &
+            "  Atom", iAtom, " multi=", phi_multi, " direct=", phi_direct, &
+            " err=", merge(abs(phi_multi-phi_direct)/abs(phi_direct), 0.0_dp, abs(phi_direct)>1e-15_dp)*100.0_dp, &
+            "% intraFar=", nIntraFar, " phiIntra=", phi_intra, " hw=", self%nodes(nodeIdx)%halfWidth
+        end block
+      endif
+    enddo
+  enddo
+
+  if (nSampled > 0) avgErr = avgErr / real(nSampled, dp)
+
+  write(nout,*) "=== Multipole vs Direct Far-Field Diagnostic ==="
+  write(nout,*) "  E_far (multipole):", E_far_multi
+  write(nout,*) "  E_far (direct):   ", E_far_direct
+  if (abs(E_far_direct) > 1.0E-15_dp) then
+    write(nout,*) "  Rel. error:       ", abs(E_far_multi - E_far_direct)/abs(E_far_direct)*100.0_dp, "%"
+  endif
+  write(nout,*) "  Per-particle max err:", maxErr*100.0_dp, "%"
+  write(nout,*) "  Per-particle avg err:", avgErr*100.0_dp, "%"
+  write(nout,*) "  Particles sampled:  ", nSampled
+
+  ! Check if error correlates with whether atom is in the same cell as other atoms
+  ! in its molecule
+  block
+    integer :: nSameCell, nDiffCell
+    integer :: aIdx, molI2, molStart, molEnd, bIdx, leafA, leafB
+    real(dp) :: errSame, errDiff, phiM, phiD, re2
+    nSameCell = 0; nDiffCell = 0; errSame = 0.0_dp; errDiff = 0.0_dp
+    do iLeaf = 1, self%nLeaves
+      nodeIdx = self%leafNodes(iLeaf)
+      if (.not. allocated(self%nodes(nodeIdx)%particles)) cycle
+      do j = 1, size(self%nodes(nodeIdx)%particles)
+        aIdx = self%nodes(nodeIdx)%particles(j)
+        atmType = curbox%AtomType(aIdx)
+        qi = self%q(atmType)
+        if (abs(qi) < 1.0E-15_dp) cycle
+        leafA = nodeIdx
+        molI2 = curbox%MolIndx(aIdx)
+        molStart = curbox%MolStartIndx(molI2)
+        molEnd = curbox%MolEndIndx(molI2)
+        ! Check if all atoms in molecule are in this same leaf
+        block
+          logical :: allSame
+          integer :: bb
+          allSame = .true.
+          do bb = molStart, molEnd
+            if (bb == aIdx) cycle
+            if (.not. curbox%IsActive(bb)) cycle
+            if (self%particleToLeaf(bb) /= leafA) then
+              allSame = .false.
+              exit
+            endif
+          enddo
+          ! Compute phi_multi and phi_direct for this atom
+          dx = atoms(1,aIdx) - self%nodes(nodeIdx)%center(1)
+          dy = atoms(2,aIdx) - self%nodes(nodeIdx)%center(2)
+          dz = atoms(3,aIdx) - self%nodes(nodeIdx)%center(3)
+          call SH_ComputeSolidHarmonic(dx,dy,dz,self%expansionOrder,Rlm)
+          phi = (0.0_dp,0.0_dp)
+          do l = 0, self%expansionOrder
+            do m = -l, l
+              idx = SH_Index(l,m)
+              phi = phi + self%nodes(nodeIdx)%L(idx) * Rlm(idx)
+            enddo
+          enddo
+          phiM = real(phi, dp)
+          phiD = 0.0_dp
+          do k = 1, self%nodes(nodeIdx)%nFar
+            nodeJ = self%nodes(nodeIdx)%farList(k)
+            if (.not. allocated(self%nodes(nodeJ)%particles)) cycle
+            do ii = 1, size(self%nodes(nodeJ)%particles)
+              bIdx = self%nodes(nodeJ)%particles(ii)
+              atmType2 = curbox%AtomType(bIdx)
+              qj = self%q(atmType2)
+              if (abs(qj) < 1.0E-15_dp) cycle
+              rx = atoms(1,aIdx)-atoms(1,bIdx)
+              ry = atoms(2,aIdx)-atoms(2,bIdx)
+              rz = atoms(3,aIdx)-atoms(3,bIdx)
+              if (self%isPeriodic) call curbox%Boundary(rx,ry,rz)
+              rsq = rx*rx+ry*ry+rz*rz
+              r = sqrt(rsq)
+              phiD = phiD + qj/r
+            enddo
+          enddo
+          if (abs(phiD) > 1e-15_dp) then
+            re2 = abs(phiM - phiD)/abs(phiD)
+            if (allSame) then
+              nSameCell = nSameCell + 1
+              errSame = errSame + re2
+            else
+              nDiffCell = nDiffCell + 1
+              errDiff = errDiff + re2
+            endif
+          endif
+        end block
+      enddo
+    enddo
+    if (nSameCell > 0) errSame = errSame / real(nSameCell, dp)
+    if (nDiffCell > 0) errDiff = errDiff / real(nDiffCell, dp)
+    write(nout,*) "  Atoms w/ all mol-mates in same cell:", nSameCell, " avgErr:", errSame*100.0_dp, "%"
+    write(nout,*) "  Atoms w/ mol-mates in diff cell:   ", nDiffCell, " avgErr:", errDiff*100.0_dp, "%"
+  end block
+  write(nout,*) "================================================="
+
+end subroutine
+!=============================================================================
+subroutine SingleCellM2LTest_FMM(self, curbox)
+  use ParallelVar, only: nout
+  implicit none
+  class(Pair_FMM), intent(inout) :: self
+  class(SimBox), intent(inout) :: curbox
+
+  integer :: tgtLeaf, tgtNode, srcNode, p
+  integer :: j, k, ii, iAtom, jAtom, atmType, atmType2, nSrc
+  real(dp) :: qi, qj, dx, dy, dz, rx, ry, rz, rsq, r
+  real(dp), pointer :: atoms(:,:) => null()
+  complex(dp), allocatable :: M_src(:), L_single(:), Rlm(:), Slm(:)
+  complex(dp) :: phi
+  real(dp) :: phi_m2l, phi_exact
+  integer :: l, m, idx
+
+  call curbox%GetCoordinates(atoms)
+  p = self%expansionOrder
+
+  allocate(M_src((p+1)*(p+1)), L_single((p+1)*(p+1)), Rlm((p+1)*(p+1)))
+
+  ! Pick first leaf with particles and a far-field source
+  tgtLeaf = 0
+  do ii = 1, self%nLeaves
+    tgtNode = self%leafNodes(ii)
+    if (.not. allocated(self%nodes(tgtNode)%particles)) cycle
+    if (self%nodes(tgtNode)%nFar < 1) cycle
+    tgtLeaf = ii
+    exit
+  enddo
+  if (tgtLeaf == 0) then
+    write(nout,*) "No suitable target cell for M2L test"
+    deallocate(M_src, L_single, Rlm)
+    return
+  endif
+  tgtNode = self%leafNodes(tgtLeaf)
+  srcNode = self%nodes(tgtNode)%farList(1)
+
+  ! Count source particles
+  nSrc = 0
+  if (allocated(self%nodes(srcNode)%particles)) nSrc = size(self%nodes(srcNode)%particles)
+
+  write(nout,*) "=== Single Cell M2L Test ==="
+  write(nout,*) "  Target leaf:", tgtLeaf, " node:", tgtNode, " nPart:", size(self%nodes(tgtNode)%particles)
+  write(nout,*) "  Source node:", srcNode, " nPart:", nSrc
+  write(nout,*) "  Target center:", self%nodes(tgtNode)%center
+  write(nout,*) "  Source center:", self%nodes(srcNode)%center
+
+  ! Compute source multipole manually (P2M for source cell)
+  M_src = (0.0_dp, 0.0_dp)
+  if (nSrc > 0) then
+    do j = 1, nSrc
+      jAtom = self%nodes(srcNode)%particles(j)
+      atmType2 = curbox%AtomType(jAtom)
+      qj = self%q(atmType2)
+      if (abs(qj) < 1.0E-15_dp) cycle
+      dx = atoms(1,jAtom) - self%nodes(srcNode)%center(1)
+      dy = atoms(2,jAtom) - self%nodes(srcNode)%center(2)
+      dz = atoms(3,jAtom) - self%nodes(srcNode)%center(3)
+      call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+      do l = 0, p
+        do m = -l, l
+          M_src(SH_Index(l,m)) = M_src(SH_Index(l,m)) + qj * Rlm(SH_Index(l,-m))
+        enddo
+      enddo
+    enddo
+  endif
+  write(nout,*) "  M_src(0,0) =", M_src(SH_Index(0,0)), " (should be ~0 if neutral)"
+
+  ! M2L from this single source
+  L_single = (0.0_dp, 0.0_dp)
+  dx = self%nodes(tgtNode)%center(1) - self%nodes(srcNode)%center(1)
+  dy = self%nodes(tgtNode)%center(2) - self%nodes(srcNode)%center(2)
+  dz = self%nodes(tgtNode)%center(3) - self%nodes(srcNode)%center(3)
+  if (self%isPeriodic) then
+    if (dx > self%cachedLx/2.0_dp) dx = dx - self%cachedLx
+    if (dx < -self%cachedLx/2.0_dp) dx = dx + self%cachedLx
+    if (dy > self%cachedLy/2.0_dp) dy = dy - self%cachedLy
+    if (dy < -self%cachedLy/2.0_dp) dy = dy + self%cachedLy
+    if (dz > self%cachedLz/2.0_dp) dz = dz - self%cachedLz
+    if (dz < -self%cachedLz/2.0_dp) dz = dz + self%cachedLz
+  endif
+  write(nout,*) "  Translation d:", dx, dy, dz, " |d|:", sqrt(dx*dx+dy*dy+dz*dz)
+  call SH_M2L_Coeff(dx, dy, dz, p, M_src, L_single)
+
+  ! Evaluate L2P at each target particle and compare with direct sum from source
+  do j = 1, size(self%nodes(tgtNode)%particles)
+    iAtom = self%nodes(tgtNode)%particles(j)
+    atmType = curbox%AtomType(iAtom)
+    qi = self%q(atmType)
+    if (abs(qi) < 1.0E-15_dp) cycle
+
+    dx = atoms(1,iAtom) - self%nodes(tgtNode)%center(1)
+    dy = atoms(2,iAtom) - self%nodes(tgtNode)%center(2)
+    dz = atoms(3,iAtom) - self%nodes(tgtNode)%center(3)
+    call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+
+    phi = (0.0_dp, 0.0_dp)
+    do l = 0, p
+      do m = -l, l
+        idx = SH_Index(l, m)
+        phi = phi + L_single(idx) * Rlm(idx)
+      enddo
+    enddo
+    phi_m2l = real(phi, dp)
+
+    phi_exact = 0.0_dp
+    if (nSrc > 0) then
+      do k = 1, nSrc
+        jAtom = self%nodes(srcNode)%particles(k)
+        atmType2 = curbox%AtomType(jAtom)
+        qj = self%q(atmType2)
+        if (abs(qj) < 1.0E-15_dp) cycle
+        rx = atoms(1,iAtom) - atoms(1,jAtom)
+        ry = atoms(2,iAtom) - atoms(2,jAtom)
+        rz = atoms(3,iAtom) - atoms(3,jAtom)
+        if (self%isPeriodic) call curbox%Boundary(rx,ry,rz)
+        rsq = rx*rx+ry*ry+rz*rz
+        r = sqrt(rsq)
+        phi_exact = phi_exact + qj/r
+      enddo
+    endif
+
+    ! Also compute L' direct: L'_l^m = sum_i q_i S_l^m(y_i - c_T)
+    block
+      complex(dp), allocatable :: L_direct(:), Slm_src(:)
+      real(dp) :: phi_direct_L, sx, sy, sz
+      complex(dp) :: phi_d
+      allocate(L_direct((p+1)*(p+1)), Slm_src((p+1)*(p+1)))
+      L_direct = (0.0_dp, 0.0_dp)
+      if (nSrc > 0) then
+        do k = 1, nSrc
+          jAtom = self%nodes(srcNode)%particles(k)
+          atmType2 = curbox%AtomType(jAtom)
+          qj = self%q(atmType2)
+          if (abs(qj) < 1.0E-15_dp) cycle
+          sx = atoms(1,jAtom) - self%nodes(tgtNode)%center(1)
+          sy = atoms(2,jAtom) - self%nodes(tgtNode)%center(2)
+          sz = atoms(3,jAtom) - self%nodes(tgtNode)%center(3)
+          if (self%isPeriodic) call curbox%Boundary(sx,sy,sz)
+          call SH_ComputeIrregularSolid(sx, sy, sz, p, Slm_src)
+          L_direct = L_direct + qj * Slm_src
+        enddo
+      endif
+      ! Evaluate: phi = sum R'(l,-m) * L_direct(l,m)
+      phi_d = (0.0_dp, 0.0_dp)
+      do l = 0, p
+        do m = -l, l
+          phi_d = phi_d + Rlm(SH_Index(l,-m)) * L_direct(SH_Index(l,m))
+        enddo
+      enddo
+      phi_direct_L = real(phi_d, dp)
+      write(nout,'(A,I6,A,ES14.6,A,ES14.6,A,ES14.6,A,F8.4,A,F8.4,A)') &
+        "  Atom", iAtom, " m2l=", phi_m2l, " directL=", phi_direct_L, &
+        " exact=", phi_exact, " m2l_err=", &
+        merge(abs(phi_m2l-phi_exact)/abs(phi_exact), 0.0_dp, abs(phi_exact)>1e-15_dp)*100.0_dp, &
+        "% dL_err=", &
+        merge(abs(phi_direct_L-phi_exact)/abs(phi_exact), 0.0_dp, abs(phi_exact)>1e-15_dp)*100.0_dp, "%"
+
+      ! Print L coefficient comparison for first atom
+      if (j == 1) then
+        write(nout,*) "  --- L coefficients: M2L vs Direct (L'(-k)) ---"
+        do l = 0, min(3, p)
+          do m = -l, l
+            idx = SH_Index(l, m)
+            write(nout,'(A,I2,A,I3,A,2ES12.4,A,2ES12.4)') &
+              "    L(", l, ",", m, ") M2L=", real(L_single(idx)), aimag(L_single(idx)), &
+              "  direct(-k)=", real(L_direct(SH_Index(l,-m))), aimag(L_direct(SH_Index(l,-m)))
+          enddo
+        enddo
+      endif
+
+      deallocate(L_direct, Slm_src)
+    end block
+  enddo
+
+  ! Now compare accumulated L from pipeline vs manual accumulation
+  write(nout,*) "--- Accumulated L comparison ---"
+  block
+    complex(dp), allocatable :: L_manual(:), Slm_tmp(:)
+    integer :: kk, sNode
+    real(dp) :: ddx, ddy, ddz
+
+    allocate(L_manual((p+1)*(p+1)), Slm_tmp((2*p+1)*(2*p+1)))
+    L_manual = (0.0_dp, 0.0_dp)
+
+    do kk = 1, self%nodes(tgtNode)%nFar
+      sNode = self%nodes(tgtNode)%farList(kk)
+      ddx = self%nodes(tgtNode)%center(1) - self%nodes(sNode)%center(1)
+      ddy = self%nodes(tgtNode)%center(2) - self%nodes(sNode)%center(2)
+      ddz = self%nodes(tgtNode)%center(3) - self%nodes(sNode)%center(3)
+      if (self%isPeriodic) then
+        if (ddx > self%cachedLx/2.0_dp) ddx = ddx - self%cachedLx
+        if (ddx < -self%cachedLx/2.0_dp) ddx = ddx + self%cachedLx
+        if (ddy > self%cachedLy/2.0_dp) ddy = ddy - self%cachedLy
+        if (ddy < -self%cachedLy/2.0_dp) ddy = ddy + self%cachedLy
+        if (ddz > self%cachedLz/2.0_dp) ddz = ddz - self%cachedLz
+        if (ddz < -self%cachedLz/2.0_dp) ddz = ddz + self%cachedLz
+      endif
+      call SH_M2L_Coeff(ddx, ddy, ddz, p, self%nodes(sNode)%M, L_manual)
+    enddo
+
+    write(nout,*) "  nFar:", self%nodes(tgtNode)%nFar
+    write(nout,*) "  Pipeline L(0,0):", self%nodes(tgtNode)%L(SH_Index(0,0))
+    write(nout,*) "  Manual   L(0,0):", L_manual(SH_Index(0,0))
+    write(nout,*) "  Pipeline L(1,0):", self%nodes(tgtNode)%L(SH_Index(1,0))
+    write(nout,*) "  Manual   L(1,0):", L_manual(SH_Index(1,0))
+    write(nout,*) "  Pipeline L(1,1):", self%nodes(tgtNode)%L(SH_Index(1,1))
+    write(nout,*) "  Manual   L(1,1):", L_manual(SH_Index(1,1))
+
+    ! L2P from manual L vs from pipeline L
+    do j = 1, min(3, size(self%nodes(tgtNode)%particles))
+      iAtom = self%nodes(tgtNode)%particles(j)
+      atmType = curbox%AtomType(iAtom)
+      qi = self%q(atmType)
+      if (abs(qi) < 1.0E-15_dp) cycle
+
+      dx = atoms(1,iAtom) - self%nodes(tgtNode)%center(1)
+      dy = atoms(2,iAtom) - self%nodes(tgtNode)%center(2)
+      dz = atoms(3,iAtom) - self%nodes(tgtNode)%center(3)
+      call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+
+      phi = (0.0_dp, 0.0_dp)
+      do l = 0, p
+        do m = -l, l
+          idx = SH_Index(l, m)
+          phi = phi + self%nodes(tgtNode)%L(idx) * Rlm(idx)
+        enddo
+      enddo
+      phi_m2l = real(phi, dp)
+
+      phi = (0.0_dp, 0.0_dp)
+      do l = 0, p
+        do m = -l, l
+          idx = SH_Index(l, m)
+          phi = phi + L_manual(idx) * Rlm(idx)
+        enddo
+      enddo
+
+      phi_exact = 0.0_dp
+      do kk = 1, self%nodes(tgtNode)%nFar
+        sNode = self%nodes(tgtNode)%farList(kk)
+        if (.not. allocated(self%nodes(sNode)%particles)) cycle
+        do ii = 1, size(self%nodes(sNode)%particles)
+          jAtom = self%nodes(sNode)%particles(ii)
+          atmType2 = curbox%AtomType(jAtom)
+          qj = self%q(atmType2)
+          if (abs(qj) < 1.0E-15_dp) cycle
+          rx = atoms(1,iAtom)-atoms(1,jAtom)
+          ry = atoms(2,iAtom)-atoms(2,jAtom)
+          rz = atoms(3,iAtom)-atoms(3,jAtom)
+          if (self%isPeriodic) call curbox%Boundary(rx,ry,rz)
+          rsq = rx*rx+ry*ry+rz*rz
+          r = sqrt(rsq)
+          phi_exact = phi_exact + qj/r
+        enddo
+      enddo
+
+      write(nout,'(A,I6,A,ES14.6,A,ES14.6,A,ES14.6)') &
+        "  Atom", iAtom, " pipeline=", phi_m2l, " manual=", real(phi,dp), " exact=", phi_exact
+    enddo
+
+    deallocate(L_manual, Slm_tmp)
+  end block
+  write(nout,*) "============================"
+
+  deallocate(M_src, L_single, Rlm)
 end subroutine
 !=============================================================================
 subroutine ComputeSelfEnergy_FMM(self, curbox, E_self)
@@ -2114,7 +2696,7 @@ subroutine UpdateMultipoleForMove_FMM(self, curbox, iAtom, x_old, y_old, z_old, 
   real(dp), intent(in) :: x_old, y_old, z_old
   real(dp), intent(in) :: x_new, y_new, z_new
 
-  integer :: oldLeaf, newLeaf, atmType
+  integer :: oldLeaf, newLeaf, atmType, l, m
   real(dp) :: qi, dx, dy, dz
   complex(dp) :: Rlm_old(self%nExpansion), Rlm_new(self%nExpansion)
   
@@ -2137,19 +2719,29 @@ subroutine UpdateMultipoleForMove_FMM(self, curbox, iAtom, x_old, y_old, z_old, 
     self%nodes(newLeaf)%M_old = self%nodes(newLeaf)%M
   endif
   
-  ! Remove old contribution from old leaf (P2M uses conjugate)
+  ! Remove old contribution from old leaf
   dx = x_old - self%nodes(oldLeaf)%center(1)
   dy = y_old - self%nodes(oldLeaf)%center(2)
   dz = z_old - self%nodes(oldLeaf)%center(3)
   call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm_old)
-  self%nodes(oldLeaf)%M = self%nodes(oldLeaf)%M - qi * conjg(Rlm_old)
+  do l = 0, self%expansionOrder
+    do m = -l, l
+      self%nodes(oldLeaf)%M(SH_Index(l,m)) = self%nodes(oldLeaf)%M(SH_Index(l,m)) &
+        - qi * Rlm_old(SH_Index(l,-m))
+    enddo
+  enddo
   
-  ! Add new contribution to new leaf (P2M uses conjugate)
+  ! Add new contribution to new leaf
   dx = x_new - self%nodes(newLeaf)%center(1)
   dy = y_new - self%nodes(newLeaf)%center(2)
   dz = z_new - self%nodes(newLeaf)%center(3)
   call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm_new)
-  self%nodes(newLeaf)%M = self%nodes(newLeaf)%M + qi * conjg(Rlm_new)
+  do l = 0, self%expansionOrder
+    do m = -l, l
+      self%nodes(newLeaf)%M(SH_Index(l,m)) = self%nodes(newLeaf)%M(SH_Index(l,m)) &
+        + qi * Rlm_new(SH_Index(l,-m))
+    enddo
+  enddo
   
   ! Update particle to leaf mapping
   self%particleToLeaf(iAtom) = newLeaf
@@ -2171,19 +2763,221 @@ subroutine AcceptUpdate_FMM(self)
 end subroutine
 !=============================================================================
 subroutine RejectUpdate_FMM(self)
-  ! Called when a move is rejected - restore old multipoles
   implicit none
   class(Pair_FMM), intent(inout) :: self
+  integer :: iS, nodeIdx
 
-  ! Restore multipoles
-  self%nodes(self%lastOldLeaf)%M = self%nodes(self%lastOldLeaf)%M_old
-  if (self%lastNewLeaf /= self%lastOldLeaf) then
-    self%nodes(self%lastNewLeaf)%M = self%nodes(self%lastNewLeaf)%M_old
-  endif
+  ! Restore multipoles for all saved leaves
+  do iS = 1, self%nSavedLeaves
+    nodeIdx = self%savedLeaves(iS)
+    if (nodeIdx > 0 .and. nodeIdx <= self%nNodes) then
+      self%nodes(nodeIdx)%M = self%nodes(nodeIdx)%M_old
+    endif
+  enddo
+  self%nSavedLeaves = 0
   
   ! Restore particle mapping
   self%particleToLeaf = self%particleToLeaf_old
 
+end subroutine
+!=============================================================================
+subroutine ResolvePendingMove_FMM(self, curbox)
+  implicit none
+  class(Pair_FMM), intent(inout) :: self
+  class(SimBox), intent(inout) :: curbox
+  real(dp), pointer :: atoms(:,:) => null()
+  
+  if (.not. self%hasPendingMove) return
+  if (.not. self%useMultipole .or. .not. self%treeBuilt) then
+    self%hasPendingMove = .false.
+    return
+  endif
+  
+  call curbox%GetCoordinates(atoms)
+  
+  if (atoms(1, self%pendingAtomIdx) /= self%pendingOldX .or. &
+      atoms(2, self%pendingAtomIdx) /= self%pendingOldY .or. &
+      atoms(3, self%pendingAtomIdx) /= self%pendingOldZ) then
+    ! Accepted: M is already tentatively updated, keep it
+    call self%AcceptUpdate()
+  else
+    ! Rejected: revert M to pre-move state
+    call self%RejectUpdate()
+  endif
+  
+  self%hasPendingMove = .false.
+end subroutine
+!=============================================================================
+function EvalFarFieldPotential_FMM(self, leafIdx, x, y, z) result(phi)
+  ! Recompute L on-the-fly from current M of all far-field cells,
+  ! then evaluate L2P at the given position. O(n_far * p^4).
+  implicit none
+  class(Pair_FMM), intent(in) :: self
+  integer, intent(in) :: leafIdx
+  real(dp), intent(in) :: x, y, z
+  real(dp) :: phi
+  
+  complex(dp) :: L_temp(self%nExpansion), Rlm(self%nExpansion)
+  complex(dp) :: phi_c
+  integer :: k, nodeJ, l, m, idx
+  real(dp) :: dx, dy, dz
+  
+  L_temp = (0.0_dp, 0.0_dp)
+  do k = 1, self%nodes(leafIdx)%nFar
+    nodeJ = self%nodes(leafIdx)%farList(k)
+    dx = self%nodes(leafIdx)%center(1) - self%nodes(nodeJ)%center(1)
+    dy = self%nodes(leafIdx)%center(2) - self%nodes(nodeJ)%center(2)
+    dz = self%nodes(leafIdx)%center(3) - self%nodes(nodeJ)%center(3)
+    if (self%isPeriodic) then
+      if (dx >  self%cachedLx*0.5_dp) dx = dx - self%cachedLx
+      if (dx < -self%cachedLx*0.5_dp) dx = dx + self%cachedLx
+      if (dy >  self%cachedLy*0.5_dp) dy = dy - self%cachedLy
+      if (dy < -self%cachedLy*0.5_dp) dy = dy + self%cachedLy
+      if (dz >  self%cachedLz*0.5_dp) dz = dz - self%cachedLz
+      if (dz < -self%cachedLz*0.5_dp) dz = dz + self%cachedLz
+    endif
+    call SH_M2L_Coeff(dx, dy, dz, self%expansionOrder, self%nodes(nodeJ)%M, L_temp)
+  enddo
+  
+  dx = x - self%nodes(leafIdx)%center(1)
+  dy = y - self%nodes(leafIdx)%center(2)
+  dz = z - self%nodes(leafIdx)%center(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm)
+  
+  phi_c = (0.0_dp, 0.0_dp)
+  do l = 0, self%expansionOrder
+    do m = -l, l
+      idx = SH_Index(l, m)
+      phi_c = phi_c + L_temp(idx) * Rlm(idx)
+    enddo
+  enddo
+  
+  phi = real(phi_c, dp)
+end function
+!=============================================================================
+subroutine TentativeMultipoleUpdate_FMM(self, curbox, disp, dispLen, atoms)
+  ! After a displacement DiffECalc, tentatively update M for all displaced atoms.
+  ! Saves M_old collectively so that RejectUpdate can revert all at once.
+  ! IMPORTANT: new positions must be wrapped to the primary cell (matching
+  ! what UpdatePosition does) before computing solid harmonics.
+  implicit none
+  class(Pair_FMM), intent(inout) :: self
+  class(SimBox), intent(inout) :: curbox
+  type(Displacement), intent(in) :: disp(:)
+  integer, intent(in) :: dispLen
+  real(dp), pointer, intent(in) :: atoms(:,:)
+  
+  integer :: iDisp, iAtom, oldLeaf, newLeaf, atmType, l, m, iS
+  real(dp) :: qi, dx, dy, dz
+  real(dp) :: xw, yw, zw
+  complex(dp) :: Rlm_tmp(self%nExpansion)
+  logical :: alreadySaved
+  
+  self%particleToLeaf_old = self%particleToLeaf
+  self%nSavedLeaves = 0
+  
+  ! First pass: collect and save M_old for all affected leaves
+  do iDisp = 1, dispLen
+    iAtom = disp(iDisp)%atmIndx
+    atmType = curbox%AtomType(iAtom)
+    qi = self%q(atmType)
+    if (abs(qi) < 1.0E-15_dp) cycle
+    
+    oldLeaf = self%particleToLeaf(iAtom)
+    
+    ! Wrap new position to primary cell (same as UpdatePosition does)
+    xw = disp(iDisp)%x_new
+    yw = disp(iDisp)%y_new
+    zw = disp(iDisp)%z_new
+    call curbox%Boundary(xw, yw, zw)
+    
+    newLeaf = self%FindLeafForPosition(xw, yw, zw)
+    if (oldLeaf <= 0) cycle
+    if (newLeaf <= 0) newLeaf = oldLeaf
+    
+    alreadySaved = .false.
+    do iS = 1, self%nSavedLeaves
+      if (self%savedLeaves(iS) == oldLeaf) then
+        alreadySaved = .true.
+        exit
+      endif
+    enddo
+    if (.not. alreadySaved .and. self%nSavedLeaves < 20) then
+      self%nSavedLeaves = self%nSavedLeaves + 1
+      self%savedLeaves(self%nSavedLeaves) = oldLeaf
+      self%nodes(oldLeaf)%M_old = self%nodes(oldLeaf)%M
+    endif
+    
+    if (newLeaf /= oldLeaf) then
+      alreadySaved = .false.
+      do iS = 1, self%nSavedLeaves
+        if (self%savedLeaves(iS) == newLeaf) then
+          alreadySaved = .true.
+          exit
+        endif
+      enddo
+      if (.not. alreadySaved .and. self%nSavedLeaves < 20) then
+        self%nSavedLeaves = self%nSavedLeaves + 1
+        self%savedLeaves(self%nSavedLeaves) = newLeaf
+        self%nodes(newLeaf)%M_old = self%nodes(newLeaf)%M
+      endif
+    endif
+  enddo
+  
+  ! Second pass: update M for each displaced atom (using wrapped positions)
+  do iDisp = 1, dispLen
+    iAtom = disp(iDisp)%atmIndx
+    atmType = curbox%AtomType(iAtom)
+    qi = self%q(atmType)
+    if (abs(qi) < 1.0E-15_dp) cycle
+    
+    oldLeaf = self%particleToLeaf(iAtom)
+    
+    xw = disp(iDisp)%x_new
+    yw = disp(iDisp)%y_new
+    zw = disp(iDisp)%z_new
+    call curbox%Boundary(xw, yw, zw)
+    
+    newLeaf = self%FindLeafForPosition(xw, yw, zw)
+    if (oldLeaf <= 0) cycle
+    if (newLeaf <= 0) newLeaf = oldLeaf
+    
+    ! Remove old contribution from old leaf
+    dx = atoms(1, iAtom) - self%nodes(oldLeaf)%center(1)
+    dy = atoms(2, iAtom) - self%nodes(oldLeaf)%center(2)
+    dz = atoms(3, iAtom) - self%nodes(oldLeaf)%center(3)
+    call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm_tmp)
+    do l = 0, self%expansionOrder
+      do m = -l, l
+        self%nodes(oldLeaf)%M(SH_Index(l,m)) = self%nodes(oldLeaf)%M(SH_Index(l,m)) &
+          - qi * Rlm_tmp(SH_Index(l,-m))
+      enddo
+    enddo
+    
+    ! Add new contribution to new leaf (using WRAPPED position)
+    dx = xw - self%nodes(newLeaf)%center(1)
+    dy = yw - self%nodes(newLeaf)%center(2)
+    dz = zw - self%nodes(newLeaf)%center(3)
+    call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm_tmp)
+    do l = 0, self%expansionOrder
+      do m = -l, l
+        self%nodes(newLeaf)%M(SH_Index(l,m)) = self%nodes(newLeaf)%M(SH_Index(l,m)) &
+          + qi * Rlm_tmp(SH_Index(l,-m))
+      enddo
+    enddo
+    
+    self%particleToLeaf(iAtom) = newLeaf
+    
+    if (newLeaf /= oldLeaf) then
+      call MoveParticleBetweenLeaves(self%nodes(oldLeaf), self%nodes(newLeaf), iAtom)
+    endif
+  enddo
+  
+  self%hasPendingMove = .true.
+  self%pendingAtomIdx = disp(1)%atmIndx
+  self%pendingOldX = atoms(1, disp(1)%atmIndx)
+  self%pendingOldY = atoms(2, disp(1)%atmIndx)
+  self%pendingOldZ = atoms(3, disp(1)%atmIndx)
 end subroutine
 !=============================================================================
 subroutine MoveParticleBetweenLeaves(oldNode, newNode, iAtom)
@@ -2226,6 +3020,71 @@ subroutine MoveParticleBetweenLeaves(oldNode, newNode, iAtom)
     call move_alloc(temp, newNode%particles)
   endif
 
+end subroutine
+!=============================================================================
+subroutine VerifyMultipoles_FMM(self, curbox)
+  use ParallelVar, only: nout
+  implicit none
+  class(Pair_FMM), intent(inout) :: self
+  class(SimBox), intent(inout) :: curbox
+  
+  integer :: iLeaf, nodeIdx, iAtom, atmType, l, m
+  real(dp) :: qi, dx, dy, dz, maxErr
+  real(dp), pointer :: atoms(:,:) => null()
+  complex(dp) :: Rlm(self%nExpansion)
+  complex(dp), allocatable :: M_scratch(:,:)
+  integer, save :: callCount = 0
+  integer :: leafForAtom, nBadLeaves
+  
+  callCount = callCount + 1
+  if (callCount > 10) return
+  
+  call curbox%GetCoordinates(atoms)
+  allocate(M_scratch(self%nExpansion, self%nNodes))
+  M_scratch = (0.0_dp, 0.0_dp)
+  
+  ! Recompute M from scratch using particleToLeaf mapping (canonical source)
+  do iAtom = 1, curbox%nMaxAtoms
+    if (.not. curbox%IsActive(iAtom)) cycle
+    leafForAtom = self%particleToLeaf(iAtom)
+    if (leafForAtom <= 0 .or. leafForAtom > self%nNodes) cycle
+    atmType = curbox%AtomType(iAtom)
+    qi = self%q(atmType)
+    if (abs(qi) < 1.0E-15_dp) cycle
+    dx = atoms(1, iAtom) - self%nodes(leafForAtom)%center(1)
+    dy = atoms(2, iAtom) - self%nodes(leafForAtom)%center(2)
+    dz = atoms(3, iAtom) - self%nodes(leafForAtom)%center(3)
+    call SH_ComputeSolidHarmonic(dx, dy, dz, self%expansionOrder, Rlm)
+    do l = 0, self%expansionOrder
+      do m = -l, l
+        M_scratch(SH_Index(l,m), leafForAtom) = M_scratch(SH_Index(l,m), leafForAtom) &
+          + qi * Rlm(SH_Index(l,-m))
+      enddo
+    enddo
+  enddo
+  
+  maxErr = 0.0_dp
+  nBadLeaves = 0
+  do iLeaf = 1, self%nLeaves
+    nodeIdx = self%leafNodes(iLeaf)
+    do l = 0, self%expansionOrder
+      do m = -l, l
+        maxErr = max(maxErr, abs(self%nodes(nodeIdx)%M(SH_Index(l,m)) - M_scratch(SH_Index(l,m), nodeIdx)))
+      enddo
+    enddo
+    if (abs(self%nodes(nodeIdx)%M(1) - M_scratch(1, nodeIdx)) > 1.0E-8_dp) then
+      nBadLeaves = nBadLeaves + 1
+      if (nBadLeaves <= 3) then
+        write(nout,'(A,I4,A,ES14.6,A,ES14.6)') " Bad leaf=", nodeIdx, &
+          " M(1)stored=", real(self%nodes(nodeIdx)%M(1)), " M(1)scratch=", real(M_scratch(1, nodeIdx))
+      endif
+    endif
+  enddo
+  
+  write(nout,'(A,I4,A,ES12.4,A,I4)') " M_VERIFY call=", callCount, &
+    " maxErr=", maxErr, " badLeaves=", nBadLeaves
+  
+  deallocate(M_scratch)
 end subroutine
 !=============================================================================
 function FindLeafForPosition_FMM(self, x, y, z) result(leafIdx)
@@ -2481,12 +3340,9 @@ subroutine ProcessIO_FMM(self, line)
       call GetXCommand(line, command, 2, lineStat)
       select case(trim(adjustl(command)))
         case("true", "yes", "1", ".true.")
-          ! Multipole far-field will be used once verified
-          ! Currently the direct far-field is always used for energy
-          ! This flag is noted but does not yet switch the energy pathway
-          continue
+          self%useMultipole = .true.
         case("false", "no", "0", ".false.")
-          continue
+          self%useMultipole = .false.
       end select
 
     case("precision")
@@ -2553,6 +3409,7 @@ subroutine Prologue_FMM(self)
   write(nout, *) "  Particles per leaf (nCrit):", self%nCrit
   write(nout, *) "  Near-field cutoff:", self%rCut
   write(nout, *) "  Periodic boundaries:", self%isPeriodic
+  write(nout, *) "  Use multipole far-field:", self%useMultipole
   write(nout, *) "  Target precision:", self%fmmPrecision
   write(nout, *) ""
   write(nout, *) "Charges per atom type:"
@@ -2580,6 +3437,504 @@ function GetCutOff_FMM(self) result(rCut)
   rCut = self%rCut
 
 end function
+!=============================================================================
+subroutine VerifyAdditionTheorem(p)
+  use ParallelVar, only: nout
+  use SphericalHarmonics, only: SH_ComputeSolidHarmonic, SH_ComputeIrregularSolid, SH_Index
+  use VarPrecision
+  implicit none
+  integer, intent(in) :: p
+
+  real(dp) :: a(3), b(3), ab(3), r_ab
+  real(dp) :: exact, approx_noSign, approx_negm
+  complex(dp), allocatable :: Rlm(:), Slm(:)
+  integer :: l, m, idx_lm, idx_lnm, nR, nS
+  complex(dp) :: sum1, sum2
+
+  nR = (p+1)*(p+1)
+  nS = (2*p+1)*(2*p+1)
+  allocate(Rlm(nR), Slm(nS))
+
+  a = [8.0_dp, 5.0_dp, 3.0_dp]
+  b = [1.0_dp, 0.5_dp, -0.3_dp]
+  ab = a - b
+  r_ab = sqrt(ab(1)**2 + ab(2)**2 + ab(3)**2)
+  exact = 1.0_dp / r_ab
+
+  call SH_ComputeSolidHarmonic(b(1), b(2), b(3), p, Rlm)
+  call SH_ComputeIrregularSolid(a(1), a(2), a(3), 2*p, Slm)
+
+  ! Test: sum_{l,m} R_l^{-m}(b) S_l^m(a) should = 1/|a-b|
+  sum1 = (0.0_dp, 0.0_dp)
+  ! Test: sum_{l,m} (-1)^m R_l^{-m}(b) S_l^m(a)
+  sum2 = (0.0_dp, 0.0_dp)
+  do l = 0, p
+    do m = -l, l
+      idx_lm = SH_Index(l, m)
+      idx_lnm = SH_Index(l, -m)
+      sum1 = sum1 + Rlm(idx_lnm) * Slm(idx_lm)
+      if (mod(abs(m), 2) == 0) then
+        sum2 = sum2 + Rlm(idx_lnm) * Slm(idx_lm)
+      else
+        sum2 = sum2 - Rlm(idx_lnm) * Slm(idx_lm)
+      endif
+    enddo
+  enddo
+
+  write(nout,*) "=== Addition Theorem Verification ==="
+  write(nout,*) "  Exact 1/|a-b|:             ", exact
+  write(nout,*) "  sum R(-m) S(m) (no sign):  ", real(sum1, dp), " err:", abs(real(sum1,dp)-exact)/exact*100, "%"
+  write(nout,*) "  sum (-1)^m R(-m) S(m):     ", real(sum2, dp), " err:", abs(real(sum2,dp)-exact)/exact*100, "%"
+
+  ! Also test: sum R_l^m(b) S_l^m(a) (same sign for both)
+  sum1 = (0.0_dp, 0.0_dp)
+  do l = 0, p
+    do m = -l, l
+      idx_lm = SH_Index(l, m)
+      sum1 = sum1 + Rlm(idx_lm) * Slm(idx_lm)
+    enddo
+  enddo
+  write(nout,*) "  sum R(m) S(m):             ", real(sum1, dp), " err:", abs(real(sum1,dp)-exact)/exact*100, "%"
+
+  ! Test with R(-m) (should equal kernel for correct convention)
+  sum1 = (0.0_dp, 0.0_dp)
+  do l = 0, p
+    do m = -l, l
+      idx_lm = SH_Index(l, m)
+      idx_lnm = SH_Index(l, -m)
+      sum1 = sum1 + Rlm(idx_lnm) * Slm(idx_lm)
+    enddo
+  enddo
+  write(nout,*) "  sum R(-m) S(m) (dup check):", real(sum1, dp), " err:", abs(real(sum1,dp)-exact)/exact*100, "%"
+
+  ! Verify the S addition theorem: S_n^m(a+b) = sum_{j,k} C * R_j^k(a) * S_{n+j}^{m-k}(b)
+  ! Test with S_0^0(delta+d) = 1/|delta+d|
+  block
+    real(dp) :: delta(3), d(3), apb(3), r_apb
+    real(dp) :: exact_S00
+    complex(dp), allocatable :: R_delta(:), S_d(:), S_apb(:)
+    complex(dp) :: sum_nj, sum_no_sign
+    integer :: j2, k2, idx_jk2, njp2, mmk2, idx_s2
+
+    delta = [0.3_dp, -0.2_dp, 0.1_dp]
+    d = [8.0_dp, 5.0_dp, 3.0_dp]
+    apb = delta + d
+    r_apb = sqrt(apb(1)**2 + apb(2)**2 + apb(3)**2)
+    exact_S00 = 1.0_dp / r_apb
+
+    allocate(R_delta(nR), S_d(nS), S_apb(nS))
+    call SH_ComputeSolidHarmonic(delta(1), delta(2), delta(3), p, R_delta)
+    call SH_ComputeIrregularSolid(d(1), d(2), d(3), 2*p, S_d)
+    call SH_ComputeIrregularSolid(apb(1), apb(2), apb(3), 2*p, S_apb)
+
+    ! Test S_0^0(delta+d) = sum_{j,k} C * R_j^k(delta) * S_j^{-k}(d)
+    ! Try C = (-1)^j
+    sum_nj = (0.0_dp, 0.0_dp)
+    sum_no_sign = (0.0_dp, 0.0_dp)
+    do j2 = 0, p
+      do k2 = -j2, j2
+        idx_jk2 = SH_Index(j2, k2)
+        mmk2 = -k2
+        if (abs(mmk2) > j2) cycle
+        idx_s2 = SH_Index(j2, mmk2)
+        if (mod(j2, 2) == 0) then
+          sum_nj = sum_nj + R_delta(idx_jk2) * S_d(idx_s2)
+        else
+          sum_nj = sum_nj - R_delta(idx_jk2) * S_d(idx_s2)
+        endif
+        sum_no_sign = sum_no_sign + R_delta(idx_jk2) * S_d(idx_s2)
+      enddo
+    enddo
+
+    write(nout,*) "--- S addition theorem: S_0^0(delta+d) ---"
+    write(nout,*) "  Exact S_0^0:                ", exact_S00
+    write(nout,*) "  Direct S_0^0(delta+d):      ", real(S_apb(SH_Index(0,0)), dp)
+    write(nout,*) "  sum (-1)^j R S (n=0,m=0):   ", real(sum_nj, dp), " err:", &
+      abs(real(sum_nj,dp) - exact_S00)/exact_S00*100, "%"
+    write(nout,*) "  sum R S no sign (n=0,m=0):  ", real(sum_no_sign, dp), " err:", &
+      abs(real(sum_no_sign,dp) - exact_S00)/exact_S00*100, "%"
+
+    ! Verify R addition theorem (should be EXACT since R is polynomial)
+    block
+      complex(dp), allocatable :: R_a(:), R_b(:), R_apb(:)
+      complex(dp) :: sum_R, exact_R
+      integer :: n_t, m_t, j_t, k_t, nj_t, mk_t
+      real(dp) :: max_err_R
+      integer :: worst_n, worst_m
+
+      allocate(R_a(nR), R_b(nR), R_apb(nR))
+      call SH_ComputeSolidHarmonic(delta(1), delta(2), delta(3), p, R_a)
+      call SH_ComputeSolidHarmonic(d(1), d(2), d(3), p, R_b)
+      call SH_ComputeSolidHarmonic(apb(1), apb(2), apb(3), p, R_apb)
+
+      write(nout,*) "--- R addition theorem test (should be exact) ---"
+      max_err_R = 0.0_dp
+      worst_n = 0; worst_m = 0
+      do n_t = 0, p
+        do m_t = -n_t, n_t
+          exact_R = R_apb(SH_Index(n_t, m_t))
+          sum_R = (0.0_dp, 0.0_dp)
+          do j_t = 0, n_t
+            do k_t = -j_t, j_t
+              nj_t = n_t - j_t
+              mk_t = m_t - k_t
+              if (abs(mk_t) > nj_t) cycle
+              sum_R = sum_R + R_a(SH_Index(j_t, k_t)) * R_b(SH_Index(nj_t, mk_t))
+            enddo
+          enddo
+          if (abs(exact_R) > 1e-15_dp) then
+            if (abs(sum_R - exact_R)/abs(exact_R)*100 > max_err_R) then
+              max_err_R = abs(sum_R - exact_R)/abs(exact_R)*100
+              worst_n = n_t; worst_m = m_t
+            endif
+          endif
+          if (n_t <= 2) then
+            write(nout,'(A,I2,A,I3,A,2ES12.4,A,2ES12.4,A,ES10.2,A)') &
+              "  R(", n_t, ",", m_t, ") exact=", real(exact_R), aimag(exact_R), &
+              "  add=", real(sum_R), aimag(sum_R), &
+              "  err=", merge(abs(sum_R-exact_R)/abs(exact_R)*100, 0.0_dp, abs(exact_R)>1e-15_dp), "%"
+          endif
+        enddo
+      enddo
+      write(nout,'(A,ES10.2,A,I2,A,I3,A)') "  Max R add.thm err: ", max_err_R, &
+        "% at R(", worst_n, ",", worst_m, ")"
+      deallocate(R_a, R_b, R_apb)
+    end block
+
+    ! Test S addition theorem for various (n,m) including m≠0
+    block
+      complex(dp) :: sum_S, exact_S_val
+      integer :: n_s, m_s, j_s, k_s, njp_s, mmk_s
+      write(nout,*) "--- S addition theorem for S(n,m) ---"
+      do n_s = 0, 2
+        do m_s = -n_s, n_s
+          exact_S_val = S_apb(SH_Index(n_s, m_s))
+          sum_S = (0.0_dp, 0.0_dp)
+          do j_s = 0, p
+            do k_s = -j_s, j_s
+              njp_s = n_s + j_s
+              mmk_s = m_s - k_s
+              if (abs(mmk_s) > njp_s .or. njp_s > 2*p) cycle
+              if (mod(j_s, 2) == 0) then
+                sum_S = sum_S + R_delta(SH_Index(j_s, k_s)) * S_d(SH_Index(njp_s, mmk_s))
+              else
+                sum_S = sum_S - R_delta(SH_Index(j_s, k_s)) * S_d(SH_Index(njp_s, mmk_s))
+              endif
+            enddo
+          enddo
+          write(nout,'(A,I2,A,I3,A,2ES14.6,A,2ES14.6,A,ES10.2,A)') &
+            "  S(", n_s, ",", m_s, ") exact=", real(exact_S_val), aimag(exact_S_val), &
+            "  add=", real(sum_S), aimag(sum_S), &
+            "  err=", abs(sum_S - exact_S_val)/max(abs(exact_S_val), 1d-30)*100, "%"
+        enddo
+      enddo
+    end block
+
+    ! Direct S values at delta+d
+    block
+      real(dp) :: r_pt(3), y_pt(3), dist, exact_val
+      complex(dp), allocatable :: R_r(:), S_y(:)
+      complex(dp) :: sum_direct
+      integer :: lt, mt
+
+      allocate(R_r(nR), S_y(nS))
+      r_pt = apb  ! delta + d
+      y_pt = [0.0_dp, 0.0_dp, 0.0_dp]
+
+      dist = sqrt(sum((r_pt - y_pt)**2))
+      exact_val = 1.0_dp / dist
+
+      call SH_ComputeSolidHarmonic(y_pt(1), y_pt(2), y_pt(3), p, R_r)
+      call SH_ComputeIrregularSolid(r_pt(1), r_pt(2), r_pt(3), 2*p, S_y)
+
+      write(nout,*) "--- Direct S values at delta+d ---"
+      do lt = 0, min(2, p)
+        do mt = -lt, lt
+          write(nout,'(A,I2,A,I3,A,2ES14.6)') "  S(", lt, ",", mt, ") = ", &
+            real(S_y(SH_Index(lt,mt))), aimag(S_y(SH_Index(lt,mt)))
+        enddo
+      enddo
+      deallocate(R_r, S_y)
+    end block
+
+    deallocate(R_delta, S_d, S_apb)
+  end block
+  write(nout,*) "======================================="
+
+  deallocate(Rlm, Slm)
+end subroutine
+!=============================================================================
+subroutine TestM2L_SinglePair(self, curbox)
+  use ParallelVar, only: nout
+  implicit none
+  class(Pair_FMM), intent(inout) :: self
+  class(SimBox), intent(inout) :: curbox
+
+  integer :: p
+  real(dp) :: q_test, ys(3), rs(3), ds(3), exact_phi, phi_val
+  complex(dp), allocatable :: M_test(:), L_test(:), Rlm(:), Slm(:)
+  complex(dp) :: phi
+  integer :: l, m, n, m_n, j, k, idx, njp, mmk, nExp
+  integer :: idx_jk, idx_nm, idx_s
+  real(dp) :: dx, dy, dz, sign_factor, r_exact
+
+  p = self%expansionOrder
+  nExp = (p+1)*(p+1)
+  allocate(M_test(nExp), L_test(nExp), Rlm(nExp), Slm((2*p+1)*(2*p+1)))
+
+  q_test = 1.0_dp
+  ys = [1.0_dp, 0.5_dp, -0.3_dp]
+  ds = [8.0_dp, 5.0_dp, 3.0_dp]
+  rs = ds + [0.2_dp, -0.1_dp, 0.15_dp]
+
+  ! Exact potential at rs from charge q_test at ys
+  dx = rs(1) - ys(1)
+  dy = rs(2) - ys(2)
+  dz = rs(3) - ys(3)
+  r_exact = sqrt(dx*dx + dy*dy + dz*dz)
+  exact_phi = q_test / r_exact
+
+  ! P2M: source center at origin
+  M_test = (0.0_dp, 0.0_dp)
+  call SH_ComputeSolidHarmonic(ys(1), ys(2), ys(3), p, Rlm)
+  do l = 0, p
+    do m = -l, l
+      M_test(SH_Index(l,m)) = q_test * Rlm(SH_Index(l,-m))
+    enddo
+  enddo
+
+  ! Try different sign conventions for M2L
+  ! Convention A: (-1)^{m+k}  (current)
+  L_test = (0.0_dp, 0.0_dp)
+  call SH_ComputeIrregularSolid(ds(1), ds(2), ds(3), 2*p, Slm)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = m_n - k
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(abs(m_n + k), 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "=== M2L SIGN TEST ==="
+  write(nout,*) "  Exact phi:", exact_phi
+  write(nout,*) "  (-1)^{m+k}:", real(phi, dp)
+
+  ! Convention B: (-1)^{j-k}  (original code)
+  L_test = (0.0_dp, 0.0_dp)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = m_n - k
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(abs(j - k), 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "  (-1)^{j-k}:", real(phi, dp)
+
+  ! Convention C: (-1)^n
+  L_test = (0.0_dp, 0.0_dp)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = m_n - k
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(n, 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "  (-1)^n:", real(phi, dp)
+
+  ! Convention D: (-1)^{n+j-k}
+  L_test = (0.0_dp, 0.0_dp)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = m_n - k
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(abs(n + j - k), 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "  (-1)^{n+j-k}:", real(phi, dp)
+
+  ! Convention E: (-1)^j (correct for CS-phase Legendre convention)
+  L_test = (0.0_dp, 0.0_dp)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = m_n - k
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(j, 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "  (-1)^j:", real(phi, dp)
+
+  ! Convention E2: (-1)^{j-k} with conj(S) i.e. index k-m instead of m-k
+  L_test = (0.0_dp, 0.0_dp)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = k - m_n
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(abs(j - k), 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "  (-1)^{j-k} conj(S):", real(phi, dp)
+
+  ! Convention F: (-1)^n with conj(S)
+  L_test = (0.0_dp, 0.0_dp)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = k - m_n
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(n, 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "  (-1)^n conj(S):", real(phi, dp)
+
+  ! Convention G: (-1)^{m+j-k} with original S (m-k)
+  L_test = (0.0_dp, 0.0_dp)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = m_n - k
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(abs(m_n + j - k), 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "  (-1)^{m+j-k}:", real(phi, dp)
+
+  ! Convention H: (-1)^n with original S (m-k), include (-1)^m in front
+  L_test = (0.0_dp, 0.0_dp)
+  do j = 0, p
+    do k = -j, j
+      idx_jk = SH_Index(j, k)
+      do n = 0, p
+        do m_n = -n, n
+          njp = n + j; mmk = m_n - k
+          if (abs(mmk) > njp .or. njp > 2*p) cycle
+          if (mod(abs(n + m_n), 2) == 0) then; sign_factor = 1.0_dp
+          else; sign_factor = -1.0_dp; endif
+          idx_nm = SH_Index(n, m_n); idx_s = SH_Index(njp, mmk)
+          L_test(idx_jk) = L_test(idx_jk) + sign_factor * M_test(idx_nm) * Slm(idx_s)
+        enddo
+      enddo
+    enddo
+  enddo
+  dx = rs(1) - ds(1); dy = rs(2) - ds(2); dz = rs(3) - ds(3)
+  call SH_ComputeSolidHarmonic(dx, dy, dz, p, Rlm)
+  phi = (0.0_dp, 0.0_dp)
+  do l = 0, p; do m = -l, l
+    idx = SH_Index(l, m); phi = phi + L_test(idx) * Rlm(idx)
+  enddo; enddo
+  write(nout,*) "  (-1)^{n+m}:", real(phi, dp)
+  write(nout,*) "======================"
+
+  deallocate(M_test, L_test, Rlm, Slm)
+end subroutine
 !=============================================================================
 end module FF_FMM
 !=============================================================================

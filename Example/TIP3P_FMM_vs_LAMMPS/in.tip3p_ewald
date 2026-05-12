@@ -1,0 +1,38 @@
+#======================================
+# TIP3P Water - LJ + Ewald Energy Test
+#
+# Computes initial energy using combined LJ + Ewald forcefield
+# For comparison with FMM and LAMMPS
+#
+# Box: 25 Å cubic, 500 TIP3P water molecules
+#======================================
+  set rng_seed -3
+  set NeighSkin 2.0
+  set moves 1
+  set cycles 0
+  set screenfrequency 1
+  SamplingType Metropolis
+  set pressureunits bar
+  set energyunits kb
+
+  ForceField "TIP3P_Ewald_Hybrid.clFF"
+
+  Create Boxes
+    fromfile "TIP3P_Config.clssy"
+  End_Create
+
+  modify box 1 energycalc 1
+  modify box 1 temperature 300
+  modify box 1 buildfreq 50
+
+  NeighList 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 11.0
+
+  Create Moves
+    MolTranslation 1.0
+  End_Create
+
+  modify move 1 maxdisplace 0.0
+
+  Run
+#=====================================

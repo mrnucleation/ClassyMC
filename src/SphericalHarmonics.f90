@@ -308,8 +308,8 @@ subroutine SH_ComputeSolidHarmonic(x, y, z, p, Rlm)
     do m = -l, l
       idx = SH_Index(l, m)
       expPhi = exp(IMAG_UNIT * real(m, dp) * phi)
-      ! R_l^m = r^l * P_l^|m|(cos theta) * exp(i*m*phi) / (l + |m|)!
       Rlm(idx) = r_power * Plm(l, abs(m)) * expPhi * invFactorial(l + abs(m))
+      if (m > 0) Rlm(idx) = Rlm(idx) * merge(1.0_dp, -1.0_dp, mod(m,2)==0)
     end do
     r_power = r_power * r
   end do
@@ -351,8 +351,8 @@ subroutine SH_ComputeIrregularSolid(x, y, z, p, Slm)
     do m = -l, l
       idx = SH_Index(l, m)
       expPhi = exp(IMAG_UNIT * real(m, dp) * phi)
-      ! S_l^m = (l-|m|)! * P_l^|m|(cos theta) * exp(i*m*phi) / r^{l+1}
       Slm(idx) = factorial(l - abs(m)) * Plm(l, abs(m)) * expPhi * r_inv_power
+      if (m < 0) Slm(idx) = Slm(idx) * merge(1.0_dp, -1.0_dp, mod(abs(m),2)==0)
     end do
     r_inv_power = r_inv_power / r
   end do
@@ -413,15 +413,12 @@ end subroutine SH_M2M_Coeff
 ! Given multipole moments M at source center, compute local expansion L
 ! at target center. Translation vector d = (dx,dy,dz) = target - source.
 !
-! Derived from the re-expansion of irregular solid harmonics:
-!   S_n^m(delta + d) = sum_{j,k} (-1)^{j-k} * S_{n+j}^{m-k}(d) * R_j^k(delta)
+! Derived from the addition theorem for irregular solid harmonics.
+! With Condon-Shortley phase in the associated Legendre polynomials:
 !
-! Therefore:
-!   L_j^k += sum_{n=0}^{p} sum_{m=-n}^{n} M_n^m * (-1)^{j-k} * S_{n+j}^{m-k}(d)
+!   L_j^k = sum_{n,m} (-1)^j * M_n^m * S_{n+j}^{m-k}(d)
 !
 ! Requires S up to order 2p.
-! Verified: monopole gives L_j^k = (-1)^{j-k} S_j^{-k}(d), consistent with
-! Taylor expansion of 1/|delta+d|.
 !================================================================================
 subroutine SH_M2L_Coeff(dx, dy, dz, p, M_source, L_target)
   implicit none
@@ -439,17 +436,16 @@ subroutine SH_M2L_Coeff(dx, dy, dz, p, M_source, L_target)
   ! Need order 2p for M2L since n+j can be up to 2p
   call SH_ComputeIrregularSolid(dx, dy, dz, 2*p, Slm)
   
-  ! M2L translation
+  ! M2L translation: L_j^k = sum_{n,m} (-1)^j * M_n^m * S_{n+j}^{m-k}(d)
   do j = 0, p
+    if (mod(j, 2) == 0) then
+      sign_factor = 1.0_dp
+    else
+      sign_factor = -1.0_dp
+    endif
+    
     do k = -j, j
       idx_jk = SH_Index(j, k)
-      
-      ! Sign factor: (-1)^{j-k}
-      if (mod(abs(j - k), 2) == 0) then
-        sign_factor = 1.0_dp
-      else
-        sign_factor = -1.0_dp
-      endif
       
       do n = 0, p
         do m_n = -n, n

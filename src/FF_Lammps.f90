@@ -113,7 +113,7 @@ module FF_Ext_LAMMPS
       real(c_double) :: lammps_get_natoms
     end function lammps_get_natoms
 
-    ! Scatter atoms - set positions from Fortran array to LAMMPS
+    ! Scatter atoms - set positions from Fortran array to LAMMPS (double data)
     subroutine lammps_scatter_atoms(ptr, name, type, count, data) bind(C, name='lammps_scatter_atoms')
       import :: c_ptr, c_char, c_int, c_double
       type(c_ptr), value :: ptr
@@ -122,6 +122,16 @@ module FF_Ext_LAMMPS
       integer(c_int), value :: count
       real(c_double), dimension(*), intent(in) :: data
     end subroutine lammps_scatter_atoms
+
+    ! Scatter atoms - set integer fields (e.g. "molecule", "type") from Fortran array
+    subroutine lammps_scatter_atoms_int(ptr, name, type, count, data) bind(C, name='lammps_scatter_atoms')
+      import :: c_ptr, c_char, c_int
+      type(c_ptr), value :: ptr
+      character(kind=c_char), dimension(*), intent(in) :: name
+      integer(c_int), value :: type
+      integer(c_int), value :: count
+      integer(c_int), dimension(*), intent(in) :: data
+    end subroutine lammps_scatter_atoms_int
 
     ! Gather atoms - get positions from LAMMPS to Fortran array
     subroutine lammps_gather_atoms(ptr, name, type, count, data) bind(C, name='lammps_gather_atoms')
@@ -191,6 +201,21 @@ module FF_Ext_LAMMPS
       integer(c_int), value :: shrinkexceed
     end subroutine lammps_create_atoms
 
+    function lammps_has_error(ptr) bind(C, name='lammps_has_error')
+      import :: c_ptr, c_int
+      type(c_ptr), value :: ptr
+      integer(c_int) :: lammps_has_error
+    end function lammps_has_error
+
+    function lammps_get_last_error_message(ptr, buf, buf_size) &
+        bind(C, name='lammps_get_last_error_message')
+      import :: c_ptr, c_int, c_char
+      type(c_ptr), value :: ptr
+      character(kind=c_char), dimension(*), intent(out) :: buf
+      integer(c_int), value :: buf_size
+      integer(c_int) :: lammps_get_last_error_message
+    end function lammps_get_last_error_message
+
   end interface
 #endif
 
@@ -223,6 +248,13 @@ module FF_Ext_LAMMPS
     ! Energy conversion factor (LAMMPS units -> Classy units)
     real(dp) :: energyConversion = 1.0_dp
     real(dp) :: lengthConversion = 1.0_dp
+
+    ! When .true., pass molecule IDs to LAMMPS and exclude intra-molecular pair
+    ! interactions via neigh_modify exclude molecule/intra all. Requires
+    ! lammps_cmd atom_style full in the user's forcefield file. This makes
+    ! LAMMPS compute the same intermolecular-only Coulomb/LJ energy that
+    ! ClassyMC's Ewald/FMM produce, so the two can be directly compared.
+    logical :: excludeIntraMol = .false.
     
     contains
 #ifdef LAMMPS
@@ -246,11 +278,68 @@ contains
     implicit none
     type(c_ptr), value :: ptr
     character(len=*), intent(in) :: cmd
+    character(len=512) :: errmsg
+    integer(c_int) :: has_err, msg_len
+    integer :: i
 
     if (len_trim(cmd) == 0) return
     
     call lammps_command(ptr, trim(cmd) // c_null_char)
+
+    has_err = lammps_has_error(ptr)
+    if (has_err /= 0) then
+      errmsg = ' '
+      msg_len = lammps_get_last_error_message(ptr, errmsg, int(len(errmsg), c_int))
+      do i = 1, len(errmsg)
+        if (iachar(errmsg(i:i)) == 0) then
+          errmsg(i:) = ' '
+          exit
+        endif
+      enddo
+      write(0, *) "LAMMPS ERROR on command: ", trim(cmd)
+      write(0, *) "  Message: ", trim(errmsg)
+      error stop "LAMMPS command failed - see message above"
+    endif
   end subroutine LammpsCommandSafe
+!=============================================================================+
+!=============================================================================+
+  ! Build an array of molecule IDs for every active atom (in the same order as
+  ! atoms were passed to lammps_create_atoms) and scatter it into LAMMPS.
+  !
+  ! IMPORTANT: this must be called AFTER atom creation and requires the
+  ! forcefield file to have selected atom_style full (otherwise LAMMPS silently
+  ! ignores the "molecule" field).
+  subroutine PushMoleculeIDs_LAMMPS(self, curbox)
+    use ParallelVar, only: nout
+    implicit none
+    class(Pair_LAMMPS), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    integer(c_int), allocatable, target :: molIDs(:)
+    integer :: iAtom, idx, nAtoms
+
+    nAtoms = 0
+    do iAtom = 1, curbox%nMaxAtoms
+      if (curbox%IsActive(iAtom)) nAtoms = nAtoms + 1
+    enddo
+    if (nAtoms == 0) return
+
+    allocate(molIDs(nAtoms))
+    idx = 0
+    do iAtom = 1, curbox%nMaxAtoms
+      if (.not. curbox%IsActive(iAtom)) cycle
+      idx = idx + 1
+      ! ClassyMC MolIndx(iAtom) is the global molecule index for this atom.
+      molIDs(idx) = int(curbox%MolIndx(iAtom), c_int)
+    enddo
+
+    ! Field name "molecule", int type (0), 1 value per atom.
+    call lammps_scatter_atoms_int(self%lmp, "molecule" // c_null_char, &
+                                  0_c_int, 1_c_int, molIDs)
+
+    write(nout,'(A,I0,A,I0,A)') "  LAMMPS: scattered ", nAtoms, &
+        " molecule IDs (last ID = ", molIDs(nAtoms), ")"
+    deallocate(molIDs)
+  end subroutine PushMoleculeIDs_LAMMPS
 !=============================================================================+
   subroutine Constructor_LAMMPS(self)
     use Common_MolInfo, only: nAtomTypes
@@ -496,28 +585,33 @@ contains
     integer :: iAtom, nAtoms, idx
     real(dp), pointer :: atoms(:,:) => null()
     real(dp) :: tempdim(1:2, 1:3)
+    real(dp) :: newlo(3), newhi(3)
+    character(len=512) :: cmd
     
-    ! Update box dimensions in LAMMPS to match curbox
     select type(curbox)
       class is(CubeBox)
         call curbox%GetDimensions(tempdim)
-        self%boxlo(1) = tempdim(1,1) * self%lengthConversion
-        self%boxlo(2) = tempdim(1,2) * self%lengthConversion
-        self%boxlo(3) = tempdim(1,3) * self%lengthConversion
-        self%boxhi(1) = tempdim(2,1) * self%lengthConversion
-        self%boxhi(2) = tempdim(2,2) * self%lengthConversion
-        self%boxhi(3) = tempdim(2,3) * self%lengthConversion
-        call lammps_reset_box(self%lmp, self%boxlo, self%boxhi, 0.0_c_double, 0.0_c_double, 0.0_c_double)
       class is(OrthoBox)
         call curbox%GetDimensions(tempdim)
-        self%boxlo(1) = tempdim(1,1) * self%lengthConversion
-        self%boxlo(2) = tempdim(1,2) * self%lengthConversion
-        self%boxlo(3) = tempdim(1,3) * self%lengthConversion
-        self%boxhi(1) = tempdim(2,1) * self%lengthConversion
-        self%boxhi(2) = tempdim(2,2) * self%lengthConversion
-        self%boxhi(3) = tempdim(2,3) * self%lengthConversion
-        call lammps_reset_box(self%lmp, self%boxlo, self%boxhi, 0.0_c_double, 0.0_c_double, 0.0_c_double)
     end select
+    
+    newlo(1) = tempdim(1,1) * self%lengthConversion
+    newlo(2) = tempdim(1,2) * self%lengthConversion
+    newlo(3) = tempdim(1,3) * self%lengthConversion
+    newhi(1) = tempdim(2,1) * self%lengthConversion
+    newhi(2) = tempdim(2,2) * self%lengthConversion
+    newhi(3) = tempdim(2,3) * self%lengthConversion
+
+    if (any(abs(newlo - self%boxlo) > 1.0e-10_dp) .or. &
+        any(abs(newhi - self%boxhi) > 1.0e-10_dp)) then
+      self%boxlo = newlo
+      self%boxhi = newhi
+      write(cmd, '(A,F16.8,A,F16.8,A,F16.8,A,F16.8,A,F16.8,A,F16.8)') &
+          "change_box all x final ", self%boxlo(1), " ", self%boxhi(1), &
+          " y final ", self%boxlo(2), " ", self%boxhi(2), &
+          " z final ", self%boxlo(3), " ", self%boxhi(3)
+      call LammpsCommandSafe(self%lmp, trim(cmd))
+    endif
     
     ! Update atom positions
     call curbox%GetCoordinates(atoms)
@@ -556,6 +650,85 @@ contains
     E_Total = pe_value * self%energyConversion
     
   end function
+!=============================================================================+
+  ! Direct Coulomb sum over all intramolecular atom pairs in the primary cell.
+  !
+  ! We subtract this from LAMMPS's total so that LAMMPS returns the same
+  ! "intermolecular only" Coulomb energy that ClassyMC's Ewald and FMM produce.
+  !
+  ! This is the clean way to compare: LAMMPS (with PPPM) computes the full
+  ! Coulomb energy of every pair of point charges -- including intramolecular
+  ! pairs in both real-space and kspace. We remove the intra contribution in
+  ! Fortran using the current positions and the charges we pull from LAMMPS.
+  subroutine ComputeIntraCoulomb_LAMMPS(self, curbox, E_intra)
+    use ClassyConstants, only: coulombConst
+    implicit none
+    class(Pair_LAMMPS), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    real(dp), intent(out) :: E_intra
+
+    integer :: iAtom, jAtom, idx, nAtoms, iMol
+    real(c_double), allocatable :: qArr(:)
+    integer, allocatable :: atomIdxMap(:)  ! classy atom -> lammps index
+    real(dp), pointer :: atoms(:,:) => null()
+    real(dp) :: rx, ry, rz, r, rsq
+    real(dp) :: qi, qj
+
+    E_intra = 0.0_dp
+
+    nAtoms = 0
+    do iAtom = 1, curbox%nMaxAtoms
+      if (curbox%IsActive(iAtom)) nAtoms = nAtoms + 1
+    enddo
+    if (nAtoms == 0) return
+
+    ! Gather charges from LAMMPS in its own atom ordering (1..N active).
+    allocate(qArr(nAtoms))
+    call lammps_gather_atoms(self%lmp, "q" // c_null_char, 1_c_int, 1_c_int, qArr)
+
+    ! Build classy-atom -> lammps-index mapping in the same order used at create time.
+    allocate(atomIdxMap(curbox%nMaxAtoms))
+    atomIdxMap = 0
+    idx = 0
+    do iAtom = 1, curbox%nMaxAtoms
+      if (curbox%IsActive(iAtom)) then
+        idx = idx + 1
+        atomIdxMap(iAtom) = idx
+      endif
+    enddo
+
+    call curbox%GetCoordinates(atoms)
+
+    ! Loop over every pair of active atoms inside the same molecule
+    do iAtom = 1, curbox%nMaxAtoms - 1
+      if (.not. curbox%IsActive(iAtom)) cycle
+      iMol = curbox%MolIndx(iAtom)
+      qi = qArr(atomIdxMap(iAtom))
+      if (abs(qi) < 1.0E-15_dp) cycle
+
+      do jAtom = iAtom + 1, curbox%nMaxAtoms
+        if (.not. curbox%IsActive(jAtom)) cycle
+        if (curbox%MolIndx(jAtom) /= iMol) cycle
+
+        qj = qArr(atomIdxMap(jAtom))
+        if (abs(qj) < 1.0E-15_dp) cycle
+
+        rx = atoms(1, iAtom) - atoms(1, jAtom)
+        ry = atoms(2, iAtom) - atoms(2, jAtom)
+        rz = atoms(3, iAtom) - atoms(3, jAtom)
+        ! NOTE: no MIC here -- atoms in the same molecule are assumed to be
+        ! in a single image of one another (which is how ClassyMC stores them).
+        rsq = rx*rx + ry*ry + rz*rz
+        if (rsq < 1.0E-20_dp) cycle
+        r = sqrt(rsq)
+
+        E_intra = E_intra + qi * qj * coulombConst / r
+      enddo
+    enddo
+
+    deallocate(qArr, atomIdxMap)
+
+  end subroutine ComputeIntraCoulomb_LAMMPS
 !=============================================================================+
   subroutine DetailedECalc_LAMMPS(self, curbox, E_T, accept)
     use ParallelVar, only: nout
@@ -612,6 +785,21 @@ contains
     ! Get energy from LAMMPS
     E_T = self%GetEnergy()
     
+    write(nout, *) "Raw LAMMPS Energy (incl. intra Coulomb):", E_T
+    
+    ! If intramolecular exclusion is requested, subtract the full direct
+    ! Coulomb sum over same-molecule atom pairs. This removes both the
+    ! real-space and kspace (PPPM) contributions -- i.e. everything LAMMPS
+    ! computed for 1-2 and 1-3 pairs in a rigid TIP3P-style model.
+    if (self%excludeIntraMol) then
+      block
+        real(dp) :: E_intra
+        call ComputeIntraCoulomb_LAMMPS(self, curbox, E_intra)
+        write(nout, *) "LAMMPS Intra-Coulomb (subtracted):", E_intra
+        E_T = E_T - E_intra
+      end block
+    endif
+
     write(nout, *) "Total LAMMPS Energy:", E_T
     
   end subroutine
@@ -948,6 +1136,21 @@ contains
         read(command, *) self%lengthConversion
         write(nout, *) "Length conversion factor:", self%lengthConversion
         
+      case("exclude_intramol", "excludeintramol", "no_intra")
+        ! Skip intramolecular pair interactions inside LAMMPS so its total
+        ! matches ClassyMC's "intermolecular only" Ewald/FMM convention.
+        ! REQUIRES atom_style full (e.g. lammps_cmd atom_style full).
+        call GetXCommand(line, command, 2, lineStat)
+        select case(trim(adjustl(command)))
+          case("true", "yes", "1", ".true.", "on")
+            self%excludeIntraMol = .true.
+          case("false", "no", "0", ".false.", "off")
+            self%excludeIntraMol = .false.
+          case default
+            self%excludeIntraMol = .true.   ! bare flag defaults to on
+        end select
+        write(nout, *) "LAMMPS intramolecular exclusion: ", self%excludeIntraMol
+
       case("typemap")
         ! Map Classy atom type to LAMMPS atom type
         call GetXCommand(line, command, 2, lineStat)

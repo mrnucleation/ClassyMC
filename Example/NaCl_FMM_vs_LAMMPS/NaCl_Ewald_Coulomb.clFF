@@ -1,6 +1,6 @@
-# NaCl Forcefield - FMM Coulomb Only
-# Pure electrostatics using Fast Multipole Method
-# For energy comparison with LAMMPS coul/long + PPPM
+# NaCl Forcefield - Ewald Coulomb Only
+# Pure electrostatics using Ewald summation
+# For energy comparison with FMM
 
 moleculetypes 2
 
@@ -27,19 +27,16 @@ molecule 2
 end_molecule
 
 forcefieldtype
-  fmm
+  ewald
 end_forcefieldtype
 
 units energy kb
 
-# FMM Coulomb parameters
+# Ewald Coulomb parameters
 forcefield 1
-  usemultipole true
-  order 6
-  maxlevel 5
-  ncrit 10
   rcut 10.0
-  periodic true
+  alpha 0.25
+  kmax 5.0
   charge 1  1.0
   charge 2 -1.0
   rmin 1 1.2

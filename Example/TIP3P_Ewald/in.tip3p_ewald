@@ -13,32 +13,54 @@
 #   Real-space cutoff: 9.0 Å
 #======================================
 
-  set rng_seed 12345
+  set rng_seed -3
   set NeighSkin 2.0
-  set moves 27
-  set cycles 10000
-  set screenfrequency 10
+  set moves 5000
+  set cycles 400
+  set screenfrequency 20
   SamplingType Metropolis
 
+  set pressureunits bar
+
+
   ForceField "TIP3P_Ewald.clFF"
+
 
   Create Boxes
     fromfile "TIP3P_Config.clssy"
   End_Create
 
+  # Hybrid forcefield (forcefield 1) handles both LJ and FMM
   modify box 1 energycalc 1
   modify box 1 temperature 300
   modify box 1 buildfreq 50
+  modify box 1 pressure 1.0
 
   NeighList 1 cellrsqlist 1
+  modify box 1 neighlist 1 rcut 10.5
 
   Create Moves
     MolTranslation 1000.0
     PlaneRotate 1000.0
+    IsoVol 1.0
   End_Create
 
   modify move 1 maxdisplace 0.1
+  modify move 1 tunemax .true.
   modify move 2 maxangle 0.3
+  modify move 2 tunemax .true.
+  modify move 3 maxdv 0.001
+  modify move 3 style log
+  modify move 3 tunemax .true.
+
+  #BlockAverage (BoxNum) (BlockAvg Variable) (Avg Frequency) (Block Size) (FileName)
+  Create Analysis
+     BlockAverage 1 density 1 100 'density&.dat'
+  End_Create
+
+  Create Trajectory
+     dump 1 100 "Traj&.dump"
+  End_Create
 
   Run
 #=====================================

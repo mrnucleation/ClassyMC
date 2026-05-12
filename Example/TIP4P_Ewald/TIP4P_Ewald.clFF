@@ -57,20 +57,36 @@ molecule 1
 end_molecule
 
 forcefieldtype
-  lj_ewald
+  hybrid
+  EP_LJ_Cut
+  ewald
 end_forcefieldtype
 
 units energy kb
 
-# LJ + Ewald parameters
-# type epsilon(kb) sigma(Å) charge(e) rmin(Å)
+# Hybrid LJ + Ewald parameters
 forcefield 1
-  ljrcut 9.0
-  ewaldrcut 9.0
+  nfields 2
+  forcefields 2 3
+end_forcefield
+
+# Lennard-Jones
+# type epsilon(kb) sigma(Å) rmin(Å)
+forcefield 2
+  rcut 9.0
+  1  78.0    3.1536       1.0
+  2  0.0     0.0          0.5
+  3  0.0     0.0          0.2
+end_forcefield
+
+# Ewald electrostatics
+# type charge(e) rmin(Å)
+forcefield 3
+  rcut 9.0
   alpha 0.3
   kmax 5.0
-  1  78.0    3.1536       0.0    1.0
-  2  0.0     0.0          0.52   0.5
-  3  0.0     0.0         -1.04   0.2
+  1   0.0   1.0
+  2   0.52  0.5
+  3  -1.04  0.2
 end_forcefield
 

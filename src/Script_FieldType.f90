@@ -33,7 +33,6 @@ contains
     use FF_ThermoIntegration, only: Pair_ThermoIntegration
     ! New Ewald-based electrostatics modules
     use FF_Ewald, only: Pair_Ewald
-    use FF_LJ_Ewald, only: Pair_LJ_Ewald
     use FF_P3M, only: Pair_P3M
     use FF_FMM, only: Pair_FMM
     ! Many-body potentials
@@ -99,10 +98,6 @@ contains
       case("ewald")
         allocate(Pair_Ewald::EnergyCalculator(FFNum) % Method)
         write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as Ewald Electrostatics style"
-
-      case("lj_ewald")
-        allocate(Pair_LJ_Ewald::EnergyCalculator(FFNum) % Method)
-        write(nout,"(1x,A,I2,A)") "Forcefield", FFNum, " allocated as LJ + Ewald Electrostatics style"
 
       case("p3m", "pp3m", "particle-mesh")
         allocate(Pair_P3M::EnergyCalculator(FFNum) % Method)
