@@ -19,7 +19,7 @@
   set rng_seed -3
   set NeighSkin 2.0
   set moves 100
-  set cycles 400
+  set cycles 10
   set screenfrequency 10
   #SamplingType Metropolis
   SamplingType AcceptAll

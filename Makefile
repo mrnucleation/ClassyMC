@@ -11,6 +11,11 @@ CUR_DIR := $(shell pwd)
 #   make FC=gfortran PYTHON=1
 #   make COMPILER=gfortran PYTHON=1
 #
+# MPI vs serial (default is parallel MPI):
+#   make PARALLEL=1                 # mpif90 + -DMPIPARALLEL (default)
+#   make PARALLEL=0 COMPILER=gfortran   # gfortran, no MPI
+#   make PARALLEL=0 COMPILER=ifort      # ifort, no MPI
+#
 # Debug mode:
 #   make DEBUG=1 PYTHON=1
 #
@@ -22,7 +27,10 @@ AENET ?= 0
 LAMMPS ?= 0
 DEBUG ?= 0
 PROFILE ?= 0
-COMPILER ?= mpif90
+# Parallel (MPI): 1 = mpif90 + -DMPIPARALLEL; 0 = native gfortran or ifort, no -DMPIPARALLEL
+PARALLEL ?= 1
+# Selects Fortran vendor flags: gfortran or ifort (not the MPI wrapper name). With PARALLEL=1, FC is still mpif90.
+COMPILER ?= gfortran
 
 # External library paths (override on command line if needed)
 LAMMPS_LIB_PATH ?=
@@ -34,9 +42,21 @@ LAMMPS_LIB_SEARCH_PATHS ?= /usr/local/lib /usr/lib /usr/lib64 /usr/local/lib64 /
 # ====================================
 #        Compiler Options
 # ====================================
-FC := mpif90
+# FC uses = so target-specific COMPILER= (e.g. gfortran target) is visible when recipes run.
+ifeq ($(PARALLEL),1)
+  FC = mpif90
+  CC = mpicc
+else
+  ifeq ($(COMPILER),gfortran)
+    FC = gfortran
+    CC = gcc
+  else
+    FC = ifort
+    CC = icc
+  endif
+endif
+
 AR := ar
-CC := mpicc
 
 # Intel Fortran flags
 OPTIMIZE_FLAGS_IFORT := -O3
@@ -64,8 +84,11 @@ LIBRARY_FLAGS := -shared -fpic
 # Base linker flags
 LDFLAGS := -lfftw3
 
-# Base package flags (always enabled)
-PACKAGE_FLAGS := -DMPIPARALLEL
+# Optional MPI preprocessor define (only for parallel/MPI builds)
+PACKAGE_FLAGS :=
+ifeq ($(PARALLEL),1)
+  PACKAGE_FLAGS += -DMPIPARALLEL
+endif
 
 # ====================================
 #        Directory List
@@ -360,6 +383,9 @@ COMPFLAGS := $(BASE_COMPFLAGS) $(PACKAGE_FLAGS) $(PYTHON_INCLUDE)
 #        Build Targets
 # ====================================
 
+# Prerequisite-only rules before this line must not become the implicit default goal.
+.DEFAULT_GOAL := default
+
 # Default target
 default: startUP classyMC modout finale
 
@@ -438,10 +464,13 @@ help:
 	@echo "              Auto-detects lib path; override with LAMMPS_LIB_PATH"
 	@echo ""
 	@echo "Build Options:"
+	@echo "  PARALLEL=1       MPI build: mpif90 + -DMPIPARALLEL (default)"
+	@echo "  PARALLEL=0       Serial: gfortran or ifort (see COMPILER), no -DMPIPARALLEL"
 	@echo "  DEBUG=1          Enable debug mode with detailed checks"
 	@echo "  PROFILE=1        Enable profiling with gprof (-pg flag)"
-	@echo "  COMPILER=ifort   Use Intel Fortran (default)"
-	@echo "  COMPILER=gfortran Use GNU Fortran"
+	@echo "  COMPILER=gfortran  GNU Fortran flags (default); native compiler when PARALLEL=0"
+	@echo "  COMPILER=ifort     Intel Fortran flags; native compiler when PARALLEL=0"
+	@echo "                     With PARALLEL=1, FC is mpif90 but flags follow COMPILER"
 	@echo ""
 	@echo "Library Paths (override defaults):"
 	@echo "  LAMMPS_LIB_PATH=/path/to/lammps/lib"
@@ -454,6 +483,8 @@ help:
 	@echo "  make DEBUG=1 PYTHON=1          # Debug build with Python"
 	@echo "  make PROFILE=1                 # Profiling build (use with gprof)"
 	@echo "  make COMPILER=gfortran PYTHON=1  # GFortran with Python"
+	@echo "  make PARALLEL=0 COMPILER=gfortran   # Serial GFortran"
+	@echo "  make PARALLEL=0 COMPILER=ifort      # Serial Intel Fortran"
 	@echo "  make lib PYTHON=1              # Shared library with Python"
 	@echo "  make LAMMPS=1 LAMMPS_LIB_PATH=/opt/lammps/lib"
 	@echo ""
@@ -521,6 +552,11 @@ startUP:
 	@echo "                     ClassyMC Build Starting"
 	@echo "=================================================================="
 	@echo "  Directory: $(CUR_DIR)"
+ifeq ($(PARALLEL),1)
+	@echo "  Parallel:  MPI (mpif90, -DMPIPARALLEL)"
+else
+	@echo "  Parallel:  serial ($(FC), no -DMPIPARALLEL)"
+endif
 	@echo "  Compiler:  $(FC)"
 	@echo "  Flags:     $(COMPFLAGS)"
 ifeq ($(PYTHON),1)
@@ -569,6 +605,10 @@ removeExec:
 #        Dependencies
 # ====================================
 $(OBJ)/Common.o: $(OBJ)/VariablePrecision.o
+
+# Modules in Common.f90 (e.g. ParallelVar) must exist before other TUs compile; needed for `make -j`.
+$(filter-out $(OBJ)/Common.o $(OBJ)/VariablePrecision.o,$(OBJ_COMPLETE)): $(OBJ)/Common.o
+
 $(OBJ)/Common_BoxData.o: $(OBJ)/Box_SimpleBox.o 
 $(OBJ)/Common_Analysis.o: $(OBJ)/Template_Analysis.o
 $(OBJ)/Common_ECalc.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Common.o

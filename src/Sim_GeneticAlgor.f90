@@ -7,7 +7,9 @@ contains
 !===========================================================================
   subroutine RunGeneticAlgorithm
     use VarPrecision
+#ifdef MPIPARALLEL
     use MPI
+#endif
 
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
@@ -41,7 +43,9 @@ contains
     !-------End of Main GA Simulation Loop-------
     
 
+#ifdef MPIPARALLEL
     call MPI_BARRIER(MPI_COMM_WORLD, ierror)       
+#endif
 
     call Output_DumpData
       

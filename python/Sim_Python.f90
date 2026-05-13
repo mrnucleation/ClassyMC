@@ -12,7 +12,7 @@ module SimPython
 contains
 !===========================================================================
   subroutine RunPythonTest(filename)
-#ifdef PARALLEL
+#ifdef MPIPARALLEL
     use MPI
 #endif
 
