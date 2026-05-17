@@ -54,8 +54,7 @@ module ClassyPyObj
           ierror = boxdict%setitem("boxtype", "unknown")
     end select
 
-    ierror = boxdict%setitem("temperature", BoxArray(boxnum)%box%temperature)
-
+    ierror = boxdict%setitem("energy", BoxArray(boxnum)%box%ETotal)
     ierror = boxdict%setitem("temperature", BoxArray(boxnum)%box%temperature)
     ierror = boxdict%setitem("pressure", BoxArray(boxnum)%box%pressure)
     ierror = boxdict%setitem("volume", BoxArray(boxnum)%box%volume)
@@ -163,6 +162,7 @@ module ClassyPyObj
           ierror = boxdict%setitem("boxtype", "unknown")
     end select
 
+    ierror = boxdict%setitem("energy", BoxArray(boxnum)%box%ETotal)
     ierror = boxdict%setitem("temperature", BoxArray(boxnum)%box%temperature)
     ierror = boxdict%setitem("pressure", BoxArray(boxnum)%box%pressure)
     ierror = boxdict%setitem("volume", BoxArray(boxnum)%box%volume)

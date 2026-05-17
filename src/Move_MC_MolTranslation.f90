@@ -79,6 +79,12 @@ use VarPrecision
 
     allocate( self%disp(1:maxAtoms) )
 
+    allocate( self%tempNNei(1:maxAtoms) )
+    allocate( self%tempList(maxAtoms, maxAtoms) )
+
+    self%tempNNei = 0
+    self%tempList = 0
+
     call self%CreateTempArray(maxAtoms)
   end subroutine
 !========================================================

@@ -448,6 +448,9 @@ use Template_NeighList, only: NeighListDef
       nCount = 0
     endif
     
+    tempList = 0
+    tempNNei = 0
+
     select type(disp)
       class is (Addition)
         disp%listIndex = iDisp

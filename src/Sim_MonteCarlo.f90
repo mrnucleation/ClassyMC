@@ -492,6 +492,7 @@ contains
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
     use Common_MolInfo, only: MolData
+    use ForcefieldData, only: EnergyCalculator
     use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
     use CommonSampling, only: Sampling
@@ -532,6 +533,10 @@ contains
 
     do i = 1, size(Moves)
       call Moves(i) % move % Epilogue
+    enddo
+
+    do i = 1, size(EnergyCalculator)
+      call EnergyCalculator(i)%method%Epilogue
     enddo
 
   end subroutine

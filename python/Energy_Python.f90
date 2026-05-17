@@ -96,10 +96,6 @@ module FF_PythonEnergy
     real(dp), allocatable :: rMin(:)
     real(dp), allocatable :: rMinTable(:,:)
     type(module_py) :: pyenergy
-    type(list) :: boxlist
-    type(tuple) :: args
-    type(tuple) :: diff_args
-    type(dict), allocatable :: boxdicts(:)
     character(len=100) :: pymodule
     contains
       procedure, pass :: Constructor => Constructor_PythonEnergy
@@ -107,6 +103,7 @@ module FF_PythonEnergy
       procedure, pass :: DiffECalc => DiffECalc_PythonEnergy
       procedure, pass :: ProcessIO => ProcessIO_PythonEnergy
       procedure, pass :: Prologue => Prologue_PythonEnergy
+      procedure, pass :: Epilogue => Epilogue_PythonEnergy
       procedure, pass :: GetCutOff => GetCutOff_PythonEnergy
   end type
 
@@ -136,14 +133,37 @@ module FF_PythonEnergy
     class(Pair_PythonEnergy), intent(inout) :: self
     integer :: ierror, iBox, nBoxes
     type(list) :: paths
+    type(list) :: boxlist
+    type(dict), allocatable :: boxdicts(:)
+    type(tuple) :: args
+    type(tuple) :: diff_args
 
     if(self%initialized) then
       return
     endif
 
     nBoxes = size(BoxArray)
-    allocate(self%boxdicts(1:nBoxes))
+    allocate(boxdicts(1:nBoxes))
 
+    ! Create boxlist with no-copy references to Fortran arrays
+    ierror = list_create(boxlist)
+    errcheck_macro
+    do iBox = 1, nBoxes
+      boxdicts(iBox) = createboxdict_nocopy(iBox)
+      ierror = boxlist%append(boxdicts(iBox))
+      errcheck_macro
+    enddo
+
+    ! Create argument tuples
+    ierror = tuple_create(args, 1)
+    errcheck_macro
+    ierror = args%setitem(0, boxlist)
+    errcheck_macro
+
+    ierror = tuple_create(diff_args, 2)
+    errcheck_macro
+    ierror = diff_args%setitem(0, boxlist)
+    errcheck_macro
     ! Add current directory to Python path
     ierror = get_sys_path(paths)
     errcheck_macro
@@ -155,28 +175,8 @@ module FF_PythonEnergy
     ierror = import_py(self%pyenergy, trim(adjustl(self%pymodule)))
     errcheck_macro
 
-    ! Create boxlist with no-copy references to Fortran arrays
-    ierror = list_create(self%boxlist)
-    errcheck_macro
-    do iBox = 1, nBoxes
-      self%boxdicts(iBox) = createboxdict_nocopy(iBox)
-      ierror = self%boxlist%append(self%boxdicts(iBox))
-      errcheck_macro
-    enddo
-
-    ! Create argument tuples
-    ierror = tuple_create(self%args, 1)
-    errcheck_macro
-    ierror = self%args%setitem(0, self%boxlist)
-    errcheck_macro
-
-    ierror = tuple_create(self%diff_args, 2)
-    errcheck_macro
-    ierror = self%diff_args%setitem(0, self%boxlist)
-    errcheck_macro
-
     ! Call Python prologue
-    ierror = call_py_noret(self%pyenergy, "prologue", args=self%args)
+    ierror = call_py_noret(self%pyenergy, "prologue", args=args)
     errcheck_macro
 
     self%initialized = .true.
@@ -185,9 +185,61 @@ module FF_PythonEnergy
 
   end subroutine
 !=========================================================================
+  subroutine Epilogue_PythonEnergy(self)
+    use BoxData, only: BoxArray
+    use ClassyPyObj, only: createboxdict_nocopy
+    use ParallelVar, only: nout
+    implicit none
+    class(Pair_PythonEnergy), intent(inout) :: self
+    integer :: ierror, iBox, nBoxes
+    type(list) :: paths
+    type(list) :: boxlist
+    type(dict), allocatable :: boxdicts(:)
+    type(tuple) :: args
+    type(tuple) :: diff_args
+
+    nBoxes = size(BoxArray)
+    allocate(boxdicts(1:nBoxes))
+
+    ! Create boxlist with no-copy references to Fortran arrays
+    ierror = list_create(boxlist)
+    errcheck_macro
+    do iBox = 1, nBoxes
+      boxdicts(iBox) = createboxdict_nocopy(iBox)
+      ierror = boxlist%append(boxdicts(iBox))
+      errcheck_macro
+    enddo
+
+    ! Create argument tuples
+    ierror = tuple_create(args, 1)
+    errcheck_macro
+    ierror = args%setitem(0, boxlist)
+    errcheck_macro
+
+    ierror = tuple_create(diff_args, 2)
+    errcheck_macro
+    ierror = diff_args%setitem(0, boxlist)
+    errcheck_macro
+
+    ! Call Python epilogue
+    ierror = call_py_noret(self%pyenergy, "epilogue", args=args)
+    errcheck_macro
+
+    call boxlist%destroy
+    call args%destroy
+    call diff_args%destroy
+    ! Destroy box list references
+    !do iBox = 1, nBoxes
+    !  call boxdicts(iBox)%destroy
+    !enddo
+    deallocate(boxdicts)
+  end subroutine
+
+!=========================================================================
   subroutine DetailedECalc_PythonEnergy(self, curbox, E_T, accept)
     use BoxData, only: BoxArray
     use ParallelVar, only: nout
+    use ClassyPyObj, only: createboxdict_nocopy
     implicit none
     class(Pair_PythonEnergy), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
@@ -195,18 +247,45 @@ module FF_PythonEnergy
     logical, intent(out) :: accept
     
     type(object) :: returnobj, item
+    type(dict), allocatable :: boxdicts(:)
     type(dict) :: resultdict
     type(ndarray) :: np_etable
+    type(tuple) :: args, diff_args
+    type(list) :: boxlist
     integer :: ierror, boxID
+    integer :: iBox, nBoxes
     real(dp) :: energy
     real(dp), pointer :: etable_ptr(:) => null()
+
 
     accept = .true.
     E_T = 0E0_dp
     boxID = curbox%boxID
+    nBoxes = size(BoxArray)
+    allocate(boxdicts(1:nBoxes))
+
+    ! Create boxlist with no-copy references to Fortran arrays
+    ierror = list_create(boxlist)
+    errcheck_macro
+    do iBox = 1, nBoxes
+      boxdicts(iBox) = createboxdict_nocopy(iBox)
+      ierror = boxlist%append(boxdicts(iBox))
+      errcheck_macro
+    enddo
+
+    ! Create argument tuples
+    ierror = tuple_create(args, 1)
+    errcheck_macro
+    ierror = args%setitem(0, boxlist)
+    errcheck_macro
+
+    ierror = tuple_create(diff_args, 2)
+    errcheck_macro
+    ierror = diff_args%setitem(0, boxlist)
+    errcheck_macro
 
     ! Call Python compute_total
-    ierror = call_py(returnobj, self%pyenergy, "compute_total", args=self%args)
+    ierror = call_py(returnobj, self%pyenergy, "compute_total", args=args)
     errcheck_macro
 
     ! Cast return value to dict
@@ -248,17 +327,27 @@ module FF_PythonEnergy
 
     call resultdict%destroy
     call returnobj%destroy
+    call boxlist%destroy
+    call args%destroy
+    
+     !Destroy box list references
+    !do iBox = 1, nBoxes
+    !  call boxdicts(iBox)%destroy
+    !enddo
+      ! Destroy diff_args tuple
+    call diff_args%destroy
 
     if(isnan(E_T)) then
       write(0,*) "ERROR! NaN energy returned from Python compute_total"
       error stop
     endif
-
+    deallocate(boxdicts)
   end subroutine
 !=========================================================================
   subroutine DiffECalc_PythonEnergy(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
     use BoxData, only: BoxArray
-    use ClassyPyObj, only: createdisplist
+    use ClassyPyObj, only: createdisplist, createboxdict_nocopy
+    use ParallelVar, only: nout
     implicit none
     class(Pair_PythonEnergy), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
@@ -269,25 +358,68 @@ module FF_PythonEnergy
 
     type(object) :: returnobj, item
     type(dict) :: resultdict
-    type(list) :: displist
+    type(list) :: displist, boxlist
+    type(tuple) :: args, diff_args
+    type(dict), allocatable :: boxdicts(:)
     type(ndarray) :: np_detable
-    integer :: ierror, iDisp
+    type(ndarray) :: np_nlist, np_nneigh
+    integer :: ierror, iDisp, iBox, nBoxes
     real(dp) :: energy
     real(dp), pointer :: detable_ptr(:) => null()
 
     accept = .true.
     E_Diff = 0E0_dp
     curbox%dETable = 0E0_dp
+    nBoxes = size(BoxArray)
+    allocate(boxdicts(1:nBoxes))
+
+    ! Create boxlist with no-copy references to Fortran arrays
+    ierror = list_create(boxlist)
+    errcheck_macro
+    do iBox = 1, nBoxes
+      boxdicts(iBox) = createboxdict_nocopy(iBox)
+      ierror = boxlist%append(boxdicts(iBox))
+      errcheck_macro
+    enddo
+
+    ! Create argument tuples
+    !ierror = tuple_create(args, 1)
+    !errcheck_macro
+    !ierror = args%setitem(0, boxlist)
+    !errcheck_macro
+
+    ierror = tuple_create(diff_args, 4)
+    errcheck_macro
+    ierror = diff_args%setitem(0, boxlist)
+    errcheck_macro
+
 
     ! Create displacement list for Python
     displist = createdisplist(disp)
 
     ! Set displacement list in args
-    ierror = self%diff_args%setitem(1, displist)
+    ierror = diff_args%setitem(1, displist)
     errcheck_macro
 
+
+    !Create Python list of temporary neighbor lists
+    ierror = ndarray_create_nocopy(np_nlist, tempList)
+    ierror = diff_args%setitem(2, np_nlist)
+    errcheck_macro
+
+    !Create Python list of temporary neighbor counts
+    ierror = ndarray_create_nocopy(np_nneigh, tempNNei)
+    ierror = diff_args%setitem(3, np_nneigh)
+    errcheck_macro
+      ! If no neighbor counts are provided, pass None to Python
+      !ierror = diff_args%setitem(3, None)
+      !errcheck_macro
+
+
+
+
     ! Call Python compute_diff
-    ierror = call_py(returnobj, self%pyenergy, "compute_diff", args=self%diff_args)
+    ierror = call_py(returnobj, self%pyenergy, "compute_diff", args=diff_args)
     errcheck_macro
 
     ! Cast return value to dict
@@ -336,11 +468,20 @@ module FF_PythonEnergy
 
     call resultdict%destroy
     call returnobj%destroy
+    call displist%destroy
+    call boxlist%destroy
+    call args%destroy
+
+ 
+     ! Destroy diff_args tuple
+    call diff_args%destroy
 
     if(isnan(E_Diff)) then
       write(0,*) "ERROR! NaN energy returned from Python compute_diff"
       error stop
     endif
+
+    deallocate(boxdicts)
 
   end subroutine
 !=========================================================================
@@ -426,6 +567,7 @@ module FF_PythonEnergy
       procedure, pass :: DiffECalc => DiffECalc_PythonEnergy_Stub
       procedure, pass :: ProcessIO => ProcessIO_PythonEnergy_Stub
       procedure, pass :: Prologue => Prologue_PythonEnergy_Stub
+      procedure, pass :: Epilogue => Epilogue_PythonEnergy_Stub
       procedure, pass :: GetCutOff => GetCutOff_PythonEnergy_Stub
   end type
 
