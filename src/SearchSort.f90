@@ -273,8 +273,8 @@ end subroutine QSort
     upper = UBound(list, dim=1)
     n = size(list) 
      
-    do i =lower, upper-1 
-      do j= lower, n-i-1 
+    do i = lower, upper-1 
+      do j = lower, upper-i
         if(list(j) > list(j+1)) then
           call Swap(list(j), list(j+1))
         endif

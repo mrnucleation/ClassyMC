@@ -130,9 +130,10 @@ use Template_NeighList, only: NeighListDef
 !    call self%DumpList(2)
   end subroutine
 !===================================================================================
-  subroutine RSqList_Update(self)
+  subroutine RSqList_Update(self, accept)
     implicit none
     class(RSqList), intent(inout) :: self
+    logical, intent(in) :: accept
 
 
 !    call self%DumpList(2)
@@ -241,11 +242,12 @@ use Template_NeighList, only: NeighListDef
           cycle
         endif
 
-        if(self%sorted) then
-          curIndx = BinarySearch( atmIndx, self%list(1:nNei, curNei) )
-        else
-          curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
-        endif
+        ! Use a linear search here: AddMol appends neighbors out of order and the
+        ! re-index step below replaces entries in place, so the per-atom lists are
+        ! not guaranteed to be sorted even when self%sorted is .true.  A binary
+        ! search on an unsorted list silently fails and leaves stale neighbor
+        ! references behind, so always scan linearly (lists are short, <= maxNei).
+        curIndx = SimpleSearch( atmIndx, self%list(1:nNei, curNei) )
 
 !        if(nNei <= 1) then
 !          self%nNeigh(curNei) = 0
@@ -290,12 +292,10 @@ use Template_NeighList, only: NeighListDef
         if(nNei == 0 ) then
           cycle
         endif
-        if(self%sorted) then
-          curIndx = BinarySearch( topAtom, self%list(1:nNei, curNei) )
-          self%sorted = .false.
-        else
-          curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
-        endif
+        ! Always linear-search (see note in the removal loop above): the lists may
+        ! be unsorted regardless of self%sorted, which would make a binary search
+        ! miss the entry and leave a stale neighbor reference.
+        curIndx = SimpleSearch( topAtom, self%list(1:nNei, curNei) )
 !        write(2,*) "Second", "curNei", curNei, "Indexes", curIndx, topAtom
         if(curIndx /= 0) then
           self % list(curIndx, curNei) = atmIndx
@@ -639,6 +639,10 @@ use Template_NeighList, only: NeighListDef
 !        enddo
 !        write(2,*)
       endif
+      ! New neighbors are appended to the end of each atom's list out of order,
+      ! so the per-atom lists are no longer guaranteed to be sorted.  Clear the
+      ! sorted flag so subsequent searches do not rely on a stale binary search.
+      trialBox%NeighList(iList)%sorted = .false.
 !      write(2,*) "N", trialBox%NeighList(iList)%nNeigh(:)     
     enddo
 

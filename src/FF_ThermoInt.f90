@@ -281,9 +281,14 @@ module FF_ThermoIntegration
 
   end function
 !=============================================================================+
-  subroutine ThermoInt_Update(self)
+  subroutine ThermoInt_Update(self, accept)
     implicit none
     class(pair_thermointegration), intent(inout) :: self
+    logical, intent(in) :: accept
+
+    if(.not. accept) then
+      return
+    endif
 
     self%E1 = self%E1 + self%EDiff1
     self%E2 = self%E2 + self%EDiff2

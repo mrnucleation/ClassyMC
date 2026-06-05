@@ -268,13 +268,18 @@ use VarPrecision
 
   end subroutine
 !=========================================================================
-  subroutine MolTrans_Update(self)
+  subroutine MolTrans_Update(self, accept)
     use BoxData, only: BoxArray
     use ParallelVar, only: nout
     implicit none
     class(MolTranslate), intent(inout) :: self
+    logical, intent(in) :: accept
     integer :: iBox
     real(dp) :: norm
+
+      if(.not. accept) then
+        return
+      endif
 
       if(self%proportional) then
         norm = 0E0_dp

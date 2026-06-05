@@ -473,10 +473,15 @@ module Constrain_DistanceCriteria
 
   end subroutine
 !=============================================================
-  subroutine RadGyr_Update(self)
+  subroutine RadGyr_Update(self, accept)
     implicit none
     class(RadiusGyration), intent(inout) :: self
+    logical, intent(in) :: accept
 
+
+    if(.not. accept) then
+      return
+    endif
     self%topoList = self%newTopoList
 
   end subroutine

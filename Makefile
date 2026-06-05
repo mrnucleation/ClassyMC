@@ -122,9 +122,9 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Debug.f90\
         		$(SRC)/Data_Graph.f90\
         		$(SRC)/Data_Queue.f90\
-         		$(SRC)/Constrain_MultiAtomDistCrit.f90\
          		$(SRC)/Constrain_MolTotal.f90\
          		$(SRC)/Constrain_DistCriteria.f90\
+         		$(SRC)/Constrain_DisCrtieriaAllMol.f90\
          		$(SRC)/Constrain_EnergyCeiling.f90\
          		$(SRC)/Constrain_EnergyFloor.f90\
          		$(SRC)/Constrain_FreezeType.f90\
@@ -651,6 +651,7 @@ $(OBJ)/MolCon_SimpleRegrowth.o: $(OBJ)/Template_MolConstructor.o
 $(OBJ)/MolCon_LinearCBMC.o: $(OBJ)/Template_MolConstructor.o $(OBJ)/MolSearch.o
 $(OBJ)/MolCon_BranchCBMC.o: $(OBJ)/Template_MolConstructor.o $(OBJ)/MolSearch.o $(OBJ)/Data_Queue.o $(OBJ)/Math_CoordinateFunctions.o
 $(OBJ)/Data_Queue.o: $(OBJ)/VariablePrecision.o
+$(OBJ)/Data_Graph.o: $(OBJ)/VariablePrecision.o $(OBJ)/SearchSort.o
 
 $(OBJ)/Script_Main.o: $(OBJ)/Units.o $(OBJ)/Common_BoxData.o $(OBJ)/Script_Forcefield.o $(OBJ)/Box_CubicBox.o $(OBJ)/Script_SimBoxes.o $(OBJ)/Script_Sampling.o $(OBJ)/Script_MCMoves.o $(OBJ)/Script_Initialize.o $(OBJ)/Script_NeighType.o $(OBJ)/Script_TrajType.o $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 

@@ -379,10 +379,15 @@ module Constrain_Python
 
   end subroutine
 !=========================================================================
-  subroutine PythonConstraint_Update(self)
+  subroutine PythonConstraint_Update(self, accept)
     implicit none
     class(PythonConstraint), intent(inout) :: self
+    logical, intent(in) :: accept
     integer :: ierror
+
+    !Need to fix the argument list to include accept, and then pass that to Python.  
+    !This will allow users to have an update function that only runs on accepted moves if desired.  
+    !If accept is false, we can skip the Python call entirely to save time for rejected moves.
 
     ! Call Python update
     ierror = call_py_noret(self%pyconstraint, "update", args=self%args_update)
@@ -521,9 +526,10 @@ module Constrain_Python
 
   end subroutine
 !=========================================================================
-  subroutine PythonConstraint_Stub_Update(self)
+  subroutine PythonConstraint_Stub_Update(self, accept)
     implicit none
     class(PythonConstraint), intent(inout) :: self
+    logical, intent(in) :: accept
 
   end subroutine
 !=========================================================================

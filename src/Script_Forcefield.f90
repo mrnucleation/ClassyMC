@@ -421,13 +421,13 @@ module Input_Forcefield
 
     nAtoms = MolData(molnum)%nAtoms
 
-    call MolData(molnum)%molgraph%Constructor(nAtoms)
+    !call MolData(molnum)%molgraph%Constructor(nAtoms)
 
     do iBond = 1, MolData(molnum)%nBonds
       intraType = MolData(molnum)%bond(iBond)%bondType
       mem1 = MolData(molnum)%bond(iBond)%mem1
       mem2 = MolData(molnum)%bond(iBond)%mem2
-      call MolData(molnum)%molgraph%AddEdge(mem1, mem2, intraType)
+      !call MolData(molnum)%molgraph%AddEdge(mem1, mem2, intraType)
     enddo
 
     do iAngle = 1, MolData(molnum)%nAngles
@@ -435,7 +435,7 @@ module Input_Forcefield
       mem1 = MolData(molnum)%angle(iAngle)%mem1
       mem2 = MolData(molnum)%angle(iAngle)%mem2
       mem3 = MolData(molnum)%angle(iAngle)%mem3
-      call MolData(molnum)%molgraph%AddAngle(mem1, mem2, mem3, intraType)
+      !call MolData(molnum)%molgraph%AddAngle(mem1, mem2, mem3, intraType)
     enddo
 
     do iTorsion = 1, MolData(molnum)%nTors
@@ -444,7 +444,7 @@ module Input_Forcefield
       mem2 = MolData(molnum)%torsion(iTorsion)%mem2
       mem3 = MolData(molnum)%torsion(iTorsion)%mem3
       mem4 = MolData(molnum)%torsion(iTorsion)%mem4
-      call MolData(molnum)%molgraph%AddTorsion(mem1, mem2, mem3, mem4, intraType)
+      !call MolData(molnum)%molgraph%AddTorsion(mem1, mem2, mem3, mem4, intraType)
     enddo
 
 

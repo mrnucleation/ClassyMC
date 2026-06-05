@@ -9,25 +9,16 @@ module Constrain_MultiAtomDistanceCriteria
   use CoordinateTypes, only: Displacement, Deletion, Addition
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
+  use Graph_Module, only:  undirected_graph
 
   type, public, extends(constraint) :: MultiAtomDistCrit
     integer :: neighList = 1
     integer :: molType = 1
     real(dp) :: rCut, rCutSq
     integer :: boxID = 1
+    type(undirected_graph) :: graph, temp_graph
 
-    integer :: nAtomMax
     integer :: nMolMax
-    integer, allocatable :: TypeStart(:), TypeEnd(:)
-    logical, allocatable :: clustMemb(:)
-
-    integer, allocatable :: nTopoNei(:)
-    integer, allocatable :: topoList(:, :)
-    integer, allocatable :: nTopoNewNei(:)
-    integer, allocatable :: newTopoList(:, :)
-
-    integer, allocatable :: newList(:)
-    integer, allocatable :: newList2(:)
     class(SimBox), pointer :: parent => null()
     contains
       procedure, pass :: Constructor => MultiDistCrit_Constructor
@@ -60,36 +51,11 @@ module Constrain_MultiAtomDistanceCriteria
 
 !    nMolMax = self % parent % NMolMax(self%molType)
     nMolMax = self % parent % maxMol
-    self%nAtomMax = 1
-
-    allocate(self%TypeStart(1:nMolTypes), stat = AllocateStat)
-    allocate(self%TypeEnd(1:nMolTypes), stat = AllocateStat)
-    self%TypeStart = 0
-    self%TypeEnd = 0
-    self%TypeStart(1) = 1
-    self%TypeEnd(1) = self%parent%NMolMax(1)
-    if(nMolTypes > 1) then
-      do iType = 2, nMolTypes
-        self%TypeStart(iType) = self%TypeEnd(iType-1) + 1
-        self%TypeEnd(iType) = self%TypeEnd(iType-1) + self%parent%NMolMax(iType) 
-      enddo
-    endif
-
-    do iType = 1, nMolTypes
-      self%nAtomMax = max(self%nAtomMax, MolData(iType)%nAtoms)
-    enddo
-    
-    allocate(self%clustMemb(1:nMolMax), stat = AllocateStat)
-
-    allocate(self%nTopoNei(1:nMolMax), stat = AllocateStat)
-    allocate(self%topoList(1:nMolMax, 1:nMolMax), stat = AllocateStat)
-    allocate(self%nTopoNewNei(1:nMolMax), stat = AllocateStat)
-    allocate(self%newTopoList(1:nMolMax, 1:nMolMax), stat = AllocateStat)
-
-    allocate(self%newlist(1:nMolMax), stat = AllocateStat)
-    allocate(self%newlist2(1:nMolMax), stat = AllocateStat)
-
     self%nMolMax = nMolMax
+
+    call self%graph%init(nMolMax)
+    call self%temp_graph%init(nMolMax)
+
 
     IF (AllocateStat /= 0) STOP "Allocation Error in Distance Constraint"
   end subroutine
@@ -110,9 +76,6 @@ module Constrain_MultiAtomDistanceCriteria
     real(dp), pointer :: atoms(:,:) => null()
 
     accept = .true.
-    self%clustMemb = .false.
-    self%topoList = 0
-    self%nTopoNei = 0
     
     call trialbox%GetCoordinates(atoms)
 
@@ -669,11 +632,15 @@ module Constrain_MultiAtomDistanceCriteria
 
   end subroutine
 !=============================================================
-  subroutine MultiDistCrit_Update(self)
+  subroutine MultiDistCrit_Update(self, accept)
     implicit none
     class(MultiAtomDistCrit), intent(inout) :: self
-    logical :: accept
+    logical, intent(in) :: accept
     integer :: iMol, newNNei
+
+    if(.not. accept) then
+      return
+    endif
 
     self%topoList = self%newTopoList
     self%nTopoNei = self%nTopoNewNei

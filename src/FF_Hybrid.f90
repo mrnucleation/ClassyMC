@@ -263,11 +263,21 @@ module FF_Hybrid
 
   end function
 !=============================================================================+
-  subroutine Hybrid_Update(self)
+  subroutine Hybrid_Update(self, accept)
     implicit none
     class(Pair_Hybrid), intent(inout) :: self
+    logical, intent(in) :: accept
+
+    integer :: iField
+
+    ! Call the update function for each sub-forcefield, which will allow them to reset any internal information after a successful move.
+    do iField = 1, self%NFFields
+      call EnergyCalculator(self%ECalcIndx(iField)) % Method % Update(accept)
+    enddo
 
     if(allocated(self%EDiff)) self%EDiff = 0E0_dp
+
+
   end subroutine
 !=============================================================================+
 end module

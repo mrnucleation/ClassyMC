@@ -6,7 +6,7 @@ module StructureTypes
   use Template_IntraAngle, only: Angle_FF
   use Template_IntraTorsion, only: Torsion_FF
   use Template_IntraMiscIntra, only: MiscIntra_FF
-  use Data_Graph, only: graph
+  !use Data_Graph, only: graph
 
 
   !These containers are used to define all the various atom, bond, angle,etc.
@@ -69,7 +69,7 @@ module StructureTypes
     integer :: nAtoms = 1
 
      !Graph Object which represents the topology of the molecule.
-    type(graph) :: molgraph
+    !type(graph) :: molgraph
 
      !MolConstructor is used to 
     class(MolConstructor), allocatable :: molConstruct

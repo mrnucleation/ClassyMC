@@ -4,9 +4,9 @@
 #======================================
 #
   set rng_seed -6
-  set NeighSkin 2.0
+  set NeighSkin 6.0
   set moves 10
-  set cycles 6000000
+  set cycles 600000
   SamplingType UmbrellaWHAM
   modify Sampling biasvariables 1
   modify Sampling analysis 1
@@ -25,7 +25,10 @@
   modify box 1 buildfreq 100
 
   modify box 1 chempotential 1 -9.210340372 
-  NeighList 1 rsqlist 1
+  modify box 1 chempotential 2 -9.210340372 
+  modify box 1 chempotential 3 -9.210340372 
+  modify box 1 chempotential 4 -9.210340372 
+  NeighList 1 cellrsqlist 1
 
   Create Moves
     AtomTranslation 2.0
@@ -36,18 +39,19 @@
   modify move 2 radius 1.5
 
   Create constraint 1
-    distancecriteria 1 1.5 1
-    # allmoldistancecriteria 1 1.5
+    #distancecriteria 1 1.5 1
+     allmoldistancecriteria 1 1.5  1 1.5  1 1.5  1 1.5
   End_Create
 
   Create Analysis
-    clustersize 1 1 
+   # clustersize 1 1 
+     totalsize 1
   End_Create
 
 
-# Create trajectory
-#   xyz 1 100 "Traj.xyz"
-# End_Create
+ Create trajectory
+   xyz 1 100 "Traj.xyz"
+ End_Create
 
 
   Run

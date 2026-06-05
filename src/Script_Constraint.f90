@@ -1,22 +1,22 @@
 !================================================================================
 module Input_Constraint
-  use Input_Format
-  use VarPrecision
 !================================================================================
 contains
 !================================================================================
   subroutine Script_Constraint(lineStore, iLine, BoxNum, lineBuffer, lineStat)
-    use Input_Format, only: GetXCommand
+    use Input_Format, only: GetXCommand, maxLineLen, FindCommandBlock
     use BoxData, only: BoxArray
     use ParallelVar, only: nout
     use Constrain_DistanceCriteria, only: DistCriteria
+    use Constrain_DistanceCriteriaAllMol, only: DistCriteriaAllMol
     use Constrain_EnergyCeiling, only: EnergyCeiling
     use Constrain_EnergyFloor, only: EnergyFloor
     use Constrain_FreezeType, only: FreezeType
 !    use Constrain_HardWall, only: HardWall
     use Constrain_MolTotal, only: MolTotal
-    use Constrain_MultiAtomDistanceCriteria, only: MultiAtomDistCrit
+    !use Constrain_MultiAtomDistanceCriteria, only: MultiAtomDistCrit
     use Constrain_Python, only: PythonConstraint
+    use VarPrecision
 
     implicit none
     character(len=maxLineLen), intent(in) :: linestore(:) 
@@ -41,8 +41,11 @@ contains
         case("distancecriteria")
           allocate( DistCriteria::BoxArray(BoxNum)%box%Constrain(i)%method )
 
-        case("multidistancecriteria")
-          allocate( MultiAtomDistCrit::BoxArray(BoxNum)%box%Constrain(i)%method )
+        !case("multidistancecriteria")
+        !  allocate( MultiAtomDistCrit::BoxArray(BoxNum)%box%Constrain(i)%method )
+
+        case("allmoldistancecriteria")
+          allocate( DistCriteriaAllMol::BoxArray(BoxNum)%box%Constrain(i)%method )
 
         case("energyceiling")
           allocate( EnergyCeiling ::BoxArray(BoxNum)%box%Constrain(i)%method )

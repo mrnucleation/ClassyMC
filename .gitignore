@@ -24,3 +24,11 @@ profiling/*
 **/*.pyc
 **/classyMC
 **/classyMC_debug
+Example/LJNucleation_MultipleTypes/fort.100
+Example/LJNucleation/umbrella.dat
+Example/LJNucleation_MultipleTypes/tmp_in.ljfcc
+Example/LJNucleation_MultipleTypes/Dimer_backup.clssy
+Example/LJNucleation/umbrella.dat
+Example/LJNucleation/LJForcefield_backup.clFF
+Example/LJNucleation/umbrella.dat
+Example/LJNucleation/Dimer_backup.clssy

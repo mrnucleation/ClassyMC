@@ -1,0 +1,6 @@
+ boxtype cube
+ dimension 45.6992084157
+ molmin           1  0 0 0
+ molmax        3 3 3 1
+ mol         1 0 0 0 
+1 1 1 0.0 0.0 0.0

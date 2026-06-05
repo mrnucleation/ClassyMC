@@ -1377,10 +1377,15 @@ subroutine ResolveTrialState_Ewald(self, curbox)
 
 end subroutine
 !=============================================================================
-subroutine Update_Ewald(self)
+subroutine Update_Ewald(self, accept)
   implicit none
   class(Pair_Ewald), intent(inout) :: self
+  logical, intent(in) :: accept 
   integer :: iK
+
+  if (.not. accept) then
+    return
+  endif
 
   if (self%pendingTrial) then
     self%E_recip_total = 0.0_dp

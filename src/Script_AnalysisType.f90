@@ -83,6 +83,7 @@ contains
      case default
         lineStat = -1
         write(0,*) "ERROR! Unknown Analysis Type Given in Input File!!!"
+        write(0,*) "       Analysis Type Given: ", trim(command)
         error stop
 
     end select

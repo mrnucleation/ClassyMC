@@ -296,6 +296,7 @@ contains
   end subroutine
 !===========================================================================
   subroutine Trajectory(iCycle, iMove)
+     !Print trajectory information to the screen or to a file.  This is ran every cycle, but can be set to only print every n cycles via the Trajectory's outfreq variable.
     use TrajData, only: TrajArray
     implicit none
     integer(kind=8), intent(in) :: iCycle, iMove
@@ -312,6 +313,8 @@ contains
   end subroutine
 !===========================================================================
   subroutine Update(accept)
+     ! Used to update all the simulation information after a MC move.  Can be used for bookkeeping that helps speed up the simulation, 
+     ! or to update any information that needs to be updated after a move.
     use AnalysisData, only: AnalysisArray
     use BoxData, only: BoxArray
     use ForcefieldData, only: EnergyCalculator
@@ -322,34 +325,32 @@ contains
     logical, intent(in) :: accept
     integer :: i
 
-    if( .not. accept) then
-      return
-    endif
 
-    call Sampling % Update
+
+    call Sampling % Update(accept)
 
     if( allocated(AnalysisArray) ) then
       do i = 1, size(AnalysisArray)
-        call AnalysisArray(i) % func % Update
+        call AnalysisArray(i) % func % Update(accept)
       enddo
     endif
 
     if( allocated(TrajArray) ) then
       do i = 1, size(TrajArray)
-        call TrajArray(i) % traj % Update
+        call TrajArray(i) % traj % Update(accept)
       enddo
     endif
 
     do i = 1, size(EnergyCalculator)
-      call EnergyCalculator(i) % method % Update
+      call EnergyCalculator(i) % method % Update(accept)
     enddo
 
     do i = 1, size(BoxArray)
-      call BoxArray(i) % box % Update
+      call BoxArray(i) % box % Update(accept)
     enddo
 
     do i = 1, size(Moves)
-      call Moves(i) % move % Update
+      call Moves(i) % move % Update(accept)
     enddo
 
   end subroutine

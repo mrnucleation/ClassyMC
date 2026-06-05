@@ -167,10 +167,11 @@ use RSqListDef, only: RSqList
 !    call self%DumpList(2)
   end subroutine
 !===================================================================================
-  subroutine CellRSqList_Update(self)
+  subroutine CellRSqList_Update(self, accept)
     implicit none
     class(CellRSqList), intent(inout) :: self
-
+    logical, intent(in) :: accept
+  
 
 !    call self%PrintList(2, "update")
 !    call self%IntegrityCheck(1)
@@ -971,8 +972,8 @@ use RSqListDef, only: RSqList
 
 
 
-    !If the atom lacks a neighbor, nothing needs to be done. 
-    if( (self%nNeigh(atmIndx) == 0)  ) then
+    !If the atom is fully purged (no neighbors and no cell), nothing needs to be done.
+    if( (self%nNeigh(atmIndx) == 0) .and. (self%cellID(atmIndx) == 0) ) then
       return
     endif
 
@@ -1026,6 +1027,11 @@ use RSqListDef, only: RSqList
 
 !    write(2,"(999(1x, I3))") self%cellList(1:nCellatoms, cellID)
     self%cellID(atmIndx) = 0
+
+    ! Invalidate the supercell cache: any cached supercell that included the
+    ! modified cell is now stale.  Zeroing the entire array is O(nCells) but
+    ! simple and correct; GetCellAtoms will lazily rebuild on next access.
+    self%nSuperCellAtoms = 0
 
 !    write(2,*) "=================================================="
 
@@ -1092,12 +1098,14 @@ use RSqListDef, only: RSqList
 
            call self%InsertAtomIntoCell(self%cellList(:,cellIndx), self%nCellAtoms(cellIndx), iAtom)
 
+           ! Invalidate the supercell cache for the same reason as in PurgeAtom.
+           self%nSuperCellAtoms = 0
+
            self%nNeigh(iAtom) = tempNNei(iDisp)
            self%list(1:tempNNei(iDisp), iAtom ) = templist(1:tempNNei(iDisp), iDisp)
            do iNei = 1, tempNNei(iDisp)
              neiIndx = tempList(iNei, iDisp)
              call self%InsertAtomIntoCell(self%list(:,neiIndx), self%nNeigh(neiIndx), iAtom)
-
            enddo
        enddo
 
@@ -1306,7 +1314,10 @@ use RSqListDef, only: RSqList
       curlist(nCurNeigh) = inatmindx
       return
     else if(nCurNeigh == 1) then
-      if(inAtmIndx > curlist(nCurNeigh)) then
+      if(inAtmIndx == curlist(1)) then
+        write(0,*) "ERROR! List already contains atom!"
+        error stop
+      else if(inAtmIndx > curlist(nCurNeigh)) then
         nCurNeigh = nCurNeigh + 1
         curlist(nCurNeigh) = inatmindx
       else
@@ -1345,7 +1356,8 @@ use RSqListDef, only: RSqList
         else if(inatmindx > curlist(half)) then
           low = half
         else if(inatmindx == curlist(half)) then
-          write(0,*) "ERROR! List already contains atom!"
+          write(0,*) "ERROR! List already contains atom! atom=", inatmindx, "nCurNeigh=", nCurNeigh
+          write(0,*) "List:", curlist(1:nCurNeigh)
           error stop
         endif
         if(loopcnt > 50) then

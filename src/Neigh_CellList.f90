@@ -157,9 +157,10 @@ use Template_NeighList, only: NeighListDef
     class(CellList), intent(inout) :: self
   end subroutine
 !===================================================================================
-  subroutine CellList_Update(self)
+  subroutine CellList_Update(self, accept)
     implicit none
     class(CellList), intent(inout) :: self
+    logical, intent(in) :: accept
   end subroutine
 !===================================================================================
   subroutine CellList_UpdateCellDimensions(self)

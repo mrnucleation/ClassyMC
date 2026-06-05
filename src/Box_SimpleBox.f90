@@ -2276,8 +2276,8 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
       write(tempStr2, "(F40.8)") massDensity
       tempStr = ReplaceText(tempStr, "%s2", trim(adjustl(tempStr2)))
       write(nout, "(A)") trim(tempStr)
-      write(nout, "(A, 999(1x,I10))") "        Number of Molecules By Type: ", self%nMol(1:nMolTypes)
     endif
+    write(nout, "(A, 999(1x,I10))") "        Number of Molecules By Type: ", self%nMol(1:nMolTypes)
 
 
   end subroutine
@@ -2403,21 +2403,22 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
 
   end subroutine
 !==========================================================================================
-  subroutine SimpleBox_Update(self)
+  subroutine SimpleBox_Update(self, accept)
     implicit none
     class(SimpleBox), intent(inout) :: self
+    logical, intent(in) :: accept
     integer :: iConstrain, iList
 
 
     if( allocated(self%Constrain) ) then
       do iConstrain = 1, size(self%Constrain)
-        call self%Constrain(iConstrain) % method % Update
+        call self%Constrain(iConstrain) % method % Update(accept)
       enddo
     endif
 
     if( allocated(self%NeighList) ) then
       do iList = 1, size(self%NeighList)
-        call self%NeighList(iList) % Update
+        call self%NeighList(iList) % Update(accept)
       enddo
     else
       error stop "No Neighbor List has been defined!"

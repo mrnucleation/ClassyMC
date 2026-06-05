@@ -791,7 +791,7 @@ use VarPrecision
         read(command, *) intVal
         self%neilistindx = intVal
 
-      case("radius")
+      case("radius", "distance")
         call GetXCommand(line, command, 5, lineStat)
         read(command, *) realVal
         self%avbmcRad = realVal

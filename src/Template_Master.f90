@@ -78,9 +78,10 @@ module MasterTemplate
   end subroutine
 !====================================================================
 ! Used to update this object's information after a successful MC move.
-  subroutine Update(self)
+  subroutine Update(self, accept)
     implicit none
     class(classyClass), intent(inout) :: self
+    logical, intent(in) :: accept
 
   end subroutine
 !====================================================================

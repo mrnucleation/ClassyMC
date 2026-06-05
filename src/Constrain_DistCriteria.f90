@@ -488,9 +488,10 @@ module Constrain_DistanceCriteria
 
   end subroutine
 !=============================================================
-  subroutine DistCrit_Update(self)
+  subroutine DistCrit_Update(self, accept)
     implicit none
     class(DistCriteria), intent(inout) :: self
+    logical, intent(in) :: accept
 
     self%topoList = self%newTopoList
 
