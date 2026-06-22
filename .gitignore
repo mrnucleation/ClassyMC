@@ -1,5 +1,14 @@
+# ── Fortran build artifacts ──────────────────────────────────────────────────
 *.o
 *.mod
+mods/*
+!mods/.gitkeep
+objects/*
+!objects/.gitkeep
+profiling/
+lib/dummy.txt
+
+# ── Compiled binaries / libraries ────────────────────────────────────────────
 *.exe
 *.so
 *.a
@@ -7,28 +16,56 @@
 *.dll
 *.dylib
 *.framework
+/classyMC
+/classyMC_debug
+/test_delta_energy
+/test_neighborlist
+
+# ── Simulation output files (keep only inputs in the repo) ────────────────────
+# Run logs / screen capture
 *.log
 log.lammps
-Config_**.clssy
-*.txt
+**/ScreenOutput_*.txt
+**/output.txt
+**/output2.txt
+
+# Analysis / umbrella / energy data written by runs
 *.dat
 *.xyz
-*.pyc
 *.dump
-objects/*.o
-mods/*
-profiling/*
-**/Config_*.clssy
-**/*.dat
-**/*.dump
-**/*.pyc
-**/classyMC
-**/classyMC_debug
-Example/LJNucleation_MultipleTypes/fort.100
-Example/LJNucleation/umbrella.dat
-Example/LJNucleation_MultipleTypes/tmp_in.ljfcc
-Example/LJNucleation_MultipleTypes/Dimer_backup.clssy
-Example/LJNucleation/umbrella.dat
-Example/LJNucleation/LJForcefield_backup.clFF
-Example/LJNucleation/umbrella.dat
-Example/LJNucleation/Dimer_backup.clssy
+*.lammpstrj
+*.xsf
+*.png
+
+# Runtime-written restart / output coordinates (numbered Config_N_M.clssy)
+**/Config_[0-9]*.clssy
+**/Out_[0-9]*.clssy
+
+# Generic txt leftovers from runs (allow README/docs exceptions below)
+Example/**/*.txt
+lib/dummy.txt
+mods/dummy.txt
+objects/dummy.txt
+docs/TodoList.txt
+
+# ── Python cache ──────────────────────────────────────────────────────────────
+*.pyc
+__pycache__/
+
+# ── Sphinx documentation build ────────────────────────────────────────────────
+docs/_build/
+docs/auto/
+
+# ── Editor temp / swap files ─────────────────────────────────────────────────
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ── Backup / temp leftovers in examples ───────────────────────────────────────
+**/*_backup.clssy
+**/*_backup.clFF
+**/*_backup.clff
+**/fort.*
+**/tmp_in.*
+Example/AENet/...

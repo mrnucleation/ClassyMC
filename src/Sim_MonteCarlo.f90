@@ -441,8 +441,17 @@ contains
     use Common_MolInfo, only: MolData
     use MCMoveData, only: Moves, MoveProb
     use TrajData, only: TrajArray
+    use Debug_Logging, only: DebugLog_Initialize, DebugLog_IsEnabled
+    use ParallelVar, only: nout
     implicit none
     integer :: i, iMisc
+
+    if(DebugLog_IsEnabled()) then
+      call DebugLog_Initialize()
+      write(nout, '(A)') "  Debug Logging: ENABLED"
+      write(nout, '(A)') "    Log file: debug_moves.log"
+      write(nout, '(A)') "    Dump file: debug_trajectory.lammpstrj"
+    endif
 
     do i = 1, size(MolData)
       if(allocated(MolData(i) % molConstruct) ) then
@@ -498,6 +507,7 @@ contains
     use TrajData, only: TrajArray
     use CommonSampling, only: Sampling
     use ParallelVar, only: nout
+    use Debug_Logging, only: DebugLog_Finalize
     implicit none
     integer :: i, iMisc
 
@@ -539,6 +549,8 @@ contains
     do i = 1, size(EnergyCalculator)
       call EnergyCalculator(i)%method%Epilogue
     enddo
+
+    call DebugLog_Finalize()
 
   end subroutine
 

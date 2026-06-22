@@ -106,7 +106,7 @@ module UmbrellaWHAMRule
   end subroutine
 !====================================================================
   subroutine UmbrellaWHAM_Prologue(self)
-    use AnalysisData, only: AnalysisArray
+    use AnalysisData, only: AnalysisArray, analyCommon
     use SimControl, only: nCycles
     use ParallelVar, only: nout, myid
     implicit none
@@ -144,6 +144,23 @@ module UmbrellaWHAMRule
       indx = self%AnalysisIndex(i)
       AnalysisArray(indx)%func%usedInMove = .true.
       AnalysisArray(indx)%func%permove = .true.
+    enddo
+
+     ! For integer-valued bias variables (e.g. molecule/cluster counts) every distinct
+     ! integer is its own bin.  The runtime index routines compute binIndx = value - valMin,
+     ! which spans 0..(valMax-valMin) regardless of the user supplied nBins.  The N-D -> 1-D
+     ! mapping below builds its strides (indexCoeff) from nBins, so the per-dimension size
+     ! must match the actual index range.  If it does not, the strides of higher dimensions
+     ! overlap and different physical states collapse onto the same bias bin, making the
+     ! umbrella potential appear to have no effect once there is more than one variable.
+     ! Force nBins (and the bin size) for integer variables to keep the mapping a bijection.
+    do i = 1, self%nBiasVar
+      indx = self%AnalysisIndex(i)
+      select type( biasVar => analyCommon(indx)%val )
+        type is(integer)
+          self%nBins(i) = nint(self%valMax(i)) - nint(self%valMin(i))
+          self%UBinSize(i) = 1E0_dp
+      end select
     enddo
 
      ! Since the number of biasing variables is only known at run time, the bias matrix
@@ -253,18 +270,27 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       indx = self%AnalysisIndex(iBias)
       call AnalysisArray(indx) % func % CalcNewState(disp, accept=usebias)
-      if(usebias) indxchanged = .true.
     enddo
 
     self%oldIndx = self % GetBiasIndex()
-    if(indxchanged) then
-      call self%GetNewBiasIndex(self%newIndx, accept)
-    else
-      self%newIndx = self%oldIndx
+    if(self%oldIndx > self%umbrellaLimit .or. self%oldIndx < 1) then
+      write(0,*) "ERROR! Umbrella Bias Index out of bounds!"
+      write(0,*) "This may be due to the initial system configuration being outside the Umbrella sampling range"
+      write(0,*) "or a calculation error in the analysis module being used."
+      write(0,*) "Old Index:", self%oldIndx
+      write(0,*) "Umbrella Limit:", self%umbrellaLimit
+      write(0,*) "Bias Values:"
+      do iBias = 1, self%nBiasVar
+        write(0,*) "Bias Value:", AnalysisArray(self%AnalysisIndex(iBias))%func%GetResult()
+      enddo
+      error stop "ERROR! Umbrella Bias Index out of bounds!"
     endif
 
+    call self%GetNewBiasIndex(self%newIndx, accept)
+
+
+
     if(.not. accept) then
-!      write(*,*) "???"
       return
     endif
 
@@ -391,21 +417,14 @@ module UmbrellaWHAMRule
     do iBias = 1, self%nBiasVar
       analyIndx = self%AnalysisIndex(iBias)
       biasVal = AnalysisArray(analyIndx)%func%GetResult()
-!      write(2,*) biasVal
 !      self%binIndx(iBias) = nint(biasVal/self%UBinSize(iBias))
       select type( biasVar => analyCommon(analyIndx)%val )
         type is(integer)
             intVal = nint(biasVal)
             self%binIndx(iBias) = intVal - nint(self%valMin(iBias))
-!            write(2,*) intVal, self%binIndx(iBias), nint(self%valMin(iBias))
-
         type is(real(dp))
-!            biasVal = biasVar
             self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
        end select
-
-
-!      self%binIndx(iBias) = floor((biasVal-self%valMin(iBias))/self%UBinSize(iBias))
     enddo
 
 
@@ -418,13 +437,17 @@ module UmbrellaWHAMRule
 !    write(2,*) biasIndx
 !    write(2,*) 
 
-  if( (biasIndx < 1) .or. (biasIndx > self%umbrellaLimit) ) then
-    write(0,*) "ERROR! Umbrella Bias Index out of bounds!"
-    write(0,*) "This may be due to the initial system configuration being outside the Umbrella sampling range"
-    write(0,*) "or a calculation error in the analysis module being used."
-    error stop "ERROR! Umbrella Bias Index out of bounds!"
-  endif
-
+  !if( (biasIndx < 1) .or. (biasIndx > self%umbrellaLimit) ) then
+  !  write(0,*) "ERROR! Umbrella Bias Index out of bounds!"
+  !  write(0,*) "This may be due to the initial system configuration being outside the Umbrella sampling range"
+  !  write(0,*) "or a calculation error in the analysis module being used."
+  !  do iBias = 1, self%nBiasVar
+  !    write(0,*) "Bias Value:", AnalysisArray(self%AnalysisIndex(iBias))%func%GetResult()
+  !    write(0,*) "Bin Index:", self%binIndx(iBias)
+  !    write(0,*) "Umbrella Limit:", self%umbrellaLimit
+  !  enddo
+  !  error stop "ERROR! Umbrella Bias Index out of bounds!"
+  !endif
 
   end function
 !==========================================================================
@@ -516,7 +539,7 @@ module UmbrellaWHAMRule
       endif
 
       call self%GetUIndexArray(varValue, biasIndx, inStat) 
-      if(inStat == 1) then
+      if(inStat /= 0) then
         cycle
       endif
 
@@ -531,7 +554,7 @@ module UmbrellaWHAMRule
 
     refVal = self%UBias(self%refBin)
     do iUmbrella = 1, self%umbrellaLimit
-      self%UBias(biasIndx) = self%UBias(biasIndx) - refVal
+      self%UBias(iUmbrella) = self%UBias(iUmbrella) - refVal
     enddo
 
 

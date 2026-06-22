@@ -18,6 +18,9 @@ use CoordinateTypes, only: Addition, Deletion
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
+use Debug_Logging, only: DebugLog_DumpBox, DebugLog_DumpProposalAddition, &
+                         DebugLog_DumpProposalDeletion, DebugLog_MoveResult, &
+                         DebugLog_ConstraintCheck, DebugLog_Message
 
   type, public, extends(MCMove) :: AVBMC
 !    real(dp) :: atmps = 1E-30_dp
@@ -314,10 +317,14 @@ use VarPrecision
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%newPart(1:nAtoms) )
+    call DebugLog_ConstraintCheck("AVBMC_SwapIn Pre-Energy", accept)
     if(.not. accept) then
       if(present(ProbIn)) ProbIn = 0E0_dp
       return
     endif
+
+    ! Log the proposal before energy calculation
+    call DebugLog_DumpProposalAddition(trialBox, self%newPart(1:nAtoms), "AVBMC SwapIn Proposal")
 
     !Energy Calculation
     call trialBox%ComputeEnergyDelta(self%newpart(1:nAtoms),&
@@ -330,12 +337,14 @@ use VarPrecision
                                      computeintra=.true.)
 
     if(.not. accept) then
+      call DebugLog_MoveResult("AVBMC_SwapIn", .false., E_Diff=E_Diff)
       if(present(ProbIn)) ProbIn = 0E0_dp
       return
     endif
 
     !Check Post Energy Constraint
     accept = trialBox % CheckPostEnergy( self%newPart(1:nAtoms), E_Diff )
+    call DebugLog_ConstraintCheck("AVBMC_SwapIn Post-Energy", accept)
     if(.not. accept) then
       if(present(ProbIn)) ProbIn = 0E0_dp
       return
@@ -362,6 +371,10 @@ use VarPrecision
       accept = .true.
     endif
 
+    ! Log the move result
+    call DebugLog_MoveResult("AVBMC_SwapIn", accept, E_Diff=E_Diff, E_Inter=E_Inter, &
+                             E_Intra=E_Intra, biasProb=Prob)
+
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
@@ -370,6 +383,8 @@ use VarPrecision
       if( present(ProbIn) )  ProbIn = Prob 
       call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList, self%tempNNei)
+      ! Log the box state after accepted move
+      call DebugLog_DumpBox(trialBox, "AVBMC SwapIn Accepted")
     endif
 
   end subroutine
@@ -447,10 +462,14 @@ use VarPrecision
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%oldPart(1:1) )
+    call DebugLog_ConstraintCheck("AVBMC_SwapOut Pre-Energy", accept)
     if(.not. accept) then
       if(present(ProbOut)) ProbOut = 0E0_dp
       return
     endif
+
+    ! Log the deletion proposal before energy calculation
+    call DebugLog_DumpProposalDeletion(trialBox, self%oldPart(1:1), "AVBMC SwapOut Proposal")
 
     !Energy Calculation
     call trialBox%ComputeEnergyDelta(self%oldpart(1:1),&
@@ -463,12 +482,14 @@ use VarPrecision
                                      computeintra=.true.)
 
     if(.not. accept) then
+      call DebugLog_MoveResult("AVBMC_SwapOut", .false., E_Diff=E_Diff)
       if(present(ProbOut)) ProbOut = 0E0_dp
       return
     endif
 
     !Check Post Energy Constraint
     accept = trialBox % CheckPostEnergy( self%oldPart(1:1), E_Diff )
+    call DebugLog_ConstraintCheck("AVBMC_SwapOut Post-Energy", accept)
     if(.not. accept) then
       if(present(ProbOut)) ProbOut = 0E0_dp
       return
@@ -512,12 +533,18 @@ use VarPrecision
       accept = .true.
     endif
 
+    ! Log the move result
+    call DebugLog_MoveResult("AVBMC_SwapOut", accept, E_Diff=E_Diff, E_Inter=E_Inter, &
+                             E_Intra=E_Intra, biasProb=Prob)
+
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp
       if( present(ProbOut) )  ProbOut = Prob
       call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
+      ! Log the box state after accepted move
+      call DebugLog_DumpBox(trialBox, "AVBMC SwapOut Accepted")
     endif
 
 

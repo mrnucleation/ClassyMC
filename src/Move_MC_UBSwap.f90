@@ -4,6 +4,9 @@ use CoordinateTypes, only: Addition, Deletion
 use MoveClassDef
 use SimpleSimBox, only: SimpleBox
 use VarPrecision
+use Debug_Logging, only: DebugLog_DumpBox, DebugLog_DumpProposalAddition, &
+                         DebugLog_DumpProposalDeletion, DebugLog_MoveResult, &
+                         DebugLog_ConstraintCheck, DebugLog_Message
 
   type, public, extends(MCMove) :: UB_Swap
 !    real(dp) :: atmps = 1E-30_dp
@@ -275,9 +278,13 @@ use VarPrecision
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%newPart(1:nAtoms) )
+    call DebugLog_ConstraintCheck("UBSwap_SwapIn Pre-Energy", accept)
     if(.not. accept) then
       return
     endif
+
+    ! Log the proposal before energy calculation
+    call DebugLog_DumpProposalAddition(trialBox, self%newPart(1:nAtoms), "UBSwap SwapIn Proposal")
 
     !Energy Calculation
     call trialBox%ComputeEnergyDelta(self%newpart(1:nAtoms),&
@@ -291,11 +298,13 @@ use VarPrecision
 
 
     if(.not. accept) then
+      call DebugLog_MoveResult("UBSwap_SwapIn", .false., E_Diff=E_Diff)
       return
     endif
 
     !Check Post Energy Constraint
     accept = trialBox % CheckPostEnergy( self%newPart(1:nAtoms), E_Diff )
+    call DebugLog_ConstraintCheck("UBSwap_SwapIn Post-Energy", accept)
     if(.not. accept) then
       return
     endif
@@ -324,6 +333,10 @@ use VarPrecision
       accept = .true.
     endif
 
+    ! Log the move result
+    call DebugLog_MoveResult("UBSwap_SwapIn", accept, E_Diff=E_Diff, E_Inter=E_Inter, &
+                             E_Intra=E_Intra, biasProb=Prob)
+
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % inaccpt = self % inaccpt + 1E0_dp
@@ -332,6 +345,8 @@ use VarPrecision
       call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
 !      write(*,*) E_Diff, E_Inter, E_Intra
       call trialBox % UpdatePosition(self%newPart(1:nAtoms), self%tempList, self%tempNNei)
+      ! Log the box state after accepted move
+      call DebugLog_DumpBox(trialBox, "UBSwap SwapIn Accepted")
     endif
 
   end subroutine
@@ -396,9 +411,13 @@ use VarPrecision
 
     !Check Constraint
     accept = trialBox % CheckConstraint( self%oldPart(1:1) )
+    call DebugLog_ConstraintCheck("UBSwap_SwapOut Pre-Energy", accept)
     if(.not. accept) then
       return
     endif
+
+    ! Log the deletion proposal before energy calculation
+    call DebugLog_DumpProposalDeletion(trialBox, self%oldPart(1:1), "UBSwap SwapOut Proposal")
 
     !Energy Calculation
     call trialBox%ComputeEnergyDelta(self%oldpart(1:1),&
@@ -411,12 +430,14 @@ use VarPrecision
                                      computeintra=.true.)
 
     if(.not. accept) then
+      call DebugLog_MoveResult("UBSwap_SwapOut", .false., E_Diff=E_Diff)
 !      write(*,*) "Energy Rejection"
       return
     endif
 
     !Check Post Energy Constraint
     accept = trialBox % CheckPostEnergy( self%oldPart(1:1), E_Diff )
+    call DebugLog_ConstraintCheck("UBSwap_SwapOut Post-Energy", accept)
     if(.not. accept) then
       return
     endif
@@ -467,6 +488,10 @@ use VarPrecision
       accept = .true.
     endif
 
+    ! Log the move result
+    call DebugLog_MoveResult("UBSwap_SwapOut", accept, E_Diff=E_Diff, E_Inter=E_Inter, &
+                             E_Intra=E_Intra, biasProb=Prob)
+
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       self % outaccpt = self % outaccpt + 1E0_dp
@@ -475,6 +500,8 @@ use VarPrecision
 !      write(*,*) E_Diff, E_Inter, E_Intra
 !      write(*,*) 
       call trialBox % DeleteMol(self%oldPart(1)%molIndx)
+      ! Log the box state after accepted move
+      call DebugLog_DumpBox(trialBox, "UBSwap SwapOut Accepted")
     endif
 
 

@@ -1,0 +1,24 @@
+/* ClassyMC documentation custom styles */
+
+.wy-nav-content {
+    max-width: 960px;
+}
+
+/* Parameter tables */
+table.docutils td:first-child {
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+/* Code examples */
+.highlight pre {
+    font-size: 0.88em;
+}
+
+/* Category badges in type listings */
+.type-keyword {
+    font-family: monospace;
+    background: #f0f0f0;
+    padding: 1px 4px;
+    border-radius: 3px;
+}

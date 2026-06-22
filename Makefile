@@ -27,6 +27,7 @@ AENET ?= 0
 LAMMPS ?= 0
 DEBUG ?= 0
 PROFILE ?= 0
+LOGGING ?= 0
 # Parallel (MPI): 1 = mpif90 + -DMPIPARALLEL; 0 = native gfortran or ifort, no -DMPIPARALLEL
 PARALLEL ?= 1
 # Selects Fortran vendor flags: gfortran or ifort (not the MPI wrapper name). With PARALLEL=1, FC is still mpif90.
@@ -90,6 +91,11 @@ ifeq ($(PARALLEL),1)
   PACKAGE_FLAGS += -DMPIPARALLEL
 endif
 
+# Logging/debug visualization support
+ifeq ($(LOGGING),1)
+  PACKAGE_FLAGS += -DLOGGING
+endif
+
 # ====================================
 #        Directory List
 # ====================================
@@ -120,6 +126,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Common_MCMoves.f90\
         		$(SRC)/Common_NeighList.f90\
         		$(SRC)/Debug.f90\
+        		$(SRC)/Debug_Logging.f90\
         		$(SRC)/Data_Graph.f90\
         		$(SRC)/Data_Queue.f90\
          		$(SRC)/Constrain_MolTotal.f90\
@@ -421,9 +428,12 @@ lammps: LDFLAGS += -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
 lammps: startUP classyMC modout finale
 
 # Test targets
-test: startUP test_delta_energy modout finale
+test: startUP test_delta_energy test_neighborlist modout finale
 	@echo "Running energy delta test..."
 	@cd $(TEST_DIR)/delta_energy && $(CUR_DIR)/test_delta_energy
+	@echo ""
+	@echo "Running neighborlist test..."
+	@$(CUR_DIR)/test_neighborlist
 	@echo ""
 	@echo "All tests passed!"
 
@@ -432,6 +442,12 @@ test_delta_energy: $(OBJ_COMPLETE) $(TEST_DIR)/Test_EnergyDelta.f90 $(OBJ_LIBRAR
 	@echo "    Linking Test: Energy Delta"
 	@echo "============================================="
 	@$(FC) $(COMPFLAGS) $(MODFLAGS) $^ -o $(CUR_DIR)/test_delta_energy $(LDFLAGS)
+
+test_neighborlist: $(OBJ_COMPLETE) $(TEST_DIR)/Test_Neighborlists.f90 $(OBJ_LIBRARY)
+	@echo "============================================="
+	@echo "    Linking Test: Neighborlist Integrity"
+	@echo "============================================="
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) $^ -o $(CUR_DIR)/test_neighborlist $(LDFLAGS)
 
 # Clean targets
 clean: removeObjects removeExec finale
@@ -468,6 +484,7 @@ help:
 	@echo "  PARALLEL=0       Serial: gfortran or ifort (see COMPILER), no -DMPIPARALLEL"
 	@echo "  DEBUG=1          Enable debug mode with detailed checks"
 	@echo "  PROFILE=1        Enable profiling with gprof (-pg flag)"
+	@echo "  LOGGING=1        Enable debug logging for move/constraint visualization"
 	@echo "  COMPILER=gfortran  GNU Fortran flags (default); native compiler when PARALLEL=0"
 	@echo "  COMPILER=ifort     Intel Fortran flags; native compiler when PARALLEL=0"
 	@echo "                     With PARALLEL=1, FC is mpif90 but flags follow COMPILER"
@@ -638,7 +655,8 @@ $(OBJ)/Box_APeriodicOrtho.o: $(OBJ)/Box_OrthoBox.o
 $(OBJ)/Box_Ultility.o: $(OBJ)/Box_SimpleBox.o
 $(OBJ)/Box_Presets.o: $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 
-$(OBJ)/Move_MC_AVBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o
+$(OBJ)/Move_MC_AVBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o $(OBJ)/Debug_Logging.o
+$(OBJ)/Move_MC_UBSwap.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o $(OBJ)/Debug_Logging.o
 $(OBJ)/Move_MC_CBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o $(OBJ)/MolCon_LinearCBMC.o $(OBJ)/MolCon_BranchCBMC.o  
 $(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o $(OBJ)/Common_Sampling.o $(OBJ)/Move_MC_MolTranslation.o
 $(OBJ)/Move_MC_IsoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
@@ -669,6 +687,7 @@ $(OBJ)/Neigh_CellRSqList.o: $(OBJ)/Neigh_RSqList.o $(OBJ)/Common_BoxData.o
 $(OBJ)/Neigh_CellList.o: $(OBJ)/Common_BoxData.o $(OBJ)/Template_NeighList.o
 $(OBJ)/Sampling_Umbrella.o: $(OBJ)/Sampling_UmbrellaWHAM.o
 $(OBJ)/Sampling_Metropolis.o: $(OBJ)/RandomNew.o
+$(OBJ)/Debug_Logging.o: $(OBJ)/Common.o $(OBJ)/Box_SimpleBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Box_CubicBox.o
 
 $(OBJ)/Main.o: $(OBJ)/Sim_MonteCarlo.o $(OBJ)/Sim_Minimize.o
 $(OBJ)/Sim_Library.o: $(OBJ)/Script_Main.o
@@ -690,7 +709,7 @@ $(OBJ)/FF_FMM.o: $(OBJ)/Template_Forcefield.o $(OBJ)/Units.o $(OBJ)/Box_OrthoBox
 $(OBJ)/Script_FieldType.o: $(OBJ)/FF_Ewald.o $(OBJ)/FF_P3M.o $(OBJ)/FF_FMM.o $(OBJ)/FF_EAM.o $(OBJ)/FF_EP_Power_Cut.o $(OBJ)/FF_EP_Exp_Cut.o $(OBJ)/FF_EP_Erfc_Cut.o $(OBJ)/FF_EP_PowerDenom_Cut.o
 $(OBJ)/Move_MC_PlaneAtomTranslate.o: $(OBJ)/Move_MC_PlaneTranslate.o
 
-$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o $(OBJ)/Units.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o $(OBJ)/Template_MultiBoxMove.o
+$(OBJ)/Sim_MonteCarlo.o: $(OBJ)/Common.o $(OBJ)/Units.o $(OBJ)/Move_MC_AtomTranslation.o $(OBJ)/RandomNew.o $(OBJ)/Common_TrajData.o $(OBJ)/Output_DumpCoords.o $(OBJ)/Common_Analysis.o $(OBJ)/Common_MCMoves.o $(OBJ)/Template_MultiBoxMove.o $(OBJ)/Debug_Logging.o
 
 # ====================================
 #        Python Package Dependencies
