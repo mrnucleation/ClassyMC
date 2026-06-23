@@ -7,6 +7,8 @@ objects/*
 !objects/.gitkeep
 profiling/
 lib/dummy.txt
+mods/dummy.txt
+objects/dummy.txt
 
 # ── Compiled binaries / libraries ────────────────────────────────────────────
 *.exe
@@ -18,6 +20,7 @@ lib/dummy.txt
 *.framework
 /classyMC
 /classyMC_debug
+/classyMCAENet
 /test_delta_energy
 /test_neighborlist
 
@@ -37,15 +40,15 @@ log.lammps
 *.xsf
 *.png
 
+# Exception: misnamed input script (content is ClassyMC input, not data)
+!Example/ThermoIntegration/TestScript.dat
+
 # Runtime-written restart / output coordinates (numbered Config_N_M.clssy)
 **/Config_[0-9]*.clssy
 **/Out_[0-9]*.clssy
 
-# Generic txt leftovers from runs (allow README/docs exceptions below)
+# Generic txt leftovers from runs (docs/TodoList is scratch notes)
 Example/**/*.txt
-lib/dummy.txt
-mods/dummy.txt
-objects/dummy.txt
 docs/TodoList.txt
 
 # ── Python cache ──────────────────────────────────────────────────────────────
@@ -68,4 +71,9 @@ docs/auto/
 **/*_backup.clff
 **/fort.*
 **/tmp_in.*
+
+# Accidental AENet network weights / large blob committed under this path
 Example/AENet/...
+
+# Backup input copies
+**/*.bak
