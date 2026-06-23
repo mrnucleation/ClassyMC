@@ -603,7 +603,7 @@ module SimpleSimBox
     endif
     self%E_Intra = E_Intra
 
-    write(nout,*) "Intra Energy:", E_Intra
+    !write(nout,*) "Intra Energy:", E_Intra
     call self % EFunc % Method % DetailedECalc( self, E_Inter, accept )
     self%E_Inter = E_Inter
     self%ETotal = E_Inter + E_Intra

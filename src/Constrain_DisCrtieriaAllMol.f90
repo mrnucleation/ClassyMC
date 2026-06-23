@@ -10,7 +10,6 @@ module Constrain_DistanceCriteriaAllMol
   use CoordinateTypes, only: Displacement, Deletion, Addition
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
-  use Graph_Module, only: undirected_graph
   implicit none
 
   type, public, extends(constraint) :: DistCriteriaAllMol
@@ -21,7 +20,11 @@ module Constrain_DistanceCriteriaAllMol
     real(dp), allocatable :: rCut(:)
     real(dp), allocatable :: rCutPairSq(:,:)
 
-    type(undirected_graph) :: topoGraph, temp_topoGraph
+    logical, allocatable :: topoList(:,:)
+    logical, allocatable :: newTopoList(:,:)
+    logical, allocatable :: clustMemb(:)
+    integer, allocatable :: newlist(:)
+    integer, allocatable :: newlist2(:)
 
     class(SimBox), pointer :: parent => null()
     contains
@@ -43,7 +46,6 @@ module Constrain_DistanceCriteriaAllMol
     class(DistCriteriaAllMol), intent(inout) :: self
     integer, intent(in) :: boxID
     integer :: AllocateStat
-    integer :: iType
 
     self%boxID = boxID
     self%parent => BoxArray(boxID) % box
@@ -59,9 +61,15 @@ module Constrain_DistanceCriteriaAllMol
       self%atomNumType = 1
     endif
 
-    call self%topoGraph%init(self%nMolMax)
-    call self%temp_topoGraph%init(self%nMolMax)
+    allocate(self%topoList(1:self%nMolMax, 1:self%nMolMax), stat = AllocateStat)
+    allocate(self%newTopoList(1:self%nMolMax, 1:self%nMolMax), stat = AllocateStat)
+    allocate(self%clustMemb(1:self%nMolMax), stat = AllocateStat)
+    allocate(self%newlist(1:self%nMolMax), stat = AllocateStat)
+    allocate(self%newlist2(1:self%nMolMax), stat = AllocateStat)
 
+    self%topoList = .false.
+    self%newTopoList = .false.
+    self%clustMemb = .false.
 
     IF (AllocateStat /= 0) STOP "Allocation Error in All-Mol Distance Constraint Constructor"
   end subroutine
@@ -90,34 +98,20 @@ module Constrain_DistanceCriteriaAllMol
 
     integer :: nActive, nNew, nClust
     integer :: iMol, jMol, iAtom, jAtom, iLimit
-    integer :: iType, jType, molStart, jStart, nNext, nNext2, iNext
-    integer :: iGraphID, jGraphID
+    integer :: iType, jType, molStart, jStart, nNext, iNext
+    integer :: startMol
     real(dp) :: rx, ry, rz, rsq
+    logical :: leave
 
     accept = .true.
+    self%topoList = .false.
+    self%clustMemb = .false.
 
-    call self%topoGraph%reset_graph()
-
-
-
-
-    ! First we need to create the nodes for each of the active molecules in the system.  We can do this with a single loop through all the molecules and checking if they're active.
-    do iMol = 1, self%nMolMax
-      call trialBox%GetMolData(iMol, molType=iType, molStart=molStart)
-      !write(*,*) "Checking molecule ", iMol, " of type ", iType, " starting at atom ", molStart
-      if(.not. trialBox%IsActive(molStart)) cycle
-      call self%topoGraph%Add_Node(nodeID=iMol)
-    enddo
-
-    ! First check if we even have more than one molecule in the first place
     nActive = trialBox%nMolTotal
     if(nActive < 2) then
       return
     endif
 
-
-    ! Loop through all the molecules current in the system and build the initial topology graph based on the distance criteria.  
-    ! We only need to check each pair once, so we can use a double loop with jMol starting from iMol + 1.
     do iMol = 1, self%nMolMax - 1
       call trialBox%GetMolData(iMol, molType=iType, molStart=molStart)
       if(.not. trialBox%IsActive(molStart)) cycle
@@ -133,17 +127,64 @@ module Constrain_DistanceCriteriaAllMol
         call trialBox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
         if(rsq < self%rCutPairSq(iType, jType)) then
-          ! Add_Edge works on graph node positions, not molecule indices.  In a
-          ! multi-type system the molecule indices are sparse, so map each one to
-          ! its current graph position first.
-          iGraphID = self%topoGraph%find_node_by_ID(iMol)
-          jGraphID = self%topoGraph%find_node_by_ID(jMol)
-          call self%topoGraph%Add_Edge(iGraphID, jGraphID)
+          self%topoList(iMol, jMol) = .true.
+          self%topoList(jMol, iMol) = .true.
         endif
       enddo
     enddo
 
-    if(.not. self%topoGraph%is_connected()) then
+    if(all(self%topoList .eqv. .false.)) then
+      accept = .false.
+      write(nout,*) "All-Mol cluster criteria check failed!"
+      return
+    endif
+
+    startMol = 0
+    leave = .false.
+    do iMol = 1, self%nMolMax
+      do jMol = 1, self%nMolMax
+        if(self%topoList(jMol, iMol)) then
+          startMol = iMol
+          leave = .true.
+          exit
+        endif
+      enddo
+      if(leave) exit
+    enddo
+
+    self%clustMemb(startMol) = .true.
+    self%newlist(1) = startMol
+    nNew = 1
+    nClust = 1
+
+    do iLimit = 1, nActive
+      nNext = nNew
+      nNew = 0
+      do iNext = 1, nNext
+        iMol = self%newlist(iNext)
+        do jMol = 1, self%nMolMax
+          if(self%topoList(jMol, iMol)) then
+            if(.not. self%clustMemb(jMol)) then
+              self%clustMemb(jMol) = .true.
+              nNew = nNew + 1
+              nClust = nClust + 1
+              self%newlist2(nNew) = jMol
+            endif
+          endif
+        enddo
+      enddo
+
+      if(nClust >= nActive) then
+        exit
+      endif
+      if(nNew <= 0) then
+        exit
+      endif
+
+      self%newlist(1:nNew) = self%newlist2(1:nNew)
+    enddo
+
+    if((nNew <= 0) .or. (nClust < nActive)) then
       accept = .false.
       write(nout,*) "All-Mol cluster criteria check failed!"
       return
@@ -160,113 +201,51 @@ module Constrain_DistanceCriteriaAllMol
     class(SimBox), intent(inout) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
+    logical :: leave
     integer :: iDisp
-    integer :: molIndx, molType, molStart, iAtom
-    integer :: iMol, jMol, jType, jStart, jAtom
-    integer :: nodeIndex
-    integer :: graphID, jGraphID, lastGraphID
-    integer :: topIndex
-
+    integer :: nActive, nNew, nClust, nNext, iNext, iLimit
+    integer :: iMol, jMol, iAtom, jAtom
+    integer :: molIndx, molType, molStart, jType, jStart
+    integer :: startMol, topIndex
     real(dp) :: rx, ry, rz, rsq
 
     accept = .true.
+    nActive = trialBox%nMolTotal
 
-    !call self%temp_topoGraph%print_graph()
-    !call self%topoGraph%print_graph()
-    self%temp_topoGraph = self%topoGraph
     select type(disp)
-        !.........
+      !----------------------------------------------------------------
       class is(Displacement)
-        !write(*,*) "Displacement"
-         ! Check if we have more than one molecule in the system.  If not, then we can just accept the move since it won't change any of the relevant distances.
-        if(trialBox%nMolTotal < 2) then
-          accept = .true.
-          return
-        endif
-         ! The variable is set initially to accept=.true. because if the molecule being displaced is not actually moving its reference atom, then we can just skip the distance checks 
-         ! and accept the move since it won't change any of the relevant distances.
+        self%newTopoList = self%topoList
         accept = .true.
-        !write(*,*) disp(1)%molIndx
-        graphID = self%temp_topoGraph%find_node_by_ID(disp(1)%molIndx)
+
         do iDisp = 1, size(disp)
           molIndx = disp(iDisp)%molIndx
           call trialBox%GetMolData(molIndx, molType=molType, molStart=molStart)
           iAtom = molStart + self%atomNumType(molType) - 1
 
-           ! If the reference atom for this molecule is being displaced, then we need to check all the distances for this molecule in its new position to see if it creates or breaks any edges in the temporary topology graph.
           if(disp(iDisp)%atmIndx == iAtom) then
-            accept = .false.
-            self%temp_topoGraph = self%topoGraph
-
-              !Disconnect the old edges for this molecule in the temporary graph since we're going to check all the distances again for this molecule in its new position.  
-            call self%temp_topoGraph%reset_single_nodes_edges(node1=graphID)
-
-              !Now use the distance to create the new edges for this molecule in the temporary graph.  
-            do jMol = 1, self%nMolMax 
-              if(molIndx == jMol) cycle
-              call trialBox%GetMolData(jMol, molType=jType, molStart=jStart)
-              if(.not. trialBox%IsActive(jStart)) cycle
-              jAtom = jStart + self%atomNumType(jType) - 1
-              rx = disp(iDisp)%x_new - trialBox%atoms(1, jAtom)
-              ry = disp(iDisp)%y_new - trialBox%atoms(2, jAtom)
-              rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
-              call trialBox%Boundary(rx, ry, rz)
-              rsq = rx*rx + ry*ry + rz*rz
-              !write(nout,*) "Distance squared between molecule ", molIndx, " and molecule ", jMol, " is ", rsq
-              if(rsq < self%rCutPairSq(molType, jType)) then
-                jGraphID = self%temp_topoGraph%find_node_by_ID(jMol)
-                call self%temp_topoGraph%Add_Edge(graphID, jGraphID)
-              endif
-            enddo
-          endif
-        enddo
-
-        if(accept) then
-          return
-        endif
-        
-        !.........
-      class is(Addition) ! If there's a new molecule being added. 
-        !write(*,*) "Add"
-
-        call self%temp_topoGraph%Add_Node(nodeID=disp(1)%molIndx)
-        graphID = self%temp_topoGraph%find_node_by_ID(disp(1)%molIndx)
-
-         ! For an addition move, we only need to check the distances for the molecule being added since no existing edges can be broken by adding a new molecule.  
-         ! If any of the distances from the new molecule to existing molecules violates the distance criteria, then we reject the move.  Otherwise we accept it.  
-         ! We can exit as soon as we find one violation, so we set
-
-        accept = .true.
-        do iDisp = 1, size(disp)
-
-          molIndx = disp(iDisp)%molIndx
-          !write(nout,*) "Addition: molIndx =", molIndx
-          call trialBox%GetMolData(molIndx, molType=molType, molStart=molStart)
-          iAtom = molStart + self%atomNumType(molType) - 1
-
-          if(disp(iDisp)%atmIndx == iAtom) then
-
-            !write(nout,*) "Addition: iAtom =", iAtom
             accept = .false.
             iMol = molIndx
-
+            do jMol = 1, self%nMolMax
+              if(iMol /= jMol) then
+                self%newTopoList(jMol, iMol) = .false.
+                self%newTopoList(iMol, jMol) = .false.
+              endif
+            enddo
             do jMol = 1, self%nMolMax
               if(iMol == jMol) cycle
               call trialBox%GetMolData(jMol, molType=jType, molStart=jStart)
               if(.not. trialBox%IsActive(jStart)) cycle
-
               jAtom = jStart + self%atomNumType(jType) - 1
               rx = disp(iDisp)%x_new - trialBox%atoms(1, jAtom)
               ry = disp(iDisp)%y_new - trialBox%atoms(2, jAtom)
               rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
               call trialBox%Boundary(rx, ry, rz)
               rsq = rx*rx + ry*ry + rz*rz
-
               if(rsq < self%rCutPairSq(molType, jType)) then
-                jGraphID = self%temp_topoGraph%find_node_by_ID(jMol)
-                call self%temp_topoGraph%Add_Edge(graphID, jGraphID)
+                self%newTopoList(jMol, iMol) = .true.
+                self%newTopoList(iMol, jMol) = .true.
               endif
-
             enddo
           endif
         enddo
@@ -275,37 +254,224 @@ module Constrain_DistanceCriteriaAllMol
           return
         endif
 
-        !.........
+        self%clustMemb = .false.
+        startMol = 0
+        leave = .false.
+        do iMol = 1, self%nMolMax
+          do jMol = 1, self%nMolMax
+            if(self%newTopoList(jMol, iMol)) then
+              startMol = iMol
+              leave = .true.
+              exit
+            endif
+          enddo
+          if(leave) exit
+        enddo
+        if(startMol == 0) then
+          accept = .false.
+          return
+        endif
+        self%clustMemb(startMol) = .true.
+        self%newlist(1) = startMol
+        nNew = 1
+        nClust = 1
+
+      !----------------------------------------------------------------
+      class is(Addition)
+        self%newTopoList = self%topoList
+        accept = .true.
+
+        do iDisp = 1, size(disp)
+          molIndx = disp(iDisp)%molIndx
+          call trialBox%GetMolData(molIndx, molType=molType, molStart=molStart)
+          iAtom = molStart + self%atomNumType(molType) - 1
+
+          if(disp(iDisp)%atmIndx == iAtom) then
+            accept = .false.
+            iMol = molIndx
+            do jMol = 1, self%nMolMax
+              if(iMol == jMol) cycle
+              call trialBox%GetMolData(jMol, molType=jType, molStart=jStart)
+              if(.not. trialBox%IsActive(jStart)) cycle
+              jAtom = jStart + self%atomNumType(jType) - 1
+              rx = disp(iDisp)%x_new - trialBox%atoms(1, jAtom)
+              ry = disp(iDisp)%y_new - trialBox%atoms(2, jAtom)
+              rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
+              call trialBox%Boundary(rx, ry, rz)
+              rsq = rx*rx + ry*ry + rz*rz
+              if(rsq < self%rCutPairSq(molType, jType)) then
+                self%newTopoList(jMol, iMol) = .true.
+                self%newTopoList(iMol, jMol) = .true.
+              endif
+            enddo
+          endif
+        enddo
+
+        if(accept) then
+          return
+        endif
+
+        nActive = nActive + 1
+
+        self%clustMemb = .false.
+        startMol = 0
+        leave = .false.
+        do iMol = 1, self%nMolMax
+          do jMol = 1, self%nMolMax
+            if(self%newTopoList(jMol, iMol)) then
+              startMol = iMol
+              leave = .true.
+              exit
+            endif
+          enddo
+          if(leave) exit
+        enddo
+        if(startMol == 0) then
+          accept = .false.
+          return
+        endif
+        self%clustMemb(startMol) = .true.
+        self%newlist(1) = startMol
+        nNew = 1
+        nClust = 1
+
+      !----------------------------------------------------------------
       class is(Deletion)
-        !write(*,*) "Deletion"
-        ! ClassyMC's DeleteMol uses a swap-with-last scheme: the last molecule of this
-        ! type (topIndex) is copied into the deleted slot (disp(1)%molIndx).  We must
-        ! mirror this in the graph: remove the deleted node, then rename the lastMol
-        ! node to the deleted slot's index and move it to the correct sorted position.
-        !
-        ! Use the same formula as DeleteMol itself: TypeMolFirst + NMol - 1.
-        ! (TypeMolLast is a static capacity array, not the current active last index.)
-        topIndex = trialBox%TypeMolFirst(disp(1)%molType) + trialBox%NMol(disp(1)%molType) - 1
-        graphID  = self%temp_topoGraph%find_node_by_ID(disp(1)%molIndx)
-        call self%temp_topoGraph%Remove_Node(node1=graphID)
+        self%newTopoList = self%topoList
+        accept = .false.
 
-        if (topIndex /= disp(1)%molIndx) then
-          ! lastMol node still present; find its current position (shifted after Remove_Node)
-          ! and move it to graphID with the deleted molecule's index as its new ID.
-          lastGraphID = self%temp_topoGraph%find_node_by_ID(topIndex)
-          call self%temp_topoGraph%move_node(fromPos=lastGraphID, toPos=graphID, &
-                                             newID=disp(1)%molIndx)
-        end if
+        iMol = disp(1)%molIndx
+        do jMol = 1, self%nMolMax
+          if(self%newTopoList(jMol, iMol)) then
+            self%newTopoList(jMol, iMol) = .false.
+            self%newTopoList(iMol, jMol) = .false.
+          endif
+        enddo
 
-        graphID = 1  ! Start connectivity check from node 1 (any remaining node is fine).
-          
-        !.........
+        nActive = nActive - 1
+
+        if(nActive <= 1) then
+          topIndex = trialBox%TypeMolFirst(disp(1)%molType) &
+                   + trialBox%NMol(disp(1)%molType) - 1
+          iMol = disp(1)%molIndx
+          if(iMol == topIndex) then
+            self%newTopoList(topIndex,:) = .false.
+            self%newTopoList(:,topIndex) = .false.
+          else
+            do jMol = 1, self%nMolMax
+              if(self%newTopoList(jMol, topIndex)) then
+                if(jMol /= iMol) then
+                  self%newTopoList(jMol, iMol) = .true.
+                  self%newTopoList(iMol, jMol) = .true.
+                endif
+              else
+                self%newTopoList(jMol, iMol) = .false.
+                self%newTopoList(iMol, jMol) = .false.
+              endif
+            enddo
+            self%newTopoList(iMol, iMol) = .false.
+            self%newTopoList(topIndex,:) = .false.
+            self%newTopoList(:,topIndex) = .false.
+          endif
+          accept = .true.
+          return
+        endif
+
+        startMol = 0
+        leave = .false.
+        do iMol = 1, self%nMolMax
+          do jMol = iMol+1, self%nMolMax
+            if(self%newTopoList(jMol, iMol)) then
+              startMol = iMol
+              leave = .true.
+              exit
+            endif
+          enddo
+          if(leave) then
+            exit
+          endif
+        enddo
+        if(startMol == 0) then
+          accept = .false.
+          return
+        endif
+        self%clustMemb = .false.
+        self%clustMemb(startMol) = .true.
+        self%newlist(1) = startMol
+        nNew = 1
+        nClust = 1
+
+      !----------------------------------------------------------------
       class default
-        error stop "All-molecule distance criteria is not compatible with this perturbation type. Currently only displacement, addition, and deletion moves are allowed."
+        error stop "All-molecule distance criteria is not compatible with this perturbation type."
+      !----------------------------------------------------------------
     end select
 
+    do iLimit = 1, nActive
+      nNext = nNew
+      nNew = 0
+      do iNext = 1, nNext
+        iMol = self%newlist(iNext)
+        do jMol = 1, self%nMolMax
+          if(self%newTopoList(jMol, iMol)) then
+            if(.not. self%clustMemb(jMol)) then
+              self%clustMemb(jMol) = .true.
+              nNew = nNew + 1
+              nClust = nClust + 1
+              self%newlist2(nNew) = jMol
+            endif
+          endif
+        enddo
+      enddo
 
-    accept = self%temp_topoGraph%is_connected(startNode=graphID)
+      if(nClust >= nActive) then
+        exit
+      endif
+      if(nNew <= 0) then
+        exit
+      endif
+
+      self%newlist(1:nNew) = self%newlist2(1:nNew)
+    enddo
+
+    select type(disp)
+      class is(Deletion)
+        if(nClust < nActive) then
+          accept = .false.
+          return
+        endif
+
+        topIndex = trialBox%TypeMolFirst(disp(1)%molType) &
+                 + trialBox%NMol(disp(1)%molType) - 1
+        iMol = disp(1)%molIndx
+
+        if(iMol == topIndex) then
+          self%newTopoList(topIndex,:) = .false.
+          self%newTopoList(:,topIndex) = .false.
+        else
+          do jMol = 1, self%nMolMax
+            if(self%newTopoList(jMol, topIndex)) then
+              if(jMol /= iMol) then
+                self%newTopoList(jMol, iMol) = .true.
+                self%newTopoList(iMol, jMol) = .true.
+              endif
+            else
+              self%newTopoList(jMol, iMol) = .false.
+              self%newTopoList(iMol, jMol) = .false.
+            endif
+          enddo
+          self%newTopoList(iMol, iMol) = .false.
+          self%newTopoList(topIndex,:) = .false.
+          self%newTopoList(:,topIndex) = .false.
+        endif
+
+      class default
+        if(nClust < nActive) then
+          accept = .false.
+          return
+        endif
+    end select
+    accept = .true.
 
   end subroutine
 !=============================================================
@@ -359,8 +525,6 @@ module Constrain_DistanceCriteriaAllMol
     enddo
     write(nout, *) "  mixing: r_ij = (r_i + r_j) / 2"
 
-    ! 
-
   end subroutine
 !====================================================================
   subroutine DistAllMol_Maintenance(self)
@@ -382,11 +546,11 @@ module Constrain_DistanceCriteriaAllMol
     class(DistCriteriaAllMol), intent(inout) :: self
     logical, intent(in) :: accept
 
-    if (.not. accept) then
+    if(.not. accept) then
       return
     endif
 
-    self%topoGraph = self%temp_topoGraph
+    self%topoList = self%newTopoList
 
   end subroutine
 !=====================================================================

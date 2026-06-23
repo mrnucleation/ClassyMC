@@ -213,7 +213,7 @@ subroutine DebugLog_DumpBox(box, label, boxDim)
   use SimpleSimBox, only: SimpleBox
   use Common_MolInfo, only: nMolTypes, AtomData
   
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   character(len=*), intent(in) :: label
   real(dp), intent(in), optional :: boxDim(2,3)
   
@@ -312,7 +312,7 @@ subroutine DebugLog_DumpProposal(box, disp, label, boxDim)
   use SimpleSimBox, only: SimpleBox
   use Common_MolInfo, only: nMolTypes, AtomData
   
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   type(Displacement), intent(in) :: disp(:)
   character(len=*), intent(in) :: label
   real(dp), intent(in), optional :: boxDim(2,3)
@@ -403,7 +403,7 @@ subroutine DebugLog_DumpProposalAddition(box, disp, label, boxDim)
   use SimpleSimBox, only: SimpleBox
   use Common_MolInfo, only: nMolTypes, AtomData
   
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   type(Addition), intent(in) :: disp(:)
   character(len=*), intent(in) :: label
   real(dp), intent(in), optional :: boxDim(2,3)
@@ -562,7 +562,7 @@ subroutine DebugLog_DumpProposalDeletion(box, disp, label, boxDim)
   use SimpleSimBox, only: SimpleBox
   use Common_MolInfo, only: nMolTypes
   
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   type(Deletion), intent(in) :: disp(:)
   character(len=*), intent(in) :: label
   real(dp), intent(in), optional :: boxDim(2,3)
@@ -648,7 +648,7 @@ end subroutine
 subroutine DebugLog_DumpVolumeChange(box, volOld, volNew, label)
   use SimpleSimBox, only: SimpleBox
   
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   real(dp), intent(in) :: volOld, volNew
   character(len=*), intent(in) :: label
   
@@ -698,14 +698,14 @@ end subroutine
 
 subroutine DebugLog_DumpBox(box, label, boxDim)
   use SimpleSimBox, only: SimpleBox
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   character(len=*), intent(in) :: label
   real(dp), intent(in), optional :: boxDim(2,3)
 end subroutine
 
 subroutine DebugLog_DumpProposal(box, disp, label, boxDim)
   use SimpleSimBox, only: SimpleBox
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   type(Displacement), intent(in) :: disp(:)
   character(len=*), intent(in) :: label
   real(dp), intent(in), optional :: boxDim(2,3)
@@ -713,7 +713,7 @@ end subroutine
 
 subroutine DebugLog_DumpProposalAddition(box, disp, label, boxDim)
   use SimpleSimBox, only: SimpleBox
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   type(Addition), intent(in) :: disp(:)
   character(len=*), intent(in) :: label
   real(dp), intent(in), optional :: boxDim(2,3)
@@ -721,7 +721,7 @@ end subroutine
 
 subroutine DebugLog_DumpProposalDeletion(box, disp, label, boxDim)
   use SimpleSimBox, only: SimpleBox
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   type(Deletion), intent(in) :: disp(:)
   character(len=*), intent(in) :: label
   real(dp), intent(in), optional :: boxDim(2,3)
@@ -729,7 +729,7 @@ end subroutine
 
 subroutine DebugLog_DumpVolumeChange(box, volOld, volNew, label)
   use SimpleSimBox, only: SimpleBox
-  class(SimpleBox), intent(in) :: box
+  class(SimpleBox), intent(inout) :: box
   real(dp), intent(in) :: volOld, volNew
   character(len=*), intent(in) :: label
 end subroutine

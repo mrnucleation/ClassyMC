@@ -274,16 +274,8 @@ module UmbrellaWHAMRule
 
     self%oldIndx = self % GetBiasIndex()
     if(self%oldIndx > self%umbrellaLimit .or. self%oldIndx < 1) then
-      write(0,*) "ERROR! Umbrella Bias Index out of bounds!"
-      write(0,*) "This may be due to the initial system configuration being outside the Umbrella sampling range"
-      write(0,*) "or a calculation error in the analysis module being used."
-      write(0,*) "Old Index:", self%oldIndx
-      write(0,*) "Umbrella Limit:", self%umbrellaLimit
-      write(0,*) "Bias Values:"
-      do iBias = 1, self%nBiasVar
-        write(0,*) "Bias Value:", AnalysisArray(self%AnalysisIndex(iBias))%func%GetResult()
-      enddo
-      error stop "ERROR! Umbrella Bias Index out of bounds!"
+      accept = .false.
+      return
     endif
 
     call self%GetNewBiasIndex(self%newIndx, accept)
@@ -371,6 +363,11 @@ module UmbrellaWHAMRule
     enddo
 
     self%oldIndx = self % GetBiasIndex()
+    if(self%oldIndx > self%umbrellaLimit .or. self%oldIndx < 1) then
+      accept = .false.
+      return
+    endif
+
     call self%GetNewBiasIndex(self%newIndx, accept)
 !    write(*,*) self%oldIndx, self%newIndx
 
@@ -509,7 +506,7 @@ module UmbrellaWHAMRule
       biasIndx = biasIndx + self%indexCoeff(iBias) * self%binIndx(iBias)
     enddo
 
-    if(biasIndx > self%umbrellaLimit) then
+    if(biasIndx < 1 .or. biasIndx > self%umbrellaLimit) then
       accept = .false.
       return
     endif
@@ -754,10 +751,11 @@ module UmbrellaWHAMRule
     logical, intent(in) :: accept
 
     if(accept) then
+      if(self%newIndx < 1 .or. self%newIndx > self%umbrellaLimit) return
       self%UHist(self%newIndx) = self%UHist(self%newIndx) + 1E0_dp
       self%oldIndx = self%newIndx
     else
-!      self%oldIndx = self % GetBiasIndex()
+      if(self%oldIndx < 1 .or. self%oldIndx > self%umbrellaLimit) return
       self%UHist(self%oldIndx) = self%UHist(self%oldIndx) + 1E0_dp
     endif
 
