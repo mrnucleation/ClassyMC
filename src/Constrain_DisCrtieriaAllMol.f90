@@ -23,7 +23,7 @@ module Constrain_DistanceCriteriaAllMol
     logical, allocatable :: topoList(:,:)
     logical, allocatable :: newTopoList(:,:)
     logical, allocatable :: clustMemb(:)
-    integer, allocatable :: newlist(:)
+    integer, allocatable :: newlist(:) ! Used to create the queue for BFS
     integer, allocatable :: newlist2(:)
 
     class(SimBox), pointer :: parent => null()
@@ -71,7 +71,7 @@ module Constrain_DistanceCriteriaAllMol
     self%newTopoList = .false.
     self%clustMemb = .false.
 
-    IF (AllocateStat /= 0) STOP "Allocation Error in All-Mol Distance Constraint Constructor"
+    IF (AllocateStat /= 0) ERROR STOP "Allocation Error in All-Mol Distance Constraint Constructor"
   end subroutine
 !=====================================================================
   subroutine DistAllMol_RebuildPairCutSq(self)
@@ -98,34 +98,46 @@ module Constrain_DistanceCriteriaAllMol
 
     integer :: nActive, nNew, nClust
     integer :: iMol, jMol, iAtom, jAtom, iLimit
-    integer :: iType, jType, molStart, jStart, nNext, iNext
+    integer :: iType, jType, iStart, jStart, nNext, iNext
     integer :: startMol
     real(dp) :: rx, ry, rz, rsq
     logical :: leave
 
+    ! Initialize the variables
     accept = .true.
     self%topoList = .false.
     self%clustMemb = .false.
 
+
+    ! First check if we even have more than one molecule.  If we don't then just skip this. 
     nActive = trialBox%nMolTotal
     if(nActive < 2) then
       return
     endif
 
     do iMol = 1, self%nMolMax - 1
-      call trialBox%GetMolData(iMol, molType=iType, molStart=molStart)
-      if(.not. trialBox%IsActive(molStart)) cycle
-      iAtom = molStart + self%atomNumType(iType) - 1
+      !Get the molecule type and first atom index for the first molecule. Then see if this molecule is active.
+      call trialBox%GetMolData(iMol, molType=iType, molStart=iStart)
+      if(.not. trialBox%IsActive(iStart)) cycle
+      !Each molecule has a different designated atom that is used. This computes that index. 
+      iAtom = iStart + self%atomNumType(iType) - 1
 
+      ! Now loop over the pairs from i+1 to N
       do jMol = iMol + 1, self%nMolMax
+
+        ! Get the molecule information for the j-molecule. 
         call trialBox%GetMolData(jMol, molType=jType, molStart=jStart)
         if(.not. trialBox%IsActive(jStart)) cycle
         jAtom = jStart + self%atomNumType(jType) - 1
+
+        !Compute distances with the key atoms. 
         rx = trialBox%atoms(1, iAtom) - trialBox%atoms(1, jAtom)
         ry = trialBox%atoms(2, iAtom) - trialBox%atoms(2, jAtom)
         rz = trialBox%atoms(3, iAtom) - trialBox%atoms(3, jAtom)
         call trialBox%Boundary(rx, ry, rz)
         rsq = rx*rx + ry*ry + rz*rz
+
+        ! If the two are within the cutoff, they are neighbored and have a graph connection.
         if(rsq < self%rCutPairSq(iType, jType)) then
           self%topoList(iMol, jMol) = .true.
           self%topoList(jMol, iMol) = .true.
@@ -133,12 +145,15 @@ module Constrain_DistanceCriteriaAllMol
       enddo
     enddo
 
+    ! If we have zero connections despite having more than one molecule, there's no cluster.
     if(all(self%topoList .eqv. .false.)) then
       accept = .false.
       write(nout,*) "All-Mol cluster criteria check failed!"
       return
     endif
 
+
+    !Find the first molecule that is active in the system.  Once we have one, exit the loop.
     startMol = 0
     leave = .false.
     do iMol = 1, self%nMolMax
@@ -152,20 +167,27 @@ module Constrain_DistanceCriteriaAllMol
       if(leave) exit
     enddo
 
+    ! Initialize the breadth first search by adding the startMol to the cluster. Then add it to the schedule.
     self%clustMemb(startMol) = .true.
     self%newlist(1) = startMol
     nNew = 1
     nClust = 1
 
+    ! We now grow the cluster by expanding the graph using breadth first search. The loop only needs
+    ! to be done N_mol times since that's the worst case scenario of a valid cluster.  
     do iLimit = 1, nActive
       nNext = nNew
       nNew = 0
       do iNext = 1, nNext
+        ! Get the next molecule from the queue.
         iMol = self%newlist(iNext)
+        ! Loop over all molecules and check if they are connected to the current molecule.
         do jMol = 1, self%nMolMax
+          ! If the two are connected, check next if it's already in the cluster. If not, add it to the queue.
           if(self%topoList(jMol, iMol)) then
             if(.not. self%clustMemb(jMol)) then
               self%clustMemb(jMol) = .true.
+              ! Add the molecule to the queue and increment the counters.
               nNew = nNew + 1
               nClust = nClust + 1
               self%newlist2(nNew) = jMol
@@ -174,9 +196,12 @@ module Constrain_DistanceCriteriaAllMol
         enddo
       enddo
 
+      ! If we have found everything, no need to continue! We're already done.
       if(nClust >= nActive) then
         exit
       endif
+
+      ! If we haven't added anything new, exit the cluster.  We either succeeded or failed to find everything
       if(nNew <= 0) then
         exit
       endif
@@ -184,6 +209,7 @@ module Constrain_DistanceCriteriaAllMol
       self%newlist(1:nNew) = self%newlist2(1:nNew)
     enddo
 
+    ! If we didn't find everything, or we didn't add anything new, the cluster is invalid.
     if((nNew <= 0) .or. (nClust < nActive)) then
       accept = .false.
       write(nout,*) "All-Mol cluster criteria check failed!"
@@ -215,6 +241,7 @@ module Constrain_DistanceCriteriaAllMol
     select type(disp)
       !----------------------------------------------------------------
       class is(Displacement)
+        ! Initialize the new topology list to the current topology list.
         self%newTopoList = self%topoList
         accept = .true.
 
@@ -223,25 +250,31 @@ module Constrain_DistanceCriteriaAllMol
           call trialBox%GetMolData(molIndx, molType=molType, molStart=molStart)
           iAtom = molStart + self%atomNumType(molType) - 1
 
+          ! If the atom being displaced is the key atom, we need to check the new connections.
           if(disp(iDisp)%atmIndx == iAtom) then
             accept = .false.
             iMol = molIndx
+            ! Remove all connections from the moved molecule to all other molecules.
             do jMol = 1, self%nMolMax
               if(iMol /= jMol) then
                 self%newTopoList(jMol, iMol) = .false.
                 self%newTopoList(iMol, jMol) = .false.
               endif
             enddo
+            ! Loop over all molecules and check if they are within the cutoff. If they are, add a connection.
             do jMol = 1, self%nMolMax
               if(iMol == jMol) cycle
               call trialBox%GetMolData(jMol, molType=jType, molStart=jStart)
               if(.not. trialBox%IsActive(jStart)) cycle
               jAtom = jStart + self%atomNumType(jType) - 1
+
+              ! Compute the distance between the two atoms.
               rx = disp(iDisp)%x_new - trialBox%atoms(1, jAtom)
               ry = disp(iDisp)%y_new - trialBox%atoms(2, jAtom)
               rz = disp(iDisp)%z_new - trialBox%atoms(3, jAtom)
               call trialBox%Boundary(rx, ry, rz)
               rsq = rx*rx + ry*ry + rz*rz
+              ! If the distance is within the cutoff, add a connection.
               if(rsq < self%rCutPairSq(molType, jType)) then
                 self%newTopoList(jMol, iMol) = .true.
                 self%newTopoList(iMol, jMol) = .true.
@@ -250,10 +283,12 @@ module Constrain_DistanceCriteriaAllMol
           endif
         enddo
 
+        ! This triggers when the atom being displaced is not the key atom.
         if(accept) then
           return
         endif
 
+        ! Initialize the breadth first search by adding the startMol to the cluster. Then add it to the schedule.
         self%clustMemb = .false.
         startMol = 0
         leave = .false.
@@ -268,24 +303,27 @@ module Constrain_DistanceCriteriaAllMol
           if(leave) exit
         enddo
         if(startMol == 0) then
-          accept = .false.
-          return
+          if(nActive >= 2) then
+            accept = .false.
+            return
+          endif
+          nNew = 0
+          nClust = nActive
+        else
+          self%clustMemb(startMol) = .true.
+          self%newlist(1) = startMol
+          nNew = 1
+          nClust = 1
         endif
-        self%clustMemb(startMol) = .true.
-        self%newlist(1) = startMol
-        nNew = 1
-        nClust = 1
 
       !----------------------------------------------------------------
       class is(Addition)
         self%newTopoList = self%topoList
         accept = .true.
-
+        molIndx = disp(1)%molIndx
+        call trialBox%GetMolData(molIndx, molType=molType, molStart=molStart)
+        iAtom = molStart + self%atomNumType(molType) - 1
         do iDisp = 1, size(disp)
-          molIndx = disp(iDisp)%molIndx
-          call trialBox%GetMolData(molIndx, molType=molType, molStart=molStart)
-          iAtom = molStart + self%atomNumType(molType) - 1
-
           if(disp(iDisp)%atmIndx == iAtom) then
             accept = .false.
             iMol = molIndx
@@ -304,6 +342,7 @@ module Constrain_DistanceCriteriaAllMol
                 self%newTopoList(iMol, jMol) = .true.
               endif
             enddo
+            exit
           endif
         enddo
 
@@ -327,20 +366,26 @@ module Constrain_DistanceCriteriaAllMol
           if(leave) exit
         enddo
         if(startMol == 0) then
-          accept = .false.
-          return
+          if(nActive >= 2) then
+            accept = .false.
+            return
+          endif
+          nNew = 0
+          nClust = nActive
+        else
+          self%clustMemb(startMol) = .true.
+          self%newlist(1) = startMol
+          nNew = 1
+          nClust = 1
         endif
-        self%clustMemb(startMol) = .true.
-        self%newlist(1) = startMol
-        nNew = 1
-        nClust = 1
 
       !----------------------------------------------------------------
       class is(Deletion)
         self%newTopoList = self%topoList
         accept = .false.
-
         iMol = disp(1)%molIndx
+
+        !First loop through and disconnect the removed molecule. 
         do jMol = 1, self%nMolMax
           if(self%newTopoList(jMol, iMol)) then
             self%newTopoList(jMol, iMol) = .false.
@@ -350,33 +395,9 @@ module Constrain_DistanceCriteriaAllMol
 
         nActive = nActive - 1
 
-        if(nActive <= 1) then
-          topIndex = trialBox%TypeMolFirst(disp(1)%molType) &
-                   + trialBox%NMol(disp(1)%molType) - 1
-          iMol = disp(1)%molIndx
-          if(iMol == topIndex) then
-            self%newTopoList(topIndex,:) = .false.
-            self%newTopoList(:,topIndex) = .false.
-          else
-            do jMol = 1, self%nMolMax
-              if(self%newTopoList(jMol, topIndex)) then
-                if(jMol /= iMol) then
-                  self%newTopoList(jMol, iMol) = .true.
-                  self%newTopoList(iMol, jMol) = .true.
-                endif
-              else
-                self%newTopoList(jMol, iMol) = .false.
-                self%newTopoList(iMol, jMol) = .false.
-              endif
-            enddo
-            self%newTopoList(iMol, iMol) = .false.
-            self%newTopoList(topIndex,:) = .false.
-            self%newTopoList(:,topIndex) = .false.
-          endif
-          accept = .true.
-          return
-        endif
-
+        !Next we need to find one molecule that is still present in the system.
+        !This will be the starting point for the breadth first search.
+        !This is a spot for potential optimization since the algorithm is O(N^2) in the number of molecules.  
         startMol = 0
         leave = .false.
         do iMol = 1, self%nMolMax
@@ -391,15 +412,22 @@ module Constrain_DistanceCriteriaAllMol
             exit
           endif
         enddo
+
         if(startMol == 0) then
-          accept = .false.
-          return
+          if(nActive >= 2) then
+            accept = .false.
+            return
+          endif
+          self%clustMemb = .false.
+          nNew = 0
+          nClust = nActive
+        else
+          self%clustMemb = .false.
+          self%clustMemb(startMol) = .true.
+          self%newlist(1) = startMol
+          nNew = 1
+          nClust = 1
         endif
-        self%clustMemb = .false.
-        self%clustMemb(startMol) = .true.
-        self%newlist(1) = startMol
-        nNew = 1
-        nClust = 1
 
       !----------------------------------------------------------------
       class default
@@ -407,12 +435,17 @@ module Constrain_DistanceCriteriaAllMol
       !----------------------------------------------------------------
     end select
 
+
+    ! Now we grow the cluster by expanding the graph using breadth first search. The loop only needs
+    ! to be done N_mol times since that's the worst case scenario of a valid cluster
     do iLimit = 1, nActive
       nNext = nNew
       nNew = 0
       do iNext = 1, nNext
+        ! Get the next molecule from the queue.
         iMol = self%newlist(iNext)
         do jMol = 1, self%nMolMax
+          ! If the two are connected, check next if it's already in the cluster. If not, add it to the queue.
           if(self%newTopoList(jMol, iMol)) then
             if(.not. self%clustMemb(jMol)) then
               self%clustMemb(jMol) = .true.

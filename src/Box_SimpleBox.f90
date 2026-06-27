@@ -1348,7 +1348,9 @@ module SimpleSimBox
 !==========================================================================================
   subroutine SimpleBox_GetMolData(self, globalIndx, nAtoms, molStart, molEnd, molType, &
                                   slice)
-    !Routine takes a
+    !Routine takes a global molecule index and returns the requested data
+    !this can be used to get the data for atom locations in memory for a given molecule
+    !or to get the number of atoms in a molecule, the molecule type, etc.
     !
     !Inputs
     !    globalIndx => Global Molecule Index irrespective of molecule type.
@@ -2284,7 +2286,7 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
 !==========================================================================================
   subroutine SimpleBox_Prologue(self)
     use Common_MolInfo, only: nMolTypes
-    use ParallelVar, only: nout
+    use ParallelVar, only: nout, myid
     use Units, only: outEngUnit, engStr
     implicit none
     class(SimpleBox), intent(inout) :: self
@@ -2315,6 +2317,7 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
         enddo
         if(.not. accept) then
           write(nout,*) "Initial Constraints are not statisfied!"
+          write(0, *) "Error observed in Box ", self%boxID, "on thread", myid
           error stop
         endif
       endif

@@ -428,12 +428,15 @@ lammps: LDFLAGS += -L$(LAMMPS_LIB_PATH) -llammps -lstdc++
 lammps: startUP classyMC modout finale
 
 # Test targets
-test: startUP test_delta_energy test_neighborlist modout finale
+test: startUP test_delta_energy test_neighborlist test_cluster_criteria modout finale
 	@echo "Running energy delta test..."
 	@cd $(TEST_DIR)/delta_energy && $(CUR_DIR)/test_delta_energy
 	@echo ""
 	@echo "Running neighborlist test..."
 	@$(CUR_DIR)/test_neighborlist
+	@echo ""
+	@echo "Running cluster criteria test..."
+	@$(CUR_DIR)/test_cluster_criteria
 	@echo ""
 	@echo "All tests passed!"
 
@@ -448,6 +451,12 @@ test_neighborlist: $(OBJ_COMPLETE) $(TEST_DIR)/Test_Neighborlists.f90 $(OBJ_LIBR
 	@echo "    Linking Test: Neighborlist Integrity"
 	@echo "============================================="
 	@$(FC) $(COMPFLAGS) $(MODFLAGS) $^ -o $(CUR_DIR)/test_neighborlist $(LDFLAGS)
+
+test_cluster_criteria: $(OBJ_COMPLETE) $(TEST_DIR)/Test_ClusterCriteria.f90 $(OBJ_LIBRARY)
+	@echo "============================================="
+	@echo "    Linking Test: Cluster Criteria"
+	@echo "============================================="
+	@$(FC) $(COMPFLAGS) $(MODFLAGS) $^ -o $(CUR_DIR)/test_cluster_criteria $(LDFLAGS)
 
 # Clean targets
 clean: removeObjects removeExec finale
@@ -617,6 +626,8 @@ removeExec:
 	@rm -f $(CUR_DIR)/classyMC_debug
 	@rm -f $(CUR_DIR)/classyMC.exe
 	@rm -f $(CUR_DIR)/test_delta_energy
+	@rm -f $(CUR_DIR)/test_neighborlist
+	@rm -f $(CUR_DIR)/test_cluster_criteria
 
 # ====================================
 #        Dependencies
@@ -730,4 +741,4 @@ $(OBJ)/Traj_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_Cubi
 $(OBJ)/Constrain_Python.o: $(OBJ)/forpy_mod.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/Python_CommonTypes.o
 endif
 
-.PHONY: default lib debug profile gfortran aenet lammps clean help startUP modout finale removeObjects removeExec test test_delta_energy
+.PHONY: default lib debug profile gfortran aenet lammps clean help startUP modout finale removeObjects removeExec test test_delta_energy test_cluster_criteria

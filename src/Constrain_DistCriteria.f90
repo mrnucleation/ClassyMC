@@ -493,6 +493,10 @@ module Constrain_DistanceCriteria
     class(DistCriteria), intent(inout) :: self
     logical, intent(in) :: accept
 
+
+    if(.not. accept) then
+      return 
+    endif
     self%topoList = self%newTopoList
 
   end subroutine

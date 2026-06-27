@@ -13,6 +13,9 @@ use VarPrecision
 !    integer :: IOUnit = -1
 !    integer :: UpdateFreq = -1
 
+
+    ! Variable Descriptions
+    ! 
     integer :: boxNum = -1
     integer :: molType = -1
 

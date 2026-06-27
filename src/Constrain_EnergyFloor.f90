@@ -37,7 +37,7 @@ module Constrain_EnergyFloor
     self%boxID = boxID
     self%parent => BoxArray(boxID) % box 
 
-    IF (AllocateStat /= 0) STOP "Allocation Error in EnergyFloor Constraint"
+    IF (AllocateStat /= 0) ERROR STOP "Allocation Error in EnergyFloor Constraint"
   end subroutine
 !=====================================================================
   subroutine EnergyFloor_CheckInitialConstraint(self, trialBox, accept)
