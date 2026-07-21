@@ -216,7 +216,7 @@ module Constrain_DistanceCriteriaAllMol
       return
     endif
 
-    write(nout,*) "All-Mol cluster criteria check succeeded!"
+    !write(nout,*) "All-Mol cluster criteria check succeeded!"
     accept = .true.
 
   end subroutine

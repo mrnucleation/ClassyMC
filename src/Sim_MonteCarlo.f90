@@ -26,7 +26,7 @@ contains
     use MultiBoxMoveDef, only: MCMultiBoxMove
     use Output_DumpCoords, only: Output_DumpData
     use RandomGen, only: sgrnd, grnd, ListRNG
-    use SimControl, only: nMoves, nCycles, screenfreq, configfreq, energyCheck
+    use SimControl, only: nMoves, nCycles, screenfreq, configfreq, energyCheck, constraintCheck
     use SimControl, only: TimeStart
     use Units, only: outEngUnit
 
@@ -119,6 +119,10 @@ contains
         call Output_DumpData
       endif
 
+      call Analyze(iCycle, iMove, accept, .false.) !Per Cycle Analysis
+      call Maintenance(iCycle, iMove)
+      call Trajectory(iCycle, iMove)
+
       if(energyCheck > 0) then
         if( mod(iCycle, int(energyCheck, 8) ) == 0) then
           do boxNum = 1, size(BoxArray)
@@ -127,11 +131,17 @@ contains
         endif
       endif
 
+      if(constraintCheck > 0) then
+        if( mod(iCycle, int(constraintCheck, 8) ) == 0) then
+          do boxNum = 1, size(BoxArray)
+            call BoxArray(boxNum)%box%ConstraintSafetyCheck
+          enddo
+        endif
+      endif
 
 
-      call Analyze(iCycle, iMove, accept, .false.) !Per Cycle Analysis
-      call Maintenance(iCycle, iMove)
-      call Trajectory(iCycle, iMove)
+
+
     enddo
     !-------End of Main Monte Carlo Simulation Loop-------
  

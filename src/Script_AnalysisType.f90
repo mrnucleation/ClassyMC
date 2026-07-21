@@ -17,6 +17,7 @@ contains
     use Anaylsis_ClusterSize, only: ClusterSize
     use Anaylsis_DensityOfStates, only: DensityOfStates
     use Anaylsis_DistPair, only: DistPair
+    use Anaylsis_PsuedoDistPair, only: PsuedoDistPair
     use Analysis_RDF, only: rdf
     use Anaylsis_MolFractionHist, only: MolFractionHist
     use Anaylsis_ThermoAverage, only: ThermoAverage
@@ -79,6 +80,8 @@ contains
       case("python")
         allocate(PythonFunc::AnalysisArray(AnaNum) % func)
 #endif
+      case("psuedodistpair")
+        allocate(PsuedoDistPair::AnalysisArray(AnaNum) % func)
 
      case default
         lineStat = -1

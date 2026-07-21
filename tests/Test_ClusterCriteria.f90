@@ -24,7 +24,7 @@
 !===========================================================================
 program test_cluster_criteria
   use VarPrecision
-  use CoordinateTypes, only: Deletion, Addition
+  use CoordinateTypes, only: Deletion, Addition, Displacement
   use BoxData, only: BoxArray
   use SimpleSimBox, only: SimpleBox
   use OrthoBoxDef, only: OrthoBox
@@ -34,7 +34,7 @@ program test_cluster_criteria
 
   implicit none
 
-  integer, parameter :: nTests = 10
+  integer, parameter :: nTests = 11
   logical :: results(nTests)
   integer :: totalFailed, i
   character(len=40) :: testNames(nTests)
@@ -51,6 +51,7 @@ program test_cluster_criteria
   testNames(8) = "AllMolDistCriteria: Broken + Addition"
   testNames(9) = "AllMolDistCriteria: Mixed rCut Chain"
   testNames(10) = "AllMolDistCriteria: Alternating Chain"
+  testNames(11) = "DistCriteria: MC Loop Safety Check"
 
   write(nout, *)
   write(nout, *) "============================================================"
@@ -67,6 +68,7 @@ program test_cluster_criteria
   call test_allmol_addition(results(8))
   call test_allmol_mixed_rcut_chain(results(9))
   call test_allmol_alternating_chain(results(10))
+  call test_distcrit_mc_loop(results(11))
 
   write(nout, *)
   write(nout, *) "============================================================"
@@ -1288,6 +1290,137 @@ contains
     else
       write(nout, "(A,I4)") "   Failed checks: ", nFail
       write(nout, *) "  >>> FAIL: AllMol Alternating Chain <<<"
+      passed = .false.
+    endif
+
+  end subroutine
+
+!===========================================================================
+! test_distcrit_mc_loop
+!
+!   Simulates the Monte Carlo loop: repeatedly propose random displacement
+!   moves, run DiffCheck/Update on the constraint, and after every accepted
+!   move call CheckInitialConstraint from scratch to verify the incremental
+!   topology stays consistent with the full calculation.
+!
+!   Uses a 5-atom chain with rCut = 3.0 and max displacement = 0.3.
+!   This gives a healthy mix of accepted and rejected moves.
+!
+!   If the from-scratch check ever disagrees with the incremental state,
+!   a topology drift has occurred and the test fails.
+!===========================================================================
+  subroutine test_distcrit_mc_loop(passed)
+    use RandomGen, only: grnd, sgrnd
+    use ParallelVar, only: nout
+    implicit none
+    logical, intent(out) :: passed
+
+    integer, parameter :: nMol = 5
+    integer, parameter :: nTrials = 500
+    real(dp), parameter :: rCut = 3.0E0_dp
+    real(dp), parameter :: spacing = 2.9E0_dp
+    real(dp), parameter :: maxDisp = 0.3E0_dp
+    real(dp), parameter :: boxL = 50.0E0_dp
+
+    type(DistCriteria) :: crit
+    class(SimpleBox), pointer :: box => null()
+    logical :: accept, initOK, verifyOK
+    integer :: nFail, nAccepted, nRejected
+    integer :: iTrial, iMol, molIndx, atomIndx
+    integer :: savedNout
+    real(dp) :: dx, dy, dz
+    type(Displacement) :: disp(1)
+
+    write(nout, *)
+    write(nout, *) "------------------------------------------------------------"
+    write(nout, *) "  Testing: DistCriteria - MC Loop Safety Check"
+    write(nout, *) "------------------------------------------------------------"
+
+    nFail = 0
+    nAccepted = 0
+    nRejected = 0
+
+    call sgrnd(12345)
+
+    call SetupSingleTypeSystem(nMol, nMol, boxL)
+    box => BoxArray(1)%box
+
+    do iMol = 1, nMol
+      box%atoms(1, iMol) = (iMol - 1) * spacing
+      box%atoms(2, iMol) = 0.0E0_dp
+      box%atoms(3, iMol) = 0.0E0_dp
+    enddo
+
+    crit%molType = 1
+    crit%atomNum = 1
+    crit%rCut = rCut
+    crit%rCutSq = rCut * rCut
+    call crit%Constructor(1)
+    call crit%CheckInitialConstraint(box, initOK)
+    if(.not. initOK) then
+      write(nout, *) "  FAIL: initial constraint check should pass"
+      nFail = nFail + 1
+      passed = .false.
+      return
+    endif
+
+    ! Suppress verbose output from CheckInitialConstraint during the loop
+    savedNout = nout
+    open(unit=99, file='/dev/null', status='old', action='write')
+
+    do iTrial = 1, nTrials
+      iMol = int(nMol * grnd()) + 1
+      if(iMol > nMol) iMol = nMol
+
+      dx = maxDisp * (2.0_dp * grnd() - 1.0_dp)
+      dy = maxDisp * (2.0_dp * grnd() - 1.0_dp)
+      dz = maxDisp * (2.0_dp * grnd() - 1.0_dp)
+
+      molIndx = box%MolGlobalIndx(1, iMol)
+      atomIndx = box%MolStartIndx(molIndx)
+
+      disp(1)%molType = 1
+      disp(1)%molIndx = molIndx
+      disp(1)%atmIndx = atomIndx
+      disp(1)%x_new = box%atoms(1, atomIndx) + dx
+      disp(1)%y_new = box%atoms(2, atomIndx) + dy
+      disp(1)%z_new = box%atoms(3, atomIndx) + dz
+
+      call crit%DiffCheck(box, disp, accept)
+
+      if(accept) then
+        call crit%Update(.true.)
+        box%atoms(1, atomIndx) = disp(1)%x_new
+        box%atoms(2, atomIndx) = disp(1)%y_new
+        box%atoms(3, atomIndx) = disp(1)%z_new
+        nAccepted = nAccepted + 1
+
+        ! Verify from scratch (suppress output)
+        nout = 99
+        call crit%CheckInitialConstraint(box, verifyOK)
+        nout = savedNout
+        if(.not. verifyOK) then
+          write(nout, "(A,I5,A)") "  FAIL: constraint drift at trial ", &
+            iTrial, " (from-scratch check failed after accepted move)"
+          nFail = nFail + 1
+          exit
+        endif
+      else
+        nRejected = nRejected + 1
+      endif
+    enddo
+
+    close(99)
+
+    write(nout, "(A,I5,A,I5,A,I5)") "    Trials: ", nTrials, &
+      "  Accepted: ", nAccepted, "  Rejected: ", nRejected
+
+    if(nFail == 0) then
+      write(nout, *) "  >>> PASS: DistCriteria MC Loop Safety Check <<<"
+      passed = .true.
+    else
+      write(nout, "(A,I4)") "   Failed checks: ", nFail
+      write(nout, *) "  >>> FAIL: DistCriteria MC Loop Safety Check <<<"
       passed = .false.
     endif
 

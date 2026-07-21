@@ -419,7 +419,7 @@ use Template_NeighList, only: NeighListDef
     real(dp) :: rx, ry, rz, rsq
 
 !    if(.not. (associated(tempList) .and. associated(tempNNei)))then
-!      error stop "Unassociated Temporary List passed into CellRSq_GetNewList"
+!      error stop "Unassociated Temporary List passed into RSq_GetNewList"
 !    endif
 
     if(present(nCount)) then
@@ -450,12 +450,14 @@ use Template_NeighList, only: NeighListDef
 !    molStart = 1
 !    do jType = 1, nMolTypes
       do jAtom = 1, self%parent%nMaxAtoms
-        if( self%parent%MolSubIndx(jAtom) == molIndx ) then
+        ! Check if the atom is part of the same molecule as the displaced atom. If so, skip it.
+        if( self%parent%MolIndx(jAtom) == molIndx ) then
           cycle
         endif
-        if( self%parent%MolSubIndx(jAtom) > self%parent%NMol(self%parent%MolType(jAtom)) ) then
+        if(.not. self%parent%IsActive(jAtom) ) then
           cycle
         endif
+        !write(*,*) "jAtom:", jAtom, "MolSubIndx:", self%parent%MolSubIndx(jAtom), "molIndx:", molIndx
         rx = xn - self%parent%atoms(1, jAtom)
         ry = yn - self%parent%atoms(2, jAtom)
         rz = zn - self%parent%atoms(3, jAtom)
@@ -544,11 +546,11 @@ use Template_NeighList, only: NeighListDef
     enddo
 
     do iAtom = 1, trialBox%nMaxAtoms-1
-      if( trialBox%MolSubIndx(iAtom) > trialBox%NMol(trialBox%MolType(iAtom)) ) then
+      if( .not. trialBox%IsActive(iAtom) ) then
         cycle
       endif
       do jAtom = iAtom+1, trialBox%nMaxAtoms
-        if( trialBox%MolSubIndx(jAtom) > trialBox%NMol(trialBox%MolType(jAtom)) ) then
+        if( .not. trialBox%IsActive(jAtom) ) then
           cycle
         endif
 

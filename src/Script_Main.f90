@@ -151,7 +151,7 @@
       use ParallelVar
       use RandomGen, only: initSeed
       use SimControl, only: nMoves, nCycles, screenFreq, energyCheck, &
-                            Etol, Forcetol, lrate, configfreq
+                            constraintCheck, Etol, Forcetol, lrate, configfreq
       use Units, only: outEngUnit, outLenUnit, outAngUnit,outPressUnit,  &
                        inEngUnit, inLenUnit, inAngUnit,inPressUnit, &
                        FindEngUnit, FindLengthUnit, FindAngularUnit,  &
@@ -181,6 +181,11 @@
           call GetXCommand(line, command, 3, lineStat)
           read(command, *) intValue  
           energyCheck = intValue
+
+        case("constraintcheck")
+          call GetXCommand(line, command, 3, lineStat)
+          read(command, *) intValue  
+          constraintCheck = intValue
 
         case("moves")
           call GetXCommand(line, command, 3, lineStat)

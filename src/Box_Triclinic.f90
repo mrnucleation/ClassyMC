@@ -53,7 +53,7 @@ module OrthoBoxDef
         do iAtom = 1, MolData(iType)%nAtoms
           subIndx = 0
           do jType = 1, iType-1
-            subIndx = self%NMolMax(jType)
+            subIndx = subIndx + self%NMolMax(jType)
           enddo
           subIndx = subIndx + iMol
           arrayIndx = self%MolStartIndx(subIndx)
@@ -326,7 +326,7 @@ module OrthoBoxDef
         do iAtom = 1, MolData(iType)%nAtoms
           subIndx = 0
           do jType = 1, iType-1
-            subIndx = self%NMolMax(jType)
+            subIndx = subIndx + self%NMolMax(jType)
           enddo
           subIndx = subIndx + iMol
           arrayIndx = self%MolStartIndx(subIndx)

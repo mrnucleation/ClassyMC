@@ -176,6 +176,7 @@ module SimpleSimBox
       procedure, pass :: ComputeEnergyDelta => SimpleBox_ComputeEnergyDelta
       procedure, pass :: ComputeForces => SimpleBox_ComputeForces
       procedure, pass :: EnergySafetyCheck => SimpleBox_EnergySafetyCheck
+      procedure, pass :: ConstraintSafetyCheck => SimpleBox_ConstraintSafetyCheck
 
       !IO Functions
       procedure, pass :: ProcessIO => SimpleBox_ProcessIO
@@ -628,8 +629,8 @@ module SimpleSimBox
       enddo
       if(tablecheck) then
         deallocate(tempETable)
+        write(nout,*) "Energy Table Check complete!"
       endif
-      write(nout,*) "Energy Table Check complete!"
     endif
 
   end subroutine
@@ -943,6 +944,8 @@ module SimpleSimBox
     if( .not. allocated(self%temppos) ) then
       allocate(self%newpos(1:3, 1:mostAtoms))
       allocate(self%temppos(1:3, 1:mostAtoms))
+      self%temppos = 0E0_dp
+      self%newpos = 0E0_dp
     endif
     E_Total = 0E0_dp
     E_Intra = 0E0_dp
@@ -963,7 +966,6 @@ module SimpleSimBox
                                            tempNNei, &
                                            E_Inter, &
                                            accept)
-
 
 
     E_Total = E_Inter + E_Intra
@@ -1051,6 +1053,8 @@ module SimpleSimBox
         write(nout, *) "Final Energy(Inter): ", self%E_Inter/outEngUnit, engStr
         write(nout, *) "Final Energy(Intra): ", self%E_Intra/outEngUnit, engStr
         write(nout, *) "Difference: ", (self%ETotal-E_Current)/outEngUnit, engStr
+        call self%DumpData("FailedStruct.clssy")
+        error stop "Energy Safety Check Failed!"
       endif
     else
       if( abs(E_Current-self%ETotal) > 1E-7_dp ) then
@@ -1063,10 +1067,39 @@ module SimpleSimBox
         write(nout, *) "Final Energy(Inter): ", self%E_Inter/outEngUnit, engStr
         write(nout, *) "Final Energy(Intra): ", self%E_Intra/outEngUnit, engStr
         write(nout, *) "Difference: ", (self%ETotal-E_Current)/outEngUnit, engStr
+        call self%DumpData("FailedStruct.clssy")
+        error stop "Energy Safety Check Failed!"
       endif
     endif
 
 
+
+  end subroutine
+!==========================================================================================
+  subroutine SimpleBox_ConstraintSafetyCheck(self)
+    use ParallelVar, only: nout
+    implicit none
+    class(SimpleBox), intent(inout) :: self
+    integer :: iConstrain
+    logical :: accept
+
+    if(.not. allocated(self%Constrain)) return
+
+    do iConstrain = 1, size(self%Constrain)
+      call self%Constrain(iConstrain)%method%CheckInitialConstraint(self, accept)
+      if(.not. accept) then
+        write(nout, *) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        write(nout, *) "  CRITICAL ERROR! Constraint Safety Check Failed!"
+        write(nout, *) "  Box: ", self%boxID
+        write(nout, *) "  Constraint Index: ", iConstrain
+        write(nout, *) "  The incremental DiffCheck/Update logic has diverged from"
+        write(nout, *) "  the full constraint calculation. This indicates a bug in"
+        write(nout, *) "  the constraint's difference calculator."
+        write(nout, *) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        call self%DumpData("FailedStruct.clssy")
+        error stop "Constraint Safety Check Failed!"
+      endif
+    enddo
 
   end subroutine
 !==========================================================================================
@@ -1309,7 +1342,7 @@ module SimpleSimBox
         do iAtom = 1, MolData(iType)%nAtoms
           subIndx = 0
           do jType = 1, iType-1
-            subIndx = self%NMolMax(jType)
+            subIndx = subIndx + self%NMolMax(jType)
           enddo
           subIndx = subIndx + iMol
           arrayIndx = self%MolStartIndx(subIndx)

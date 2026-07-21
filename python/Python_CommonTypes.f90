@@ -14,6 +14,7 @@ module ClassyPyObj
   contains
 !=========================================================================
   function createboxdict(boxnum) result(boxdict)
+    use ParallelVar, only: myid
     use BoxData, only: BoxArray
     use Input_Format, only: ReplaceText
 
@@ -54,6 +55,8 @@ module ClassyPyObj
           ierror = boxdict%setitem("boxtype", "unknown")
     end select
 
+    ierror = boxdict%setitem("thread_id", myid)
+    ierror = boxdict%setitem("box_id", boxnum)
     ierror = boxdict%setitem("energy", BoxArray(boxnum)%box%ETotal)
     ierror = boxdict%setitem("temperature", BoxArray(boxnum)%box%temperature)
     ierror = boxdict%setitem("pressure", BoxArray(boxnum)%box%pressure)
@@ -125,6 +128,7 @@ module ClassyPyObj
   end function
 !=========================================================================
   function createboxdict_nocopy(boxnum) result(boxdict)
+    use ParallelVar, only: myid
     use BoxData, only: BoxArray
     use Input_Format, only: ReplaceText
     implicit none
@@ -162,6 +166,8 @@ module ClassyPyObj
           ierror = boxdict%setitem("boxtype", "unknown")
     end select
 
+    ierror = boxdict%setitem("thread_id", myid)
+    ierror = boxdict%setitem("box_id", boxnum)
     ierror = boxdict%setitem("energy", BoxArray(boxnum)%box%ETotal)
     ierror = boxdict%setitem("temperature", BoxArray(boxnum)%box%temperature)
     ierror = boxdict%setitem("pressure", BoxArray(boxnum)%box%pressure)

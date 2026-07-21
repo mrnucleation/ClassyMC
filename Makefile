@@ -170,6 +170,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Analysis_DensityOfStates.f90\
         		$(SRC)/Analysis_ClusterSize.f90\
         		$(SRC)/Analysis_DistPair.f90\
+        		$(SRC)/Analysis_PseudoDistPair.f90\
         		$(SRC)/Analysis_MolFraction.f90\
         		$(SRC)/Analysis_RDF.f90\
         		$(SRC)/Analysis_ThermoAverage.f90\

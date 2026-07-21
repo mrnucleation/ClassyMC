@@ -329,12 +329,12 @@ module FF_EasyPair_Cut
 !    write(*,*)
     do iDisp = 1, dispLen
       iAtom = disp(iDisp)%atmIndx
-!      write(*,*) iAtom
       atmType1 = curbox % AtomType(iAtom)
 
       listIndx = disp(iDisp)%listIndex
       maxNei = tempNNei(listIndx)
       do jNei = 1, maxNei
+
         jAtom = tempList(jNei, listIndx)
         rx = disp(iDisp)%x_new - atoms(1, jAtom)
         ry = disp(iDisp)%y_new - atoms(2, jAtom)

@@ -1,4 +1,4 @@
-moleculetypes 4
+moleculetypes 3
 
 atomdef
 #  Element - Atomic Mass
@@ -26,14 +26,6 @@ molecule 3
     1
   end_atoms
 end_molecule
-
-molecule 4
-  RegrowthType Simple
-  atoms
-    1
-  end_atoms
-end_molecule
-
 
 
 

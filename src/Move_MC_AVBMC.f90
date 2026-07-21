@@ -360,8 +360,9 @@ use Debug_Logging, only: DebugLog_DumpBox, DebugLog_DumpProposalAddition, &
     Prob = real(trialBox%nMolTotal, dp) * self%avbmcVol
     Prob = Prob*ProbSel/real(trialBox%nMolTotal+1, dp)
     Prob = GasProb*Prob/GenProb
-!    write(*,*) "In", Prob, real(trialBox%nMolTotal, dp), 1E0_dp/ProbSel, GenProb
-!    write(*,*) "  ", real(trialBox%nMolTotal+1, dp), self%avbmcVol, GasProb, molType
+    !write(*,*) "In", Prob, real(trialBox%nMolTotal, dp), 1E0_dp/ProbSel, GenProb
+    !write(*,*) "  ", real(trialBox%nMolTotal+1, dp), self%avbmcVol, GasProb, molType
+    !write(*,*) E_Diff, E_Inter, E_Intra, accept 
 
     !Get the chemical potential term for GCMC
     extraTerms = sampling % GetExtraTerms(self%newpart(1:nAtoms), trialBox)
