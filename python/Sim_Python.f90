@@ -58,6 +58,10 @@ contains
     ierror = args%setitem(0, boxdict)
     ierror = call_py_noret(testscript, "classyunit", args)
 
+    call args%destroy
+    call boxdict%destroy
+    call testscript%destroy
+    call paths%destroy
 
     call Epilogue
 

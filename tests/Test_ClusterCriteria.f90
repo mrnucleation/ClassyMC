@@ -24,7 +24,7 @@
 !===========================================================================
 program test_cluster_criteria
   use VarPrecision
-  use CoordinateTypes, only: Deletion, Addition, Displacement
+  use CoordinateTypes, only: Deletion, Addition, Displacement, NewState_IsoMol
   use BoxData, only: BoxArray
   use SimpleSimBox, only: SimpleBox
   use OrthoBoxDef, only: OrthoBox
@@ -34,7 +34,7 @@ program test_cluster_criteria
 
   implicit none
 
-  integer, parameter :: nTests = 11
+  integer, parameter :: nTests = 13
   logical :: results(nTests)
   integer :: totalFailed, i
   character(len=40) :: testNames(nTests)
@@ -51,7 +51,9 @@ program test_cluster_criteria
   testNames(8) = "AllMolDistCriteria: Broken + Addition"
   testNames(9) = "AllMolDistCriteria: Mixed rCut Chain"
   testNames(10) = "AllMolDistCriteria: Alternating Chain"
-  testNames(11) = "DistCriteria: MC Loop Safety Check"
+  testNames(11) = "DistCriteria: NewState IsoMol"
+  testNames(12) = "AllMolDistCriteria: NewState IsoMol"
+  testNames(13) = "DistCriteria: MC Loop Safety Check"
 
   write(nout, *)
   write(nout, *) "============================================================"
@@ -68,7 +70,9 @@ program test_cluster_criteria
   call test_allmol_addition(results(8))
   call test_allmol_mixed_rcut_chain(results(9))
   call test_allmol_alternating_chain(results(10))
-  call test_distcrit_mc_loop(results(11))
+  call test_distcrit_newstate(results(11))
+  call test_allmol_newstate(results(12))
+  call test_distcrit_mc_loop(results(13))
 
   write(nout, *)
   write(nout, *) "============================================================"
@@ -243,6 +247,26 @@ contains
     delDisp(1)%molIndx = globalIndx
     delDisp(1)%atmIndx = box%MolStartIndx(globalIndx)
     call crit%DiffCheck(box, delDisp, accept)
+
+  end subroutine
+
+!===========================================================================
+! CheckNewState
+!
+! Calls DiffCheck with a NewState_IsoMol perturbation whose trial
+! coordinates are already stored in disp(1)%newAtoms.
+!===========================================================================
+  subroutine CheckNewState(crit, disp, accept)
+    use ConstraintTemplate, only: constraint
+    implicit none
+    class(constraint), intent(inout) :: crit
+    type(NewState_IsoMol), intent(inout) :: disp(:)
+    logical, intent(out) :: accept
+
+    class(SimpleBox), pointer :: box => null()
+
+    box => BoxArray(1)%box
+    call crit%DiffCheck(box, disp, accept)
 
   end subroutine
 
@@ -1290,6 +1314,197 @@ contains
     else
       write(nout, "(A,I4)") "   Failed checks: ", nFail
       write(nout, *) "  >>> FAIL: AllMol Alternating Chain <<<"
+      passed = .false.
+    endif
+
+  end subroutine
+
+!===========================================================================
+! test_distcrit_newstate
+!
+! NewState_IsoMol keeps N fixed and supplies a full trial coordinate array.
+! Unlike Deletion, moving an end atom far away still leaves that molecule
+! in the system, so it must be rejected as a broken cluster.
+!===========================================================================
+  subroutine test_distcrit_newstate(passed)
+    implicit none
+    logical, intent(out) :: passed
+
+    integer, parameter :: nMol = 5
+    real(dp), parameter :: rCut = 3.0E0_dp
+    real(dp), parameter :: spacing = 2.9E0_dp
+    real(dp), parameter :: boxL = 50.0E0_dp
+
+    type(DistCriteria) :: crit
+    type(NewState_IsoMol) :: disp(1:1)
+    class(SimpleBox), pointer :: box => null()
+    logical :: accept, initOK
+    integer :: nFail, iMol
+
+    write(nout, *)
+    write(nout, *) "------------------------------------------------------------"
+    write(nout, *) "  Testing: DistCriteria - NewState_IsoMol"
+    write(nout, *) "------------------------------------------------------------"
+
+    nFail = 0
+    call SetupSingleTypeSystem(nMol, nMol, boxL)
+    box => BoxArray(1)%box
+
+    do iMol = 1, nMol
+      box%atoms(1, iMol) = (iMol - 1) * spacing
+      box%atoms(2, iMol) = 0.0E0_dp
+      box%atoms(3, iMol) = 0.0E0_dp
+    enddo
+
+    crit%molType = 1
+    crit%atomNum = 1
+    crit%rCut = rCut
+    crit%rCutSq = rCut * rCut
+    call crit%Constructor(1)
+    call crit%CheckInitialConstraint(box, initOK)
+    if(.not. initOK) then
+      write(nout, *) "  FAIL: initial constraint check should pass for a valid chain"
+      nFail = nFail + 1
+    endif
+
+    allocate(disp(1)%newAtoms(1:3, 1:box%nMaxAtoms))
+    disp(1)%newAtoms = box%atoms
+    disp(1)%nMoved = nMol
+
+    ! Tiny collective shift: chain stays intact
+    do iMol = 1, nMol
+      disp(1)%newAtoms(1, iMol) = box%atoms(1, iMol) + 0.05E0_dp
+    enddo
+    call CheckNewState(crit, disp, accept)
+    if(.not. accept) then
+      write(nout, *) "  FAIL: rigid shift of a connected chain should be accepted"
+      nFail = nFail + 1
+    else
+      write(nout, *) "    ok: rigid shift -> accepted"
+    endif
+
+    ! Pull an interior atom out of range: chain splits
+    disp(1)%newAtoms = box%atoms
+    disp(1)%newAtoms(1, 3) = 100.0E0_dp
+    call CheckNewState(crit, disp, accept)
+    if(accept) then
+      write(nout, *) "  FAIL: isolating an interior atom should be rejected"
+      nFail = nFail + 1
+    else
+      write(nout, *) "    ok: isolate interior atom -> rejected"
+    endif
+
+    ! Pull an end atom out of range: N is unchanged so this is still a break
+    disp(1)%newAtoms = box%atoms
+    disp(1)%newAtoms(1, 1) = 100.0E0_dp
+    call CheckNewState(crit, disp, accept)
+    if(accept) then
+      write(nout, *) "  FAIL: isolating an end atom (same N) should be rejected"
+      nFail = nFail + 1
+    else
+      write(nout, *) "    ok: isolate end atom -> rejected"
+    endif
+
+    if(nFail == 0) then
+      write(nout, *) "  >>> PASS: DistCriteria NewState IsoMol <<<"
+      passed = .true.
+    else
+      write(nout, "(A,I4)") "   Failed checks: ", nFail
+      write(nout, *) "  >>> FAIL: DistCriteria NewState IsoMol <<<"
+      passed = .false.
+    endif
+
+  end subroutine
+
+!===========================================================================
+! test_allmol_newstate
+!
+! AllMol cluster distances are evaluated in the xz plane (ry forced to 0),
+! matching CheckInitial. A large y-only displacement must therefore still
+! be accepted, while a large x displacement that splits the chain is not.
+!===========================================================================
+  subroutine test_allmol_newstate(passed)
+    use Common_MolInfo, only: nMolTypes
+    implicit none
+    logical, intent(out) :: passed
+
+    integer, parameter :: nMol1 = 3, nMol2 = 2
+    real(dp), parameter :: rCutVal = 3.0E0_dp
+    real(dp), parameter :: spacing = 2.9E0_dp
+    real(dp), parameter :: boxL = 50.0E0_dp
+
+    type(DistCriteriaAllMol) :: crit
+    type(NewState_IsoMol) :: disp(1:1)
+    class(SimpleBox), pointer :: box => null()
+    logical :: accept, initOK
+    integer :: nFail, iType, jType
+    real(dp) :: rMix
+
+    write(nout, *)
+    write(nout, *) "------------------------------------------------------------"
+    write(nout, *) "  Testing: AllMolDistCriteria - NewState_IsoMol"
+    write(nout, *) "------------------------------------------------------------"
+
+    nFail = 0
+    call SetupTwoTypeSystem(nMol1, nMol1, nMol2, nMol2, boxL)
+    box => BoxArray(1)%box
+
+    ! Chain order: global 1, 4, 2, 5, 3
+    box%atoms(1:3, 1) = [0.0_dp,          0.0_dp, 0.0_dp]
+    box%atoms(1:3, 2) = [2*spacing,       0.0_dp, 0.0_dp]
+    box%atoms(1:3, 3) = [4*spacing,       0.0_dp, 0.0_dp]
+    box%atoms(1:3, 4) = [1*spacing,       0.0_dp, 0.0_dp]
+    box%atoms(1:3, 5) = [3*spacing,       0.0_dp, 0.0_dp]
+
+    call crit%Constructor(1)
+    crit%rCut(1) = rCutVal
+    crit%rCut(2) = rCutVal
+    crit%atomNumType(1) = 1
+    crit%atomNumType(2) = 1
+    do iType = 1, nMolTypes
+      do jType = 1, nMolTypes
+        rMix = 0.5E0_dp * (crit%rCut(iType) + crit%rCut(jType))
+        crit%rCutPairSq(iType, jType) = rMix * rMix
+      enddo
+    enddo
+
+    call crit%CheckInitialConstraint(box, initOK)
+    if(.not. initOK) then
+      write(nout, *) "  FAIL: initial constraint check should pass for chain"
+      nFail = nFail + 1
+    endif
+
+    allocate(disp(1)%newAtoms(1:3, 1:box%nMaxAtoms))
+    disp(1)%newAtoms = box%atoms
+    disp(1)%nMoved = 5
+
+    ! y-only move of the middle atom: AllMol ignores y, so stay connected
+    disp(1)%newAtoms(2, 2) = 10.0E0_dp
+    call CheckNewState(crit, disp, accept)
+    if(.not. accept) then
+      write(nout, *) "  FAIL: large y-only displacement should be accepted (2D cluster metric)"
+      nFail = nFail + 1
+    else
+      write(nout, *) "    ok: y-only displacement -> accepted"
+    endif
+
+    ! Split the chain along x
+    disp(1)%newAtoms = box%atoms
+    disp(1)%newAtoms(1, 2) = 100.0E0_dp
+    call CheckNewState(crit, disp, accept)
+    if(accept) then
+      write(nout, *) "  FAIL: isolating a chain member along x should be rejected"
+      nFail = nFail + 1
+    else
+      write(nout, *) "    ok: isolate along x -> rejected"
+    endif
+
+    if(nFail == 0) then
+      write(nout, *) "  >>> PASS: AllMol NewState IsoMol <<<"
+      passed = .true.
+    else
+      write(nout, "(A,I4)") "   Failed checks: ", nFail
+      write(nout, *) "  >>> FAIL: AllMol NewState IsoMol <<<"
       passed = .false.
     endif
 

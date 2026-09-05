@@ -154,6 +154,7 @@ SRC_MAIN := $(SRC)/Common.f90\
         		$(SRC)/Move_MC_Delete.f90\
         		$(SRC)/Move_MC_MolTranslation.f90\
         		$(SRC)/Move_MC_IsoVol.f90\
+        		$(SRC)/Move_MC_ForceBias.f90\
         		$(SRC)/Move_MC_PlaneRotate.f90\
         		$(SRC)/Move_MC_3DRotate.f90\
         		$(SRC)/Move_MC_PlaneTranslate.f90\
@@ -672,6 +673,7 @@ $(OBJ)/Move_MC_UBSwap.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o $(OBJ)/Debug_Logg
 $(OBJ)/Move_MC_CBMC.o: $(OBJ)/Common.o $(OBJ)/Box_Ultility.o $(OBJ)/MolCon_LinearCBMC.o $(OBJ)/MolCon_BranchCBMC.o  
 $(OBJ)/Move_MC_AtomTranslation.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o $(OBJ)/Common_Sampling.o $(OBJ)/Move_MC_MolTranslation.o
 $(OBJ)/Move_MC_IsoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
+$(OBJ)/Move_MC_ForceBias.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o $(OBJ)/Common_Sampling.o $(OBJ)/Template_Forcefield.o
 $(OBJ)/Move_MC_AnisoVol.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_CubicBox.o $(OBJ)/Box_OrthoBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Template_Constraint.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_AtomExchange.o: $(OBJ)/Common.o $(OBJ)/Common_BoxData.o $(OBJ)/Box_SimpleBox.o $(OBJ)/RandomNew.o $(OBJ)/Template_MoveClass.o $(OBJ)/Box_Ultility.o
 $(OBJ)/Move_MC_ThermoLambda.o: $(OBJ)/FF_ThermoInt.o $(OBJ)/Analysis_ThermoIntegration.o 

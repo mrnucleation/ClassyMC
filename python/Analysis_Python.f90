@@ -132,20 +132,18 @@ module Anaylsis_PythonFunc
 !    call self%boxlist%destroy
 !=========================================================================
   subroutine PythonFunc_Compute(self, accept)
-    use BoxData, only: BoxArray
-    use ClassyPyObj, only: createboxdict
+    use ClassyPyObj, only: refreshboxdicts
     implicit none
     class(PythonFunc), intent(inout) :: self
     logical, intent(in) :: accept
     type(object) :: returnobj
-    integer :: iBox
     integer :: ierror
-
-
 
     if(.not. accept) then
       return
     endif
+
+    call refreshboxdicts(self%boxdicts)
 
     if(self%new) then
       self%lastvalue = self%newvalue
@@ -171,21 +169,20 @@ module Anaylsis_PythonFunc
 !=========================================================================
   subroutine PythonFunc_CalcNewState(self, disp, accept, newVal)
     use CoordinateTypes, only: Displacement, Perturbation
-    use ClassyPyObj, only: createdisplist
+    use ClassyPyObj, only: createdisplist, refreshboxdicts
     implicit none
     class(PythonFunc), intent(inout) :: self
     class(Perturbation), intent(in), optional :: disp(:)
     logical, intent(out) :: accept
     real(dp), intent(in), optional :: newVal
-    integer :: iDisp
     type(object) :: returnobj
-    type(object) :: item
     type(list) :: displist
-    integer :: listlen, ierror
+    integer :: ierror
     real(dp) :: returnval
 
     accept = .true.
 
+    call refreshboxdicts(self%boxdicts)
     displist = createdisplist(disp)
 
     ierror = self%newargs%setitem(1, displist)
@@ -201,11 +198,6 @@ module Anaylsis_PythonFunc
       error stop "NaN value returned from Python compute_new function!"
     endif
 
-!    call self%newargs%destroy
-    do iDisp = 0, size(disp)-1
-      ierror = displist%getitem(item, iDisp)
-      call item%destroy
-    enddo
     call displist%destroy
 
     self%new = .true.

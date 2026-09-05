@@ -26,6 +26,7 @@ module FF_EasyEP_LJ_Cut
     contains
       procedure, pass :: Constructor => Constructor_EP_LJ_Cut
       procedure, pass :: PairFunction => PairFunction_EP_LJ_Cut
+      procedure, pass :: PairForceScale => PairForceScale_EP_LJ_Cut
       procedure, pass :: ProcessIO => ProcessIO_EP_LJ_Cut
       procedure, pass :: TailCorrection => TailCorrection_EP_LJ_Cut
       procedure, pass :: ComputeTypeCount => ComputeTypeCount_EP_LJ_Cut
@@ -80,6 +81,25 @@ module FF_EasyEP_LJ_Cut
     LJ = LJ * LJ * LJ
     E_Pair = ep * LJ * (LJ-1E0_dp)
 
+  end function
+  !=============================================================================+
+  function PairForceScale_EP_LJ_Cut(self, rsq, atmtype1, atmtype2) result(scale)
+    implicit none
+    class(EP_LJ_Cut), intent(inout) :: self
+    integer, intent(in) :: atmtype1, atmtype2
+    real(dp), intent(in) :: rsq
+    real(dp) :: scale
+    real(dp) :: ep, sig_sq, LJ
+
+    scale = 0E0_dp
+    if(rsq >= self%rCutSq .or. rsq < 1.0E-20_dp) then
+      return
+    endif
+    ep = self % epsTable(atmType2, atmType1)
+    sig_sq = self % sigTable(atmType2, atmType1)
+    LJ = (sig_sq/rsq)
+    LJ = LJ * LJ * LJ
+    scale = 6.0E0_dp * ep * LJ * (2.0E0_dp*LJ - 1.0E0_dp) / rsq
   end function
   !=============================================================================+
    !Sums up the tail corrections over all atoms in the system.

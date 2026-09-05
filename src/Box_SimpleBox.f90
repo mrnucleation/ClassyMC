@@ -58,8 +58,9 @@ module SimpleSimBox
 !                                                  to signal that the forces must be recomputed
 !    real(dp) :: forcedelta => (Force delta used for finite difference method)
 !    real(dp), allocatable :: forces(:,:) => Similar to the atoms(:,:) array, but keeps
-!                                            the force gradient instead of the positional
-!                                            components. 
+!                                            the force on each atom (F = -dU/dr when the
+!                                            forcefield provides ComputeForces; otherwise
+!                                            a finite-difference of DiffECalc). 
 
     !forceERecompute => Forces the box to recompute the energy of the system.
     !                   Setting this to true is expensive and should only be used for debug
@@ -638,7 +639,7 @@ module SimpleSimBox
 ! This subroutine recomputes the intra contribution of entire system 
 ! energy from scratch. 
   subroutine SimpleBox_ComputeIntraEnergyDelta(self, disp, E_Intra)
-    use Common_MolInfo, only:MolData
+    use Common_MolInfo, only: MolData, nMolTypes
     use ParallelVar, only: nout
     implicit none
     class(SimpleBox), intent(inout) :: self
@@ -705,6 +706,25 @@ module SimpleSimBox
       class is(AtomExchange)
          !Atom Exchange assumes mono-atomic system
          return
+
+      class is(NewState_IsoMol)
+         ! Collective same-N move: intramolecular DOF can change for every molecule.
+         do iType = 1, nMolTypes
+           if(MolData(iType)%ridgid) cycle
+           do iMol = 1, self%NMol(iType)
+             molIndx = self % MolGlobalIndx(iType, iMol)
+             call self % GetMolData(molIndx, nAtoms=nAtoms, molStart=molStart, molEnd=molEnd)
+             self%newpos(1:3, 1:nAtoms) = disp(1)%newAtoms(1:3, molStart:molEnd)
+             call self%ComputeMolIntra(iType, molIndx, E_Temp, accept, self%newpos)
+             if(.not. accept) then
+               E_Intra = 0E0_dp
+               return
+             endif
+             E_Intra = E_Intra + E_Temp
+             call self%ComputeMolIntra(iType, molIndx, E_Temp, accept)
+             E_Intra = E_Intra - E_Temp
+           enddo
+         enddo
     end select
 
   end subroutine
@@ -973,19 +993,12 @@ module SimpleSimBox
   end subroutine
 !==========================================================================================
 ! This subroutine recomputes the forces for the system.
+! Prefer a forcefield's own ComputeForces (analytic pair derivatives for
+! EasyPair styles, summed subfields for Hybrid). Fall back to finite
+! difference of DiffECalc only when the forcefield has no force definition.
   subroutine SimpleBox_ComputeForces(self)
-    use ParallelVar, only: nout
-    use CoordinateTypes, only: Displacement
-    use Units, only: outEngUnit, engStr
     implicit none
     class(SimpleBox), intent(inout) :: self
-    logical :: accept
-    integer :: iAtom, atmType
-    type(Displacement) :: disp(1:1)
-    real(dp) :: E_Diff
-    integer, pointer :: tempNnei(:)
-    integer, pointer :: tempList(:, :)
-
 
     if(.not. allocated(self%forces)) then
       allocate(self%forces(1:3, 1:self%nMaxAtoms))
@@ -998,31 +1011,13 @@ module SimpleSimBox
     endif
 
     self%forces = 0E0_dp
-
-
-    do iAtom = 1, self%nMaxAtoms
-      if(.not. self%isActive(iAtom)) cycle
-      disp(1)%molType = self%MolType(iAtom)
-      disp(1)%molIndx = self%MolIndx(iAtom)
-      disp(1)%atmIndx = iAtom
-      !Approximate the gradient by making a very small displacement on the atom position
-      !and computing the slope (E2-E2)/(x2-x1).  Do this in each direction for the fx, fy, and fz components
-      disp(1)%x_new = self%atoms(1, iAtom) + self%forcedelta
-      disp(1)%y_new = self%atoms(2, iAtom) 
-      disp(1)%z_new = self%atoms(3, iAtom)
-      call self%EFunc%Method%DiffECalc(self, disp(1:1), tempList, tempNNei, E_Diff, accept)
-      self%forces(1, iAtom) = E_diff/self%forcedelta
-
-      disp(1)%x_new = self%atoms(1, iAtom) 
-      disp(1)%y_new = self%atoms(2, iAtom) + self%forcedelta
-      call self%EFunc%Method%DiffECalc(self, disp(1:1), tempList, tempNNei, E_Diff, accept)
-      self%forces(2, iAtom) = E_diff/self%forcedelta
-
-      disp(1)%y_new = self%atoms(2, iAtom) 
-      disp(1)%z_new = self%atoms(3, iAtom) + self%forcedelta
-      call self%EFunc%Method%DiffECalc(self, disp(1:1), tempList, tempNNei, E_Diff, accept)
-      self%forces(3, iAtom) = E_diff/self%forcedelta
-    enddo
+    if(associated(self%EFunc)) then
+      if(self%EFunc%Method%HasComputeForces()) then
+        call self%EFunc%Method%ComputeForces(self, self%forces, self%atoms)
+      else
+        call self%EFunc%Method%ComputeForcesFiniteDiff(self, self%forces, self%atoms)
+      endif
+    endif
     self%forceoutofdate = .false.
   end subroutine
 !==========================================================================================
@@ -1332,9 +1327,9 @@ module SimpleSimBox
 
     write(50,*) "boxtype nobox"
     write(50,*) 
-    write(50,*) "molmin", (self%NMolMin(iType), iType=1,nMolTypes)
-    write(50,*) "molmax", (self%NMolMax(iType), iType=1,nMolTypes)
-    write(50,*) "mol", (self%NMol(iType), iType=1,nMolTypes)
+    write(50,'(A,*(1X,I0))') "molmin", (self%NMolMin(iType), iType=1,nMolTypes)
+    write(50,'(A,*(1X,I0))') "molmax", (self%NMolMax(iType), iType=1,nMolTypes)
+    write(50,'(A,*(1X,I0))') "mol", (self%NMol(iType), iType=1,nMolTypes)
     write(50,*) "# MolType,  MolNumber, AtomNumber, x1, x2......."
 
     do iType = 1, nMolTypes
@@ -2135,6 +2130,33 @@ subroutine SimpleBox_GetTypeMols(self, iType, typeMolStart, typeMolEnd)
 
       class is(AtomExchange)
         call self%SwapAtomType(disp)
+
+       !-------------------------------------------------
+      class is(NewState_IsoMol)
+        if(.not. allocated(disp(1)%newAtoms)) then
+          write(0,*) "ERROR! NewState_IsoMol newAtoms array is not allocated."
+          error stop
+        endif
+        do iAtom = 1, self%nMaxAtoms
+          if(.not. self%IsActive(iAtom)) cycle
+          self%atoms(1:3, iAtom) = disp(1)%newAtoms(1:3, iAtom)
+          call self%Boundary(self%atoms(1, iAtom), self%atoms(2, iAtom), self%atoms(3, iAtom))
+        enddo
+        self%dr = 0E0_dp
+        self%drsq = 0E0_dp
+        self%maxdr = 0E0_dp
+        self%maxdr2 = 0E0_dp
+        do iMol = 1, self%maxMol
+          call self%GetMolData(iMol, molStart=molStart)
+          if(self%IsActive(molStart)) then
+            call self%ComputeCM(iMol)
+          endif
+        enddo
+        if(allocated(self%NeighList)) then
+          do iType = 1, size(self%NeighList)
+            call self%NeighList(iType)%BuildList(iType)
+          enddo
+        endif
 
        !-------------------------------------------------
       class default

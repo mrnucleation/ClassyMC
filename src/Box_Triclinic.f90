@@ -317,9 +317,9 @@ module OrthoBoxDef
 
     write(50,*) "boxtype ortho"
     write(50,*) "dimension", self%boxLx, self%boxLy, self%boxLz
-    write(50,*) "molmin", (self%NMolMin(iType), iType=1,nMolTypes)
-    write(50,*) "molmax", (self%NMolMax(iType), iType=1,nMolTypes)
-    write(50,*) "mol", (self%NMol(iType), iType=1,nMolTypes)
+    write(50,'(A,*(1X,I0))') "molmin", (self%NMolMin(iType), iType=1,nMolTypes)
+    write(50,'(A,*(1X,I0))') "molmax", (self%NMolMax(iType), iType=1,nMolTypes)
+    write(50,'(A,*(1X,I0))') "mol", (self%NMol(iType), iType=1,nMolTypes)
 
     do iType = 1, nMolTypes
       do iMol = 1, self%NMol(iType)

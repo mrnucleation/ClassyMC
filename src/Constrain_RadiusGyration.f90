@@ -6,7 +6,7 @@ module Constrain_DistanceCriteria
   use VarPrecision
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Perturbation
-  use CoordinateTypes, only: Displacement, Deletion, Addition
+  use CoordinateTypes, only: Displacement, Deletion, Addition, NewState_IsoMol
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
 
@@ -315,6 +315,44 @@ module Constrain_DistanceCriteria
         self%clustMemb = .false.
         self%clustMemb(startMol) = .true.
         self%newlist(1) = startMol
+        nNew = 1
+        nClust = 1
+
+       !----------------------------------------------------------------------------
+      class is(NewState_IsoMol)
+        self%newTopoList = .false.
+        if(totalMol < 2) then
+          accept = .true.
+          return
+        endif
+        if(.not. allocated(disp(1)%newAtoms)) then
+          accept = .false.
+          return
+        endif
+        do iMol = 1, totalMol-1
+          molIndx = trialBox % MolGlobalIndx(self%molType, iMol)
+          iAtom = trialBox % MolStartIndx(molIndx) + self%atomNum - 1
+          do jMol = iMol+1, totalMol
+            molIndx = trialBox % MolGlobalIndx(self%molType, jMol)
+            jAtom = trialBox % MolStartIndx(molIndx) + self%atomNum - 1
+            rx = disp(1)%newAtoms(1, iAtom) - disp(1)%newAtoms(1, jAtom)
+            ry = disp(1)%newAtoms(2, iAtom) - disp(1)%newAtoms(2, jAtom)
+            rz = disp(1)%newAtoms(3, iAtom) - disp(1)%newAtoms(3, jAtom)
+            call trialBox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < self%rCutSq) then
+              self%newTopoList(iMol, jMol) = .true.
+              self%newTopoList(jMol, iMol) = .true.
+            endif
+          enddo
+        enddo
+        if(all(self%newTopoList .eqv. .false.)) then
+          accept = .false.
+          return
+        endif
+        self%clustMemb = .false.
+        self%clustMemb(1) = .true.
+        self%newlist(1) = 1
         nNew = 1
         nClust = 1
 

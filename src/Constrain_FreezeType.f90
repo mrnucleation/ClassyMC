@@ -6,7 +6,7 @@ module Constrain_FreezeType
   use VarPrecision
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Perturbation
-  use CoordinateTypes, only: Displacement, Deletion, Addition
+  use CoordinateTypes, only: Displacement, Deletion, Addition, NewState_IsoMol
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
 
@@ -57,7 +57,8 @@ module Constrain_FreezeType
     class(SimBox), intent(inout) :: trialBox
     class(Perturbation), intent(in) :: disp(:)
     logical, intent(out) :: accept
-    integer :: iDisp
+    integer :: iDisp, iAtom
+    real(dp) :: dx, dy, dz
 
 
     !This section creates the topology list of the new state using information
@@ -84,6 +85,25 @@ module Constrain_FreezeType
       class is(Deletion)
         do iDisp = 1, size(disp)
           if(disp(iDisp)%molType == self%molType) then
+            accept = .false.
+            return
+          endif
+        enddo
+
+       !----------------------------------------------------------------------------
+      class is(NewState_IsoMol)
+        if(.not. allocated(disp(1)%newAtoms)) then
+          accept = .false.
+          return
+        endif
+        do iAtom = 1, trialBox%nMaxAtoms
+          if(.not. trialBox%IsActive(iAtom)) cycle
+          if(trialBox%MolType(iAtom) /= self%molType) cycle
+          dx = disp(1)%newAtoms(1, iAtom) - trialBox%atoms(1, iAtom)
+          dy = disp(1)%newAtoms(2, iAtom) - trialBox%atoms(2, iAtom)
+          dz = disp(1)%newAtoms(3, iAtom) - trialBox%atoms(3, iAtom)
+          call trialBox%Boundary(dx, dy, dz)
+          if(dx*dx + dy*dy + dz*dz > 1.0E-20_dp) then
             accept = .false.
             return
           endif

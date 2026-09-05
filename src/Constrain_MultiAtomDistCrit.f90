@@ -6,7 +6,7 @@ module Constrain_MultiAtomDistanceCriteria
   use VarPrecision
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Perturbation
-  use CoordinateTypes, only: Displacement, Deletion, Addition
+  use CoordinateTypes, only: Displacement, Deletion, Addition, NewState_IsoMol
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
   use Graph_Module, only:  undirected_graph
@@ -354,6 +354,44 @@ module Constrain_MultiAtomDistanceCriteria
         call self%DeleteMol(molIndx, topMol, self%newTopoList, self%nTopoNewNei)
 
         totalMol = totalMol - 1
+       !----------------------------------------------------------------------------
+      class is(NewState_IsoMol)
+        if(totalMol < 2) then
+          accept = .true.
+          return
+        endif
+        if(.not. allocated(disp(1)%newAtoms)) then
+          accept = .false.
+          return
+        endif
+        self%nTopoNewNei = 0
+        do iMol = 1, self%nMolMax-1
+          call trialbox%GetMolData(iMol, molStart=iStart, molEnd=iEnd)
+          if(.not. trialbox%IsActive(iStart)) cycle
+          do jMol = iMol+1, self%nMolMax
+            call trialbox%GetMolData(jMol, molStart=jStart, molEnd=jEnd)
+            if(.not. trialbox%IsActive(jStart)) cycle
+            atomloop_iso: do iAtom = iStart, iEnd
+              do jAtom = jStart, jEnd
+                rx = disp(1)%newAtoms(1, iAtom) - disp(1)%newAtoms(1, jAtom)
+                ry = disp(1)%newAtoms(2, iAtom) - disp(1)%newAtoms(2, jAtom)
+                rz = disp(1)%newAtoms(3, iAtom) - disp(1)%newAtoms(3, jAtom)
+                call trialBox%Boundary(rx, ry, rz)
+                rsq = rx*rx + ry*ry + rz*rz
+                if(rsq < self%rCutSq) then
+                  newNnei = self%nTopoNewNei(iMol) + 1
+                  self%nTopoNewNei(iMol) = newNnei
+                  self%newTopoList(newNnei, iMol) = jMol
+                  newNnei = self%nTopoNewNei(jMol) + 1
+                  self%nTopoNewNei(jMol) = newNnei
+                  self%newTopoList(newNnei, jMol) = iMol
+                  exit atomloop_iso
+                endif
+              enddo
+            enddo atomloop_iso
+          enddo
+        enddo
+
        !----------------------------------------------------------------------------
       class default
         stop "Distance criteria is not compatiable with this perturbation type."

@@ -22,6 +22,7 @@ Move Types:
     - 'atomexchange': Exchange atom types
     - 'volchange': Isotropic volume change
     - 'orthovolchange': Anisotropic volume change
+    - 'newstate_isomol': Same molecule count, many atom positions (full recompute)
 
 The boxlist contains dictionaries with box information:
     - 'boxtype': string - type of box ('cube', 'ortho', etc.)
@@ -67,6 +68,7 @@ def get_move_type():
             - 'atomexchange' - exchange atom types
             - 'volchange' - isotropic volume change
             - 'orthovolchange' - anisotropic volume change
+            - 'newstate_isomol' - same N, many atom positions
     """
     return 'displacement'
 
@@ -118,7 +120,17 @@ def generate_move(boxlist):
     For 'orthovolchange':
         {'volnew': float, 'volold': float,
          'xscale': float, 'yscale': float, 'zscale': float}
-    
+
+    For 'newstate_isomol':
+        {'new_atoms': numpy array (3 x nMaxAtoms),
+         'n_moved': int (optional)}
+
+    Probability (either linear or log, not both):
+        {'forward_prob': float}  - linear generation probability (default 1.0)
+        {'log_forward_prob': float} - if present, compute_reverse_prob must
+          return a log reverse probability. Used by force-bias MC to avoid
+          underflow. See example_fbmc_move.py.
+
     Any type can also return:
         {'reject': True} - to immediately reject the move
     
@@ -203,6 +215,12 @@ def compute_reverse_prob(boxlist, move_dict):
         - Forward: select atom i with prob P_fwd(i)
         - Reverse: select atom i with prob P_rev(i) 
         - These may differ if selection depends on configuration
+
+    For force-bias / smart MC (see example_fbmc_move.py):
+        Return log T from generate_move as 'log_forward_prob' and return
+        log T_reverse from this function. Classy then uses
+            logProb = log_reverse - log_forward
+        in the Metropolis criterion.
     
     Args:
         boxlist: List of box dictionaries (current/old configuration)

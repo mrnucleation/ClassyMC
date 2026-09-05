@@ -21,6 +21,10 @@ module Template_ForceField
 !      procedure, pass :: VolECalc
       procedure, pass :: ProcessIO
       procedure, pass :: GetCutOff
+      procedure, pass :: PairForceScale
+      procedure, pass :: HasComputeForces
+      procedure, pass :: ComputeForces
+      procedure, pass :: ComputeForcesFiniteDiff
   end type
 
   contains
@@ -121,6 +125,83 @@ module Template_ForceField
 !    write(*,*) self%rCut
     rCut = self%rCut
   end function
+!=============================================================================+
+  function HasComputeForces(self) result(hasForce)
+    ! True when this forcefield overrides ComputeForces with a real
+    ! implementation (analytic pair derivative, etc.). The box uses
+    ! finite-difference DiffECalc when this returns false.
+    implicit none
+    class(forcefield), intent(in) :: self
+    logical :: hasForce
+
+    hasForce = .false.
+  end function
+!=============================================================================+
+  function PairForceScale(self, rsq, atmtype1, atmtype2) result(scale)
+    ! Returns the scalar such that F_i = scale * (r_i - r_j) for a pair.
+    implicit none
+    class(forcefield), intent(inout) :: self
+    integer, intent(in) :: atmtype1, atmtype2
+    real(dp), intent(in) :: rsq
+    real(dp) :: scale
+
+    scale = 0E0_dp
+  end function
+!=============================================================================+
+  subroutine ComputeForces(self, curbox, forces, coords)
+    implicit none
+    class(forcefield), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    real(dp), intent(out) :: forces(:,:)
+    real(dp), intent(in) :: coords(:,:)
+
+    forces = 0E0_dp
+  end subroutine
+!=============================================================================+
+  subroutine ComputeForcesFiniteDiff(self, curbox, forces, coords)
+    ! Finite-difference fallback: F_i ≈ (U(r_i + δ ê) - U(r)) / δ
+    ! evaluated from DiffECalc. This uses the current box coordinates as
+    ! the reference state; coords is accepted for interface consistency
+    ! with ComputeForces.
+    implicit none
+    class(forcefield), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    real(dp), intent(out) :: forces(:,:)
+    real(dp), intent(in) :: coords(:,:)
+    logical :: accept
+    integer :: iAtom, nMax
+    type(Displacement) :: disp(1:1)
+    real(dp) :: E_Diff
+    integer :: tempList(1,1)
+    integer :: tempNNei(1)
+
+    forces = 0E0_dp
+    tempList = 0
+    tempNNei = 0
+    nMax = min(curbox%nMaxAtoms, size(forces, 2), size(coords, 2), size(curbox%atoms, 2))
+    do iAtom = 1, nMax
+      if(.not. curbox%IsActive(iAtom)) cycle
+      disp(1)%molType = curbox%MolType(iAtom)
+      disp(1)%molIndx = curbox%MolIndx(iAtom)
+      disp(1)%atmIndx = iAtom
+
+      disp(1)%x_new = curbox%atoms(1, iAtom) + curbox%forcedelta
+      disp(1)%y_new = curbox%atoms(2, iAtom)
+      disp(1)%z_new = curbox%atoms(3, iAtom)
+      call self%DiffECalc(curbox, disp(1:1), tempList, tempNNei, E_Diff, accept)
+      forces(1, iAtom) = E_Diff / curbox%forcedelta
+
+      disp(1)%x_new = curbox%atoms(1, iAtom)
+      disp(1)%y_new = curbox%atoms(2, iAtom) + curbox%forcedelta
+      call self%DiffECalc(curbox, disp(1:1), tempList, tempNNei, E_Diff, accept)
+      forces(2, iAtom) = E_Diff / curbox%forcedelta
+
+      disp(1)%y_new = curbox%atoms(2, iAtom)
+      disp(1)%z_new = curbox%atoms(3, iAtom) + curbox%forcedelta
+      call self%DiffECalc(curbox, disp(1:1), tempList, tempNNei, E_Diff, accept)
+      forces(3, iAtom) = E_Diff / curbox%forcedelta
+    enddo
+  end subroutine
 !=============================================================================+
 end module
 !=============================================================================+

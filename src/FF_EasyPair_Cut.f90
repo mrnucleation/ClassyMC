@@ -27,12 +27,15 @@ module FF_EasyPair_Cut
       procedure, pass :: NewECalc => New_EasyPair_Cut
       procedure, pass :: OldECalc => Old_EasyPair_Cut
       procedure, pass :: OrthoVolECalc => OrthoVol_EasyPair_Cut
+      procedure, pass :: IsoMolECalc => IsoMol_EasyPair_Cut
       procedure, pass :: AtomExchange => AtomExchange_EasyPair_Cut
       procedure, pass :: SinglePair => SinglePair_EasyPair_Cut
       procedure, pass :: ManyBody => ManyBody_EasyPair_Cut
       procedure, pass :: ProcessIO => ProcessIO_EasyPair_Cut
-!      procedure, pass :: Prologue => Prologue_EasyPair_Cut
       procedure, pass :: GetCutOff => GetCutOff_EasyPair_Cut
+      procedure, pass :: PairForceScale => PairForceScale_EasyPair_Cut
+      procedure, pass :: HasComputeForces => HasComputeForces_EasyPair_Cut
+      procedure, pass :: ComputeForces => ComputeForces_EasyPair_Cut
   end type
 
   contains
@@ -163,6 +166,7 @@ module FF_EasyPair_Cut
     type(Addition), pointer :: add(:) => null()
     type(Deletion), pointer :: del(:) => null()
     type(OrthoVolChange), pointer :: ortho(:) => null()
+    type(NewState_IsoMol), pointer :: isomol(:) => null()
     integer, intent(in) :: tempList(:,:), tempNNei(:)
     real(dp), intent(inOut) :: E_Diff
     logical, intent(out) :: accept
@@ -196,6 +200,10 @@ module FF_EasyPair_Cut
       class is(OrthoVolChange)
          ortho => disp(dlow:dhigh)
          call self % OrthoVolECalc( curbox, ortho(dlow:dhigh), E_Diff, accept)
+
+      class is(NewState_IsoMol)
+         isomol => disp(dlow:dhigh)
+         call self % IsoMolECalc( curbox, isomol(dlow:dhigh), E_Diff, accept)
 
       class is(AtomExchange)
          call self % AtomExchange( curbox, disp(dlow:dhigh), E_Diff, accept)
@@ -495,6 +503,65 @@ module FF_EasyPair_Cut
 
   end subroutine
   !=====================================================================
+  subroutine IsoMol_EasyPair_Cut(self, curbox, disp, E_Diff, accept)
+    implicit none
+    class(EasyPair_Cut), intent(inout) :: self
+    class(SimBox), intent(inout) :: curbox
+    type(NewState_IsoMol), intent(in) :: disp(:)
+    real(dp), intent(inOut) :: E_Diff
+    logical, intent(out) :: accept
+
+    integer :: iAtom, jAtom
+    integer :: atmType1, atmType2
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: E_Pair, E_New
+    real(dp) :: rmin_ij
+
+    accept = .true.
+    E_New = 0E0_dp
+    E_Diff = 0E0_dp
+    curbox%dETable = 0E0_dp
+
+    if(.not. allocated(disp(1)%newAtoms)) then
+      write(0,*) "ERROR! NewState_IsoMol newAtoms array is not allocated."
+      error stop
+    endif
+
+    do iAtom = 1, curbox%nMaxAtoms-1
+      if( .not. curbox%IsActive(iAtom) ) cycle
+      atmType1 = curbox % AtomType(iAtom)
+      do jAtom = iAtom+1, curbox%nMaxAtoms
+        if( .not. curbox%IsActive(jAtom) ) cycle
+        if( curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom) ) cycle
+
+        rx = disp(1)%newAtoms(1, iAtom) - disp(1)%newAtoms(1, jAtom)
+        ry = disp(1)%newAtoms(2, iAtom) - disp(1)%newAtoms(2, jAtom)
+        rz = disp(1)%newAtoms(3, iAtom) - disp(1)%newAtoms(3, jAtom)
+        call curbox%Boundary(rx, ry, rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        atmType2 = curbox % AtomType(jAtom)
+        if(rsq < self%rCutSq) then
+          rmin_ij = self % rMinTable(atmType1, atmType2)
+          if(rsq < rmin_ij) then
+            accept = .false.
+            return
+          endif
+          E_Pair = self%PairFunction(rsq, atmtype1, atmtype2)
+          E_New = E_New + E_Pair
+          curbox % dETable(iAtom) = curbox % dETable(iAtom) + E_Pair
+          curbox % dETable(jAtom) = curbox % dETable(jAtom) + E_Pair
+        endif
+      enddo
+    enddo
+
+    E_Diff = E_New
+    if (.not. self%isSubPair) then
+      E_Diff = E_Diff - curbox%E_Inter
+      curbox % dETable = curbox%dETable - curbox % ETable
+    endif
+
+  end subroutine
+  !=====================================================================
   subroutine AtomExchange_EasyPair_Cut(self, curbox, disp, E_Diff, accept)
     implicit none
     class(EasyPair_Cut), intent(inout) :: self
@@ -618,6 +685,80 @@ module FF_EasyPair_Cut
       endif
     enddo
 
+  end subroutine
+  !=============================================================================+
+  ! Pair force scale from a centered finite difference of PairFunction.
+  ! F_i = scale * (r_i - r_j). Children such as EP_LJ_Cut may override
+  ! this with an analytic derivative.
+  function PairForceScale_EasyPair_Cut(self, rsq, atmtype1, atmtype2) result(scale)
+    implicit none
+    class(EasyPair_Cut), intent(inout) :: self
+    integer, intent(in) :: atmtype1, atmtype2
+    real(dp), intent(in) :: rsq
+    real(dp) :: scale
+    real(dp) :: delta, rsq_p, rsq_m, u_p, u_m, dU_drsq
+
+    scale = 0E0_dp
+    if(rsq >= self%rCutSq .or. rsq < 1.0E-20_dp) then
+      return
+    endif
+    delta = max(1.0E-8_dp, 1.0E-6_dp * rsq)
+    rsq_p = rsq + delta
+    rsq_m = rsq - delta
+    if(rsq_m < 1.0E-20_dp) then
+      rsq_m = 1.0E-20_dp
+    endif
+    u_p = self%PairFunction(rsq_p, atmtype1, atmtype2)
+    u_m = self%PairFunction(rsq_m, atmtype1, atmtype2)
+    dU_drsq = (u_p - u_m) / (rsq_p - rsq_m)
+    scale = -2.0E0_dp * dU_drsq
+  end function
+  !=============================================================================+
+  function HasComputeForces_EasyPair_Cut(self) result(hasForce)
+    implicit none
+    class(EasyPair_Cut), intent(in) :: self
+    logical :: hasForce
+
+    hasForce = .true.
+  end function
+  !=============================================================================+
+  subroutine ComputeForces_EasyPair_Cut(self, curbox, forces, coords)
+    implicit none
+    class(EasyPair_Cut), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    real(dp), intent(out) :: forces(:,:)
+    real(dp), intent(in) :: coords(:,:)
+    integer :: iAtom, jAtom
+    integer :: atmType1, atmType2
+    integer :: nMax
+    real(dp) :: rx, ry, rz, rsq
+    real(dp) :: scale
+
+    forces = 0E0_dp
+    nMax = min(curbox%nMaxAtoms, size(coords, 2), size(forces, 2))
+    do iAtom = 1, nMax-1
+      if(.not. curbox%IsActive(iAtom)) cycle
+      atmType1 = curbox%AtomType(iAtom)
+      do jAtom = iAtom+1, nMax
+        if(.not. curbox%IsActive(jAtom)) cycle
+        if(curbox%MolIndx(jAtom) == curbox%MolIndx(iAtom)) cycle
+        rx = coords(1, iAtom) - coords(1, jAtom)
+        ry = coords(2, iAtom) - coords(2, jAtom)
+        rz = coords(3, iAtom) - coords(3, jAtom)
+        call curbox%Boundary(rx, ry, rz)
+        rsq = rx*rx + ry*ry + rz*rz
+        if(rsq >= self%rCutSq) cycle
+        atmType2 = curbox%AtomType(jAtom)
+        scale = self%PairForceScale(rsq, atmType1, atmType2)
+        if(scale == 0E0_dp) cycle
+        forces(1, iAtom) = forces(1, iAtom) + scale * rx
+        forces(2, iAtom) = forces(2, iAtom) + scale * ry
+        forces(3, iAtom) = forces(3, iAtom) + scale * rz
+        forces(1, jAtom) = forces(1, jAtom) - scale * rx
+        forces(2, jAtom) = forces(2, jAtom) - scale * ry
+        forces(3, jAtom) = forces(3, jAtom) - scale * rz
+      enddo
+    enddo
   end subroutine
   !=====================================================================
   subroutine ProcessIO_EasyPair_Cut(self, line)

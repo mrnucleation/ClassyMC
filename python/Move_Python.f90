@@ -17,6 +17,7 @@
 !              - 'atomexchange' - exchange atom types
 !              - 'volchange' - isotropic volume change
 !              - 'orthovolchange' - anisotropic volume change
+!              - 'newstate_isomol' - same N, many atom positions
 !      """
 !      return 'displacement'
 !
@@ -50,6 +51,14 @@
 !      For 'orthovolchange':
 !          {'volnew': float, 'volold': float,
 !           'xscale': float, 'yscale': float, 'zscale': float}
+!
+!      For 'newstate_isomol':
+!          {'new_atoms': numpy array (3 x nMaxAtoms),
+!           'n_moved': int (optional),
+!           'log_forward_prob': float (optional, recommended for FBMC)}
+!
+!      If log_forward_prob is returned, compute_reverse_prob should return the
+!      log reverse probability. Otherwise forward_prob / reverse_prob are linear.
 !      
 !      Any type can also return:
 !          {'reject': True} - to immediately reject the move
@@ -93,14 +102,14 @@
 module MCMove_Python
   use MoveClassDef
   use CoordinateTypes, only: Perturbation, Displacement, Deletion, Addition, &
-                             AtomExchange, VolChange, OrthoVolChange
+                             AtomExchange, VolChange, OrthoVolChange, NewState_IsoMol
   use SimpleSimBox, only: SimpleBox
   use VarPrecision
   use iso_c_binding, only: C_CHAR
 #ifdef EMBPYTHON
   use forpy_mod, only: dict, dict_create, get_sys_path, list, call_py, module_py, import_py, &
                        object, call_py_noret, tuple, &
-                       tuple_create, list_create, cast, err_print, is_none
+                       tuple_create, list_create, cast, err_print, is_none, ndarray
 #endif
   
   ! Move type constants
@@ -110,6 +119,7 @@ module MCMove_Python
   integer, parameter :: MOVE_ATOMEXCHANGE = 4
   integer, parameter :: MOVE_VOLCHANGE = 5
   integer, parameter :: MOVE_ORTHOVOLCHANGE = 6
+  integer, parameter :: MOVE_NEWSTATE_ISOMOL = 7
 
 #ifdef EMBPYTHON
 !------------------------------------------------------------------------------
@@ -175,7 +185,7 @@ module MCMove_Python
     implicit none
     class(PythonMove), intent(inout) :: self
     integer :: ierror
-    integer :: iBox, nBoxes, iType, maxAtoms
+    integer :: iBox, nBoxes, iType, maxAtoms, nMaxAtoms
     type(object) :: returnobj
     character(kind=C_CHAR, len=:), allocatable :: moveTypeStr
 
@@ -256,10 +266,25 @@ module MCMove_Python
         self%moveType = MOVE_ORTHOVOLCHANGE
         allocate(OrthoVolChange :: self%perturb(1:1))
         write(nout,"(1x,A)") "(Python Move) Move type: orthovolchange"
+
+      case("newstate_isomol")
+        self%moveType = MOVE_NEWSTATE_ISOMOL
+        allocate(NewState_IsoMol :: self%perturb(1:1))
+        nMaxAtoms = 0
+        do iBox = 1, nBoxes
+          nMaxAtoms = max(nMaxAtoms, BoxArray(iBox)%box%nMaxAtoms)
+        enddo
+        select type(p => self%perturb(1))
+          type is(NewState_IsoMol)
+            allocate(p%newAtoms(1:3, 1:nMaxAtoms))
+            p%newAtoms = 0E0_dp
+            p%nMoved = 0
+        end select
+        write(nout,"(1x,A)") "(Python Move) Move type: newstate_isomol"
         
       case default
         write(0,*) "ERROR! Unknown move type from Python: ", trim(adjustl(moveTypeStr))
-        write(0,*) "Valid types: displacement, deletion, addition, atomexchange, volchange, orthovolchange"
+        write(0,*) "Valid types: displacement, deletion, addition, atomexchange, volchange, orthovolchange, newstate_isomol"
         error stop
     end select
 
@@ -277,6 +302,7 @@ module MCMove_Python
   end subroutine
 !=========================================================================
   subroutine PythonMove_FullMove(self, trialBox, accept) 
+    use ClassyPyObj, only: refreshboxdicts
     use CommonSampling, only: sampling
     use Common_MolInfo, only: MolData, nMolTypes
     use ParallelVar, only: nout
@@ -295,11 +321,15 @@ module MCMove_Python
     real(dp) :: volNew, volOld, xScale, yScale, zScale
     real(dp) :: E_Diff, E_Inter, E_Intra
     real(dp) :: Prob, forward_prob, reverse_prob
+    real(dp) :: log_forward_prob
     logical :: reject_flag
+    logical :: use_log_prob
 
     boxID = trialBox % boxID
     self % atmps = self % atmps + 1E0_dp
     accept = .true.
+
+    call refreshboxdicts(self%boxdicts)
 
     ! Call Python generate_move function
     ierror = call_py(returnobj, self%pymove, "generate_move", args=self%args)
@@ -322,12 +352,22 @@ module MCMove_Python
       endif
     endif
 
-    ! Parse forward_prob from the return dict (default 1.0)
+    ! Parse forward probability. If log_forward_prob is present, treat
+    ! compute_reverse_prob as returning a log reverse probability.
+    use_log_prob = .false.
+    log_forward_prob = 0E0_dp
     forward_prob = 1E0_dp
-    ierror = dispdict%getitem(item, "forward_prob")
+    ierror = dispdict%getitem(item, "log_forward_prob")
     if(ierror == 0) then
-      ierror = cast(forward_prob, item)
+      use_log_prob = .true.
+      ierror = cast(log_forward_prob, item)
       call item%destroy
+    else
+      ierror = dispdict%getitem(item, "forward_prob")
+      if(ierror == 0) then
+        ierror = cast(forward_prob, item)
+        call item%destroy
+      endif
     endif
 
     ! Parse displacement based on move type
@@ -349,6 +389,9 @@ module MCMove_Python
         
       case(MOVE_ORTHOVOLCHANGE)
         call ParseOrthoVolChange(dispdict, accept)
+
+      case(MOVE_NEWSTATE_ISOMOL)
+        call ParseNewState(dispdict, accept)
     end select
 
     if(.not. accept) then
@@ -372,12 +415,15 @@ module MCMove_Python
 
     ! Compute generation probability ratio for detailed balance
     ! acc = min(1, (reverse_prob / forward_prob) * exp(-beta * dE))
-    if(forward_prob > 0E0_dp) then
-      Prob = reverse_prob / forward_prob
+    if(use_log_prob) then
+      Prob = 1E0_dp
     else
-      ! Invalid forward probability - reject move
-      accept = .false.
-      return
+      if(forward_prob > 0E0_dp) then
+        Prob = reverse_prob / forward_prob
+      else
+        accept = .false.
+        return
+      endif
     endif
 
     ! Set box ID on perturbation
@@ -415,7 +461,12 @@ module MCMove_Python
     endif
 
     !Accept/Reject
-    accept = sampling % MakeDecision(trialBox, E_Diff, self%perturb(1:1), inProb=Prob)
+    if(use_log_prob) then
+      accept = sampling % MakeDecision(trialBox, E_Diff, self%perturb(1:1), &
+                                       logProb=reverse_prob-log_forward_prob)
+    else
+      accept = sampling % MakeDecision(trialBox, E_Diff, self%perturb(1:1), inProb=Prob)
+    endif
     if(accept) then
       self % accpt = self % accpt + 1E0_dp
       call trialBox % UpdateEnergy(E_Diff, E_Inter, E_Intra)
@@ -435,8 +486,13 @@ module MCMove_Python
 
       ierr = self%accept_args%setitem(0, self%boxlist)
       ierr = self%accept_args%setitem(1, accepted)
-      ierr = self%accept_args%setitem(2, forward_prob)
-      ierr = self%accept_args%setitem(3, reverse_prob)
+      if(use_log_prob) then
+        ierr = self%accept_args%setitem(2, log_forward_prob)
+        ierr = self%accept_args%setitem(3, reverse_prob)
+      else
+        ierr = self%accept_args%setitem(2, forward_prob)
+        ierr = self%accept_args%setitem(3, reverse_prob)
+      endif
       ierr = call_py_noret(self%pymove, "accept_move", args=self%accept_args)
     end subroutine
     !-----------------------------------------------------------------------
@@ -669,6 +725,61 @@ module MCMove_Python
           p%yScale = yScale
           p%zScale = zScale
       end select
+    end subroutine
+    !-----------------------------------------------------------------------
+    subroutine ParseNewState(ddict, ok)
+      type(dict), intent(inout) :: ddict
+      logical, intent(out) :: ok
+      integer :: ierr
+      integer :: n1, n2, nCopy
+      integer :: nMoved
+      type(ndarray) :: np_new
+      real(dp), pointer :: newptr(:,:) => null()
+
+      ok = .true.
+
+      ierr = ddict%getitem(item, "new_atoms")
+      if(ierr /= 0) then; ok = .false.; return; endif
+      ierr = cast(np_new, item)
+      call item%destroy
+      if(ierr /= 0) then; ok = .false.; return; endif
+
+      ierr = np_new%get_data(newptr)
+      if(ierr /= 0 .or. .not. associated(newptr)) then
+        ok = .false.
+        call np_new%destroy
+        return
+      endif
+
+      select type(p => self%perturb(1))
+        type is(NewState_IsoMol)
+          if(.not. allocated(p%newAtoms)) then
+            write(0,*) "ERROR! NewState_IsoMol newAtoms was not allocated in Prologue"
+            ok = .false.
+            call np_new%destroy
+            return
+          endif
+          n1 = size(newptr, 1)
+          n2 = size(newptr, 2)
+          p%newAtoms = 0E0_dp
+          if(n1 == 3) then
+            nCopy = min(size(p%newAtoms, 2), n2)
+            p%newAtoms(1:3, 1:nCopy) = newptr(1:3, 1:nCopy)
+          else
+            write(0,*) "ERROR! new_atoms must have shape (3, nAtoms), got", n1, n2
+            ok = .false.
+            call np_new%destroy
+            return
+          endif
+          p%nMoved = 0
+          ierr = ddict%getitem(item, "n_moved")
+          if(ierr == 0) then
+            ierr = cast(nMoved, item)
+            call item%destroy
+            if(ierr == 0) p%nMoved = nMoved
+          endif
+      end select
+      call np_new%destroy
     end subroutine
     !-----------------------------------------------------------------------
 

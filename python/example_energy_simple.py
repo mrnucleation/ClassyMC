@@ -18,6 +18,7 @@ Required Functions:
     - prologue(boxlist): Initialize with starting configuration
     - compute_total(boxlist): Compute total system energy
     - compute_diff(boxlist, displist): Compute energy difference for a move
+    - compute_forces(boxlist, coords): Forces at coords (for native forcebias)
 
 The return dictionary must contain:
     - 'energy': float - the computed energy (required)
@@ -213,11 +214,63 @@ def compute_diff(boxlist, displist):
             rsq = dx*dx + dy*dy + dz*dz
             
             delta_energy -= 0.5 * spring_constant * rsq
+
+        elif disp_type == 'newstate_isomol':
+            new_atoms = disp.get('new_atoms')
+            if new_atoms is None:
+                return {'energy': 0.0, 'accept': False}
+            mol_types = box['moltype']
+            mol_subindx = box['molsubindx']
+            nmol = box['moleculecount']
+            nmax = min(atoms.shape[1], new_atoms.shape[1], _reference_positions.shape[1])
+            for i in range(nmax):
+                mol_type = mol_types[i]
+                mol_idx = mol_subindx[i]
+                if mol_idx > nmol[mol_type - 1]:
+                    continue
+                dx_old = atoms[0, i] - _reference_positions[0, i]
+                dy_old = atoms[1, i] - _reference_positions[1, i]
+                dz_old = atoms[2, i] - _reference_positions[2, i]
+                dx_new = new_atoms[0, i] - _reference_positions[0, i]
+                dy_new = new_atoms[1, i] - _reference_positions[1, i]
+                dz_new = new_atoms[2, i] - _reference_positions[2, i]
+                rsq_old = dx_old*dx_old + dy_old*dy_old + dz_old*dz_old
+                rsq_new = dx_new*dx_new + dy_new*dy_new + dz_new*dz_new
+                delta_energy += 0.5 * spring_constant * (rsq_new - rsq_old)
     
     return {
         'energy': delta_energy,
         'accept': True
     }
+
+
+def compute_forces(boxlist, coords):
+    """
+    Harmonic tether forces at coords: F = -k (r - r_ref).
+
+    Required for native forcebias. `coords` may be a trial state.
+    """
+    global _reference_positions
+
+    nmax = coords.shape[1]
+    forces = np.zeros((3, nmax), dtype=np.float64, order='F')
+    if not _initialized or _reference_positions is None:
+        return {'forces': forces}
+
+    box = boxlist[0]
+    mol_types = box['moltype']
+    mol_subindx = box['molsubindx']
+    nmol = box['moleculecount']
+    ncopy = min(nmax, _reference_positions.shape[1])
+    for i in range(ncopy):
+        mol_type = mol_types[i]
+        mol_idx = mol_subindx[i]
+        if mol_idx > nmol[mol_type - 1]:
+            continue
+        forces[0, i] = -spring_constant * (coords[0, i] - _reference_positions[0, i])
+        forces[1, i] = -spring_constant * (coords[1, i] - _reference_positions[1, i])
+        forces[2, i] = -spring_constant * (coords[2, i] - _reference_positions[2, i])
+    return {'forces': forces}
 
 
 def update(boxlist):

@@ -10,6 +10,8 @@ module UmbrellaWHAMRule
     integer :: nBiasVar = 0
     integer, allocatable :: AnalysisIndex(:)
 
+    !umbrellaLimit => The total number of umbrella bins. Computed as N = nBins1 * nBins2 * nBins3 * ... * nBinsN.
+
     integer :: umbrellaLimit = 0
     integer, private :: potfile = 0
     integer, private :: histfile = 0
@@ -25,6 +27,7 @@ module UmbrellaWHAMRule
     real(dp), allocatable :: UHist(:)
     real(dp), allocatable :: UBinSize(:)
     real(dp), allocatable :: varValues(:)
+    real(dp) :: zerodefault = 1E0_dp
     character(len=50) :: fileName = "umbrella.dat"
 
     real(dp), allocatable :: refVals(:)
@@ -718,6 +721,15 @@ module UmbrellaWHAMRule
           read(command, *) realVal
           self%maintFreq = floor(realVal)
 
+      case("zerodefault")
+          call GetXCommand(line, command, 4, lineStat)
+          read(command, *) realVal
+          if(realVal < 0E0_dp) then
+            write(0,*) "ERROR! The default zero value for the umbrella sampling histogram must be positive!"
+            error stop
+          endif
+          self%zeroDefault = realVal
+
       case default
         lineStat = -1
     end select
@@ -932,10 +944,10 @@ module UmbrellaWHAMRule
         self%FreeEnergyEst = 0E0_dp
       endif
 
-
+      ! Update the umbrella bias based on the new free energy estimate.  If a b
       do i = 1, self%umbrellaLimit
         if(self%TempHist(i) < 1E0_dp) then
-          self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) + log(self%TempHist(maxbin2))
+          self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) + log(self%TempHist(maxbin2)/self%zeroDefault)
         else
           self%NewBias(i) = self%UBias(i) - self%UBias(maxbin2) - log(self%TempHist(i)/self%TempHist(maxbin2))
         endif

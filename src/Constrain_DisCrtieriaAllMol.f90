@@ -7,7 +7,7 @@ module Constrain_DistanceCriteriaAllMol
   use VarPrecision
   use ConstraintTemplate, only: constraint
   use CoordinateTypes, only: Perturbation
-  use CoordinateTypes, only: Displacement, Deletion, Addition
+  use CoordinateTypes, only: Displacement, Deletion, Addition, NewState_IsoMol
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
   implicit none
@@ -413,6 +413,64 @@ module Constrain_DistanceCriteriaAllMol
           endif
         enddo
 
+        if(startMol == 0) then
+          if(nActive >= 2) then
+            accept = .false.
+            return
+          endif
+          self%clustMemb = .false.
+          nNew = 0
+          nClust = nActive
+        else
+          self%clustMemb = .false.
+          self%clustMemb(startMol) = .true.
+          self%newlist(1) = startMol
+          nNew = 1
+          nClust = 1
+        endif
+
+      !----------------------------------------------------------------
+      class is(NewState_IsoMol)
+        self%newTopoList = .false.
+        if(nActive < 2) then
+          accept = .true.
+          return
+        endif
+        if(.not. allocated(disp(1)%newAtoms)) then
+          accept = .false.
+          return
+        endif
+        do iMol = 1, self%nMolMax - 1
+          call trialBox%GetMolData(iMol, molType=molType, molStart=molStart)
+          if(.not. trialBox%IsActive(molStart)) cycle
+          iAtom = molStart + self%atomNumType(molType) - 1
+          do jMol = iMol + 1, self%nMolMax
+            call trialBox%GetMolData(jMol, molType=jType, molStart=jStart)
+            if(.not. trialBox%IsActive(jStart)) cycle
+            jAtom = jStart + self%atomNumType(jType) - 1
+            rx = disp(1)%newAtoms(1, iAtom) - disp(1)%newAtoms(1, jAtom)
+            ry = disp(1)%newAtoms(2, iAtom) - disp(1)%newAtoms(2, jAtom)
+            rz = disp(1)%newAtoms(3, iAtom) - disp(1)%newAtoms(3, jAtom)
+            call trialBox%Boundary(rx, ry, rz)
+            rsq = rx*rx + ry*ry + rz*rz
+            if(rsq < self%rCutPairSq(molType, jType)) then
+              self%newTopoList(iMol, jMol) = .true.
+              self%newTopoList(jMol, iMol) = .true.
+            endif
+          enddo
+        enddo
+        startMol = 0
+        leave = .false.
+        do iMol = 1, self%nMolMax
+          do jMol = 1, self%nMolMax
+            if(self%newTopoList(jMol, iMol)) then
+              startMol = iMol
+              leave = .true.
+              exit
+            endif
+          enddo
+          if(leave) exit
+        enddo
         if(startMol == 0) then
           if(nActive >= 2) then
             accept = .false.

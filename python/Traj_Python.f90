@@ -119,6 +119,7 @@ module Traj_Python
     errcheck_macro
     ierror = paths%append(".")
     errcheck_macro
+    call paths%destroy
 
     ierror = import_py(self%pytraj, trim(adjustl(self%pymodule)))
     errcheck_macro
@@ -169,32 +170,38 @@ module Traj_Python
     errcheck_macro
     ierror = self%boxinfo%setitem("boxdimensions", np_boxdim)
     errcheck_macro
+    call np_boxdim%destroy
 
     ! Add atomic data with no-copy for efficiency
     ierror = ndarray_create_nocopy(np_atoms, BoxArray(boxNum)%box%atoms)
     errcheck_macro
     ierror = self%boxinfo%setitem("raw_atoms", np_atoms)
     errcheck_macro
+    call np_atoms%destroy
 
     ierror = ndarray_create_nocopy(np_atomtype, BoxArray(boxNum)%box%AtomType)
     errcheck_macro
     ierror = self%boxinfo%setitem("atomtype", np_atomtype)
     errcheck_macro
+    call np_atomtype%destroy
 
     ierror = ndarray_create_nocopy(np_nmol, BoxArray(boxNum)%box%NMol)
     errcheck_macro
     ierror = self%boxinfo%setitem("moleculecount", np_nmol)
     errcheck_macro
+    call np_nmol%destroy
 
     ierror = ndarray_create_nocopy(np_moltype, BoxArray(boxNum)%box%MolType)
     errcheck_macro
     ierror = self%boxinfo%setitem("moltype", np_moltype)
     errcheck_macro
+    call np_moltype%destroy
 
     ierror = ndarray_create_nocopy(np_molsubindx, BoxArray(boxNum)%box%MolSubIndx)
     errcheck_macro
     ierror = self%boxinfo%setitem("molsubindx", np_molsubindx)
     errcheck_macro
+    call np_molsubindx%destroy
 
     ! Add atom symbols list
     ierror = list_create(atomsymbols)
@@ -205,6 +212,7 @@ module Traj_Python
     enddo
     ierror = self%boxinfo%setitem("atomsymbols", atomsymbols)
     errcheck_macro
+    call atomsymbols%destroy
 
     ! Create argument tuples
     ierror = tuple_create(self%args_prologue, 1)
@@ -238,27 +246,18 @@ module Traj_Python
 !=========================================================================
   subroutine PythonTraj_WriteFrame(self, iCycle)
     use BoxData, only: BoxArray
+    use ClassyPyObj, only: refreshboxdict
     implicit none
     class(PythonTraj), intent(inout) :: self
     integer(kind=8), intent(in) :: iCycle
     integer :: ierror, boxNum
-    type(ndarray) :: np_boxdim
-    real(dp), allocatable :: boxDim(:,:)
 
     boxNum = self%boxNum
 
-    ! Update dynamic values in boxinfo
-    ierror = self%boxinfo%setitem("volume", BoxArray(boxNum)%box%volume)
+    call refreshboxdict(self%boxinfo, boxNum)
     ierror = self%boxinfo%setitem("natoms", BoxArray(boxNum)%box%nAtoms)
     ierror = self%boxinfo%setitem("cycle", iCycle)
 
-    ! Update box dimensions (may change for NPT)
-    allocate(boxDim(1:2, 1:BoxArray(boxNum)%box%nDimension))
-    call BoxArray(boxNum)%box%GetDimensions(boxDim)
-    ierror = ndarray_create(np_boxdim, boxDim)
-    ierror = self%boxinfo%setitem("boxdimensions", np_boxdim)
-
-    ! Set cycle in args and call Python
     ierror = self%args_frame%setitem(1, iCycle)
     errcheck_macro
 

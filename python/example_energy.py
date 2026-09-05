@@ -14,6 +14,8 @@ Required Functions:
     - prologue(boxlist): Called once at the start of the simulation
     - compute_total(boxlist): Compute total system energy
     - compute_diff(boxlist, displist): Compute energy difference for a move
+    - compute_forces(boxlist, coords): Forces at coords (optional but required
+      for native forcebias; omit to fall back to finite difference)
     - update(boxlist): Called after accepted moves to update internal state
 
 The boxlist contains dictionaries with box information:
@@ -31,11 +33,30 @@ The boxlist contains dictionaries with box information:
     - 'energytable': numpy array - energy table
 
 The displist contains dictionaries with displacement information:
-    - 'type': str - 'displacement', 'addition', 'deletion', etc.
+    - 'type': str - 'displacement', 'addition', 'deletion', 'newstate_isomol', etc.
     - 'moltype': int - molecule type
     - 'molindex': int - molecule index
     - 'atomindex': int - atom index
     - 'x_new', 'y_new', 'z_new': float - new coordinates (if applicable)
+    - For 'newstate_isomol':
+        - 'new_atoms': numpy array (3 x nMaxAtoms) - full proposed coordinates
+        - 'n_moved': int - number of atoms that were changed (informational)
+
+If the box has had forces allocated on the Fortran side, box dictionaries may also
+contain:
+    - 'forces': numpy array (3 x nMaxAtoms) - last forces stored on the box
+      (only present after ComputeForces)
+
+For native force-bias, implement compute_forces(boxlist, coords) and return
+{'forces': array} evaluated at coords (which may be a trial state, not
+box['raw_atoms']). Pair with:
+
+    create moves 1
+        forcebias 1.0
+    ...
+    pythonenergy
+        module example_energy
+
 
 Return Format:
     Both compute_total and compute_diff should return a dictionary containing:
@@ -360,12 +381,41 @@ def compute_diff(boxlist, displist):
                     delta_energy -= e
                     denergy_table[i] -= e
                     denergy_table[j] -= e
+
+        elif disp_type == 'newstate_isomol':
+            new_atoms = disp.get('new_atoms')
+            if new_atoms is None:
+                return {'energy': 0.0, 'accept': False}
+            e_new, etable_new, ok = lj_energy_config(new_atoms, box)
+            if not ok:
+                return {'energy': 0.0, 'accept': False, 'denergytable': denergy_table}
+            e_old, etable_old, _ = lj_energy_config(atoms, box)
+            de_table = etable_new - etable_old
+            delta_energy += (e_new - e_old)
+            ncopy = min(len(denergy_table), len(de_table))
+            denergy_table[:ncopy] += de_table[:ncopy]
     
     return {
         'energy': delta_energy,
         'accept': accept,
         'denergytable': denergy_table
     }
+
+
+def compute_forces(boxlist, coords):
+    """
+    Forces at the given coordinates.
+
+    Fortran calls this from ComputeForces / native force-bias. `coords` is the
+    configuration to evaluate (current box or a NewState_IsoMol trial). Use
+    `coords`, not box['raw_atoms'], for positions.
+
+    Returns:
+        dict with 'forces': numpy array (3 x nAtoms), Fortran order, F = -dU/dr
+    """
+    box = boxlist[0]
+    forces = compute_lj_forces(coords, box)
+    return {'forces': np.asfortranarray(forces)}
 
 
 def update(boxlist):
@@ -437,6 +487,132 @@ def get_pair_energy(rsq):
     sig_over_r_sq = (sigma * sigma) / rsq
     sig_over_r_6 = sig_over_r_sq * sig_over_r_sq * sig_over_r_sq
     return 4.0 * epsilon * sig_over_r_6 * (sig_over_r_6 - 1.0)
+
+
+def _atom_is_active(i, mol_types, mol_subindx, nmol):
+    """Return True if atom i is currently occupied in the box."""
+    mol_type = int(mol_types[i])
+    mol_idx = int(mol_subindx[i])
+    if mol_type < 1 or mol_type > len(nmol):
+        return False
+    return mol_idx <= nmol[mol_type - 1]
+
+
+def lj_energy_config(atoms, box):
+    """
+    Full Lennard-Jones energy of a coordinate array.
+
+    Args:
+        atoms: numpy array (3 x nMaxAtoms), same layout as box['raw_atoms']
+        box: box dictionary from Classy
+
+    Returns:
+        tuple: (energy, energy_table, accept)
+    """
+    atom_types = box['atomtype']
+    mol_types = box['moltype']
+    mol_subindx = box['molsubindx']
+    nmol = box['moleculecount']
+    nmax = atoms.shape[1]
+    energy_table = np.zeros(nmax, dtype=np.float64)
+    total_energy = 0.0
+
+    box_dim = box.get('boxdimensions')
+    has_pbc = box_dim is not None and box['boxtype'] != 'nobox'
+    if has_pbc:
+        lx = box_dim[1, 0] - box_dim[0, 0]
+        ly = box_dim[1, 1] - box_dim[0, 1]
+        lz = box_dim[1, 2] - box_dim[0, 2]
+
+    for i in range(nmax - 1):
+        if not _atom_is_active(i, mol_types, mol_subindx, nmol):
+            continue
+        for j in range(i + 1, nmax):
+            if not _atom_is_active(j, mol_types, mol_subindx, nmol):
+                continue
+            if mol_types[i] == mol_types[j] and mol_subindx[i] == mol_subindx[j]:
+                continue
+            rx = atoms[0, i] - atoms[0, j]
+            ry = atoms[1, i] - atoms[1, j]
+            rz = atoms[2, i] - atoms[2, j]
+            if has_pbc:
+                rx = rx - lx * round(rx / lx)
+                ry = ry - ly * round(ry / ly)
+                rz = rz - lz * round(rz / lz)
+            rsq = rx * rx + ry * ry + rz * rz
+            if rsq < rmin_sq:
+                return 0.0, energy_table, False
+            if rsq < rcut_sq:
+                e = get_pair_energy(rsq)
+                total_energy += e
+                energy_table[i] += e
+                energy_table[j] += e
+
+    return total_energy, energy_table, True
+
+
+def compute_lj_forces(atoms, box):
+    """
+    Analytic Lennard-Jones forces on a coordinate array.
+
+    Force on i from j: F = 24*eps*(2*(sig/r)^12 - (sig/r)^6) * r_ij / r^2
+    with r_ij = r_i - r_j. Native force-bias uses compute_forces() which
+    wraps this helper so F can be evaluated on a trial state.
+
+    Args:
+        atoms: numpy array (3 x nMaxAtoms)
+        box: box dictionary from Classy
+
+    Returns:
+        numpy array (3 x nMaxAtoms) of forces. Inactive atoms are zero.
+    """
+    mol_types = box['moltype']
+    mol_subindx = box['molsubindx']
+    nmol = box['moleculecount']
+    nmax = atoms.shape[1]
+    forces = np.zeros((3, nmax), dtype=np.float64, order='F')
+
+    box_dim = box.get('boxdimensions')
+    has_pbc = box_dim is not None and box['boxtype'] != 'nobox'
+    if has_pbc:
+        lx = box_dim[1, 0] - box_dim[0, 0]
+        ly = box_dim[1, 1] - box_dim[0, 1]
+        lz = box_dim[1, 2] - box_dim[0, 2]
+
+    sig2 = sigma * sigma
+    for i in range(nmax - 1):
+        if not _atom_is_active(i, mol_types, mol_subindx, nmol):
+            continue
+        for j in range(i + 1, nmax):
+            if not _atom_is_active(j, mol_types, mol_subindx, nmol):
+                continue
+            if mol_types[i] == mol_types[j] and mol_subindx[i] == mol_subindx[j]:
+                continue
+            rx = atoms[0, i] - atoms[0, j]
+            ry = atoms[1, i] - atoms[1, j]
+            rz = atoms[2, i] - atoms[2, j]
+            if has_pbc:
+                rx = rx - lx * round(rx / lx)
+                ry = ry - ly * round(ry / ly)
+                rz = rz - lz * round(rz / lz)
+            rsq = rx * rx + ry * ry + rz * rz
+            if rsq < rcut_sq and rsq > 0.0:
+                inv_r2 = 1.0 / rsq
+                sig_over_r_sq = sig2 * inv_r2
+                sig_over_r_6 = sig_over_r_sq * sig_over_r_sq * sig_over_r_sq
+                # 24*eps*(2*s12 - s6) / r^2 * r_vec
+                f_scale = 24.0 * epsilon * (2.0 * sig_over_r_6 * sig_over_r_6 - sig_over_r_6) * inv_r2
+                fx = f_scale * rx
+                fy = f_scale * ry
+                fz = f_scale * rz
+                forces[0, i] += fx
+                forces[1, i] += fy
+                forces[2, i] += fz
+                forces[0, j] -= fx
+                forces[1, j] -= fy
+                forces[2, j] -= fz
+
+    return forces
 
 
 def minimum_image(rx, ry, rz, box):

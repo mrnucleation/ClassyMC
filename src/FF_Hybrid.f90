@@ -15,11 +15,13 @@ module FF_Hybrid
       procedure, pass :: Constructor => Hybrid_Constructor
       procedure, pass :: DetailedECalc => Hybrid_DetailedECalc
       procedure, pass :: DiffECalc => Hybrid_DiffECalc
+      procedure, pass :: HasComputeForces => Hybrid_HasComputeForces
+      procedure, pass :: ComputeForces => Hybrid_ComputeForces
+      procedure, pass :: ProcessIO => Hybrid_ProcessIO
 !      procedure, pass :: ShiftECalc_Single => Hybrid_ShiftECalc_Single
 !      procedure, pass :: NewECalc => Hybrid_NewECalc
 !      procedure, pass :: OldECalc => Hybrid_OldECalc
 !      procedure, pass :: OrthoVolECalc => Hybrid_OrthoVolECalc
-      procedure, pass :: ProcessIO => Hybrid_ProcessIO
       procedure, pass :: GetCutOff => Hybrid_GetCutOff
       procedure, pass :: Update => Hybrid_Update
   end type
@@ -94,10 +96,41 @@ module FF_Hybrid
       class is(OrthoVolChange)
         E_Diff = E_Diff - curbox%E_Inter
         curbox%dETable = curbox%dETable - curbox%ETable
+      class is(NewState_IsoMol)
+        E_Diff = E_Diff - curbox%E_Inter
+        curbox%dETable = curbox%dETable - curbox%ETable
     end select
 
 
 
+  end subroutine
+!=============================================================================+
+  function Hybrid_HasComputeForces(self) result(hasForce)
+    implicit none
+    class(Pair_Hybrid), intent(in) :: self
+    logical :: hasForce
+
+    hasForce = .true.
+  end function
+!=============================================================================+
+  subroutine Hybrid_ComputeForces(self, curbox, forces, coords)
+    implicit none
+    class(Pair_Hybrid), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    real(dp), intent(out) :: forces(:,:)
+    real(dp), intent(in) :: coords(:,:)
+    integer :: iField
+    real(dp) :: fsub(size(forces,1), size(forces,2))
+
+    forces = 0E0_dp
+    do iField = 1, self%NFFields
+      if(EnergyCalculator(self%ECalcIndx(iField)) % Method % HasComputeForces()) then
+        call EnergyCalculator(self%ECalcIndx(iField)) % Method % ComputeForces(curbox, fsub, coords)
+      else
+        call EnergyCalculator(self%ECalcIndx(iField)) % Method % ComputeForcesFiniteDiff(curbox, fsub, coords)
+      endif
+      forces = forces + fsub
+    enddo
   end subroutine
 !=============================================================================+
   subroutine Hybrid_ProcessIO(self, line)

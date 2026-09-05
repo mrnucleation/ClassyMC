@@ -10,7 +10,7 @@
 !      """Called once at the start of the simulation to initialize.
 !      
 !      Args:
-!          boxinfo: Dictionary containing box information
+!          boxinfo: Dictionary containing box information (see createboxdict)
 !      """
 !      pass
 !
@@ -18,19 +18,24 @@
 !      """Check if the initial configuration satisfies the constraint.
 !      
 !      Args:
-!          boxinfo: Dictionary containing:
-!              - 'boxtype': str - type of box ('cube', 'ortho', etc.)
+!          boxinfo: Standardized box dictionary from ClassyPyObj containing:
+!              - 'boxtype': str - type of box ('cube', 'ortho', 'nobox', etc.)
+!              - 'thread_id': int - parallel thread id
+!              - 'box_id': int - box identifier
+!              - 'energy': float - total energy
 !              - 'temperature': float - temperature
 !              - 'pressure': float - pressure
 !              - 'volume': float - volume
 !              - 'boxdimensions': numpy array (2 x ndim) - box bounds
+!              - 'chemicalpotential': numpy array - chemical potentials
 !              - 'atomtype': numpy array - atom types (1-indexed)
-!              - 'raw_atoms': numpy array (3 x nMaxAtoms) - atomic coordinates
+!              - 'raw_atoms': numpy array (ndim x nMaxAtoms) - atomic coordinates
 !              - 'moleculecount': numpy array - molecules per type
-!              - 'natoms': int - current number of atoms
-!              - 'nmaxatoms': int - maximum atoms
+!              - 'energytable': numpy array - per-atom energies
 !              - 'moltype': numpy array - molecule type per atom
 !              - 'molsubindx': numpy array - molecule sub-index per atom
+!              - 'molindx': numpy array - molecule index per atom
+!              - 'neighlists': list of neighbor-list dicts (if present)
 !      
 !      Returns:
 !          bool: True if constraint satisfied, False otherwise
@@ -89,16 +94,14 @@
 module Constrain_Python
   use VarPrecision
   use ConstraintTemplate, only: constraint
-  use CoordinateTypes, only: Perturbation, Displacement, Deletion, Addition, &
-                             VolChange, OrthoVolChange
+  use CoordinateTypes, only: Perturbation
   use Template_SimBox, only: SimBox
   use ParallelVar, only: nout
 
 #ifdef EMBPYTHON
-  use forpy_mod, only: dict, dict_create, list, list_create, call_py, &
-                       module_py, import_py, object, call_py_noret, tuple, &
-                       tuple_create, ndarray, ndarray_create, ndarray_create_nocopy, &
-                       cast, err_print, get_sys_path
+  use forpy_mod, only: dict, list, call_py, module_py, import_py, object, &
+                       call_py_noret, tuple, tuple_create, ndarray, &
+                       ndarray_create, cast, err_print, get_sys_path
 !------------------------------------------------------------------------------
   type, public, extends(constraint) :: PythonConstraint
     logical, private :: initialized = .false.
@@ -126,18 +129,12 @@ module Constrain_Python
 !=========================================================================
   subroutine PythonConstraint_Constructor(self, boxID)
     use BoxData, only: BoxArray
-    use CubicBoxDef, only: CubeBox
-    use OrthoBoxDef, only: OrthoBox
-    use SimpleSimBox, only: SimpleBox
-    use Common_MolInfo, only: AtomData, nAtomTypes
+    use ClassyPyObj, only: createboxdict_nocopy
     implicit none
     class(PythonConstraint), intent(inout) :: self
     integer, intent(in) :: boxID
-    integer :: ierror, iType
-    type(list) :: paths, atomsymbols
-    type(ndarray) :: np_atoms, np_boxdim, np_atomtype, np_nmol
-    type(ndarray) :: np_moltype, np_molsubindx
-    real(dp), allocatable :: boxDim(:,:)
+    integer :: ierror
+    type(list) :: paths
 
     if(self%initialized) then
       return
@@ -152,91 +149,13 @@ module Constrain_Python
     errcheck_macro
     ierror = paths%append(".")
     errcheck_macro
+    call paths%destroy
 
     ierror = import_py(self%pyconstraint, trim(adjustl(self%pymodule)))
     errcheck_macro
 
-    ! Create the boxinfo dictionary
-    ierror = dict_create(self%boxinfo)
-    errcheck_macro
-
-    ! Add box type
-    select type(box => BoxArray(boxID)%box)
-      type is(SimpleBox)
-        ierror = self%boxinfo%setitem("boxtype", "nobox")
-      class is(CubeBox)
-        ierror = self%boxinfo%setitem("boxtype", "cube")
-      class is(OrthoBox)
-        ierror = self%boxinfo%setitem("boxtype", "ortho")
-      class default
-        ierror = self%boxinfo%setitem("boxtype", "unknown")
-    end select
-    errcheck_macro
-
-    ! Add thermodynamic properties
-    ierror = self%boxinfo%setitem("temperature", BoxArray(boxID)%box%temperature)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("pressure", BoxArray(boxID)%box%pressure)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("volume", BoxArray(boxID)%box%volume)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("natoms", BoxArray(boxID)%box%nAtoms)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("nmaxatoms", BoxArray(boxID)%box%nMaxAtoms)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("ndimension", BoxArray(boxID)%box%nDimension)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("boxid", boxID)
-    errcheck_macro
-
-    ! Add box dimensions (requires select type to access GetDimensions)
-    allocate(boxDim(1:2, 1:BoxArray(boxID)%box%nDimension))
-    select type(box => BoxArray(boxID)%box)
-      class is(SimpleBox)
-        call box%GetDimensions(boxDim)
-      class default
-        boxDim = 0.0_dp
-    end select
-    ierror = ndarray_create(np_boxdim, boxDim)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("boxdimensions", np_boxdim)
-    errcheck_macro
-
-    ! Add atomic data with no-copy for efficiency
-    ierror = ndarray_create_nocopy(np_atoms, BoxArray(boxID)%box%atoms)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("raw_atoms", np_atoms)
-    errcheck_macro
-
-    ierror = ndarray_create_nocopy(np_atomtype, BoxArray(boxID)%box%AtomType)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("atomtype", np_atomtype)
-    errcheck_macro
-
-    ierror = ndarray_create_nocopy(np_nmol, BoxArray(boxID)%box%NMol)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("moleculecount", np_nmol)
-    errcheck_macro
-
-    ierror = ndarray_create_nocopy(np_moltype, BoxArray(boxID)%box%MolType)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("moltype", np_moltype)
-    errcheck_macro
-
-    ierror = ndarray_create_nocopy(np_molsubindx, BoxArray(boxID)%box%MolSubIndx)
-    errcheck_macro
-    ierror = self%boxinfo%setitem("molsubindx", np_molsubindx)
-    errcheck_macro
-
-    ! Add atom symbols list
-    ierror = list_create(atomsymbols)
-    errcheck_macro
-    do iType = 1, nAtomTypes
-      ierror = atomsymbols%append(trim(adjustl(AtomData(iType)%Symb)))
-      errcheck_macro
-    enddo
-    ierror = self%boxinfo%setitem("atomsymbols", atomsymbols)
-    errcheck_macro
+    ! Use the standardized ClassyPyObj box dictionary
+    self%boxinfo = createboxdict_nocopy(boxID)
 
     ! Create argument tuples
     ierror = tuple_create(self%args_init, 1)
@@ -270,36 +189,18 @@ module Constrain_Python
   end subroutine
 !=========================================================================
   subroutine PythonConstraint_CheckInitialConstraint(self, trialBox, accept)
-    use BoxData, only: BoxArray
-    use SimpleSimBox, only: Simplebox
+    use ClassyPyObj, only: refreshboxdict
     implicit none
     class(PythonConstraint), intent(inout) :: self
     class(SimBox), intent(inout) :: trialBox
     logical, intent(out) :: accept
     type(object) :: returnobj
     integer :: ierror
-    type(ndarray) :: np_boxdim
-    real(dp), allocatable :: boxDim(:,:)
 
     accept = .true.
 
-    ! Update dynamic values in boxinfo
-    ierror = self%boxinfo%setitem("volume", trialBox%volume)
-    ierror = self%boxinfo%setitem("natoms", trialBox%nAtoms)
+    call refreshboxdict(self%boxinfo, self%boxID)
 
-    ! Update box dimensions using select type for SimpleBox
-    allocate(boxDim(1:2, 1:trialBox%nDimension))
-    select type(box => trialBox)
-      class is (SimpleBox)
-        call box%GetDimensions(boxDim)
-      class default
-        ! Default to zero dimensions if not a SimpleBox
-        boxDim = 0.0_dp
-    end select
-    ierror = ndarray_create(np_boxdim, boxDim)
-    ierror = self%boxinfo%setitem("boxdimensions", np_boxdim)
-
-    ! Call Python check_initial
     ierror = call_py(returnobj, self%pyconstraint, "check_initial", args=self%args_init)
     errcheck_macro
     ierror = cast(accept, returnobj)
@@ -315,7 +216,6 @@ module Constrain_Python
   end subroutine
 !=========================================================================
   subroutine PythonConstraint_DiffCheck(self, trialBox, disp, accept)
-    use BoxData, only: BoxArray
     use ClassyPyObj, only: createdisplist
     implicit none
     class(PythonConstraint), intent(inout) :: self
@@ -346,7 +246,6 @@ module Constrain_Python
   end subroutine
 !=========================================================================
   subroutine PythonConstraint_PostEnergy(self, trialBox, disp, E_Diff, accept)
-    use BoxData, only: BoxArray
     use ClassyPyObj, only: createdisplist
     implicit none
     class(PythonConstraint), intent(inout) :: self

@@ -475,11 +475,7 @@ contains
     enddo
 
 
-    if( allocated(AnalysisArray) ) then
-      do i = 1, size(AnalysisArray)
-        call AnalysisArray(i) % func % Prologue
-      enddo
-    endif
+
 
     call Sampling % Prologue
 !    write(nout, *) "Traj"
@@ -494,6 +490,11 @@ contains
       call EnergyCalculator(i)%method%Prologue
     enddo
 
+    if( allocated(AnalysisArray) ) then
+      do i = 1, size(AnalysisArray)
+        call AnalysisArray(i) % func % Prologue
+      enddo
+    endif
 
 !    write(nout,*) "Box"
     do i = 1, size(BoxArray)

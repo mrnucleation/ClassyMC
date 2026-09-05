@@ -18,6 +18,7 @@ module Input_Moves
   use MCMove_PlaneTranslation, only: PlaneTranslate
   use MCMove_PlaneAtomTranslation, only: PlaneAtomTranslate
   use MCMove_IsoVol, only: IsoVol
+  use MCMove_ForceBias, only: ForceBias
   use MCMove_UB_Swap, only: UB_Swap
   use MCMove_VolExchange, only: VolExchange
 !  use Move_ThermoLambda, only: ThermoLambda
@@ -75,6 +76,9 @@ module Input_Moves
 
       case("isovol")
         allocate(IsoVol::Moves(moveNum)%move)
+
+      case("forcebias", "fbmc", "smartmc")
+        allocate(ForceBias::Moves(moveNum)%move)
 
       case("particleexchange")
         allocate(ParticleExchange::Moves(moveNum)%move)

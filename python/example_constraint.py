@@ -18,22 +18,24 @@ Required Functions:
     - update(boxinfo): Update internal state after accepted move
     - epilogue(boxinfo): Cleanup at end of simulation
 
-The boxinfo dictionary contains:
+The boxinfo dictionary is the standardized ClassyPyObj box dict containing:
     - 'boxtype': str - type of box ('cube', 'ortho', 'nobox')
+    - 'thread_id': int - parallel thread id
+    - 'box_id': int - box identifier
+    - 'energy': float - total energy
     - 'temperature': float - temperature
     - 'pressure': float - pressure
     - 'volume': float - volume
     - 'boxdimensions': numpy array (2 x ndim) - box bounds [[lo, hi], ...]
+    - 'chemicalpotential': numpy array - chemical potentials
     - 'atomtype': numpy array - atom types (1-indexed)
-    - 'raw_atoms': numpy array (3 x nMaxAtoms) - atomic coordinates
+    - 'raw_atoms': numpy array (ndim x nMaxAtoms) - atomic coordinates
     - 'moleculecount': numpy array - molecules per type
-    - 'natoms': int - current number of atoms
-    - 'nmaxatoms': int - maximum atoms
+    - 'energytable': numpy array - per-atom energies
     - 'moltype': numpy array - molecule type per atom
     - 'molsubindx': numpy array - molecule sub-index per atom
-    - 'atomsymbols': list of str - atomic symbols by type
-    - 'ndimension': int - number of dimensions
-    - 'boxid': int - box identifier
+    - 'molindx': numpy array - molecule index per atom
+    - 'neighlists': list of neighbor-list dicts (if present)
 
 The displist contains dictionaries with displacement information:
     - 'type': str - 'displacement', 'addition', 'deletion', 'volchange', etc.
@@ -64,10 +66,11 @@ def prologue(boxinfo):
     """
     global MAX_RADIUS, MIN_SEPARATION
     
+    n_max_atoms = boxinfo['raw_atoms'].shape[1]
     print("Python Constraint: Initializing example constraint")
     print(f"  Box type: {boxinfo['boxtype']}")
     print(f"  Temperature: {boxinfo['temperature']}")
-    print(f"  Max atoms: {boxinfo['nmaxatoms']}")
+    print(f"  Max atoms: {n_max_atoms}")
     print(f"  Constraint: MAX_RADIUS = {MAX_RADIUS}")
     print(f"  Constraint: MIN_SEPARATION = {MIN_SEPARATION}")
 
@@ -92,14 +95,15 @@ def check_initial(boxinfo):
     mol_subindx = boxinfo['molsubindx']
     nmol = boxinfo['moleculecount']
     box_dims = boxinfo['boxdimensions']
-    ndim = boxinfo['ndimension']
+    ndim = raw_atoms.shape[0]
+    n_max_atoms = raw_atoms.shape[1]
     
     # Calculate box center
     center = np.array([(box_dims[0, i] + box_dims[1, i]) / 2 for i in range(ndim)])
     
     # Get active atom positions
     positions = []
-    for i in range(boxinfo['nmaxatoms']):
+    for i in range(n_max_atoms):
         mol_type = mol_types[i]
         mol_idx = mol_subindx[i]
         if mol_idx <= nmol[mol_type - 1]:
@@ -150,7 +154,7 @@ def diff_check(boxinfo, displist):
     CHECK_COUNT += 1
     
     box_dims = boxinfo['boxdimensions']
-    ndim = boxinfo['ndimension']
+    ndim = boxinfo['raw_atoms'].shape[0]
     
     # Calculate box center
     center = np.array([(box_dims[0, i] + box_dims[1, i]) / 2 for i in range(ndim)])
@@ -248,12 +252,13 @@ def compute_center_of_mass(boxinfo, mol_type=None):
     mol_types = boxinfo['moltype']
     mol_subindx = boxinfo['molsubindx']
     nmol = boxinfo['moleculecount']
-    ndim = boxinfo['ndimension']
+    ndim = raw_atoms.shape[0]
+    n_max_atoms = raw_atoms.shape[1]
     
     total_mass = 0.0
     com = np.zeros(ndim)
     
-    for i in range(boxinfo['nmaxatoms']):
+    for i in range(n_max_atoms):
         mt = mol_types[i]
         mol_idx = mol_subindx[i]
         
@@ -285,14 +290,15 @@ def compute_radius_of_gyration(boxinfo, mol_type=None):
     mol_types = boxinfo['moltype']
     mol_subindx = boxinfo['molsubindx']
     nmol = boxinfo['moleculecount']
-    ndim = boxinfo['ndimension']
+    ndim = raw_atoms.shape[0]
+    n_max_atoms = raw_atoms.shape[1]
     
     com = compute_center_of_mass(boxinfo, mol_type)
     
     total_mass = 0.0
     rg_sq = 0.0
     
-    for i in range(boxinfo['nmaxatoms']):
+    for i in range(n_max_atoms):
         mt = mol_types[i]
         mol_idx = mol_subindx[i]
         

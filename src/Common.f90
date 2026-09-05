@@ -54,6 +54,14 @@ module CoordinateTypes
     real(dp) :: xScale, yScale, zScale
   end type
 
+  ! Same molecule count, but many (or all) atom positions change.
+  ! Used when a move is too collective for incremental Displacement
+  ! energy and a near-complete recompute is required.
+  type, extends(Perturbation) :: NewState_IsoMol
+    integer :: nMoved = 0
+    real(dp), allocatable :: newAtoms(:,:)   ! 3 x nMaxAtoms, same layout as box%atoms
+  end type
+
 
 
 end module

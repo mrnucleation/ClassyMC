@@ -55,6 +55,8 @@
 !              - 'molindex': int - molecule index
 !              - 'atomindex': int - atom index
 !              - 'x_new', 'y_new', 'z_new': float - new coordinates (if applicable)
+!              - For 'newstate_isomol':
+!                    'new_atoms': numpy array (3 x nMaxAtoms)
 !      
 !      Returns:
 !          dict: Dictionary containing:
@@ -63,6 +65,24 @@
 !              - 'denergytable': numpy array - per-atom energy differences (optional)
 !      """
 !      return {'energy': 0.0, 'accept': True}
+!
+!  def compute_forces(boxlist, coords):
+!      """Optional. Forces at the given coordinates (current or trial state).
+!      Needed for native force-bias / smart MC. If omitted, Fortran falls
+!      back to finite-difference of compute_diff on the current box.
+!
+!      Args:
+!          boxlist: List of box dictionaries (types, PBC, occupancy).
+!                   Do not use box['raw_atoms'] as the configuration;
+!                   that is the current box, not necessarily coords.
+!          coords: numpy array (3 x nMaxAtoms), Fortran order — the
+!                  configuration to evaluate, which may be a trial state.
+!
+!      Returns:
+!          dict with 'forces': numpy array (3 x nMaxAtoms), Fortran order.
+!          F = -dU/dr. Inactive atoms should be zero.
+!      """
+!      return {'forces': numpy.zeros_like(coords)}
 !
 !  def update(boxlist):
 !      """Called after an accepted move to update internal state.
@@ -89,22 +109,30 @@ module FF_PythonEnergy
   use forpy_mod, only: dict, dict_create, list, list_create, call_py, &
                        module_py, import_py, object, call_py_noret, tuple, &
                        tuple_create, ndarray, ndarray_create, ndarray_create_nocopy, &
-                       cast, err_print, get_sys_path, is_none
+                       cast, err_print, err_clear, get_sys_path, is_none
 !------------------------------------------------------------------------------
   type, public, extends(forcefield) :: Pair_PythonEnergy
     logical, private :: initialized = .false.
+    logical, private :: hasPyForces = .false.
     real(dp), allocatable :: rMin(:)
     real(dp), allocatable :: rMinTable(:,:)
     type(module_py) :: pyenergy
+    type(list) :: boxlist
+    type(tuple) :: args
+    type(tuple) :: diff_args
+    type(dict), allocatable :: boxdicts(:)
     character(len=100) :: pymodule
     contains
       procedure, pass :: Constructor => Constructor_PythonEnergy
       procedure, pass :: DetailedECalc => DetailedECalc_PythonEnergy
       procedure, pass :: DiffECalc => DiffECalc_PythonEnergy
+      procedure, pass :: HasComputeForces => HasComputeForces_PythonEnergy
+      procedure, pass :: ComputeForces => ComputeForces_PythonEnergy
       procedure, pass :: ProcessIO => ProcessIO_PythonEnergy
       procedure, pass :: Prologue => Prologue_PythonEnergy
       procedure, pass :: Epilogue => Epilogue_PythonEnergy
       procedure, pass :: GetCutOff => GetCutOff_PythonEnergy
+      procedure, pass :: Update => Update_PythonEnergy
   end type
 
  contains
@@ -133,113 +161,97 @@ module FF_PythonEnergy
     class(Pair_PythonEnergy), intent(inout) :: self
     integer :: ierror, iBox, nBoxes
     type(list) :: paths
-    type(list) :: boxlist
-    type(dict), allocatable :: boxdicts(:)
-    type(tuple) :: args
-    type(tuple) :: diff_args
+    type(object) :: forceattr
 
     if(self%initialized) then
       return
     endif
 
     nBoxes = size(BoxArray)
-    allocate(boxdicts(1:nBoxes))
+    allocate(self%boxdicts(1:nBoxes))
 
-    ! Create boxlist with no-copy references to Fortran arrays
-    ierror = list_create(boxlist)
-    errcheck_macro
-    do iBox = 1, nBoxes
-      boxdicts(iBox) = createboxdict_nocopy(iBox)
-      ierror = boxlist%append(boxdicts(iBox))
-      errcheck_macro
-    enddo
-
-    ! Create argument tuples
-    ierror = tuple_create(args, 1)
-    errcheck_macro
-    ierror = args%setitem(0, boxlist)
-    errcheck_macro
-
-    ierror = tuple_create(diff_args, 2)
-    errcheck_macro
-    ierror = diff_args%setitem(0, boxlist)
-    errcheck_macro
-    ! Add current directory to Python path
     ierror = get_sys_path(paths)
     errcheck_macro
     ierror = paths%append(".")
     errcheck_macro
+    call paths%destroy
 
-    ! Load Python module
     write(nout,"(1x,A,A)") "Loading Python Energy Module: ", trim(adjustl(self%pymodule))
     ierror = import_py(self%pyenergy, trim(adjustl(self%pymodule)))
     errcheck_macro
 
-    ! Call Python prologue
-    ierror = call_py_noret(self%pyenergy, "prologue", args=args)
+    self%hasPyForces = .false.
+    ierror = self%pyenergy%getattribute(forceattr, "compute_forces")
+    if(ierror == 0) then
+      self%hasPyForces = .true.
+      call forceattr%destroy
+    else
+      call err_clear()
+    endif
+
+    ierror = list_create(self%boxlist)
+    errcheck_macro
+    do iBox = 1, nBoxes
+      self%boxdicts(iBox) = createboxdict_nocopy(iBox)
+      ierror = self%boxlist%append(self%boxdicts(iBox))
+      errcheck_macro
+    enddo
+
+    ierror = tuple_create(self%args, 1)
+    errcheck_macro
+    ierror = self%args%setitem(0, self%boxlist)
+    errcheck_macro
+
+    ierror = tuple_create(self%diff_args, 4)
+    errcheck_macro
+    ierror = self%diff_args%setitem(0, self%boxlist)
+    errcheck_macro
+
+    ierror = call_py_noret(self%pyenergy, "prologue", args=self%args)
     errcheck_macro
 
     self%initialized = .true.
 
     write(nout,"(1x,A,A)") "(Python Energy) Loaded module: ", trim(adjustl(self%pymodule))
+    if(self%hasPyForces) then
+      write(nout,"(1x,A)") "(Python Energy) compute_forces found; native force-bias will use Python forces"
+    else
+      write(nout,"(1x,A)") "(Python Energy) no compute_forces; forces fall back to finite difference"
+    endif
 
   end subroutine
 !=========================================================================
   subroutine Epilogue_PythonEnergy(self)
-    use BoxData, only: BoxArray
-    use ClassyPyObj, only: createboxdict_nocopy
+    use ClassyPyObj, only: refreshboxdicts
     use ParallelVar, only: nout
     implicit none
     class(Pair_PythonEnergy), intent(inout) :: self
-    integer :: ierror, iBox, nBoxes
-    type(list) :: paths
-    type(list) :: boxlist
-    type(dict), allocatable :: boxdicts(:)
-    type(tuple) :: args
-    type(tuple) :: diff_args
+    integer :: ierror, iBox
 
-    nBoxes = size(BoxArray)
-    allocate(boxdicts(1:nBoxes))
+    if(.not. self%initialized) then
+      return
+    endif
 
-    ! Create boxlist with no-copy references to Fortran arrays
-    ierror = list_create(boxlist)
+    call refreshboxdicts(self%boxdicts)
+    ierror = call_py_noret(self%pyenergy, "epilogue", args=self%args)
     errcheck_macro
-    do iBox = 1, nBoxes
-      boxdicts(iBox) = createboxdict_nocopy(iBox)
-      ierror = boxlist%append(boxdicts(iBox))
-      errcheck_macro
+
+    call self%args%destroy
+    call self%diff_args%destroy
+    call self%boxlist%destroy
+    do iBox = 1, size(self%boxdicts)
+      call self%boxdicts(iBox)%destroy
     enddo
+    deallocate(self%boxdicts)
+    call self%pyenergy%destroy
+    self%initialized = .false.
 
-    ! Create argument tuples
-    ierror = tuple_create(args, 1)
-    errcheck_macro
-    ierror = args%setitem(0, boxlist)
-    errcheck_macro
-
-    ierror = tuple_create(diff_args, 2)
-    errcheck_macro
-    ierror = diff_args%setitem(0, boxlist)
-    errcheck_macro
-
-    ! Call Python epilogue
-    ierror = call_py_noret(self%pyenergy, "epilogue", args=args)
-    errcheck_macro
-
-    call boxlist%destroy
-    call args%destroy
-    call diff_args%destroy
-    ! Destroy box list references
-    !do iBox = 1, nBoxes
-    !  call boxdicts(iBox)%destroy
-    !enddo
-    deallocate(boxdicts)
+    write(nout,"(1x,A)") "(Python Energy) Epilogue completed"
   end subroutine
 
 !=========================================================================
   subroutine DetailedECalc_PythonEnergy(self, curbox, E_T, accept)
-    use BoxData, only: BoxArray
-    use ParallelVar, only: nout
-    use ClassyPyObj, only: createboxdict_nocopy
+    use ClassyPyObj, only: refreshboxdicts
     implicit none
     class(Pair_PythonEnergy), intent(inout) :: self
     class(SimBox), intent(inout) :: curbox
@@ -247,52 +259,23 @@ module FF_PythonEnergy
     logical, intent(out) :: accept
     
     type(object) :: returnobj, item
-    type(dict), allocatable :: boxdicts(:)
     type(dict) :: resultdict
     type(ndarray) :: np_etable
-    type(tuple) :: args, diff_args
-    type(list) :: boxlist
-    integer :: ierror, boxID
-    integer :: iBox, nBoxes
+    integer :: ierror
     real(dp) :: energy
     real(dp), pointer :: etable_ptr(:) => null()
 
-
     accept = .true.
     E_T = 0E0_dp
-    boxID = curbox%boxID
-    nBoxes = size(BoxArray)
-    allocate(boxdicts(1:nBoxes))
 
-    ! Create boxlist with no-copy references to Fortran arrays
-    ierror = list_create(boxlist)
-    errcheck_macro
-    do iBox = 1, nBoxes
-      boxdicts(iBox) = createboxdict_nocopy(iBox)
-      ierror = boxlist%append(boxdicts(iBox))
-      errcheck_macro
-    enddo
+    call refreshboxdicts(self%boxdicts)
 
-    ! Create argument tuples
-    ierror = tuple_create(args, 1)
-    errcheck_macro
-    ierror = args%setitem(0, boxlist)
+    ierror = call_py(returnobj, self%pyenergy, "compute_total", args=self%args)
     errcheck_macro
 
-    ierror = tuple_create(diff_args, 2)
-    errcheck_macro
-    ierror = diff_args%setitem(0, boxlist)
-    errcheck_macro
-
-    ! Call Python compute_total
-    ierror = call_py(returnobj, self%pyenergy, "compute_total", args=args)
-    errcheck_macro
-
-    ! Cast return value to dict
     ierror = cast(resultdict, returnobj)
     errcheck_macro
 
-    ! Get energy from result
     ierror = resultdict%getitem(item, "energy")
     if(ierror /= 0) then
       write(0,*) "ERROR! Python compute_total must return dict with 'energy' key"
@@ -303,14 +286,12 @@ module FF_PythonEnergy
     call item%destroy
     E_T = energy
 
-    ! Check if accept flag is present
     ierror = resultdict%getitem(item, "accept")
     if(ierror == 0) then
       ierror = cast(accept, item)
       call item%destroy
     endif
 
-    ! Check if energytable is provided (optional)
     ierror = resultdict%getitem(item, "energytable")
     if(ierror == 0) then
       ierror = cast(np_etable, item)
@@ -321,33 +302,22 @@ module FF_PythonEnergy
             curbox%ETable(1:curbox%nMaxAtoms) = etable_ptr(1:curbox%nMaxAtoms)
           endif
         endif
+        call np_etable%destroy
       endif
       call item%destroy
     endif
 
     call resultdict%destroy
     call returnobj%destroy
-    call boxlist%destroy
-    call args%destroy
-    
-     !Destroy box list references
-    !do iBox = 1, nBoxes
-    !  call boxdicts(iBox)%destroy
-    !enddo
-      ! Destroy diff_args tuple
-    call diff_args%destroy
 
     if(isnan(E_T)) then
       write(0,*) "ERROR! NaN energy returned from Python compute_total"
       error stop
     endif
-    deallocate(boxdicts)
   end subroutine
 !=========================================================================
   subroutine DiffECalc_PythonEnergy(self, curbox, disp, tempList, tempNNei, E_Diff, accept)
-    use BoxData, only: BoxArray
-    use ClassyPyObj, only: createdisplist, createboxdict_nocopy
-    use ParallelVar, only: nout
+    use ClassyPyObj, only: createdisplist, refreshboxdicts
     implicit none
     class(Pair_PythonEnergy), intent(inout) :: self
     class(simBox), intent(inout) :: curbox
@@ -358,75 +328,42 @@ module FF_PythonEnergy
 
     type(object) :: returnobj, item
     type(dict) :: resultdict
-    type(list) :: displist, boxlist
-    type(tuple) :: args, diff_args
-    type(dict), allocatable :: boxdicts(:)
+    type(list) :: displist
     type(ndarray) :: np_detable
     type(ndarray) :: np_nlist, np_nneigh
-    integer :: ierror, iDisp, iBox, nBoxes
+    integer :: ierror
     real(dp) :: energy
     real(dp), pointer :: detable_ptr(:) => null()
 
     accept = .true.
     E_Diff = 0E0_dp
     curbox%dETable = 0E0_dp
-    nBoxes = size(BoxArray)
-    allocate(boxdicts(1:nBoxes))
 
-    ! Create boxlist with no-copy references to Fortran arrays
-    ierror = list_create(boxlist)
-    errcheck_macro
-    do iBox = 1, nBoxes
-      boxdicts(iBox) = createboxdict_nocopy(iBox)
-      ierror = boxlist%append(boxdicts(iBox))
-      errcheck_macro
-    enddo
+    call refreshboxdicts(self%boxdicts)
 
-    ! Create argument tuples
-    !ierror = tuple_create(args, 1)
-    !errcheck_macro
-    !ierror = args%setitem(0, boxlist)
-    !errcheck_macro
-
-    ierror = tuple_create(diff_args, 4)
-    errcheck_macro
-    ierror = diff_args%setitem(0, boxlist)
-    errcheck_macro
-
-
-    ! Create displacement list for Python
     displist = createdisplist(disp)
-
-    ! Set displacement list in args
-    ierror = diff_args%setitem(1, displist)
+    ierror = self%diff_args%setitem(1, displist)
     errcheck_macro
+    call displist%destroy
 
-
-    !Create Python list of temporary neighbor lists
     ierror = ndarray_create_nocopy(np_nlist, tempList)
-    ierror = diff_args%setitem(2, np_nlist)
     errcheck_macro
+    ierror = self%diff_args%setitem(2, np_nlist)
+    errcheck_macro
+    call np_nlist%destroy
 
-    !Create Python list of temporary neighbor counts
     ierror = ndarray_create_nocopy(np_nneigh, tempNNei)
-    ierror = diff_args%setitem(3, np_nneigh)
     errcheck_macro
-      ! If no neighbor counts are provided, pass None to Python
-      !ierror = diff_args%setitem(3, None)
-      !errcheck_macro
+    ierror = self%diff_args%setitem(3, np_nneigh)
+    errcheck_macro
+    call np_nneigh%destroy
 
-
-
-
-    ! Call Python compute_diff
-    ierror = call_py(returnobj, self%pyenergy, "compute_diff", args=diff_args)
+    ierror = call_py(returnobj, self%pyenergy, "compute_diff", args=self%diff_args)
     errcheck_macro
 
-    ! Cast return value to dict
     ierror = cast(resultdict, returnobj)
     errcheck_macro
 
-    ! Get energy difference from result
     ierror = resultdict%getitem(item, "energy")
     if(ierror /= 0) then
       write(0,*) "ERROR! Python compute_diff must return dict with 'energy' key"
@@ -437,14 +374,12 @@ module FF_PythonEnergy
     call item%destroy
     E_Diff = energy
 
-    ! Check if accept flag is present
     ierror = resultdict%getitem(item, "accept")
     if(ierror == 0) then
       ierror = cast(accept, item)
       call item%destroy
     endif
 
-    ! Check if denergytable is provided (optional)
     ierror = resultdict%getitem(item, "denergytable")
     if(ierror == 0) then
       ierror = cast(np_detable, item)
@@ -455,34 +390,18 @@ module FF_PythonEnergy
             curbox%dETable(1:curbox%nMaxAtoms) = detable_ptr(1:curbox%nMaxAtoms)
           endif
         endif
+        call np_detable%destroy
       endif
       call item%destroy
     endif
 
-    ! Clean up displacement list
-    do iDisp = 0, size(disp)-1
-      ierror = displist%getitem(item, iDisp)
-      call item%destroy
-    enddo
-    call displist%destroy
-
     call resultdict%destroy
     call returnobj%destroy
-    call displist%destroy
-    call boxlist%destroy
-    call args%destroy
-
- 
-     ! Destroy diff_args tuple
-    call diff_args%destroy
 
     if(isnan(E_Diff)) then
       write(0,*) "ERROR! NaN energy returned from Python compute_diff"
       error stop
     endif
-
-    deallocate(boxdicts)
-
   end subroutine
 !=========================================================================
   subroutine ProcessIO_PythonEnergy(self, line)
@@ -555,6 +474,109 @@ module FF_PythonEnergy
 
     rCut = self%rCut
   end function
+!=========================================================================
+  subroutine Update_PythonEnergy(self, accept)
+    use ClassyPyObj, only: refreshboxdicts
+    implicit none
+    class(Pair_PythonEnergy), intent(inout) :: self
+    logical, intent(in) :: accept
+
+    type(object) :: returnobj
+    integer :: ierror
+
+    if(.not. self%initialized) then
+      return
+    endif
+
+    call refreshboxdicts(self%boxdicts)
+    ierror = call_py(returnobj, self%pyenergy, "update", args=self%args)
+    errcheck_macro
+
+    call returnobj%destroy
+  end subroutine
+!=========================================================================
+  function HasComputeForces_PythonEnergy(self) result(hasForce)
+    implicit none
+    class(Pair_PythonEnergy), intent(in) :: self
+    logical :: hasForce
+
+    hasForce = self%hasPyForces
+  end function
+!=========================================================================
+  subroutine ComputeForces_PythonEnergy(self, curbox, forces, coords)
+    use ClassyPyObj, only: refreshboxdicts
+    implicit none
+    class(Pair_PythonEnergy), intent(inout) :: self
+    class(simBox), intent(inout) :: curbox
+    real(dp), intent(out) :: forces(:,:)
+    real(dp), intent(in) :: coords(:,:)
+
+    type(object) :: returnobj, item
+    type(dict) :: resultdict
+    type(tuple) :: force_args
+    type(ndarray) :: np_coords, np_forces
+    real(dp), pointer :: fptr(:,:) => null()
+    integer :: ierror, nCopy
+
+    forces = 0E0_dp
+    if(.not. self%initialized) then
+      call self%Prologue()
+    endif
+    if(.not. self%hasPyForces) then
+      call self%ComputeForcesFiniteDiff(curbox, forces, coords)
+      return
+    endif
+
+    call refreshboxdicts(self%boxdicts)
+
+    ierror = tuple_create(force_args, 2)
+    errcheck_macro
+    ierror = force_args%setitem(0, self%boxlist)
+    errcheck_macro
+    ierror = ndarray_create(np_coords, coords)
+    errcheck_macro
+    ierror = force_args%setitem(1, np_coords)
+    errcheck_macro
+    call np_coords%destroy
+
+    ierror = call_py(returnobj, self%pyenergy, "compute_forces", args=force_args)
+    errcheck_macro
+    call force_args%destroy
+
+    ierror = cast(resultdict, returnobj)
+    if(ierror /= 0) then
+      write(0,*) "ERROR! Python compute_forces must return a dict with a 'forces' key"
+      error stop
+    endif
+
+    ierror = resultdict%getitem(item, "forces")
+    if(ierror /= 0) then
+      write(0,*) "ERROR! Python compute_forces must return dict with 'forces' key"
+      write(0,*) "  'forces' must be a numpy array of shape (3, nAtoms), Fortran order"
+      error stop
+    endif
+    ierror = cast(np_forces, item)
+    errcheck_macro
+    call item%destroy
+
+    ierror = np_forces%get_data(fptr)
+    if(ierror /= 0 .or. .not. associated(fptr)) then
+      write(0,*) "ERROR! Python compute_forces 'forces' array could not be read."
+      write(0,*) "  Use a contiguous (3, nAtoms) float64 array with order='F'."
+      error stop
+    endif
+    if(size(fptr, 1) /= 3) then
+      write(0,*) "ERROR! Python compute_forces 'forces' must have shape (3, nAtoms), got", &
+        size(fptr, 1), size(fptr, 2)
+      error stop
+    endif
+    nCopy = min(size(forces, 2), size(fptr, 2))
+    forces(1:3, 1:nCopy) = fptr(1:3, 1:nCopy)
+
+    call np_forces%destroy
+    call resultdict%destroy
+    call returnobj%destroy
+  end subroutine
 !=========================================================================
 #else
 ! Stub type when EMBPYTHON is not defined
